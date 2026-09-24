@@ -87,3 +87,16 @@ Cálculo: Σ(peso × nota). Donde la nota es parecida entre opciones, la diferen
 - **No cambia el stack:** Flutter sigue siendo la mejor opción precisamente porque mantiene iOS abierto con la misma base de código. Si en F-iOS algo fallase, el coste queda acotado a la integración nativa (puertos `SystemViewer`, `WebSnapshotter`, `ImageSanitizer`), no a la app.
 - **Mitigación del riesgo R-18:** el job `ios` de CI (macOS, sin firmar) compila iOS en cada PR desde F2, así que las roturas de compilación se detectan aunque no haya Xcode en local.
 - **Versión de Flutter fijada:** 3.47.5 (cabeza del canal `stable` el 2026-09-24), en `.fvmrc`.
+
+## Resultados de los spikes F1 en Android (2026-09-24)
+
+| Spike | Resultado | Estado |
+|---|---|---|
+| S1 arranque | ~80 ms desde `main()` hasta ver una tarea de texto (SQLite en el isolate principal); ~1,3 s con una imagen de 12 MP en el emulador | Provisional: falta un dispositivo físico |
+| S2 animaciones | 60 fps con la GPU del Mac (con ruido del emulador); primer fotograma por optimizar (I-3) | Provisional: falta un dispositivo físico |
+| S3 PDF y visor | ✅ | Aceptado (Android) |
+| S4 URL | ✅ con `webview_flutter` + captura nativa | Aceptado (Android) |
+| S5 importación y backup | ✅; backup replanteado (ADR-0004) | Aceptado (Android) |
+| S6 web + Vercel | Pendiente de conectar Vercel | — |
+
+Nada invalida Flutter. Informes en `docs/spikes/`.

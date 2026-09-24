@@ -66,6 +66,15 @@ Convertir una página web (el horario de un festival, una receta, un mapa) en la
   - **Cuando** elige Editar (spec 005)
   - **Entonces** se abre "Cargar URL" con la dirección actual; al confirmar, se regenera la captura y la tarea conserva su posición.
 
+- **CA-009-13 Certificado inválido o página de error**
+  - **Dado** una URL cuyo certificado es inválido (caducado, autofirmado, de otro dominio) o cuya página principal responde con un error HTTP (≥ 400)
+  - **Cuando** se intenta crear la tarea o actualizar la captura
+  - **Entonces** no se guarda ninguna captura (tampoco una página en blanco ni la página de error del sitio) y se muestra "No se ha podido cargar la página ({motivo})" con "Abrir en el navegador"; un certificado inválido **nunca** se acepta.
+- **CA-009-14 Contenido que aparece al desplazarse**
+  - **Dado** una página que carga o anima contenido al hacer *scroll*
+  - **Cuando** se genera la captura
+  - **Entonces** la captura incluye ese contenido (la página se recorre antes de capturarla).
+
 ## 4. Casos límite
 
 | ID | Situación | Comportamiento |
@@ -115,6 +124,9 @@ Convertir una página web (el horario de un festival, una receta, un mapa) en la
 | `urlLeaveConfirm` | ¿Abrir {host} en el navegador? | Open {host} in the browser? |
 | `urlA11yBar` | Página web de {host} | Web page from {host} |
 | `urlOpenPageWeb` | Abrir página ↗ | Open page ↗ |
+| `urlLoadFailed` | No se ha podido cargar la página ({reason}). | Couldn't load the page ({reason}). |
+| `urlReasonCertificate` | certificado no válido | invalid certificate |
+| `urlReasonHttp` | error {code} del sitio | site error {code} |
 
 ## 8. Fuera de alcance
 

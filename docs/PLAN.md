@@ -81,13 +81,13 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R-01 | **Espacio en disco** insuficiente (30 GB libres; **79 GB tras liberar, 2026-09-24**) para Xcode, simuladores, Android y compilaciones | Alta | Alta | Liberar ≥ 60 GB antes de F0; un solo runtime de simulador; limpiar DerivedData y AVD que no se usen | F0 |
 | R-02 | Arranque en frío > 1 s en Android de gama media | Media | Alta | S1 temprano; tarea actual antes del primer fotograma; miniaturas pregeneradas; caché de la tarea actual; plan B Expo | S1, test de rendimiento en CI con dispositivo (F2) |
 | R-03 | Animaciones (arrugar y romper) con tirones o costosas de implementar | Media | Media | S2 con shaders precompilados; versión simplificada aceptable (con aprobación de producto) | S2 |
-| R-04 | `flutter_inappwebview` sin mantenimiento o con fallos | Media | Media | Aislarlo tras el puerto `WebSnapshotter`; plan B `webview_flutter` + código de plataforma | Dependabot, releases |
+| R-04 | ~~`flutter_inappwebview` sin mantenimiento~~ **Materializado (S4): estable de 2024** | — | — | **Mitigado:** `webview_flutter` oficial + captura nativa propia (ADR-0007) | Cerrado |
 | R-05 | Captura de página completa poco fiable en Android | Media | Media | S4; plan B: desplazar y coser o PDF → raster | S4 |
 | R-06 | Migraciones de datos que rompen datos reales tras publicar | Baja | Alta | Tests de migración obligatorios desde la v1; *fixtures* de BD reales anonimizadas | Cada cambio de esquema |
 | R-07 | **Google Play: 12 testers durante 14 días** retrasa la v1.0 | Alta | Media | Crear la cuenta en F0–F2 y reclutar testers en paralelo | F2 |
 | R-08 | Bundle ID sin dominio definitivo | Media | Alta (permanente) | Comprar el dominio en F0; marcador solo en desarrollo; prohibido subir a una tienda con el marcador | F0 |
 | R-09 | Curva de aprendizaje de Dart y Flutter del propietario | Alta | Media | CLAUDE.md, specs en español, subagentes revisores, explicaciones en cada PR | Continuo |
-| R-10 | Límite de 25 MB del backup de Android hace perder adjuntos al cambiar de móvil | Alta | Media | ADR-0004: exclusión controlada + estado "Adjunto no disponible" + exportación manual (Bloque 5) | F4 |
+| R-10 | **Confirmado (S5):** superar los 25 MB de backup de Android hace que se descarte **toda** la copia | Alta | Alta | `BackupAgent` con presupuesto de 20 MB y prioridades (ADR-0004 revisado); la app tolera adjuntos ausentes | F4 |
 | R-11 | Documentos no PDF sin app para abrirlos en Android | Media | Baja | Mensaje claro; D6 revisable | F4 |
 | R-12 | Rechazo en App Store (p. ej. por la guideline 4.2 de funcionalidad mínima o por la WebView) | Baja | Media | Funcionalidad nativa clara; la WebView es secundaria; notas de revisión | F6 |
 | R-13 | Clones de la app (repo público) | Media | Baja | "Todos los derechos reservados"; marca; se puede hacer privado en cualquier momento (la historia ya publicada queda expuesta) | Continuo |
@@ -96,6 +96,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R-16 | Deriva entre prototipo e implementación | Media | Media | `screen-map.md`, `prototype-deviations.md` y *goldens* | Cada PR de UI |
 | R-18 | **iOS aplazado (D17):** problemas propios de iOS (arranque, captura con WKWebView, QuickLook, Data Protection, revisión de App Store) se descubren tarde y obligan a rehacer trabajo | Media | Media | Toda la integración nativa detrás de puertos (`SystemViewer`, `WebSnapshotter`, `ImageSanitizer`) con implementación Android primero; nada de APIs solo de Android en el dominio; **CI compila iOS sin firmar desde F2** (macOS runner, gratis en repo público) para detectar roturas de compilación; F-iOS empieza por los spikes iOS | Cada PR (job iOS de CI); inicio de F-iOS |
 | R-17 | Pantallas sin diseño (Configuración, aviso de deshacer, visor, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (010, 004, 007–009) | Antes de F3/F4 |
+| R-19 | Tamaño del APK por encima del presupuesto (27,6 MB arm64 en el spike, con PDFium, SQLite y WebView) | Media | Baja | App bundle por ABI, sin símbolos, `--analyze-size` en CI; revisar dependencias | F2 |
 
 ## 6. Trazabilidad de reglas → specs
 
@@ -124,7 +125,8 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | PD-1 | ~~Usuario u organización de GitHub~~ **Resuelto (2026-09-24): cuenta personal `svallev`** | Propietario | F0 | — |
 | PD-2 | Dominio neutro → bundle ID y package name | Propietario | F0 | `com.<estudio>.<identificador-neutro>`, sin "una" |
 | PD-3 | Cuentas de Apple Developer y Google Play | Propietario | Antes de F5 (Play, antes de F2 por R-07) | Crear la de Play pronto |
-| PD-4 | Aprobación de los spikes S1–S6 | Propietario | Inicio de F1 | — |
+| PD-4 | ~~Aprobación de los spikes S1–S6~~ **Aprobados (2026-09-24).** S3–S5 ✅ en Android; S1–S2 pendientes de un dispositivo físico; S6 pendiente de conectar Vercel | Propietario | — | — |
+| PD-8 | ¿TXT, CSV y MD se muestran **dentro** de la app como texto plano? (cambia D6; ver ADR-0008) | Propietario | Antes de la spec 008 | Sí: riesgo nulo y mejor experiencia |
 | PD-7 | ¿Se hace la versión de iOS? (D17) | Propietario | Al terminar F6 (o antes si se quiere adelantar) | Decidir con la beta de Android en la mano |
 | PD-5 | Diseño de las pantallas que faltan (R-17) | Propietario + Claude Design | Antes de F3 | — |
 | P-1 | ¿Guardar el borrador del editor? | Producto | Spec 001 | No en la v1 |

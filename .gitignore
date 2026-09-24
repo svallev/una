@@ -80,7 +80,7 @@ node_modules/
 npm-debug.log*
 
 # ─── Spikes (código desechable de F1: nunca en main) ─────────────────
-spikes/
+/spikes/
 
 # ─── SO y editores ───────────────────────────────────────────────────
 .DS_Store

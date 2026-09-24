@@ -1,6 +1,6 @@
 # ADR-0008: PDF dentro de la tarea (pdfrx); el resto de documentos, con el visor del sistema
 
-- **Estado:** Provisional, pendiente del spike S3
+- **Estado:** Aceptado para Android (spike S3, 2026-09-24); provisional para iOS
 - **Fecha:** 2026-09-24
 - **Relacionado:** spec 008, DEV-03, modelo de amenazas (T-3)
 
@@ -27,3 +27,9 @@
 
 - En Android la experiencia con documentos no PDF depende del usuario → texto de ayuda y estado de error diseñados.
 - Versión web de pruebas: pdfrx funciona con WASM; el resto se descarga o se muestra la tarjeta.
+
+## Resultados del spike S3 (2026-09-24, Android)
+
+- pdfrx: visor listo en 18–20 ms (PDF de 9 MB, 300 páginas, PDF con JavaScript); **ningún JavaScript ejecutado**; los enlaces piden confirmación.
+- FileProvider en solo lectura correcto. En un Android sin app de Office, el sistema muestra un selector vacío y en inglés: **comprobar antes con `queryIntentActivities`** y mostrar nuestro mensaje (CA-008-08).
+- **[Pendiente PD-8]** Mostrar TXT, CSV y MD **dentro de la app** como texto plano (sin interpretar marcado): riesgo nulo y mejor que abrir Chrome o "HTML Viewer". Cambia D6; lo decide el propietario.
