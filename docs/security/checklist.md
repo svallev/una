@@ -30,6 +30,8 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 - [ ] `javaScriptBridgeEnabled:false`, sin acceso a archivos ni contenido, almacén no persistente, sin permisos ni descargas.
 - [ ] Navegación fuera del dominio → navegador del sistema; ventanas nuevas bloqueadas.
 - [ ] Sin excepciones de ATS ni de *cleartext*.
+- [ ] Certificado inválido → cancelar siempre (`onReceivedSslError`) y HTTP ≥ 400 del marco principal → captura fallida (I-5). Test con `expired.badssl.com`, `self-signed.badssl.com` y una 404.
+- [ ] Ningún canal JS (`addJavaScriptChannel`) ni `addJavascriptInterface`.
 
 ## Si toca el almacenamiento o el esquema (T-1, T-7)
 

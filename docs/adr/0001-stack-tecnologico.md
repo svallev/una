@@ -1,6 +1,6 @@
 # ADR-0001: Flutter como stack de la app
 
-- **Estado:** Provisional, pendiente del resultado de los spikes S1–S6 (fase F1 de `docs/PLAN.md`)
+- **Estado:** **Aceptado para Android** (spikes F1, 2026-09-24); provisional para iOS (F-iOS)
 - **Fecha:** 2026-09-24
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** ADR-0002, 0007, 0008, 0010; riesgos R-02, R-03, R-04, R-09
@@ -75,7 +75,28 @@ Cálculo: Σ(peso × nota). Donde la nota es parecida entre opciones, la diferen
 |---|---|---|
 | S1 | Arranque en frío con SQLite + una tarea con imagen de 12 MP | p50 < 1 s y p90 < 1,3 s en Android de gama media (*release*); < 0,6 s en iPhone ≥ 12 |
 | S2 | Arrugar (shader de desplazamiento + facetas) y rotura en dos; variante "reducir movimiento" | 60 fps sostenidos en gama media, sin tirones en el primer uso (shaders precompilados) |
-| S3 | PDF de 50 MB/300 páginas con pdfrx sin conexión; abrir DOCX/XLSX con QuickLook/intent | Primera página < 500 ms; zoom fluido; sin red |
+| S3 | PDF de 10 MB (límite D18) y muchas páginas con pdfrx sin conexión; abrir DOCX/XLSX con QuickLook/intent | Primera página < 500 ms; zoom fluido; sin red |
 | S4 | WebView endurecida + captura de página completa (iOS/Android) de 3 webs reales (horario, mapa, receta) | Captura legible de hasta 20 000 px de alto; puente JS y acceso a archivos desactivados y verificados |
-| S5 | Importación: bytes mágicos, eliminación de EXIF/GPS, 30/50 MB, copia en el sandbox, inclusión en el backup | EXIF eliminado (comprobado con exiftool); sin bloquear la UI |
+| S5 | Importación: bytes mágicos, eliminación de EXIF/GPS, límites 30 MB imagen / 10 MB PDF / 25 MB documento, copia en el sandbox, inclusión en el backup | EXIF eliminado (comprobado con exiftool); sin bloquear la UI |
 | S6 | `flutter build web` + preview en Vercel con cabeceras | Preview por PR funcionando en < 10 min |
+
+## Actualización 2026-09-24: Android primero (D17)
+
+- **[Hecho]** El propietario decide desarrollar y validar primero en **Android** (emulador Pixel 6a, API 37) y en la web de pruebas, sin instalar Xcode por ahora. iOS se abordará al final (fase F-iOS de `docs/PLAN.md`) si decide seguir (PD-7).
+- **Efecto en esta decisión:** los spikes de F1 se ejecutan en Android y web. Si se cumplen, este ADR pasa a **Aceptado para Android** y sigue **Provisional para iOS** hasta los spikes iOS de F-iOS.
+- **No cambia el stack:** Flutter sigue siendo la mejor opción precisamente porque mantiene iOS abierto con la misma base de código. Si en F-iOS algo fallase, el coste queda acotado a la integración nativa (puertos `SystemViewer`, `WebSnapshotter`, `ImageSanitizer`), no a la app.
+- **Mitigación del riesgo R-18:** el job `ios` de CI (macOS, sin firmar) compila iOS en cada PR desde F2, así que las roturas de compilación se detectan aunque no haya Xcode en local.
+- **Versión de Flutter fijada:** 3.47.5 (cabeza del canal `stable` el 2026-09-24), en `.fvmrc`.
+
+## Resultados de los spikes F1 en Android (2026-09-24)
+
+| Spike | Resultado | Estado |
+|---|---|---|
+| S1 arranque | **Xiaomi 15T Pro:** ~250 ms desde el icono hasta ver la tarea de texto y ~257 ms con una imagen de 12 MP (igual que una app Flutter vacía o Ajustes) | ✅ Aceptado en gama alta; gama media sin medir (R-02, riesgo bajo por el margen ×4) |
+| S2 animaciones | **Xiaomi 15T Pro (Vulkan, 120 Hz):** p90 ≈ 4,5 ms; 0 fotogramas > 32 ms; 2 fotogramas > 16,7 ms solo la primera vez (captura, I-3) | ✅ Aceptado |
+| S3 PDF y visor | ✅ | Aceptado (Android) |
+| S4 URL | ✅ con `webview_flutter` + captura nativa | Aceptado (Android) |
+| S5 importación y backup | ✅; backup replanteado (ADR-0004) | Aceptado (Android) |
+| S6 web + Vercel | Build `--wasm --no-web-resources-cdn` validado en local con la CSP estricta: shader y PDF (PDFium WASM) funcionan; todas las peticiones al propio dominio | ✅ en local; falta el despliegue real en Vercel |
+
+**Veredicto:** ADR-0001 pasa a **Aceptado para Android** (2026-09-24). Sigue provisional para iOS (F-iOS) y queda abierto R-02 (gama media). Informes en `docs/spikes/`.

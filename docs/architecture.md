@@ -31,8 +31,8 @@ flowchart TB
   subgraph DATA["Datos e infraestructura"]
     DR[DriftTaskRepository → SQLite]
     FS[FileAttachmentStore → sandbox]
-    IMP[ImportPipeline: bytes mágicos · límites · eliminar EXIF · miniaturas]
-    WV[HardenedWebView + Snapshotter]
+    IMP[ImportPipeline: bytes mágicos · límites · ImageSanitizer nativo sin EXIF · miniaturas]
+    WV[WebView en vivo: webview_flutter endurecida · WebSnapshotter nativo Kotlin/Swift]
     PDF[pdfrx]
     NV[Canal nativo: QuickLook · FileProvider/ACTION_VIEW]
   end
@@ -75,7 +75,7 @@ sequenceDiagram
   participant UI as CurrentTaskScreen
   OS->>N: lanza la app (splash mostrado por el SO)
   N->>M: runApp (sin await de plugins no críticos)
-  M->>DB: abrir BD + SELECT tarea actual (índice status,deletedAt,rank) LIMIT 1
+  M->>DB: abrir SQLite en el isolate principal (I-1) + SELECT tarea actual (índice status,deletedAt,rank) LIMIT 1
   DB-->>M: Task + Attachment (rutas)
   M->>UI: primer fotograma: nota o miniatura en caché
   UI-->>OS: tarea visible (medida: TTFD)
@@ -83,7 +83,7 @@ sequenceDiagram
 ```
 
 - Fuentes empaquetadas (ya en el primer fotograma) y *shaders* precompilados.
-- Imagen: se muestra primero la **versión de pantalla** pregenerada al importar (≤ 2 × la resolución de pantalla); el original se carga al hacer zoom.
+- Imagen: se muestra primero la **versión de pantalla** pregenerada al importar, **JPEG al ancho físico exacto de la pantalla** (I-2; ~20 % más rápido que PNG en S1); el original se carga al hacer zoom.
 - PDF: miniatura de la primera página pregenerada; pdfrx se inicializa tras el primer fotograma.
 - Web: captura mostrada al instante; la WebView en vivo se inicializa detrás.
 - Bienvenida (R1) **solo** en el primer uso; nunca retrasa R8.
@@ -164,15 +164,27 @@ flowchart LR
   C -- no --> Y[Error: demasiado grande]
   C -- sí --> D[Copiar a tmp del sandbox]
   D --> E{kind}
-  E -- image --> F[Decodificar → normalizar orientación → recodificar sin EXIF/GPS/XMP → versión de pantalla + miniatura]
+  E -- image --> F[ImageSanitizer nativo: decodificar con orientación → recodificar JPEG sin EXIF/GPS/XMP → original ≤ 4096 px + pantalla + miniatura]
   E -- pdf --> G[Abrir con pdfrx en modo solo lectura → miniatura p.1 → pageCount]
   E -- document --> H[Guardar tal cual → icono por tipo]
-  E -- web --> I[HardenedWebView → captura de página completa → miniatura]
+  E -- web --> I[WebSnapshotter nativo → recorrer la página → captura completa ≤ 16 000 px → miniatura; SSL/HTTP ≥ 400 = fallo]
   F & G & H & I --> J[Mover de forma atómica a attachments/uuid/ + sha256]
   J --> K[Insertar Task + Attachment en una transacción]
 ```
 
-Límites: imagen 30 MB (y 50 MP), PDF 50 MB, documento 25 MB, captura web 20 000 px de alto. La importación va en un *isolate* (no bloquea la UI) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
+Límites: imagen 30 MB (y 50 MP), **PDF 10 MB** (D18), documento 25 MB, captura web 20 000 px de alto. La importación va en un *isolate* (no bloquea la UI) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
+
+### Decisiones de implementación de los spikes (F1)
+
+| ID | Decisión | Evidencia |
+|---|---|---|
+| I-1 | La consulta de arranque usa SQLite en el **isolate principal**; las escrituras pesadas van a un isolate en segundo plano después del primer fotograma | S1: de ~900 ms a ~80 ms en el emulador |
+| I-2 | Versión de pantalla de las imágenes en **JPEG al ancho físico** de la pantalla | S1: −20 % frente a PNG |
+| I-3 | **Precapturar** la nota actual tras el primer fotograma (o `ImageFilter.shader` sin captura) para completar y eliminar | S2: primer fotograma de 40–105 ms |
+| I-4 | **`ImageSanitizer` nativo** (Android `ImageDecoder` + `Bitmap.compress`; iOS ImageIO) | S5: 12 MP en 0,77 s frente a 12 s en Dart puro |
+| I-5 | Captura web: SSL inválido (siempre cancelado) y HTTP ≥ 400 del marco principal = fallo | S4: sin esto se guardaba una página en blanco |
+| I-6 | Captura web: recorrer la página por pasos antes de capturar | S4: huecos en webs que animan al hacer *scroll* |
+| I-7 | Visor del sistema: comprobar si hay app antes de lanzar el intent y mostrar nuestro mensaje | S3: selector del sistema vacío y en inglés |
 
 ## 5. Plataforma e integración nativa
 

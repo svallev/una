@@ -13,21 +13,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pr-title:
-    name: Título de PR (Conventional Commits)
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validar título
-        env:
-          TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          re='^(feat|fix|docs|test|refactor|perf|chore|ci|build|revert)(\([a-z0-9._/-]+\))?!?: .{3,}$'
-          if [[ ! "$TITLE" =~ $re ]]; then
-            echo "::error::El título '$TITLE' no sigue Conventional Commits (p. ej. 'feat(003): completar manteniendo pulsado')"
-            exit 1
-          fi
-
   docs:
     name: Documentación y tokens
     runs-on: ubuntu-latest

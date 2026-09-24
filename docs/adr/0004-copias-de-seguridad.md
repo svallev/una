@@ -1,6 +1,6 @@
 # ADR-0004: Incluir los datos en las copias de seguridad del sistema
 
-- **Estado:** Aceptado (D14)
+- **Estado:** Aceptado (D14), **revisado el 2026-09-24 tras el spike S5**
 - **Fecha:** 2026-09-24
 - **Relacionado:** ADR-0005, modelo de amenazas (A-1, T-7)
 
@@ -23,3 +23,14 @@
 - La app debe tolerar la falta de archivos de adjuntos tras una restauración (estado de error diseñado en las specs 007–009).
 - Test de integración que simula una restauración (BD sin archivos).
 - El manifiesto de privacidad y el "Data safety" de Play siguen declarando "no se recogen datos": la copia la hace el sistema operativo y va a la cuenta del usuario.
+
+## Revisión tras el spike S5 (2026-09-24)
+
+- **[Hecho]** Con reglas estáticas que incluyen `attachments/`, en cuanto los adjuntos superan la cuota (25 MB), Android responde *"Size quota exceeded"* y **descarta la copia entera de la app, base de datos incluida**. Sin adjuntos, la BD se copia (57 KB) y se restaura correctamente.
+- **[Hecho]** Tras restaurar sin adjuntos, una app que suponga que el archivo existe **se cuelga al arrancar** (lo hizo el spike).
+
+**Decisión revisada (Android):**
+1. Un `BackupAgent` propio (copia completa con `onFullBackup`) que incluye **siempre** la BD y los ajustes y añade adjuntos **por prioridad** (primero el de la tarea actual; después, las pendientes por orden de la cola; nunca las completadas) **hasta un presupuesto de 20 MB**. Las reglas XML quedan como respaldo para Android 11 o anterior, sin adjuntos.
+2. La transferencia entre dispositivos (`device-transfer`) incluye **todo** (no tiene cuota).
+3. La app **nunca** depende de que exista el archivo de un adjunto para arrancar ni para mostrar la tarea: estado "Adjunto no disponible" (CL-007-4) con test de integración de restauración.
+4. iOS (F-iOS): iCloud no tiene esta cuota por app; se mantiene "incluir todo".
