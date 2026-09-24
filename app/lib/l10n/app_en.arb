@@ -12,5 +12,6 @@
   "storageErrorNoSpace": "Your phone is out of storage",
   "retry": "Try again",
   "skipIntroHint": "continue",
+  "webPreviewBanner": "Test version · data is erased when you reload",
   "editorSaveError": "We couldn't save your task"
 }

@@ -57,5 +57,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get skipIntroHint => 'continue';
 
   @override
+  String get webPreviewBanner =>
+      'Test version · data is erased when you reload';
+
+  @override
   String get editorSaveError => 'We couldn\'t save your task';
 }

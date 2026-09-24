@@ -4,12 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
 double _fontSizeOf(WidgetTester t, String text) =>
     t.widget<Text>(find.text(text)).style!.fontSize!;
 
 void main() {
+  // Fuentes reales: con la de pruebas cada letra mide 1 em y las medidas de
+  // ancho (palabras, una sola línea) no serían representativas.
+  setUpAll(loadAppFonts);
+
   testWidgets(
     'CA-001-06: muestra solo la tarea actual, el menú y el botón de completar',
     (tester) async {
@@ -27,11 +32,13 @@ void main() {
   testWidgets('CA-001-07: el tamaño del texto depende de su longitud', (
     tester,
   ) async {
+    // Palabras cortas: el tamaño solo depende de la longitud total.
+    String words(int n) => ('abc ' * n).substring(0, n);
     final cases = {
-      'a' * 39: UnaFontSizes.noteXL,
-      'a' * 40: UnaFontSizes.noteL,
-      'a' * 90: UnaFontSizes.noteM,
-      'a' * 160: UnaFontSizes.noteS,
+      words(39): UnaFontSizes.noteXL,
+      words(40): UnaFontSizes.noteL,
+      words(90): UnaFontSizes.noteM,
+      words(160): UnaFontSizes.noteS,
     };
     for (final e in cases.entries) {
       await pumpWithApp(
@@ -180,4 +187,32 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'CA-001-07: con texto grande no se parte ninguna palabra (se reduce lo justo)',
+    (tester) async {
+      const text = 'Llamar a Marta para confirmar la cena';
+      for (final (scale, width) in [(1.0, 320.0), (2.0, 390.0), (2.0, 320.0)]) {
+        await pumpWithApp(
+          tester,
+          CurrentTaskScreen(task: sampleTask(text: text)),
+          textScale: scale,
+          size: Size(width, 844),
+        );
+        final p = tester.renderObject<RenderParagraph>(find.text(text));
+        var start = 0;
+        for (final word in text.split(' ')) {
+          final boxes = p.getBoxesForSelection(
+            TextSelection(baseOffset: start, extentOffset: start + word.length),
+          );
+          expect(
+            boxes.map((b) => b.top).toSet(),
+            hasLength(1),
+            reason: '«$word» partida (escala $scale, ancho $width)',
+          );
+          start += word.length + 1;
+        }
+      }
+    },
+  );
 }

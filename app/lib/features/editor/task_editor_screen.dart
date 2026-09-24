@@ -8,7 +8,6 @@ import '../../app/providers.dart';
 import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
-import '../../domain/entities/color_picker.dart';
 import '../../domain/entities/task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
@@ -31,7 +30,7 @@ class FirstTaskEditorScreen extends ConsumerStatefulWidget {
 
 class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
   final _controller = TextEditingController();
-  late final int _colorKey = ColorPicker().pick();
+  late final int _colorKey = ref.read(colorPickerProvider).pick();
   bool _saving = false;
 
   bool get _canSave => !_saving && _controller.text.trim().isNotEmpty;
@@ -108,10 +107,12 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
           // teclado abierto), se desplaza en lugar de cortarse (CL-001-9).
           child: CustomScrollView(
             slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.all(UnaSpace.l),
-                sliver: SliverFillRemaining(
-                  hasScrollBody: false,
+              // El margen va dentro: con SliverPadding, SliverFillRemaining
+              // ocupa la pantalla entera y el margen inferior la desborda.
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(UnaSpace.l),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

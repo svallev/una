@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/una_theme.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/color_picker.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +35,8 @@ Future<InMemoryTaskRepository> pumpWithApp(
       overrides: [
         taskRepositoryProvider.overrideWithValue(r),
         settingsRepositoryProvider.overrideWithValue(r),
+        // Color determinista (goldens estables).
+        colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
         bootStateProvider.overrideWithValue(
           BootState(currentTask: currentTask, firstRunDone: firstRunDone),
         ),

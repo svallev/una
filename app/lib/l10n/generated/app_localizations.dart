@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'continuar'**
   String get skipIntroHint;
 
+  /// Aviso fijo de la web de pruebas (ADR-0010). Los datos viven en memoria
+  ///
+  /// In es, this message translates to:
+  /// **'Versión de pruebas · los datos se borran al recargar'**
+  String get webPreviewBanner;
+
   /// Error al escribir la tarea en el editor. Sección 5
   ///
   /// In es, this message translates to:

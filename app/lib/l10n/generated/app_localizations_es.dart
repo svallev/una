@@ -57,5 +57,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get skipIntroHint => 'continuar';
 
   @override
+  String get webPreviewBanner =>
+      'Versión de pruebas · los datos se borran al recargar';
+
+  @override
   String get editorSaveError => 'No hemos podido guardar la tarea';
 }

@@ -135,6 +135,14 @@ void main() {
       handle.dispose();
     },
   );
+
+  testWidgets('CA-001-02: el botón Guardar se ve entero, con su margen', (
+    tester,
+  ) async {
+    await pumpWithApp(tester, const FirstTaskEditorScreen());
+    final button = tester.getRect(find.byType(BrutalButton));
+    expect(button.bottom, lessThanOrEqualTo(844 - 24 + 0.01));
+  });
 }
 
 class _FailingRepository extends InMemoryTaskRepository {

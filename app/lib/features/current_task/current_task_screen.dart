@@ -67,11 +67,20 @@ class CurrentTaskScreen extends StatelessWidget {
                             child: Semantics(
                               label: l10n.currentTaskSemantics(text),
                               excludeSemantics: true,
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: Text(
-                                  text,
-                                  style: UnaTheme.noteText(text),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) => SizedBox(
+                                  width: double.infinity,
+                                  child: Text(
+                                    text,
+                                    style: UnaTheme.fitNoteText(
+                                      text,
+                                      maxWidth: constraints.maxWidth,
+                                      textScaler: MediaQuery.textScalerOf(
+                                        context,
+                                      ),
+                                      textDirection: Directionality.of(context),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

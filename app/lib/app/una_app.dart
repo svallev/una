@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +12,7 @@ import 'locale_resolution.dart';
 import 'providers.dart';
 import 'theme/tokens.g.dart';
 import 'theme/una_theme.dart';
+import 'web_preview_banner.dart';
 
 /// Raíz de la app.
 class UnaApp extends ConsumerStatefulWidget {
@@ -67,7 +69,7 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
-      builder: centerOnLargeScreens,
+      builder: appFrame,
       home: HomeRouter(key: ValueKey(_resetGeneration)),
     );
   }
@@ -136,19 +138,24 @@ class StorageErrorApp extends StatelessWidget {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
-      builder: centerOnLargeScreens,
+      builder: appFrame,
       home: StorageErrorScreen(noSpace: noSpace, onRetry: onRetry),
     );
   }
 }
 
-/// En tablets y plegables el contenido se centra con un ancho máximo (CL-001-7).
-Widget centerOnLargeScreens(BuildContext context, Widget? child) => ColoredBox(
-  color: UnaColors.paper,
-  child: Center(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: UnaSizes.contentMaxWidth),
-      child: child,
+/// Marco de todas las pantallas: en tablets y plegables el contenido se centra
+/// con un ancho máximo (CL-001-7) y en la web de pruebas se añade su aviso
+/// (ADR-0010).
+Widget appFrame(BuildContext context, Widget? child) {
+  final centered = ColoredBox(
+    color: UnaColors.paper,
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: UnaSizes.contentMaxWidth),
+        child: child,
+      ),
     ),
-  ),
-);
+  );
+  return kIsWeb ? WebPreviewBanner(child: centered) : centered;
+}

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../domain/entities/color_picker.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
@@ -26,11 +27,15 @@ final clockProvider = Provider<Clock>((ref) => const SystemClock());
 
 final idGeneratorProvider = Provider<IdGenerator>((ref) => const UuidV7Ids());
 
+/// Colores de las tareas nuevas; en los tests, con semilla fija.
+final colorPickerProvider = Provider<ColorPicker>((ref) => ColorPicker());
+
 final createTaskProvider = Provider<CreateTask>(
   (ref) => CreateTask(
     repository: ref.watch(taskRepositoryProvider),
     clock: ref.watch(clockProvider),
     ids: ref.watch(idGeneratorProvider),
+    colors: ref.watch(colorPickerProvider),
   ),
 );
 

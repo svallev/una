@@ -1,0 +1,3 @@
+tags:
+  # Goldens: solo se comparan en Linux (CI). Ver docs/testing.md, "Goldens".
+  golden:

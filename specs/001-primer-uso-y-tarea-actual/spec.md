@@ -125,6 +125,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 | `retry` | Reintentar | Try again | |
 | `skipIntroHint` | continuar | continue | Acción del lector: "Toca dos veces para continuar" |
 | `editorSaveError` | No hemos podido guardar la tarea | We couldn't save your task | §5 |
+| `webPreviewBanner` | Versión de pruebas · los datos se borran al recargar | Test version · data is erased when you reload | Solo en la web de pruebas (ADR-0010) |
 
 ## 8. Fuera de alcance
 
@@ -152,3 +153,4 @@ Salen de las revisiones de cierre (subagentes `spec-reviewer`, `a11y-reviewer` y
 - CL-001-4: el primer uso se marca al **mostrarse** la bienvenida (antes, al terminar), para que al matar la app a mitad se abra el editor.
 - Privacidad (decisión del propietario): el teclado del sistema **no aprende** del texto de las tareas (`enableIMEPersonalizedLearning: false`; en Android, `IME_FLAG_NO_PERSONALIZED_LEARNING`).
 - Texto del botón de completar (decisión del propietario): **"Pulsa para completar"** en una sola línea, como en el prototipo. Se revoca DEV-06.
+- CA-001-07 (hallado con los goldens): si la palabra más larga no cabe en una línea, el tamaño de la nota se reduce lo justo (sin bajar de `noteS`) para no partirla; por debajo de `noteS`, las palabras enormes se parten (CL-001-3).
