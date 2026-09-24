@@ -24,6 +24,7 @@
    ```
    y añadir `$HOME/development/flutter/bin` al `PATH` (en `~/.zshrc`). Después: `flutter doctor` y `flutter doctor --android-licenses`. FVM es **opcional** (útil si algún día conviven varias versiones); los comandos de `CLAUDE.md` funcionan igual quitando el prefijo `fvm`.
    - **Java:** Android Studio trae OpenJDK 25. Si Gradle o algún plugin fallan con él, usar un JDK 21 solo para Flutter (`flutter config --jdk-dir <ruta>`).
+   - **Emulador con GPU del Mac:** lanzarlo con `emulator -avd Pixel_6a -gpu host` (o en Android Studio: Device Manager → Edit → Graphics: Hardware). Con el modo automático puede acabar renderizando por software (lavapipe/SwANGLE) y cualquier animación va a 2–10 fps (ver `docs/spikes/F1-S1-S2-resultados.md`).
    - **Páginas de 16 KB:** el emulador usa páginas de 16 KB (obligatorio en Google Play para apps con `targetSdk` ≥ 35). Sirve para verificar que las librerías nativas (SQLite, PDFium, WebView) están alineadas.
 7. **CocoaPods / Swift Package Manager:** según lo que exijan la versión de Flutter y los plugins (`flutter doctor` lo indica).
 
