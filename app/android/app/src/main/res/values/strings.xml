@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERADO por tool/gen_identity.dart desde identity.yaml. No editar a mano. -->
+<resources>
+    <string name="app_name" translatable="false">Una.</string>
+</resources>

@@ -57,10 +57,12 @@ jobs:
         run: bash tools/install-flutter.sh && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
       - run: flutter --version
       - run: flutter pub get --enforce-lockfile
-      - name: Código generado al día (drift, l10n, tokens)
+      - name: Código generado al día (drift, l10n, identidad, tokens, esquema)
         run: |
           dart run build_runner build --delete-conflicting-outputs
           flutter gen-l10n
+          dart run tool/gen_identity.dart --check
+          dart run tool/gen_tokens.dart --check
           git diff --exit-code || (echo "::error::Hay código generado sin actualizar" && exit 1)
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze --fatal-infos

@@ -1,0 +1,15 @@
+{
+  "@@locale": "en",
+  "welcomeTitle": "You can now create your first task",
+  "editorTagFirst": "Your first task",
+  "editorPlaceholder": "What's that thing you need to do and haven't done yet?",
+  "editorSaveFirst": "Save",
+  "editorCharsLeft": "{count, plural, =1{1 character left} other{{count} characters left}}",
+  "currentTaskSemantics": "Current task: {text}",
+  "menuButton": "Task menu",
+  "completeButton": "Press and hold to complete",
+  "storageErrorTitle": "We couldn't open your tasks",
+  "storageErrorNoSpace": "Your phone is out of storage",
+  "retry": "Try again",
+  "skipIntroHint": "Tap to continue"
+}

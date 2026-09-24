@@ -1,0 +1,33 @@
+{
+  "@@locale": "es",
+  "welcomeTitle": "Ya puedes crear tu primera tarea",
+  "@welcomeTitle": { "description": "Bienvenida (máquina de escribir). Spec 001, CA-001-01" },
+  "editorTagFirst": "Tu primera tarea",
+  "@editorTagFirst": { "description": "Etiqueta del editor de la primera tarea. CA-001-02" },
+  "editorPlaceholder": "¿Qué es eso que tienes que hacer y no has hecho?",
+  "@editorPlaceholder": { "description": "Placeholder del editor de texto. DEV-07" },
+  "editorSaveFirst": "Guardar",
+  "@editorSaveFirst": { "description": "Botón para guardar la primera tarea. CA-001-04" },
+  "editorCharsLeft": "{count, plural, =1{Queda 1 carácter} other{Quedan {count} caracteres}}",
+  "@editorCharsLeft": {
+    "description": "Contador a partir de 9000 caracteres. CL-001-2",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "currentTaskSemantics": "Tarea actual: {text}",
+  "@currentTaskSemantics": {
+    "description": "Lectura de la tarea actual para lectores de pantalla. Sección 6",
+    "placeholders": { "text": { "type": "String", "example": "Comprar pan" } }
+  },
+  "menuButton": "Menú de la tarea",
+  "@menuButton": { "description": "Etiqueta del botón de menú (icono)" },
+  "completeButton": "Mantén pulsado para completar",
+  "@completeButton": { "description": "Botón de completar. DEV-06; comportamiento en la spec 003" },
+  "storageErrorTitle": "No hemos podido abrir tus tareas",
+  "@storageErrorTitle": { "description": "Error de almacenamiento. CL-001-6" },
+  "storageErrorNoSpace": "Tu teléfono no tiene espacio libre",
+  "@storageErrorNoSpace": { "description": "Error por falta de espacio. CL-001-6" },
+  "retry": "Reintentar",
+  "@retry": { "description": "Botón de reintentar" },
+  "skipIntroHint": "Toca para continuar",
+  "@skipIntroHint": { "description": "Pista accesible para saltar la bienvenida. Sección 6" }
+}

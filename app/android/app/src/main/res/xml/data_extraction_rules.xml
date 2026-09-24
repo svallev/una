@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ (ADR-0004). F2: BD (app_flutter/) y preferencias. Los adjuntos llegarán en F4
+     con un BackupAgent con presupuesto (la cuota de 25 MB descarta toda la copia, spike S5). -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="root" path="app_flutter/"/>
+        <include domain="sharedpref" path="."/>
+    </cloud-backup>
+    <device-transfer>
+        <include domain="root" path="app_flutter/"/>
+        <include domain="sharedpref" path="."/>
+        <include domain="file" path="."/>
+    </device-transfer>
+</data-extraction-rules>

@@ -1,0 +1,7 @@
+# Fuente ÚNICA de la identidad de la app (constitución P7). No escribas el nombre en ningún otro sitio.
+# Tras cambiarlo: `dart run tool/gen_identity.dart` (CI comprueba que lo generado está al día).
+#
+# [Pendiente PD-2] El identificador (bundle ID / applicationId) NO está aquí a propósito: es permanente
+# y se fija una sola vez al comprar el dominio neutro (ADR y android/app/build.gradle.kts).
+displayName: "Una."   # nombre bajo el icono y en el sistema
+wordmark: "una."      # logotipo dentro de la app
