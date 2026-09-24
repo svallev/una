@@ -20,12 +20,12 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
 
 - **CA-003-01 Progreso al mantener**
   - **Dado** la tarea actual en la pantalla principal
-  - **Cuando** el usuario mantiene pulsado el botón "Mantén pulsado para completar"
+  - **Cuando** el usuario mantiene pulsado el botón "Pulsa para completar"
   - **Entonces** el botón se hunde y un relleno negro avanza de izquierda a derecha durante **1,2 s**, y el texto cambia a "Sigue pulsando…".
 - **CA-003-02 Soltar antes de tiempo**
   - **Dado** que el relleno está avanzando
   - **Cuando** el usuario suelta, arrastra el dedo fuera del botón o la app pasa a segundo plano antes de 1,2 s
-  - **Entonces** el relleno retrocede (0,28 s), el texto vuelve a "Mantén pulsado para completar" y la tarea **no** se completa.
+  - **Entonces** el relleno retrocede (0,28 s), el texto vuelve a "Pulsa para completar" y la tarea **no** se completa.
 - **CA-003-03 Completar**
   - **Dado** que se ha mantenido 1,2 s
   - **Cuando** se completa el tiempo
@@ -74,7 +74,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
 
 ## 6. Accesibilidad
 
-- Botón con etiqueta "Mantén pulsado para completar" y pista (hint) "Mantén pulsado o usa las acciones para completar".
+- Botón con etiqueta "Pulsa para completar" y pista (hint) "Mantén pulsado o usa las acciones para completar".
 - Acción personalizada "Completar tarea" (CA-003-07). Sin confirmación extra: la acción es deliberada.
 - La enhorabuena se anuncia como región en vivo (educada); con lector de pantalla, la pantalla dura hasta que se toca o 4 s como mínimo.
 - Vibración respetando los ajustes del sistema. Contraste: blanco sobre `ink` 18,9:1.
@@ -83,7 +83,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
 
 | Clave | ES | EN |
 |---|---|---|
-| `completeButton` | Mantén pulsado para completar | Press and hold to complete |
+| `completeButton` | Pulsa para completar (una sola línea) | Press to complete |
 | `completeHolding` | Sigue pulsando… | Keep holding… |
 | `completeDone` | ¡Hecho! | Done! |
 | `completeA11yAction` | Completar tarea | Complete task |

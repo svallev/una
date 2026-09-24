@@ -46,7 +46,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 - **CA-001-06 Solo una tarea**
   - **Dado** que hay una o más tareas pendientes
   - **Cuando** se muestra la pantalla principal
-  - **Entonces** se ve **solo** la primera tarea pendiente (según el orden de la cola), como nota adhesiva a pantalla completa con su color, el logotipo arriba a la izquierda, el botón de menú arriba a la derecha y el botón "Mantén pulsado para completar" abajo. No se muestra ni número ni vista previa de otras tareas.
+  - **Entonces** se ve **solo** la primera tarea pendiente (según el orden de la cola), como nota adhesiva a pantalla completa con su color, el logotipo arriba a la izquierda, el botón de menú arriba a la derecha y el botón "Pulsa para completar" abajo, en una sola línea. No se muestra ni número ni vista previa de otras tareas.
 - **CA-001-07 Tamaño del texto**
   - **Dado** una tarea de texto
   - **Cuando** se muestra
@@ -119,7 +119,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 | `editorCharsLeft` | {count, plural, =1{Queda 1 carácter} other{Quedan {count} caracteres}} | {count, plural, =1{1 character left} other{{count} characters left}} | A partir de 9 000 |
 | `currentTaskSemantics` | Tarea actual: {text} | Current task: {text} | Lector de pantalla |
 | `menuButton` | Menú de la tarea | Task menu | |
-| `completeButton` | Mantén pulsado para completar | Press and hold to complete | DEV-06; comportamiento en la spec 003 |
+| `completeButton` | Pulsa para completar | Press to complete | Una sola línea; texto del prototipo (DEV-06 revocada); comportamiento en la spec 003 |
 | `storageErrorTitle` | No hemos podido abrir tus tareas | We couldn't open your tasks | |
 | `storageErrorNoSpace` | Tu teléfono no tiene espacio libre | Your phone is out of storage | |
 | `retry` | Reintentar | Try again | |
@@ -151,3 +151,4 @@ Salen de las revisiones de cierre (subagentes `spec-reviewer`, `a11y-reviewer` y
 - §7: textos `skipIntroHint` y `editorSaveError`.
 - CL-001-4: el primer uso se marca al **mostrarse** la bienvenida (antes, al terminar), para que al matar la app a mitad se abra el editor.
 - Privacidad (decisión del propietario): el teclado del sistema **no aprende** del texto de las tareas (`enableIMEPersonalizedLearning: false`; en Android, `IME_FLAG_NO_PERSONALIZED_LEARNING`).
+- Texto del botón de completar (decisión del propietario): **"Pulsa para completar"** en una sola línea, como en el prototipo. Se revoca DEV-06.

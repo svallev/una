@@ -42,7 +42,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuButton => 'Task menu';
 
   @override
-  String get completeButton => 'Press and hold to complete';
+  String get completeButton => 'Press to complete';
 
   @override
   String get storageErrorTitle => 'We couldn\'t open your tasks';

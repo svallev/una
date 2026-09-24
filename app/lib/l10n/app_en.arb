@@ -7,7 +7,7 @@
   "editorCharsLeft": "{count, plural, =1{1 character left} other{{count} characters left}}",
   "currentTaskSemantics": "Current task: {text}",
   "menuButton": "Task menu",
-  "completeButton": "Press and hold to complete",
+  "completeButton": "Press to complete",
   "storageErrorTitle": "We couldn't open your tasks",
   "storageErrorNoSpace": "Your phone is out of storage",
   "retry": "Try again",

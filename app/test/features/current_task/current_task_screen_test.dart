@@ -20,7 +20,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
-      expect(find.text('Mantén pulsado para completar'), findsOneWidget);
+      expect(find.text('Pulsa para completar'), findsOneWidget);
     },
   );
 
@@ -82,7 +82,7 @@ void main() {
     expect(labels, [
       'Tarea actual: Llamar a Marta',
       'Menú de la tarea',
-      'Mantén pulsado para completar',
+      'Pulsa para completar',
     ]);
     handle.dispose();
   });
@@ -138,4 +138,46 @@ void main() {
       }
     },
   );
+
+  for (final (locale, label) in [
+    (const Locale('es'), 'Pulsa para completar'),
+    (const Locale('en'), 'Press to complete'),
+  ]) {
+    testWidgets(
+      'CA-001-06: «$label» ocupa una sola línea, también al 200 % en un móvil estrecho',
+      (tester) async {
+        for (final (scale, size) in [
+          (1.0, const Size(390, 844)),
+          (2.0, const Size(320, 640)),
+        ]) {
+          await pumpWithApp(
+            tester,
+            CurrentTaskScreen(task: sampleTask()),
+            locale: locale,
+            textScale: scale,
+            size: size,
+          );
+          expect(tester.takeException(), isNull);
+          final text = find.text(label);
+          expect(text, findsOneWidget);
+          final p = tester.renderObject<RenderParagraph>(text);
+          expect(
+            p
+                .getBoxesForSelection(
+                  TextSelection(baseOffset: 0, extentOffset: label.length),
+                )
+                .map((b) => b.top)
+                .toSet(),
+            hasLength(1),
+            reason: 'escala $scale',
+          );
+          expect(
+            tester.getRect(text).right,
+            lessThanOrEqualTo(size.width),
+            reason: 'escala $scale: no se corta',
+          );
+        }
+      },
+    );
+  }
 }

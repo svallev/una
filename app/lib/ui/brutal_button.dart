@@ -12,6 +12,7 @@ class BrutalButton extends StatefulWidget {
     this.icon,
     this.background = UnaColors.surface,
     this.expand = true,
+    this.singleLine = false,
   });
 
   final String label;
@@ -19,6 +20,10 @@ class BrutalButton extends StatefulWidget {
   final IconData? icon;
   final Color background;
   final bool expand;
+
+  /// El texto nunca pasa a una segunda línea: si no cabe (texto grande del
+  /// sistema, pantallas estrechas) se reduce lo justo, sin cortarse.
+  final bool singleLine;
 
   @override
   State<BrutalButton> createState() => _BrutalButtonState();
@@ -47,6 +52,22 @@ class _BrutalButtonState extends State<BrutalButton> {
         ),
       },
       child: FocusRing(visible: _focused && enabled, child: _button(enabled)),
+    );
+  }
+
+  Widget _label() {
+    const style = TextStyle(
+      fontFamily: UnaFonts.display,
+      fontSize: UnaFontSizes.bodyL,
+      fontWeight: UnaFontWeights.extrabold,
+      color: UnaColors.ink,
+    );
+    if (!widget.singleLine) {
+      return Text(widget.label, textAlign: TextAlign.center, style: style);
+    }
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(widget.label, maxLines: 1, softWrap: false, style: style),
     );
   }
 
@@ -98,18 +119,7 @@ class _BrutalButtonState extends State<BrutalButton> {
                   Icon(widget.icon, size: UnaSizes.icon, color: UnaColors.ink),
                   const SizedBox(width: UnaSpace.s),
                 ],
-                Flexible(
-                  child: Text(
-                    widget.label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: UnaFonts.display,
-                      fontSize: UnaFontSizes.bodyL,
-                      fontWeight: UnaFontWeights.extrabold,
-                      color: UnaColors.ink,
-                    ),
-                  ),
-                ),
+                Flexible(child: _label()),
               ],
             ),
           ),

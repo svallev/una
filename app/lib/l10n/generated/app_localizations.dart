@@ -140,10 +140,10 @@ abstract class AppLocalizations {
   /// **'Menú de la tarea'**
   String get menuButton;
 
-  /// Botón de completar. DEV-06; comportamiento en la spec 003
+  /// Botón de completar, siempre en una sola línea (texto del prototipo; DEV-06 revocada). El gesto (mantener) está en la spec 003
   ///
   /// In es, this message translates to:
-  /// **'Mantén pulsado para completar'**
+  /// **'Pulsa para completar'**
   String get completeButton;
 
   /// Error de almacenamiento. CL-001-6

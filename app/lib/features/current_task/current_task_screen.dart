@@ -86,6 +86,7 @@ class CurrentTaskScreen extends StatelessWidget {
                     child: BrutalButton(
                       label: l10n.completeButton,
                       icon: Icons.check,
+                      singleLine: true,
                       onPressed: null,
                     ),
                   ),

@@ -15,7 +15,7 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 | 20 | 187 ms | **198 ms** | 211 ms | 279 ms |
 
 - **[Hecho]** CA-001-09 se cumple con amplio margen en el dispositivo de referencia: p50 = 20 % del presupuesto. El primer arranque tras instalar tardó 515 ms (optimización inicial del sistema); no cuenta como arranque en frío habitual.
-- **[Hecho]** Tras matar el proceso, la app reabre en la tarea actual (lectura del árbol de accesibilidad: "Tarea actual: …", "Menú de la tarea", "Mantén pulsado para completar").
+- **[Hecho]** Tras matar el proceso, la app reabre en la tarea actual (lectura del árbol de accesibilidad: "Tarea actual: …", "Menú de la tarea", "Pulsa para completar").
 - **[Pendiente, riesgo R-02]** Falta un Android de gama media. El spike S1 midió la misma arquitectura en el emulador (tiempo propio de la app ≈ 80 ms); se confirmará en la beta o con un dispositivo prestado.
 
 ## Cómo repetir la medición

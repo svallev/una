@@ -42,7 +42,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuButton => 'Menú de la tarea';
 
   @override
-  String get completeButton => 'Mantén pulsado para completar';
+  String get completeButton => 'Pulsa para completar';
 
   @override
   String get storageErrorTitle => 'No hemos podido abrir tus tareas';
