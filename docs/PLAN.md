@@ -74,7 +74,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 
 | ID | Riesgo | P | I | Mitigación | Disparador o seguimiento |
 |---|---|---|---|---|---|
-| R-01 | **Espacio en disco** insuficiente (30 GB libres) para Xcode, simuladores, Android y compilaciones | Alta | Alta | Liberar ≥ 60 GB antes de F0; un solo runtime de simulador; limpiar DerivedData y AVD que no se usen | F0 |
+| R-01 | **Espacio en disco** insuficiente (30 GB libres; **79 GB tras liberar, 2026-09-24**) para Xcode, simuladores, Android y compilaciones | Alta | Alta | Liberar ≥ 60 GB antes de F0; un solo runtime de simulador; limpiar DerivedData y AVD que no se usen | F0 |
 | R-02 | Arranque en frío > 1 s en Android de gama media | Media | Alta | S1 temprano; tarea actual antes del primer fotograma; miniaturas pregeneradas; caché de la tarea actual; plan B Expo | S1, test de rendimiento en CI con dispositivo (F2) |
 | R-03 | Animaciones (arrugar y romper) con tirones o costosas de implementar | Media | Media | S2 con shaders precompilados; versión simplificada aceptable (con aprobación de producto) | S2 |
 | R-04 | `flutter_inappwebview` sin mantenimiento o con fallos | Media | Media | Aislarlo tras el puerto `WebSnapshotter`; plan B `webview_flutter` + código de plataforma | Dependabot, releases |
@@ -116,7 +116,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 
 | ID | Pendiente | Quién | Cuándo | Recomendación |
 |---|---|---|---|---|
-| PD-1 | Usuario u organización de GitHub | Propietario | F0 | Organización gratuita con un nombre neutro (separa el producto de la cuenta personal) |
+| PD-1 | ~~Usuario u organización de GitHub~~ **Resuelto (2026-09-24): cuenta personal `svallev`** | Propietario | F0 | — |
 | PD-2 | Dominio neutro → bundle ID y package name | Propietario | F0 | `com.<estudio>.<identificador-neutro>`, sin "una" |
 | PD-3 | Cuentas de Apple Developer y Google Play | Propietario | Antes de F5 (Play, antes de F2 por R-07) | Crear la de Play pronto |
 | PD-4 | Aprobación de los spikes S1–S6 | Propietario | Inicio de F1 | — |
@@ -155,4 +155,4 @@ Además: recibir texto, URL y archivos desde "Compartir" del sistema (*share ext
 
 ## 9. Siguiente paso concreto
 
-**F0:** liberar espacio → instalar Xcode desde la App Store → decidir el usuario de GitHub (PD-1) → crear el repo y hacer el primer push de esta planificación (con tu aprobación) → aprobar los spikes (PD-4).
+**F0:** liberar espacio ✅ (79 GB libres) → instalar Xcode desde la App Store → crear el repo `svallev/una` y hacer el primer push de esta planificación (con tu aprobación) → aprobar los spikes (PD-4).

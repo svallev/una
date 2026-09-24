@@ -1,8 +1,6 @@
-# Propietarios del código. [Pendiente PD-1] Sustituir <github-user> por el usuario u organización real
-# y descomentar cuando exista el repositorio en GitHub.
-#
-# *                    @<github-user>
-# /.github/            @<github-user>
-# /.claude/            @<github-user>
-# /docs/security/      @<github-user>
-# /specs/constitution.md @<github-user>
+# Propietarios del código (revisión requerida en las PR que tocan estas rutas).
+*                        @svallev
+/.github/                @svallev
+/.claude/                @svallev
+/docs/security/          @svallev
+/specs/constitution.md   @svallev
