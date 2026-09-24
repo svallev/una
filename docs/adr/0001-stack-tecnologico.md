@@ -79,3 +79,11 @@ Cálculo: Σ(peso × nota). Donde la nota es parecida entre opciones, la diferen
 | S4 | WebView endurecida + captura de página completa (iOS/Android) de 3 webs reales (horario, mapa, receta) | Captura legible de hasta 20 000 px de alto; puente JS y acceso a archivos desactivados y verificados |
 | S5 | Importación: bytes mágicos, eliminación de EXIF/GPS, 30/50 MB, copia en el sandbox, inclusión en el backup | EXIF eliminado (comprobado con exiftool); sin bloquear la UI |
 | S6 | `flutter build web` + preview en Vercel con cabeceras | Preview por PR funcionando en < 10 min |
+
+## Actualización 2026-09-24: Android primero (D17)
+
+- **[Hecho]** El propietario decide desarrollar y validar primero en **Android** (emulador Pixel 6a, API 37) y en la web de pruebas, sin instalar Xcode por ahora. iOS se abordará al final (fase F-iOS de `docs/PLAN.md`) si decide seguir (PD-7).
+- **Efecto en esta decisión:** los spikes de F1 se ejecutan en Android y web. Si se cumplen, este ADR pasa a **Aceptado para Android** y sigue **Provisional para iOS** hasta los spikes iOS de F-iOS.
+- **No cambia el stack:** Flutter sigue siendo la mejor opción precisamente porque mantiene iOS abierto con la misma base de código. Si en F-iOS algo fallase, el coste queda acotado a la integración nativa (puertos `SystemViewer`, `WebSnapshotter`, `ImageSanitizer`), no a la app.
+- **Mitigación del riesgo R-18:** el job `ios` de CI (macOS, sin firmar) compila iOS en cada PR desde F2, así que las roturas de compilación se detectan aunque no haya Xcode en local.
+- **Versión de Flutter fijada:** 3.47.5 (cabeza del canal `stable` el 2026-09-24), en `.fvmrc`.

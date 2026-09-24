@@ -4,6 +4,8 @@
 
 **[Hecho, 2026-09-24]** macOS 26.6 en Apple Silicon; Xcode **no** instalado (solo las Command Line Tools); sin Homebrew, `gh` ni Flutter; Node 24 (nvm); **30 GB libres**.
 
+**Estado actualizado (2026-09-24, D17 Android primero):** 72 GB libres ✅ · Android Studio 2026.1 (JDK integrado OpenJDK 25) ✅ · SDK Platform 37, Build-Tools 36, Platform-Tools, Emulator y Command-line Tools ✅ · emulador `Pixel_6a` (Android 37.2, Google APIs Play Store, arm64-v8a, **páginas de 16 KB**) ✅ · **Xcode aplazado** hasta F-iOS (los pasos 2–3 de abajo se harán entonces).
+
 1. **Liberar espacio:** objetivo ≥ 60 GB libres.
 2. **Xcode, desde la Mac App Store** (oficial, firmado por Apple, no necesita el espacio extra de descomprimir un `.xip`). Basta un Apple ID gratuito. Desactiva **App Store → Ajustes → Actualizaciones automáticas** para que no cambie de versión a mitad del trabajo; actualiza cuando Flutter confirme la compatibilidad.
    - Alternativa para fijar una versión: el `.xip` oficial en developer.apple.com/download/all. No se usan herramientas de terceros (`xcodes`).
@@ -16,7 +18,13 @@
    ```
 4. **Android Studio** (developer.android.com): SDK Platform 35+, Build-Tools, un emulador (p. ej. Pixel 6a, API 35) y **otro de API 26** para probar el mínimo.
 5. **Homebrew** (opcional, oficial: brew.sh) para instalar `gh` y `fvm`. Alternativa sin Homebrew: los binarios oficiales de GitHub CLI.
-6. **Flutter con FVM:** la versión la fija `.fvmrc` en el repo; `fvm install` y `fvm flutter doctor`.
+6. **Flutter:** la versión la fija `.fvmrc` (3.47.5). Instalación sin herramientas de terceros, con el mismo script que CI y Vercel:
+   ```bash
+   FLUTTER_HOME="$HOME/development/flutter" bash tools/install-flutter.sh
+   ```
+   y añadir `$HOME/development/flutter/bin` al `PATH` (en `~/.zshrc`). Después: `flutter doctor` y `flutter doctor --android-licenses`. FVM es **opcional** (útil si algún día conviven varias versiones); los comandos de `CLAUDE.md` funcionan igual quitando el prefijo `fvm`.
+   - **Java:** Android Studio trae OpenJDK 25. Si Gradle o algún plugin fallan con él, usar un JDK 21 solo para Flutter (`flutter config --jdk-dir <ruta>`).
+   - **Páginas de 16 KB:** el emulador usa páginas de 16 KB (obligatorio en Google Play para apps con `targetSdk` ≥ 35). Sirve para verificar que las librerías nativas (SQLite, PDFium, WebView) están alineadas.
 7. **CocoaPods / Swift Package Manager:** según lo que exijan la versión de Flutter y los plugins (`flutter doctor` lo indica).
 
 ## 2. Ejecutar en local

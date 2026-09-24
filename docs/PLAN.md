@@ -1,7 +1,7 @@
 # Plan maestro
 
 > Versión 1.0 · 2026-09-24 · Estado: **planificación cerrada; F0 pendiente**.
-> Etiquetas: **[Hecho]**, **[Suposición]** y **[Pendiente]**. Las decisiones D1–D16 salen de la ronda de preguntas con el propietario; los ADR, en `docs/adr/`.
+> Etiquetas: **[Hecho]**, **[Suposición]** y **[Pendiente]**. Las decisiones D1–D17 salen de la ronda de preguntas con el propietario; los ADR, en `docs/adr/`.
 
 ## 1. Resumen
 
@@ -27,6 +27,7 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D14 | Backups del sistema **incluidos** |
 | D15 | Bundle ID con un dominio neutro que se comprará → **[Pendiente]** |
 | D16 | Código en inglés; documentación en español |
+| D17 | **Android primero** (2026-09-24): se desarrolla y valida todo en Android (emulador + web de pruebas) sin instalar Xcode. iOS se aborda al final, en la fase **F-iOS**, y solo si el propietario decide seguir (PD-7). La arquitectura sigue siendo multiplataforma; CI compila iOS sin firmar desde F2 |
 | — | Skills, plugins y MCP **solo a nivel de proyecto**, revisados antes de instalar y nunca con `-g`/`-y` |
 
 ## 3. Fases e hitos
@@ -43,21 +44,23 @@ flowchart LR
   F3 --> F5a[010 Configuración · S]
   F4 --> F5[F5 Endurecimiento y tiendas · M]
   F5a --> F5
-  F5 --> F6[F6 Beta y v1.0 · M + 14 días de Play]
+  F5 --> F6[F6 Beta Android y v1.0 · M + 14 días de Play]
+  F6 -.->|PD-7: si se decide| FI[F-iOS Validar y publicar en iOS · L]
 ```
 
 | Fase | Contenido | Tamaño | Depende de | Criterio de salida |
 |---|---|---|---|---|
-| **F0 Preparación** | Liberar espacio (≥ 60 GB libres); Xcode 26 desde la App Store + simulador; Android Studio + emulador; Homebrew (opcional) → `gh`, FVM → Flutter estable; crear el repo en GitHub (público) y activar la seguridad; conectar Vercel; comprar el dominio neutro; decidir las cuentas de tienda | S | — | `flutter doctor` sin errores; repo con CI verde (solo docs); reglas de rama en `main`; dominio → bundle ID definitivo en ADR |
-| **F1 Spikes** | S1 arranque · S2 animaciones · S3 PDF y visor del sistema · S4 captura web · S5 importación y backup · S6 web + Vercel (ADR-0001). Código **desechable** en `spikes/` (rama propia, no se fusiona). **Requiere aprobación.** | M | F0 | Todos los criterios de ADR-0001 cumplidos → ADR-0001 **Aceptado**; si no → ADR de cambio a Expo |
+| **F0 Preparación** | Liberar espacio ✅; Android Studio + SDK + Command-line Tools + emulador Pixel 6a (API 37) ✅; Flutter fijado en `.fvmrc` e instalado con `tools/install-flutter.sh` (FVM opcional); `gh` (opcional); repo en GitHub ✅ y seguridad activada; conectar Vercel; comprar el dominio neutro; cuenta de Google Play. **Xcode aplazado (D17)** | S | — | `flutter doctor` sin errores para Android y web; repo con CI verde ✅; reglas de rama en `main`; dominio → bundle ID definitivo en ADR |
+| **F1 Spikes (Android + web)** | S1 arranque (Android) · S2 animaciones · S3 PDF y visor del sistema (Android: intent) · S4 captura web (Android) · S5 importación y backup (Android) · S6 web + Vercel. Las partes iOS de S1, S3, S4 y S5 pasan a F-iOS (D17). Código **desechable** en `spikes/` (rama propia, no se fusiona). **Requiere aprobación.** | M | F0 | Criterios de ADR-0001 cumplidos en Android → ADR-0001 **Aceptado para Android**, provisional para iOS; si no → ADR de cambio a Expo |
 | **F2 Esqueleto + 001** | `app/` + identidad + l10n + tokens + BD v1 + repositorio + CI + web + la spec 001 completa | L | F1 | CA-001 en verde; arranque p50 < 1 s medido; preview en Vercel por PR |
 | **F3 Núcleo** | 002 crear y posición → 003 completar → 004 eliminar y deshacer → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
 | **F4 Adjuntos** | 007 imagen (canal de importación + visor) → 008 documento → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
 | **010** | Idioma y Configuración (tras diseñar la pantalla) | S | F3 (se puede hacer en paralelo con F4) | CA-010 en verde |
 | **F5 Endurecimiento** | Auditoría de accesibilidad (VoiceOver, TalkBack, Switch, texto grande), pruebas MASTG, presupuesto de rendimiento y tamaño, política de privacidad, fichas de tienda, capturas, manifiesto de privacidad y Data Safety, iconos | M | F4, 010 | Checklist de publicación completa; 0 hallazgos altos |
-| **F6 Beta y v1.0** | TestFlight (interno y externo), Play: prueba cerrada con **12 testers durante 14 días** (cuenta personal nueva), corrección de errores, v1.0 | M + 14 días | F5 + cuentas | Crash-free observado por los testers (sin telemetría: formulario o correo), aprobación en ambas tiendas |
+| **F6 Beta Android y v1.0** | Play: Internal testing y prueba cerrada con **12 testers durante 14 días** (cuenta personal nueva), corrección de errores, v1.0 en Google Play | M + 14 días | F5 + cuenta de Play | Aprobación en Google Play; feedback de los testers (sin telemetría: formulario o correo) |
+| **F-iOS** *(si PD-7 = sí)* | Instalar Xcode; partes iOS de los spikes (S1 arranque < 0,6 s, S3 QuickLook, S4 captura con WKWebView, S5 backup iCloud y Data Protection); ajustes de plataforma (Info.plist, PrivacyInfo.xcprivacy, permisos, splash); tests de integración en simulador; auditoría VoiceOver; cuenta de Apple Developer; TestFlight → App Store | L | F6 (o antes, en paralelo con F5, si se decide) | Criterios iOS de ADR-0001; CA de todas las specs en verde en iOS; aprobación en App Store |
 
-**Camino crítico:** F0 → F1 → F2 → F3 → F4 → F5 → F6. **Tareas con plazo propio que conviene adelantar:** la cuenta de Google Play y el reclutamiento de 12 testers (el reloj de 14 días) y la compra del dominio (bloquea la primera subida).
+**Camino crítico:** F0 → F1 → F2 → F3 → F4 → F5 → F6 (→ F-iOS si PD-7). **Tareas con plazo propio que conviene adelantar:** la cuenta de Google Play y el reclutamiento de 12 testers (el reloj de 14 días) y la compra del dominio (bloquea la primera subida).
 
 ## 4. Orden de implementación dentro de F3/F4 y motivo
 
@@ -90,6 +93,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R-14 | Dependencia o acción de CI comprometida | Baja | Alta | Lockfiles, SHA fijados, OSV, dependency-review, permisos mínimos | CI |
 | R-15 | Web de pruebas poco representativa (canvas, accesibilidad) | Alta | Baja | Los criterios de accesibilidad y rendimiento se verifican solo en dispositivo | — |
 | R-16 | Deriva entre prototipo e implementación | Media | Media | `screen-map.md`, `prototype-deviations.md` y *goldens* | Cada PR de UI |
+| R-18 | **iOS aplazado (D17):** problemas propios de iOS (arranque, captura con WKWebView, QuickLook, Data Protection, revisión de App Store) se descubren tarde y obligan a rehacer trabajo | Media | Media | Toda la integración nativa detrás de puertos (`SystemViewer`, `WebSnapshotter`, `ImageSanitizer`) con implementación Android primero; nada de APIs solo de Android en el dominio; **CI compila iOS sin firmar desde F2** (macOS runner, gratis en repo público) para detectar roturas de compilación; F-iOS empieza por los spikes iOS | Cada PR (job iOS de CI); inicio de F-iOS |
 | R-17 | Pantallas sin diseño (Configuración, aviso de deshacer, visor, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (010, 004, 007–009) | Antes de F3/F4 |
 
 ## 6. Trazabilidad de reglas → specs
@@ -120,6 +124,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | PD-2 | Dominio neutro → bundle ID y package name | Propietario | F0 | `com.<estudio>.<identificador-neutro>`, sin "una" |
 | PD-3 | Cuentas de Apple Developer y Google Play | Propietario | Antes de F5 (Play, antes de F2 por R-07) | Crear la de Play pronto |
 | PD-4 | Aprobación de los spikes S1–S6 | Propietario | Inicio de F1 | — |
+| PD-7 | ¿Se hace la versión de iOS? (D17) | Propietario | Al terminar F6 (o antes si se quiere adelantar) | Decidir con la beta de Android en la mano |
 | PD-5 | Diseño de las pantallas que faltan (R-17) | Propietario + Claude Design | Antes de F3 | — |
 | P-1 | ¿Guardar el borrador del editor? | Producto | Spec 001 | No en la v1 |
 | P-2 | Vuelta desde segundo plano: ¿conservar la pantalla? | Producto | Spec 001 | Sí si pasan < 10 min |
@@ -155,4 +160,4 @@ Además: recibir texto, URL y archivos desde "Compartir" del sistema (*share ext
 
 ## 9. Siguiente paso concreto
 
-**F0:** liberar espacio ✅ (79 GB libres) → instalar Xcode desde la App Store → crear el repo `svallev/una` y hacer el primer push de esta planificación (con tu aprobación) → aprobar los spikes (PD-4).
+**F0 (Android primero, D17):** espacio ✅ → Android Studio + emulador ✅ → repo `svallev/una` ✅ → instalar Flutter 3.47.5 (`.fvmrc`) y pasar `flutter doctor` → activar la seguridad del repo en GitHub → aprobar los spikes Android (PD-4).

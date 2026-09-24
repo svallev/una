@@ -2,7 +2,7 @@
 
 App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y deja un único elemento (foto, PDF, web) a pantalla completa nada más abrirla. Sin servidor, sin cuentas y sin analítica. Nombre provisional: "Una." (nunca literal en el código: `AppIdentity` / clave l10n `appName`).
 
-**Fase actual:** planificación cerrada → F0 (preparación). **No hay código de la app.** No crees `app/` ni hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
+**Fase actual:** F0 (preparación), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). **No hay código de la app.** No crees `app/` ni hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
 
 ## Lee primero
 
