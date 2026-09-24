@@ -15,6 +15,7 @@
 - **Word, Excel, PowerPoint, TXT, CSV, RTF, ODF, Pages/Numbers/Keynote:** tarjeta a pantalla completa (tipo, nombre, tamaño, el texto de la tarea) con el botón **"Abrir"**:
   - iOS: `QLPreviewController` (sin conexión, dentro de la app).
   - Android: `ACTION_VIEW` con `FileProvider` (URI `content://` temporal, `FLAG_GRANT_READ_URI_PERMISSION` y ningún permiso de escritura). Si no hay ninguna app, se muestra "No hay ninguna app para abrir este archivo" con la sugerencia de instalar un visor.
+- **Tamaño máximo del PDF: 10 MB** (decisión del propietario, D18). Cubre programas, entradas y horarios; un PDF escaneado mayor debe comprimirse antes de adjuntarlo.
 - **Tipos admitidos** (por bytes mágicos + extensión coherente): PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, RTF, TXT, CSV, MD, Pages/Numbers/Keynote. **Rechazados:** HTML/HTM/SVG/XML, ejecutables, scripts, APK/IPA, ZIP y otros contenedores genéricos.
 
 ## Motivos

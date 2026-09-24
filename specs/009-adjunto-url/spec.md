@@ -122,4 +122,4 @@ Guardar varias URL por tarea, lector de artículos, compartir desde el navegador
 
 ## 9. Preguntas abiertas
 
-- **[Pendiente P-6]** Si una URL apunta directamente a un PDF: ¿descargarlo como tarea de documento? Recomendación: sí (mejor experiencia sin conexión), con el mismo límite de 50 MB. Decide: producto.
+- **[Pendiente P-6]** Si una URL apunta directamente a un PDF: ¿descargarlo como tarea de documento? Recomendación: sí (mejor experiencia sin conexión), con el mismo límite de 10 MB (D18). Decide: producto.

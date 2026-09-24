@@ -172,7 +172,7 @@ flowchart LR
   J --> K[Insertar Task + Attachment en una transacción]
 ```
 
-Límites: imagen 30 MB (y 50 MP), PDF 50 MB, documento 25 MB, captura web 20 000 px de alto. La importación va en un *isolate* (no bloquea la UI) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
+Límites: imagen 30 MB (y 50 MP), **PDF 10 MB** (D18), documento 25 MB, captura web 20 000 px de alto. La importación va en un *isolate* (no bloquea la UI) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
 
 ## 5. Plataforma e integración nativa
 

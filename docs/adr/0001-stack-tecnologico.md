@@ -75,9 +75,9 @@ Cálculo: Σ(peso × nota). Donde la nota es parecida entre opciones, la diferen
 |---|---|---|
 | S1 | Arranque en frío con SQLite + una tarea con imagen de 12 MP | p50 < 1 s y p90 < 1,3 s en Android de gama media (*release*); < 0,6 s en iPhone ≥ 12 |
 | S2 | Arrugar (shader de desplazamiento + facetas) y rotura en dos; variante "reducir movimiento" | 60 fps sostenidos en gama media, sin tirones en el primer uso (shaders precompilados) |
-| S3 | PDF de 50 MB/300 páginas con pdfrx sin conexión; abrir DOCX/XLSX con QuickLook/intent | Primera página < 500 ms; zoom fluido; sin red |
+| S3 | PDF de 10 MB (límite D18) y muchas páginas con pdfrx sin conexión; abrir DOCX/XLSX con QuickLook/intent | Primera página < 500 ms; zoom fluido; sin red |
 | S4 | WebView endurecida + captura de página completa (iOS/Android) de 3 webs reales (horario, mapa, receta) | Captura legible de hasta 20 000 px de alto; puente JS y acceso a archivos desactivados y verificados |
-| S5 | Importación: bytes mágicos, eliminación de EXIF/GPS, 30/50 MB, copia en el sandbox, inclusión en el backup | EXIF eliminado (comprobado con exiftool); sin bloquear la UI |
+| S5 | Importación: bytes mágicos, eliminación de EXIF/GPS, límites 30 MB imagen / 10 MB PDF / 25 MB documento, copia en el sandbox, inclusión en el backup | EXIF eliminado (comprobado con exiftool); sin bloquear la UI |
 | S6 | `flutter build web` + preview en Vercel con cabeceras | Preview por PR funcionando en < 10 min |
 
 ## Actualización 2026-09-24: Android primero (D17)

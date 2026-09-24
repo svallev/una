@@ -6,7 +6,7 @@
 
 ## Contexto
 
-- **[Hecho]** Hay que guardar tareas, adjuntos (archivos grandes: fotos, PDF de hasta 50 MB, capturas de URL) y ajustes durante años, sin conexión.
+- **[Hecho]** Hay que guardar tareas, adjuntos (archivos grandes: fotos, PDF de hasta 10 MB (D18), capturas de URL) y ajustes durante años, sin conexión.
 - **[Hecho]** La hoja de ruta incluye fechas límite, subtareas, importación desde otras apps y, mucho más adelante, sincronización en la nube. El modelo no debe impedirlo (P10).
 - **[Hecho]** El arranque debe leer **solo** la tarea actual lo antes posible (P2).
 

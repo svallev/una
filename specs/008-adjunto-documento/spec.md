@@ -23,7 +23,7 @@ Tener a mano un PDF (entradas, un programa, instrucciones) a pantalla completa y
   - **Entonces** se abre el selector de archivos del sistema (sin permisos de almacenamiento) y el archivo elegido se **copia** a la app.
 - **CA-008-02 Validación**
   - **Dado** un archivo elegido
-  - **Cuando** su contenido (bytes mágicos) corresponde a un tipo admitido (PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, RTF, TXT, CSV, MD, Pages/Numbers/Keynote) y respeta el límite (PDF ≤ 50 MB; resto ≤ 25 MB)
+  - **Cuando** su contenido (bytes mágicos) corresponde a un tipo admitido (PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, RTF, TXT, CSV, MD, Pages/Numbers/Keynote) y respeta el límite (PDF ≤ **10 MB** (D18); resto ≤ 25 MB)
   - **Entonces** se acepta. Si no, se muestra el error (§5). HTML, SVG, XML, ejecutables, scripts y ZIP genéricos se rechazan aunque la extensión sea engañosa.
 - **CA-008-03 Siempre arriba (R5, D5)**
   - **Dado** el editor con un documento
@@ -60,7 +60,7 @@ Tener a mano un PDF (entradas, un programa, instrucciones) a pantalla completa y
 |---|---|---|
 | CL-008-1 | PDF protegido con contraseña | Se acepta; se muestra la tarjeta "PDF protegido" con "Abrir" (visor del sistema) |
 | CL-008-2 | PDF corrupto | Se rechaza al importar: "No hemos podido leer este archivo." |
-| CL-008-3 | PDF de 300 páginas | Carga perezosa; memoria acotada |
+| CL-008-3 | PDF con muchas páginas (p. ej. 300 páginas de texto en < 10 MB) | Carga perezosa; memoria acotada |
 | CL-008-4 | Nombre de archivo con rutas o caracteres raros | Se sanea el nombre que se muestra; el archivo se guarda con un nombre generado |
 | CL-008-5 | Extensión incoherente con el contenido (`.pdf` que es HTML) | Se rechaza como tipo no admitido |
 

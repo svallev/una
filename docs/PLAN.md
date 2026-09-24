@@ -1,7 +1,7 @@
 # Plan maestro
 
 > Versión 1.0 · 2026-09-24 · Estado: **planificación cerrada; F0 pendiente**.
-> Etiquetas: **[Hecho]**, **[Suposición]** y **[Pendiente]**. Las decisiones D1–D17 salen de la ronda de preguntas con el propietario; los ADR, en `docs/adr/`.
+> Etiquetas: **[Hecho]**, **[Suposición]** y **[Pendiente]**. Las decisiones D1–D18 salen de la ronda de preguntas con el propietario; los ADR, en `docs/adr/`.
 
 ## 1. Resumen
 
@@ -28,6 +28,7 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D15 | Bundle ID con un dominio neutro que se comprará → **[Pendiente]** |
 | D16 | Código en inglés; documentación en español |
 | D17 | **Android primero** (2026-09-24): se desarrolla y valida todo en Android (emulador + web de pruebas) sin instalar Xcode. iOS se aborda al final, en la fase **F-iOS**, y solo si el propietario decide seguir (PD-7). La arquitectura sigue siendo multiplataforma; CI compila iOS sin firmar desde F2 |
+| D18 | **PDF de 10 MB como máximo** (2026-09-24). El resto de documentos, 25 MB; las imágenes, 30 MB y 50 MP |
 | — | Skills, plugins y MCP **solo a nivel de proyecto**, revisados antes de instalar y nunca con `-g`/`-y` |
 
 ## 3. Fases e hitos
