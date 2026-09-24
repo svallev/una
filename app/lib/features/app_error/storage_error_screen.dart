@@ -21,28 +21,44 @@ class StorageErrorScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(UnaSpace.l),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Align(alignment: Alignment.centerLeft, child: Wordmark()),
-              const Spacer(),
-              Semantics(
-                liveRegion: true,
-                child: Text(
-                  noSpace ? l10n.storageErrorNoSpace : l10n.storageErrorTitle,
-                  style: const TextStyle(
-                    fontFamily: UnaFonts.display,
-                    fontSize: UnaFontSizes.display,
-                    fontWeight: UnaFontWeights.black,
-                    color: UnaColors.ink,
-                  ),
+        // Con texto al 200 % en pantallas pequeñas se desplaza (CL-001-9).
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.all(UnaSpace.l),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - UnaSpace.l * 2,
+              ),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wordmark(),
+                    ),
+                    const Spacer(),
+                    Semantics(
+                      liveRegion: true,
+                      header: true,
+                      child: Text(
+                        noSpace
+                            ? l10n.storageErrorNoSpace
+                            : l10n.storageErrorTitle,
+                        style: const TextStyle(
+                          fontFamily: UnaFonts.display,
+                          fontSize: UnaFontSizes.display,
+                          fontWeight: UnaFontWeights.black,
+                          color: UnaColors.ink,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    BrutalButton(label: l10n.retry, onPressed: onRetry),
+                  ],
                 ),
               ),
-              const Spacer(),
-              BrutalButton(label: l10n.retry, onPressed: onRetry),
-            ],
+            ),
           ),
         ),
       ),

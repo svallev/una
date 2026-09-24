@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme/tokens.g.dart';
+import 'focus_ring.dart';
 
 /// Botón "brutalista" del prototipo: borde de 3 px, sombra dura y hundimiento al pulsar.
 class BrutalButton extends StatefulWidget {
@@ -25,10 +26,31 @@ class BrutalButton extends StatefulWidget {
 
 class _BrutalButtonState extends State<BrutalButton> {
   bool _down = false;
+  bool _focused = false;
+
+  void _activate() => widget.onPressed?.call();
 
   @override
   Widget build(BuildContext context) {
     final enabled = widget.onPressed != null;
+    // Teclado e interruptores: Tab llega al botón e Intro/Espacio lo activan.
+    return FocusableActionDetector(
+      enabled: enabled,
+      mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      onShowFocusHighlight: (v) => setState(() => _focused = v),
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            _activate();
+            return null;
+          },
+        ),
+      },
+      child: FocusRing(visible: _focused && enabled, child: _button(enabled)),
+    );
+  }
+
+  Widget _button(bool enabled) {
     final pressed = _down || !enabled;
     final offset = pressed ? const Offset(4, 4) : Offset.zero;
     return Semantics(

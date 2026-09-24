@@ -57,6 +57,8 @@ jobs:
         run: bash tools/install-flutter.sh && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
       - run: flutter --version
       - run: flutter pub get --enforce-lockfile
+      - name: Licencias de las dependencias (threat-model §5)
+        run: dart run tool/check_licenses.dart
       - name: Código generado al día (drift, l10n, identidad, tokens, esquema)
         run: |
           dart run build_runner build --delete-conflicting-outputs
@@ -71,7 +73,7 @@ jobs:
       - run: flutter build web --release --wasm --no-web-resources-cdn
 
   android:
-    name: Android · build debug
+    name: Android · build debug y release
     needs: [detect, flutter]
     if: needs.detect.outputs.app == 'true'
     runs-on: ubuntu-latest
@@ -88,9 +90,20 @@ jobs:
         run: |
           flutter pub get --enforce-lockfile
           flutter build apk --debug
-      - name: Permisos del manifiesto combinado (solo los esperados)
+          flutter build apk --release --split-per-abi
+      - name: Permisos del manifiesto combinado (release sin permisos; debug solo los esperados)
         working-directory: app
-        run: bash ../tools/check-android-permissions.sh
+        run: |
+          bash ../tools/check-android-permissions.sh release
+          bash ../tools/check-android-permissions.sh debug
+      - name: Tamaño de descarga (< 25 MB por ABI)
+        working-directory: app
+        run: |
+          for apk in build/app/outputs/flutter-apk/app-*-release.apk; do
+            size=$(stat -c %s "$apk")
+            echo "$apk: $((size / 1024 / 1024)) MB"
+            [ "$size" -lt $((25 * 1024 * 1024)) ] || { echo "::error::$apk supera 25 MB"; exit 1; }
+          done
 
   ios:
     name: iOS · build sin firmar

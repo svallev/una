@@ -11,5 +11,6 @@
   "storageErrorTitle": "We couldn't open your tasks",
   "storageErrorNoSpace": "Your phone is out of storage",
   "retry": "Try again",
-  "skipIntroHint": "Tap to continue"
+  "skipIntroHint": "continue",
+  "editorSaveError": "We couldn't save your task"
 }

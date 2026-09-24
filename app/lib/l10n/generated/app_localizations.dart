@@ -164,11 +164,17 @@ abstract class AppLocalizations {
   /// **'Reintentar'**
   String get retry;
 
-  /// Pista accesible para saltar la bienvenida. Sección 6
+  /// Acción del lector de pantalla para saltar la bienvenida; se lee tras «Toca dos veces para». Sección 6
   ///
   /// In es, this message translates to:
-  /// **'Toca para continuar'**
+  /// **'continuar'**
   String get skipIntroHint;
+
+  /// Error al escribir la tarea en el editor. Sección 5
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido guardar la tarea'**
+  String get editorSaveError;
 }
 
 class _AppLocalizationsDelegate

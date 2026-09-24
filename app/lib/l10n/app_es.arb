@@ -28,6 +28,8 @@
   "@storageErrorNoSpace": { "description": "Error por falta de espacio. CL-001-6" },
   "retry": "Reintentar",
   "@retry": { "description": "Botón de reintentar" },
-  "skipIntroHint": "Toca para continuar",
-  "@skipIntroHint": { "description": "Pista accesible para saltar la bienvenida. Sección 6" }
+  "skipIntroHint": "continuar",
+  "@skipIntroHint": { "description": "Acción del lector de pantalla para saltar la bienvenida; se lee tras «Toca dos veces para». Sección 6" },
+  "editorSaveError": "No hemos podido guardar la tarea",
+  "@editorSaveError": { "description": "Error al escribir la tarea en el editor. Sección 5" }
 }

@@ -45,7 +45,12 @@ class CurrentTaskController extends Notifier<Task?> {
   @override
   Task? build() {
     final repo = ref.watch(taskRepositoryProvider);
-    _sub = repo.watchCurrentTask().listen((t) => state = t);
+    _sub = repo.watchCurrentTask().listen(
+      (t) => state = t,
+      // Se conserva la última tarea conocida. No se registra el error: el de
+      // SQLite puede incluir la sentencia y datos del usuario (MASVS-STORAGE).
+      onError: (Object _) {},
+    );
     ref.onDispose(() => _sub?.cancel());
     return ref.read(bootStateProvider).currentTask;
   }
@@ -60,10 +65,21 @@ class FirstRunController extends Notifier<bool> {
   @override
   bool build() => ref.read(bootStateProvider).firstRunDone;
 
-  Future<void> markDone() async {
-    await ref.read(settingsRepositoryProvider).setFirstRunDone();
-    state = true;
+  /// Se llama en cuanto se muestra la bienvenida: si la app se mata a mitad de
+  /// la animación, al reabrir se va al editor (CL-001-4). No cambia el estado en
+  /// memoria para no cortar la animación. Si no se puede escribir, la bienvenida
+  /// se repetirá una vez más: es inocuo y el error de escritura real se muestra
+  /// al guardar la tarea.
+  Future<void> persistSeen() async {
+    try {
+      await ref.read(settingsRepositoryProvider).setFirstRunDone();
+    } on Object {
+      // Ver arriba: best effort.
+    }
   }
+
+  /// Fin de la bienvenida: se pasa al editor.
+  void markDone() => state = true;
 }
 
 /// Resultado del arranque.

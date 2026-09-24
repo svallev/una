@@ -7,6 +7,7 @@ import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -125,6 +126,85 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Borrador'), findsNothing);
       expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'CL-001-4: el primer uso queda guardado en cuanto se muestra la bienvenida',
+    (tester) async {
+      final repo = await _pumpApp(tester);
+      expect(find.byType(WelcomeIntro), findsOneWidget);
+      // Aún se está escribiendo: si la app muere aquí, al reabrir irá al editor.
+      expect(await repo.firstRunDone(), isTrue);
+      expect(find.byType(WelcomeIntro), findsOneWidget);
+      await tester.pump(const Duration(seconds: 10));
+    },
+  );
+
+  testWidgets(
+    'CA-001-03: el gesto atrás en el editor de la primera tarea cierra la app sin salir del editor',
+    (tester) async {
+      final calls = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          calls.add(call.method);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await _pumpApp(tester, firstRunDone: true);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(calls, contains('SystemNavigator.pop'));
+      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets('CA-001-06: con varias tareas solo se ve la primera de la cola', (
+    tester,
+  ) async {
+    final repo = InMemoryTaskRepository();
+    await repo.insert(sampleTask(id: 'b', text: 'Segunda', rank: 'b'));
+    await repo.insert(sampleTask(id: 'a', text: 'Primera', rank: 'a'));
+    await repo.setFirstRunDone();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          taskRepositoryProvider.overrideWithValue(repo),
+          settingsRepositoryProvider.overrideWithValue(repo),
+          bootStateProvider.overrideWithValue(
+            BootState(
+              currentTask: await repo.currentTask(),
+              firstRunDone: true,
+            ),
+          ),
+        ],
+        child: const UnaApp(),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Primera'), findsOneWidget);
+    expect(find.text('Segunda'), findsNothing);
+  });
+
+  testWidgets(
+    'CL-001-8: si cambia el idioma del sistema, los textos se actualizan',
+    (tester) async {
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      tester.platformDispatcher.localesTestValue = const [Locale('es', 'ES')];
+      await _pumpApp(tester, firstRunDone: true);
+      expect(find.text('Guardar'), findsOneWidget);
+
+      tester.platformDispatcher.localesTestValue = const [Locale('en', 'US')];
+      await tester.pumpAndSettle();
+      expect(find.text('Save'), findsOneWidget);
+      expect(find.text('Guardar'), findsNothing);
     },
   );
 }

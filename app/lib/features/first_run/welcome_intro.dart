@@ -10,9 +10,12 @@ import '../../ui/wordmark.dart';
 /// Bienvenida del primer uso (R1, CA-001-01): el texto se escribe letra a letra
 /// y después se pasa al editor. Se puede saltar (toque, Intro/Espacio o lector de pantalla).
 class WelcomeIntro extends StatefulWidget {
-  const WelcomeIntro({super.key, required this.onDone});
+  const WelcomeIntro({super.key, required this.onDone, this.onShown});
 
   final VoidCallback onDone;
+
+  /// Se llama una vez, al mostrarse (para marcar el primer uso, CL-001-4).
+  final VoidCallback? onShown;
 
   static const startDelay = Duration(milliseconds: 500);
   static const pauseAtEnd = Duration(milliseconds: 1000);
@@ -26,17 +29,22 @@ class _WelcomeIntroState extends State<WelcomeIntro> {
   int _typed = 0;
   bool _started = false;
   bool _done = false;
+  bool _autoAdvance = true;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    widget.onShown?.call();
     final total = AppLocalizations.of(context).welcomeTitle.characters.length;
+    // Con lector de pantalla no se avanza solo: se espera a que el usuario la
+    // salte, para no cortar la lectura (spec 001 §6).
+    _autoAdvance = !MediaQuery.accessibleNavigationOf(context);
     if (MediaQuery.disableAnimationsOf(context)) {
       // Reducir movimiento: el texto aparece de golpe.
       _typed = total;
-      _timer = Timer(WelcomeIntro.pauseAtEnd, _finish);
+      _scheduleFinish();
       return;
     }
     _timer = Timer(WelcomeIntro.startDelay, () {
@@ -45,10 +53,14 @@ class _WelcomeIntroState extends State<WelcomeIntro> {
         setState(() => _typed++);
         if (_typed >= total) {
           t.cancel();
-          _timer = Timer(WelcomeIntro.pauseAtEnd, _finish);
+          _scheduleFinish();
         }
       });
     });
+  }
+
+  void _scheduleFinish() {
+    if (_autoAdvance) _timer = Timer(WelcomeIntro.pauseAtEnd, _finish);
   }
 
   void _finish() {
@@ -97,8 +109,8 @@ class _WelcomeIntroState extends State<WelcomeIntro> {
                     liveRegion: true,
                     header: true,
                     label: full,
-                    hint: l10n.skipIntroHint,
                     onTap: _finish,
+                    onTapHint: l10n.skipIntroHint,
                     excludeSemantics: true,
                     child: Text.rich(
                       TextSpan(
@@ -107,7 +119,7 @@ class _WelcomeIntroState extends State<WelcomeIntro> {
                           // Reserva el espacio del texto aún no escrito para que no salte.
                           TextSpan(
                             text: full.characters.skip(_typed).toString(),
-                            style: const TextStyle(color: Color(0x00000000)),
+                            style: const TextStyle(color: Colors.transparent),
                           ),
                         ],
                       ),

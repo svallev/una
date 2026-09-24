@@ -14,6 +14,9 @@ abstract final class UnaColors {
   /// Líneas y separadores
   static const Color line = Color(0xFFD8D4CA);
 
+  /// Fondo del texto seleccionado (ink al 20 %)
+  static const Color selection = Color(0x33111111);
+
   /// Botones, hojas inferiores y fondo tras adjuntos
   static const Color surface = Color(0xFFFFFFFF);
 
@@ -155,6 +158,7 @@ abstract final class UnaSizes {
   static const double minTouchTarget = 44.0;
   static const double frameWidth = 390.0;
   static const double frameHeight = 844.0;
+  static const double contentMaxWidth = 600.0;
   static const double icon = 22.0;
   static const double iconStroke = 2.4;
 }

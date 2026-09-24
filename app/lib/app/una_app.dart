@@ -67,6 +67,7 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
+      builder: centerOnLargeScreens,
       home: HomeRouter(key: ValueKey(_resetGeneration)),
     );
   }
@@ -88,6 +89,7 @@ class HomeRouter extends ConsumerWidget {
     } else if (!firstRunDone) {
       child = WelcomeIntro(
         key: const ValueKey('intro'),
+        onShown: () => ref.read(firstRunDoneProvider.notifier).persistSeen(),
         onDone: () => ref.read(firstRunDoneProvider.notifier).markDone(),
       );
     } else {
@@ -95,7 +97,21 @@ class HomeRouter extends ConsumerWidget {
     }
     return AnimatedSwitcher(
       duration: reduced ? UnaMotion.reducedMotionFade : UnaMotion.introFade,
-      child: child,
+      // Cada pantalla es una "ruta" para el lector (se anuncia el cambio) y la
+      // que sale no se lee durante el fundido.
+      layoutBuilder: (current, previous) => Stack(
+        alignment: Alignment.center,
+        children: [
+          for (final p in previous) ExcludeSemantics(child: p),
+          ?current,
+        ],
+      ),
+      child: Semantics(
+        key: child.key,
+        scopesRoute: true,
+        explicitChildNodes: true,
+        child: child,
+      ),
     );
   }
 }
@@ -120,16 +136,19 @@ class StorageErrorApp extends StatelessWidget {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
+      builder: centerOnLargeScreens,
       home: StorageErrorScreen(noSpace: noSpace, onRetry: onRetry),
     );
   }
 }
 
-/// ¿El error se debe a falta de espacio? (ENOSPC / SQLITE_FULL)
-bool isNoSpaceError(Object e) {
-  final s = e.toString().toLowerCase();
-  return s.contains('no space left') ||
-      s.contains('sqlite_full') ||
-      s.contains('database or disk is full') ||
-      s.contains('errno = 28');
-}
+/// En tablets y plegables el contenido se centra con un ancho máximo (CL-001-7).
+Widget centerOnLargeScreens(BuildContext context, Widget? child) => ColoredBox(
+  color: UnaColors.paper,
+  child: Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: UnaSizes.contentMaxWidth),
+      child: child,
+    ),
+  ),
+);

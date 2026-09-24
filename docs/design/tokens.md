@@ -23,12 +23,12 @@ flowchart LR
 
 | Grupo | Contenido | Notas |
 |---|---|---|
-| `color` | ink, paper, line, surface, textMuted, disabled, error, dangerFill, paperFiber, onInk, scrim, placeholder, pressed | `error #B3241A` para texto; `dangerFill #FF5A4E` para el botón Eliminar (texto en ink) |
+| `color` | ink, paper, line, surface, textMuted, disabled, error, dangerFill, paperFiber, onInk, scrim, placeholder, pressed, selection | `error #B3241A` para texto; `dangerFill #FF5A4E` para el botón Eliminar (texto en ink) |
 | `palette` | `classic` (por defecto), `neon`, `mono` × 5 índices | Una tarea nueva nunca repite el color de la tarea actual |
 | `font` | Archivo (500–900), Space Mono (400/700); tamaños; interletrado; cortes de longitud de nota | Las fuentes se **empaquetan** (licencia OFL); nunca se cargan de Google Fonts |
 | `space` | 2 · 4 · 8 · 12 · 16 · 20 · 24 · 28 · 40 | 24 es el margen lateral |
-| `size` | objetivo táctil de 44, icono de 22, trazo de 2,4 | En Android se usan 48 dp por las pautas de Material |
-| `border` | ancho de 3, radio de 0 | |
+| `size` | objetivo táctil de 44, icono de 22, trazo de 2,4, ancho máximo del contenido de 600 (tablets, CL-001-7) | En Android se usan 48 dp por las pautas de Material |
+| `border` | ancho de 3, radio de 0; anillo de foco de 3 desplazado 3 (teclado e interruptores) | |
 | `shadow` | sombras duras sin desenfoque: 5/1 (botón), 3 (icono), 4/10/9 (listado) | |
 | `motion` | duraciones y curvas del prototipo; ventana de deshacer de 6 s | Con "reducir movimiento": fundido de 400 ms |
 

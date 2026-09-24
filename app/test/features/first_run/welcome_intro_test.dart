@@ -1,6 +1,7 @@
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/pump_app.dart';
@@ -59,5 +60,59 @@ void main() {
       findsOneWidget,
     );
     await tester.pump(const Duration(seconds: 10));
+  });
+
+  testWidgets(
+    'spec 001 §6: con lector de pantalla no avanza sola; se salta con la acción del lector',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      var done = 0;
+      await pumpWithApp(
+        tester,
+        WelcomeIntro(onDone: () => done++),
+        accessibleNavigation: true,
+      );
+      await tester.pump(const Duration(seconds: 30));
+      expect(done, 0);
+      final node = tester.getSemantics(find.bySemanticsLabel(_es));
+      expect(node, isSemantics(hasTapAction: true));
+      tester.semantics.tap(find.semantics.byLabel(_es));
+      await tester.pump();
+      expect(done, 1);
+      handle.dispose();
+    },
+  );
+
+  testWidgets('CL-001-4: avisa de que se ha mostrado nada más aparecer', (
+    tester,
+  ) async {
+    var shown = 0;
+    await pumpWithApp(
+      tester,
+      WelcomeIntro(onDone: () {}, onShown: () => shown++),
+    );
+    expect(shown, 1);
+    await tester.pump(const Duration(seconds: 10));
+    expect(shown, 1);
+  });
+
+  testWidgets('se puede saltar con Intro', (tester) async {
+    var done = 0;
+    await pumpWithApp(tester, WelcomeIntro(onDone: () => done++));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(done, 1);
+  });
+
+  testWidgets('accesibilidad: contraste de la bienvenida', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pumpWithApp(
+      tester,
+      WelcomeIntro(onDone: () {}),
+      disableAnimations: true,
+    );
+    await expectLater(tester, meetsGuideline(textContrastGuideline));
+    await tester.pump(const Duration(seconds: 2));
+    handle.dispose();
   });
 }

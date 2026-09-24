@@ -54,5 +54,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get retry => 'Reintentar';
 
   @override
-  String get skipIntroHint => 'Toca para continuar';
+  String get skipIntroHint => 'continuar';
+
+  @override
+  String get editorSaveError => 'No hemos podido guardar la tarea';
 }

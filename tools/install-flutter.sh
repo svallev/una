@@ -18,6 +18,13 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 
+LOCK="$ROOT/tools/flutter-sdk.lock"
+EXPECTED="$(awk -v v="$VERSION" '$1 == v {print $2}' "$LOCK")"
+if [ -z "$EXPECTED" ]; then
+  echo "Falta el commit de Flutter $VERSION en tools/flutter-sdk.lock." >&2
+  exit 1
+fi
+
 if [ -x "$DEST/bin/flutter" ] && [ "$(git -C "$DEST" describe --tags 2>/dev/null || true)" = "$VERSION" ]; then
   echo "Flutter $VERSION ya instalado en $DEST"
 else
@@ -25,7 +32,12 @@ else
   git clone --depth 1 --branch "$VERSION" https://github.com/flutter/flutter.git "$DEST"
 fi
 
-echo "Flutter $VERSION @ $(git -C "$DEST" rev-parse HEAD)"
+ACTUAL="$(git -C "$DEST" rev-parse HEAD)"
+if [ "$ACTUAL" != "$EXPECTED" ]; then
+  echo "::error::La etiqueta $VERSION de Flutter apunta a $ACTUAL; se esperaba $EXPECTED (tools/flutter-sdk.lock)." >&2
+  exit 1
+fi
+echo "Flutter $VERSION @ $ACTUAL (verificado)"
 "$DEST/bin/flutter" config --no-analytics >/dev/null
 "$DEST/bin/dart" --disable-analytics >/dev/null 2>&1 || true
 "$DEST/bin/flutter" --version

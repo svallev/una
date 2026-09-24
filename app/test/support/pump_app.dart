@@ -16,9 +16,17 @@ Future<InMemoryTaskRepository> pumpWithApp(
   bool firstRunDone = true,
   Task? currentTask,
   bool disableAnimations = false,
+  bool accessibleNavigation = false,
   double textScale = 1.0,
+  EdgeInsets viewInsets = EdgeInsets.zero,
+  Size size = const Size(390, 844),
 }) async {
   final r = repo ?? InMemoryTaskRepository();
+  // La superficie del test coincide con la pantalla simulada (por defecto es 800 × 600).
+  tester.view
+    ..physicalSize = size
+    ..devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -30,8 +38,10 @@ Future<InMemoryTaskRepository> pumpWithApp(
       ],
       child: MediaQuery(
         data: MediaQueryData(
-          size: const Size(390, 844),
+          size: size,
+          viewInsets: viewInsets,
           disableAnimations: disableAnimations,
+          accessibleNavigation: accessibleNavigation,
           textScaler: TextScaler.linear(textScale),
         ),
         child: MaterialApp(

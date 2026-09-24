@@ -32,7 +32,7 @@ abstract final class UnaTheme {
       ),
       textSelectionTheme: const TextSelectionThemeData(
         cursorColor: UnaColors.ink,
-        selectionColor: Color(0x33111111),
+        selectionColor: UnaColors.selection,
         selectionHandleColor: UnaColors.ink,
       ),
     );

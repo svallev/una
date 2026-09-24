@@ -90,14 +90,17 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 | Estado | Cuándo | Qué ve el usuario |
 |---|---|---|
 | Sin tareas y primer uso completado | Nunca en la pantalla principal: se va al editor | — |
-| Error de almacenamiento | La BD no abre o no se puede escribir | "No hemos podido abrir tus tareas" + "Reintentar"; si es por falta de espacio: "Tu teléfono no tiene espacio libre" |
+| Error de almacenamiento | La BD no abre | Pantalla "No hemos podido abrir tus tareas" + "Reintentar"; si es por falta de espacio: "Tu teléfono no tiene espacio libre" |
+| Error al guardar | No se puede escribir la tarea | Aviso "No hemos podido guardar la tarea" (o el de falta de espacio) con "Reintentar"; el texto escrito se conserva |
 
 (Los estados "Todo hecho." y "Nada pendiente." se definen en las specs 003 y 004.)
 
 ## 6. Accesibilidad
 
 - La bienvenida se anuncia como un único texto completo ("Ya puedes crear tu primera tarea"), no letra a letra; con **reducir movimiento**, el texto aparece de golpe y el paso al editor es un fundido de 400 ms.
-- Se puede saltar la bienvenida con un toque o con la tecla Intro/Espacio (y con la acción por defecto del lector de pantalla).
+- Se puede saltar la bienvenida con un toque o con la tecla Intro/Espacio (y con la acción por defecto del lector de pantalla, que se anuncia como "Toca dos veces para continuar"). **Con el lector de pantalla activo la bienvenida no avanza sola**: espera a que el usuario la salte, para no cortar la lectura.
+- Todo lo que se pulsa se alcanza con teclado e interruptores y muestra el anillo de foco del prototipo (3 px `ink`, desplazado 3 px).
+- El contador de caracteres se anuncia al aparecer (9 000) y al llegar al máximo.
 - La tarea actual se anuncia como "Tarea actual: {texto}". El logotipo es decorativo (excluido de la semántica). El botón de menú: "Menú de la tarea".
 - Orden de foco: tarea → menú → completar.
 - Contraste: texto `ink` sobre cualquier color de nota ≥ 9,8:1.
@@ -120,6 +123,8 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 | `storageErrorTitle` | No hemos podido abrir tus tareas | We couldn't open your tasks | |
 | `storageErrorNoSpace` | Tu teléfono no tiene espacio libre | Your phone is out of storage | |
 | `retry` | Reintentar | Try again | |
+| `skipIntroHint` | continuar | continue | Acción del lector: "Toca dos veces para continuar" |
+| `editorSaveError` | No hemos podido guardar la tarea | We couldn't save your task | §5 |
 
 ## 8. Fuera de alcance
 
@@ -136,3 +141,13 @@ Posición de las tareas nuevas (002), completar (003), menú (005), adjuntos (00
   - **Dado** que la app pasó a segundo plano
   - **Cuando** vuelve a primer plano
   - **Entonces** si pasaron menos de 10 minutos se ve la misma pantalla; si pasaron 10 minutos o más, se ve la tarea actual (o el editor de la primera tarea si no hay ninguna).
+
+## 11. Ajustes durante la implementación (2026-09-24, pendientes de visto bueno del propietario)
+
+Salen de las revisiones de cierre (subagentes `spec-reviewer`, `a11y-reviewer` y `security-reviewer`). No cambian ningún CA; concretan accesibilidad y errores:
+
+- §5: nueva fila "Error al guardar" (antes la BD que no escribe mostraba el mensaje de "no hemos podido abrir").
+- §6: la bienvenida no avanza sola con lector de pantalla; foco visible y teclado en todos los botones; anuncio del contador.
+- §7: textos `skipIntroHint` y `editorSaveError`.
+- CL-001-4: el primer uso se marca al **mostrarse** la bienvenida (antes, al terminar), para que al matar la app a mitad se abra el editor.
+
