@@ -1,6 +1,6 @@
 # ADR-0001: Flutter como stack de la app
 
-- **Estado:** Provisional, pendiente del resultado de los spikes S1–S6 (fase F1 de `docs/PLAN.md`)
+- **Estado:** **Aceptado para Android** (spikes F1, 2026-09-24); provisional para iOS (F-iOS)
 - **Fecha:** 2026-09-24
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** ADR-0002, 0007, 0008, 0010; riesgos R-02, R-03, R-04, R-09
@@ -92,11 +92,11 @@ Cálculo: Σ(peso × nota). Donde la nota es parecida entre opciones, la diferen
 
 | Spike | Resultado | Estado |
 |---|---|---|
-| S1 arranque | ~80 ms desde `main()` hasta ver una tarea de texto (SQLite en el isolate principal); ~1,3 s con una imagen de 12 MP en el emulador | Provisional: falta un dispositivo físico |
-| S2 animaciones | 60 fps con la GPU del Mac (con ruido del emulador); primer fotograma por optimizar (I-3) | Provisional: falta un dispositivo físico |
+| S1 arranque | **Xiaomi 15T Pro:** ~250 ms desde el icono hasta ver la tarea de texto y ~257 ms con una imagen de 12 MP (igual que una app Flutter vacía o Ajustes) | ✅ Aceptado en gama alta; gama media sin medir (R-02, riesgo bajo por el margen ×4) |
+| S2 animaciones | **Xiaomi 15T Pro (Vulkan, 120 Hz):** p90 ≈ 4,5 ms; 0 fotogramas > 32 ms; 2 fotogramas > 16,7 ms solo la primera vez (captura, I-3) | ✅ Aceptado |
 | S3 PDF y visor | ✅ | Aceptado (Android) |
 | S4 URL | ✅ con `webview_flutter` + captura nativa | Aceptado (Android) |
 | S5 importación y backup | ✅; backup replanteado (ADR-0004) | Aceptado (Android) |
-| S6 web + Vercel | Pendiente de conectar Vercel | — |
+| S6 web + Vercel | Build `--wasm --no-web-resources-cdn` validado en local con la CSP estricta: shader y PDF (PDFium WASM) funcionan; todas las peticiones al propio dominio | ✅ en local; falta el despliegue real en Vercel |
 
-Nada invalida Flutter. Informes en `docs/spikes/`.
+**Veredicto:** ADR-0001 pasa a **Aceptado para Android** (2026-09-24). Sigue provisional para iOS (F-iOS) y queda abierto R-02 (gama media). Informes en `docs/spikes/`.

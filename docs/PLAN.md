@@ -79,8 +79,8 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | ID | Riesgo | P | I | Mitigación | Disparador o seguimiento |
 |---|---|---|---|---|---|
 | R-01 | **Espacio en disco** insuficiente (30 GB libres; **79 GB tras liberar, 2026-09-24**) para Xcode, simuladores, Android y compilaciones | Alta | Alta | Liberar ≥ 60 GB antes de F0; un solo runtime de simulador; limpiar DerivedData y AVD que no se usen | F0 |
-| R-02 | Arranque en frío > 1 s en Android de gama media | Media | Alta | S1 temprano; tarea actual antes del primer fotograma; miniaturas pregeneradas; caché de la tarea actual; plan B Expo | S1, test de rendimiento en CI con dispositivo (F2) |
-| R-03 | Animaciones (arrugar y romper) con tirones o costosas de implementar | Media | Media | S2 con shaders precompilados; versión simplificada aceptable (con aprobación de producto) | S2 |
+| R-02 | Arranque en frío > 1 s en Android de gama media | **Baja** (S1 en gama alta: ~0,25 s, margen ×4) | Alta | Tarea actual antes del primer fotograma (I-1), versión de pantalla JPEG (I-2); medir en gama media con un móvil prestado o en la beta cerrada | F2 o F6 |
+| R-03 | Animaciones (arrugar y romper) con tirones | **Baja** (S2: p90 ≈ 4,5 ms a 120 Hz con Vulkan) | Media | Precaptura (I-3); medir en gama media | F3 |
 | R-04 | ~~`flutter_inappwebview` sin mantenimiento~~ **Materializado (S4): estable de 2024** | — | — | **Mitigado:** `webview_flutter` oficial + captura nativa propia (ADR-0007) | Cerrado |
 | R-05 | Captura de página completa poco fiable en Android | Media | Media | S4; plan B: desplazar y coser o PDF → raster | S4 |
 | R-06 | Migraciones de datos que rompen datos reales tras publicar | Baja | Alta | Tests de migración obligatorios desde la v1; *fixtures* de BD reales anonimizadas | Cada cambio de esquema |
@@ -125,7 +125,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | PD-1 | ~~Usuario u organización de GitHub~~ **Resuelto (2026-09-24): cuenta personal `svallev`** | Propietario | F0 | — |
 | PD-2 | Dominio neutro → bundle ID y package name | Propietario | F0 | `com.<estudio>.<identificador-neutro>`, sin "una" |
 | PD-3 | Cuentas de Apple Developer y Google Play | Propietario | Antes de F5 (Play, antes de F2 por R-07) | Crear la de Play pronto |
-| PD-4 | ~~Aprobación de los spikes S1–S6~~ **Aprobados (2026-09-24).** S3–S5 ✅ en Android; S1–S2 pendientes de un dispositivo físico; S6 pendiente de conectar Vercel | Propietario | — | — |
+| PD-4 | ~~Aprobación de los spikes S1–S6~~ **Aprobados y ejecutados (2026-09-24).** S1–S5 ✅ en Android (S1/S2 en Xiaomi 15T Pro); S6 ✅ en local, falta conectar Vercel | Propietario | — | — |
 | PD-8 | ¿TXT, CSV y MD se muestran **dentro** de la app como texto plano? (cambia D6; ver ADR-0008) | Propietario | Antes de la spec 008 | Sí: riesgo nulo y mejor experiencia |
 | PD-7 | ¿Se hace la versión de iOS? (D17) | Propietario | Al terminar F6 (o antes si se quiere adelantar) | Decidir con la beta de Android en la mano |
 | PD-5 | Diseño de las pantallas que faltan (R-17) | Propietario + Claude Design | Antes de F3 | — |
