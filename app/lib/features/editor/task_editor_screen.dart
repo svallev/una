@@ -139,6 +139,9 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
                                 autofocus: true,
                                 maxLines: null,
                                 maxLength: Task.maxTextLength,
+                                // El teclado no aprende del texto de las tareas
+                                // (MASVS-STORAGE-2, decisión del propietario).
+                                enableIMEPersonalizedLearning: false,
                                 textCapitalization:
                                     TextCapitalization.sentences,
                                 style: UnaTheme.noteText(_controller.text),

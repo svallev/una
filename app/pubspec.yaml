@@ -30,3 +30,19 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+  # Fuentes empaquetadas (licencia OFL 1.1, P4: nunca se descargan). Origen:
+  # github.com/google/fonts @ 23e54b51ddffbc7713c583748e3bd86f62b1fa4a (docs/design/tokens.md).
+  assets:
+    - assets/fonts/archivo/OFL.txt
+    - assets/fonts/space_mono/OFL.txt
+  fonts:
+    - family: Archivo
+      fonts:
+        # Variable (ejes wght 100–900 y wdth): FontWeight ajusta el grosor.
+        - asset: assets/fonts/archivo/Archivo-Variable.ttf
+    - family: Space Mono
+      fonts:
+        - asset: assets/fonts/space_mono/SpaceMono-Regular.ttf
+        - asset: assets/fonts/space_mono/SpaceMono-Bold.ttf
+          weight: 700

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 9–11 (ADR-0004): BD y preferencias, sin adjuntos, y solo si la copia va
+     cifrada de extremo a extremo (el móvil tiene bloqueo de pantalla). -->
+<full-backup-content>
+    <include domain="root" path="app_flutter/" requireFlags="clientSideEncryption"/>
+    <include domain="sharedpref" path="." requireFlags="clientSideEncryption"/>
+</full-backup-content>

@@ -142,7 +142,7 @@ Posición de las tareas nuevas (002), completar (003), menú (005), adjuntos (00
   - **Cuando** vuelve a primer plano
   - **Entonces** si pasaron menos de 10 minutos se ve la misma pantalla; si pasaron 10 minutos o más, se ve la tarea actual (o el editor de la primera tarea si no hay ninguna).
 
-## 11. Ajustes durante la implementación (2026-09-24, pendientes de visto bueno del propietario)
+## 11. Ajustes durante la implementación (aprobados por el propietario el 2026-09-24)
 
 Salen de las revisiones de cierre (subagentes `spec-reviewer`, `a11y-reviewer` y `security-reviewer`). No cambian ningún CA; concretan accesibilidad y errores:
 
@@ -150,4 +150,4 @@ Salen de las revisiones de cierre (subagentes `spec-reviewer`, `a11y-reviewer` y
 - §6: la bienvenida no avanza sola con lector de pantalla; foco visible y teclado en todos los botones; anuncio del contador.
 - §7: textos `skipIntroHint` y `editorSaveError`.
 - CL-001-4: el primer uso se marca al **mostrarse** la bienvenida (antes, al terminar), para que al matar la app a mitad se abra el editor.
-
+- Privacidad (decisión del propietario): el teclado del sistema **no aprende** del texto de las tareas (`enableIMEPersonalizedLearning: false`; en Android, `IME_FLAG_NO_PERSONALIZED_LEARNING`).
