@@ -12,7 +12,6 @@ analyzer:
     todo: ignore
   exclude:
     - build/**
-    - "**/*.g.dart"
     - lib/l10n/generated/**
     - test/drift/**/generated/**
     - android/**

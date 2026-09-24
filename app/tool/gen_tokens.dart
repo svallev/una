@@ -121,7 +121,7 @@ void main(List<String> args) {
     (k, v) => b
       ..writeln('  /// ${_doc(v)}')
       ..writeln(
-        '  static const Duration $k = Duration(milliseconds: ${_num(v[r'$value'])});',
+        '  static const Duration $k = Duration(milliseconds: ${_int(v[r'$value'])});',
       ),
   );
   _entries(motion['easing']).forEach((k, v) {
@@ -168,6 +168,11 @@ String _doc(Map<String, dynamic> v) =>
 String _num(Object? v) {
   final n = v is Map<String, dynamic> ? v['value'] as num : v! as num;
   return n.toDouble().toString();
+}
+
+String _int(Object? v) {
+  final n = v is Map<String, dynamic> ? v['value'] as num : v! as num;
+  return n.round().toString();
 }
 
 String _color(String v) {

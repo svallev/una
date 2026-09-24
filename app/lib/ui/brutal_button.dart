@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+
+import '../app/theme/tokens.g.dart';
+
+/// Botón "brutalista" del prototipo: borde de 3 px, sombra dura y hundimiento al pulsar.
+class BrutalButton extends StatefulWidget {
+  const BrutalButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.background = UnaColors.surface,
+    this.expand = true,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final Color background;
+  final bool expand;
+
+  @override
+  State<BrutalButton> createState() => _BrutalButtonState();
+}
+
+class _BrutalButtonState extends State<BrutalButton> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onPressed != null;
+    final pressed = _down || !enabled;
+    final offset = pressed ? const Offset(4, 4) : Offset.zero;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.label,
+      excludeSemantics: true,
+      onTap: widget.onPressed,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: enabled ? (_) => setState(() => _down = true) : null,
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: enabled ? (_) => setState(() => _down = false) : null,
+        onTap: widget.onPressed,
+        child: Opacity(
+          opacity: enabled ? 1 : 0.4,
+          child: AnimatedContainer(
+            duration: UnaMotion.press,
+            transform: Matrix4.translationValues(offset.dx, offset.dy, 0),
+            constraints: const BoxConstraints(
+              minHeight: UnaSizes.minTouchTarget + UnaSpace.m,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: UnaSpace.ml,
+              vertical: UnaSpace.sm,
+            ),
+            decoration: BoxDecoration(
+              color: widget.background,
+              border: Border.all(
+                color: UnaColors.ink,
+                width: UnaBorders.strongWidth,
+              ),
+              boxShadow: [
+                if (!pressed)
+                  UnaShadows.button
+                else if (enabled)
+                  UnaShadows.buttonPressed,
+              ],
+            ),
+            child: Row(
+              mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, size: UnaSizes.icon, color: UnaColors.ink),
+                  const SizedBox(width: UnaSpace.s),
+                ],
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: UnaFonts.display,
+                      fontSize: UnaFontSizes.bodyL,
+                      fontWeight: UnaFontWeights.extrabold,
+                      color: UnaColors.ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

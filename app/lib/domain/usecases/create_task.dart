@@ -24,6 +24,7 @@ class CreateTask {
   Future<Task> call(
     String rawText, {
     QueuePosition position = QueuePosition.top,
+    int? colorKey,
   }) async {
     final text = validateTaskText(rawText);
     final current = await repository.currentTask();
@@ -37,7 +38,7 @@ class CreateTask {
       text: text,
       status: TaskStatus.pending,
       rank: rank,
-      colorKey: colors.pick(currentColorKey: current?.colorKey),
+      colorKey: colorKey ?? colors.pick(currentColorKey: current?.colorKey),
       createdAt: now,
       updatedAt: now,
     );

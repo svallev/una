@@ -1,16 +1,35 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-void main() {
-  runApp(const MainApp());
+import 'app/providers.dart';
+import 'app/una_app.dart';
+import 'data/repository_factory.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await bootstrap();
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('Hello World!'))),
+/// Abre el almacenamiento y lee la tarea actual ANTES del primer fotograma (P2,
+/// CA-001-09): la primera pantalla ya es la tarea, sin "cargando".
+Future<void> bootstrap() async {
+  try {
+    final repos = await openRepositories();
+    final boot = BootState(
+      currentTask: await repos.tasks.currentTask(),
+      firstRunDone: await repos.settings.firstRunDone(),
     );
+    runApp(
+      ProviderScope(
+        overrides: [
+          taskRepositoryProvider.overrideWithValue(repos.tasks),
+          settingsRepositoryProvider.overrideWithValue(repos.settings),
+          bootStateProvider.overrideWithValue(boot),
+        ],
+        child: const UnaApp(),
+      ),
+    );
+  } on Object catch (e) {
+    runApp(StorageErrorApp(noSpace: isNoSpaceError(e), onRetry: bootstrap));
   }
 }

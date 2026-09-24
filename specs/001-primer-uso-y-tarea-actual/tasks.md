@@ -30,3 +30,29 @@ Requisitos: F0 completa para Android (D17: sin Xcode; el job iOS de CI compila s
 - [ ] Definition of Done completa.
 - [ ] Preguntas P-1 y P-2 resueltas por producto (o aplicada la recomendación).
 - [ ] Spec marcada como **Implementada**.
+
+## Progreso (2026-09-24)
+
+| Tarea | Estado |
+|---|---|
+| T-001-01 Proyecto `app/` | ✅ |
+| T-001-02 CI activa | ✅ Flutter, Android e iOS en verde. ⚠️ "Revisión de dependencias" falla por el formato de licencias de pub.dev (pendiente de decisión del propietario) |
+| T-001-03 Identidad | ✅ |
+| T-001-04 Tokens | ✅ |
+| T-001-05 Tema y componentes | 🟡 Tema, `StickyNote` y `BrutalButton` hechos; **faltan las fuentes Archivo y Space Mono** (descarga pendiente de aprobación) y los *goldens* |
+| T-001-06 l10n | ✅ |
+| T-001-07 Dominio | ✅ |
+| T-001-08 BD drift v1 + migraciones | ✅ (columna SQL `body` en lugar de `text`, que choca con el código generado de drift) |
+| T-001-09 Repositorios + contrato | ✅ |
+| T-001-10 Casos de uso | ✅ |
+| T-001-11 Arranque (tarea antes del primer fotograma) + error de almacenamiento | ✅ (medición en dispositivo pendiente: T-001-17) |
+| T-001-12 Bienvenida | ✅ |
+| T-001-13 Editor de la primera tarea | ✅ |
+| T-001-14 Tarea actual | ✅ (menú y completar se activan en las specs 005 y 003) |
+| T-001-15 Enrutado + P-2 (10 min) | ✅ |
+| T-001-16 Integración persistencia / sin red | 🟡 Persistencia en disco cubierta por test; falta `integration_test` en dispositivo y el test sin red |
+| T-001-17 Rendimiento de arranque en dispositivo | ⏳ |
+| T-001-18 Web de pruebas (Vercel) | ⏳ (en web, repositorio en memoria) |
+| T-001-19 Revisiones (spec, a11y, seguridad) | ⏳ |
+
+Verificado a mano en el emulador (release): bienvenida → editor → guardar → tarea actual → cerrar y reabrir conserva la tarea.

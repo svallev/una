@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 
 part 'app_database.g.dart';
 
@@ -78,13 +75,6 @@ class SettingEntries extends Table {
 @DriftDatabase(tables: [Tasks, Attachments, SettingEntries])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
-
-  /// Conexión en el isolate principal (decisión I-1: la consulta de arranque
-  /// no paga el coste de crear un isolate; ~50 ms en un móvil real, spike S1).
-  factory AppDatabase.openFile(File file) => AppDatabase(NativeDatabase(file));
-
-  /// Base de datos en memoria para tests.
-  factory AppDatabase.inMemory() => AppDatabase(NativeDatabase.memory());
 
   @override
   int get schemaVersion => 1;

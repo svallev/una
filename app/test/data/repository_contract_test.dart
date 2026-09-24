@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:app/data/db/app_database.dart';
+import 'package:app/data/db/open_database_native.dart';
 import 'package:app/data/drift_task_repository.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/rank.dart';
@@ -105,7 +105,7 @@ void main() {
   });
 
   _contract('drift (SQLite en memoria)', () async {
-    final db = AppDatabase.inMemory();
+    final db = openInMemoryDatabase();
     final r = DriftTaskRepository(db);
     return (r as _Repo, r as SettingsRepository, db.close);
   });
@@ -115,12 +115,12 @@ void main() {
     () async {
       final dir = await Directory.systemTemp.createTemp('una_db');
       final file = File('${dir.path}/app.sqlite');
-      var db = AppDatabase.openFile(file);
+      var db = openAppDatabaseFile(file);
       await DriftTaskRepository(db).insert(_task('p', 'K', color: 3));
       await DriftTaskRepository(db).setFirstRunDone();
       await db.close();
 
-      db = AppDatabase.openFile(file);
+      db = openAppDatabaseFile(file);
       final repo = DriftTaskRepository(db);
       expect((await repo.currentTask())!.colorKey, 3);
       expect(await repo.firstRunDone(), isTrue);

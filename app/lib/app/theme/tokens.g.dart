@@ -206,52 +206,52 @@ abstract final class UnaShadows {
 
 abstract final class UnaMotion {
   /// {value: 80, unit: ms}
-  static const Duration press = Duration(milliseconds: 80.0);
+  static const Duration press = Duration(milliseconds: 80);
 
   /// {value: 200, unit: ms}
-  static const Duration sheetIn = Duration(milliseconds: 200.0);
+  static const Duration sheetIn = Duration(milliseconds: 200);
 
   /// {value: 160, unit: ms}
-  static const Duration sheetOut = Duration(milliseconds: 160.0);
+  static const Duration sheetOut = Duration(milliseconds: 160);
 
   /// {value: 450, unit: ms}
-  static const Duration enter = Duration(milliseconds: 450.0);
+  static const Duration enter = Duration(milliseconds: 450);
 
   /// Tiempo de mantener pulsado para completar
-  static const Duration holdToComplete = Duration(milliseconds: 1200.0);
+  static const Duration holdToComplete = Duration(milliseconds: 1200);
 
   /// Retroceso del relleno al soltar antes de tiempo
-  static const Duration holdRelease = Duration(milliseconds: 280.0);
+  static const Duration holdRelease = Duration(milliseconds: 280);
 
   /// La nota se rompe en dos
-  static const Duration tear = Duration(milliseconds: 1250.0);
+  static const Duration tear = Duration(milliseconds: 1250);
 
   /// Tiempo visible de ¡Enhorabuena!
-  static const Duration successHold = Duration(milliseconds: 2100.0);
+  static const Duration successHold = Duration(milliseconds: 2100);
 
   /// {value: 700, unit: ms}
-  static const Duration successFade = Duration(milliseconds: 700.0);
+  static const Duration successFade = Duration(milliseconds: 700);
 
   /// Arrugar y tirar a la papelera
-  static const Duration crumple = Duration(milliseconds: 2200.0);
+  static const Duration crumple = Duration(milliseconds: 2200);
 
   /// Máquina de escribir de la bienvenida
-  static const Duration introCharStep = Duration(milliseconds: 62.0);
+  static const Duration introCharStep = Duration(milliseconds: 62);
 
   /// {value: 800, unit: ms}
-  static const Duration introFade = Duration(milliseconds: 800.0);
+  static const Duration introFade = Duration(milliseconds: 800);
 
   /// {value: 900, unit: ms}
-  static const Duration listFlash = Duration(milliseconds: 900.0);
+  static const Duration listFlash = Duration(milliseconds: 900);
 
   /// {value: 350, unit: ms}
-  static const Duration doubleTapWindow = Duration(milliseconds: 350.0);
+  static const Duration doubleTapWindow = Duration(milliseconds: 350);
 
   /// Ventana para deshacer una eliminación (ADR-0006)
-  static const Duration undoWindow = Duration(milliseconds: 6000.0);
+  static const Duration undoWindow = Duration(milliseconds: 6000);
 
   /// Sustituto con 'reducir movimiento'
-  static const Duration reducedMotionFade = Duration(milliseconds: 400.0);
+  static const Duration reducedMotionFade = Duration(milliseconds: 400);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);
