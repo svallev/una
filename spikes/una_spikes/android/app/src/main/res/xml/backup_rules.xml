@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 o anterior (ADR-0004). -->
+<full-backup-content>
+    <include domain="database" path="."/>
+    <include domain="sharedpref" path="."/>
+    <include domain="file" path="attachments/"/>
+    <include domain="root" path="app_flutter/"/>
+</full-backup-content>

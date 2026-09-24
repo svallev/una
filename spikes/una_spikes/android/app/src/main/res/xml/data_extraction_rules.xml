@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ (ADR-0004): BD, preferencias y adjuntos en la nube; todo en transferencia entre dispositivos. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="database" path="."/>
+        <include domain="sharedpref" path="."/>
+        <include domain="root" path="app_flutter/"/>
+        <!-- Variante B del spike: sin adjuntos en la nube (superan la cuota de 25 MB y Android descarta TODA la copia). -->
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="."/>
+        <include domain="sharedpref" path="."/>
+        <include domain="file" path="."/>
+        <include domain="root" path="app_flutter/"/>
+    </device-transfer>
+</data-extraction-rules>

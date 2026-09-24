@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'anim.dart';
 import 'db.dart';
+import 'lab.dart';
 import 'perf.dart';
 
 late SpikeDb db;
@@ -114,6 +115,10 @@ class _CurrentTaskScreenState extends State<CurrentTaskScreen> {
               FilledButton(
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AnimLab())),
                 child: const Text('S2 · Animaciones'),
+              ),
+              FilledButton.tonal(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const Lab())),
+                child: const Text('S3 · S4 · S5'),
               ),
               OutlinedButton(
                 onPressed: () async {
