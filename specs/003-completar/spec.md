@@ -64,6 +64,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
 | CL-003-3 | Multitoque: dos dedos | Solo cuenta el primer puntero |
 | CL-003-4 | Tarea con adjunto (imagen, PDF, web) | Misma animación; en la nota rota se ve la miniatura |
 | CL-003-5 | Reducir movimiento activado | Sin rotura ni confeti: fundido (0,4 s) y enhorabuena estática |
+| CL-003-6 | Toque breve (menos de 1,2 s) | Se comporta como soltar antes de tiempo (CA-003-02): el relleno retrocede y no se completa. **Sin pista visual ni texto adicional** (decisión del propietario, 2026-09-24) |
 
 ## 5. Estados vacíos y de error
 
@@ -103,4 +104,5 @@ Ver el histórico o borrarlo (Bloque 4). Deshacer una tarea completada.
 
 ## 9. Preguntas abiertas
 
+- **[Resuelto 2026-09-24, revisable] P-5:** con la etiqueta "Pulsa para completar", ¿qué pasa con un toque breve? Decisión del propietario: **se mantiene el gesto de mantener pulsado y no se muestra ninguna pista** (CL-003-6). Se probará en español y puede cambiar más adelante (alternativas: pista "Mantén pulsado para completar" tras un toque breve, o completar con un toque y deshacer). La pista del lector de pantalla (§6) se mantiene porque no es visible y TalkBack/VoiceOver la necesitan para descubrir el gesto.
 - **[Pendiente P-4]** ¿Ofrecer "Deshacer" tras completar? Recomendación: no en la v1 (mantener pulsado 1,2 s ya evita los accidentes); se puede recuperar desde el futuro histórico. Decide: producto.
