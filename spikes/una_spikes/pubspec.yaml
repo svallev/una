@@ -30,3 +30,5 @@ flutter:
   uses-material-design: true
   shaders:
     - shaders/crumple.frag
+  assets:
+    - assets/texto_300p.pdf

@@ -30,6 +30,8 @@ Future<void> main() async {
     marks['seeded'] = true;
   }
   marks['display'] = display;
+  const current = String.fromEnvironment('CURRENT', defaultValue: '');
+  if (current.isNotEmpty) await db.setCurrent(image: current == 'image'); // solo para medir (≈1 ms)
   final task = await db.currentTask();
   marks['query_ms'] = startup.elapsedMilliseconds;
   marks['seeded'] = seeded || marks['seeded'] == true;

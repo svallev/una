@@ -1,6 +1,6 @@
 # F1 · Resultados de los spikes S1 (arranque) y S2 (animaciones), Android
 
-- **Fecha:** 2026-09-24 · **Estado:** provisional (falta medir en un dispositivo físico)
+- **Fecha:** 2026-09-24 · **Estado:** ✅ **validado en dispositivo físico** (Xiaomi 15T Pro); pendiente solo un móvil de gama media (R-02)
 - **Código:** rama `spike/f1-android`, carpeta `spikes/una_spikes/` (desechable, no se fusiona)
 - **Entorno:** Flutter 3.47.5 (stable), Dart 3.13.4, *release* arm64, JDK 25 de Android Studio (Gradle sin problemas). Emulador `Pixel_6a` Android 17 (API 37), 4 núcleos, 3 GB, páginas de 16 KB, en un Mac Apple Silicon.
 - **Relacionado:** ADR-0001 (criterios S1/S2), D17, riesgos R-02, R-03, R-18
@@ -61,3 +61,33 @@ Hallazgos:
 1. **Medir en tu móvil Android físico** (gama alta): mismas variantes, 15 arranques cada una. Es el dato que manda sobre el emulador.
 2. En el móvil: comprobar que Impeller usa **Vulkan** y repetir S2 (60 fps sin modo bimodal; primer fotograma < 32 ms con I-3).
 3. **Riesgo abierto (R-02):** sin un dispositivo de gama media, el objetivo de < 1 s en gama media queda **sin verificar**. Opciones: un móvil prestado, un laboratorio de dispositivos gratuito (p. ej. Firebase Test Lab en su capa gratuita; habría que valorar su privacidad antes) o aceptar el riesgo hasta la beta.
+
+## Dispositivo físico: Xiaomi 15T Pro (2026-09-24)
+
+**Dispositivo:** Xiaomi 15T Pro (MediaTek Dimensity MT6991, 8 núcleos, 11 GB, Android 16 / HyperOS 3, pantalla de 120 Hz, páginas de 4 KB). **Gama alta.** Impeller sobre **Vulkan**. Compilación *release* arm64.
+
+### S1: arranque en frío (am start -W + reportFullyDrawn)
+
+| Caso | Desde el icono (TotalTime) | Dentro de la app (`main()` → tarea visible) |
+|---|---|---|
+| Tarea de texto, SQLite en el isolate principal (I-1) | **219–316 ms**, mediana ≈ 250 ms (19 medidas) | 6–121 ms, mediana ≈ 45 ms |
+| **Imagen de 12 MP**, versión de pantalla JPEG (I-2) | **242–347 ms**, mediana ≈ 257 ms (15/15) | 67–154 ms, mediana ≈ 89 ms |
+| Tarea de texto, SQLite en un isolate aparte | 288–319 ms (4 válidas; reconexión del cable) | 71–141 ms, mediana ≈ 100 ms |
+| Referencia: app Flutter vacía | 204–344 ms, mediana ≈ 245 ms | — |
+| Referencia: Ajustes (nativa) | 258–385 ms, mediana ≈ 265 ms | — |
+
+**Conclusión S1:** la app abre y muestra la tarea actual, incluso con una foto de 12 MP, **igual de rápido que una app Flutter vacía y que una app nativa del sistema**: ~0,25 s, un 25 % del presupuesto de 1 s. En el dispositivo real, I-1 ahorra ~50 ms (no 850 ms como en el emulador), pero se mantiene: no cuesta nada.
+
+### S2: animaciones (FrameTiming; 120 Hz → 8,3 ms por fotograma)
+
+| Animación | Fotogramas | p50 | p90 | p99 | > 16,7 ms | > 32 ms |
+|---|---|---|---|---|---|---|
+| Completar (romper en dos) ×3 | 237–239 | 2,9–3,6 | 4,2–4,7 | 6,9–10,6 | 2 (solo en la 1.ª) · 0 · 0 | 0 |
+| Eliminar (shader + papelera) ×3 | 267 | 3,5–3,6 | 4,4–4,6 | 6,5–6,7 | 0 | 0 |
+| Reducir movimiento: completar / eliminar | 137 / 50 | 3,3 / 3,0 | 4,2 / 3,9 | 7,2 / 6,2 | 0 | 0 |
+
+**Conclusión S2:** el shader de arrugado y la rotura en dos van **a 120 fps con mucho margen** (p90 ≈ 4,5 ms). El único tirón (2 fotogramas, la primera vez) es la captura de la nota: I-3 sigue siendo necesaria. El modo bimodal de 9/23 ms del emulador era ruido del emulador.
+
+### Riesgo que queda abierto
+
+**R-02 (gama media):** el dispositivo de prueba es de gama alta. Con un margen de ×4 sobre el presupuesto el riesgo baja a **bajo**, pero el criterio de ADR-0001 habla de gama media y no está medido. Opciones: un móvil prestado (Android de 200–300 €) o medir en la beta cerrada de Play (F6).
