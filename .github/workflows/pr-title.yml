@@ -1,0 +1,25 @@
+name: PR title
+
+# Separado de CI para que se vuelva a ejecutar al editar el título (evento "edited")
+# sin relanzar todos los builds.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    name: Título de PR (Conventional Commits)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar título
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          re='^(feat|fix|docs|test|refactor|perf|chore|ci|build|revert)(\([a-z0-9._/-]+\))?!?: .{3,}$'
+          if [[ ! "$TITLE" =~ $re ]]; then
+            echo "::error::El título '$TITLE' no sigue Conventional Commits (p. ej. 'feat(003): completar manteniendo pulsado')"
+            exit 1
+          fi
