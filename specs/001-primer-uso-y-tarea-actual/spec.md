@@ -1,6 +1,6 @@
 # Spec 001: Primer uso y tarea actual
 
-- **Estado:** En revisión
+- **Estado:** Aprobada (2026-09-24)
 - **Reglas de producto:** R1, R2, R6, R8 (y R3 solo para texto; los adjuntos, en 007–009)
 - **Pantallas del prototipo:** 0 "Prototipo (empieza vacío)", 1 "La tarea", 3 "Nueva tarea" (variante "Tu primera tarea")
 - **Decisiones y ADR:** P1, P2, P7; ADR-0001, 0002; DEV-06, DEV-07, DEV-08
@@ -79,7 +79,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 | CL-001-2 | Texto de 10 000 caracteres (máximo) | Se acepta; no se pueden escribir más (contador visible a partir de 9 000); la nota se desplaza |
 | CL-001-3 | Emojis, RTL, CJK, texto sin espacios (URL larga pegada) | Se muestra sin desbordar; las palabras largas se parten |
 | CL-001-4 | La app se mata durante la bienvenida | Al reabrir, se abre el editor (CA-001-05) |
-| CL-001-5 | La app se mata mientras se escribe la primera tarea | Al reabrir, editor vacío (el borrador no se guarda en la v1) **[Pendiente P-1]** |
+| CL-001-5 | La app se mata mientras se escribe la primera tarea | Al reabrir, editor vacío (el borrador no se guarda en la v1; P-1 resuelto) |
 | CL-001-6 | Fallo al abrir la BD (corrupta o sin espacio) | Pantalla de error recuperable (ver §5); nunca se pierde la BD de forma silenciosa |
 | CL-001-7 | Rotación o pantallas grandes (tablet, plegable) | Solo vertical en la v1 (iPad/tablet: centrado a 390–600 pt de ancho) |
 | CL-001-8 | Cambio de idioma del sistema con la app abierta | Los textos se actualizan al volver a la app |
@@ -127,5 +127,12 @@ Posición de las tareas nuevas (002), completar (003), menú (005), adjuntos (00
 
 ## 9. Preguntas abiertas
 
-- **[Pendiente P-1]** ¿Se guarda el borrador del editor si la app se cierra? Recomendación: no en la v1 (simplicidad); sí en el futuro si hay quejas. Decide: producto.
-- **[Pendiente P-2]** Vuelta desde segundo plano (arranque en caliente): recomendación, conservar la pantalla en la que estaba el usuario (comportamiento estándar del SO) si pasaron < 10 min; si pasaron más, volver a la tarea actual (cumple el espíritu de R8). Decide: producto.
+- **P-1 (resuelto 2026-09-24):** el borrador del editor **no** se guarda en la v1.
+- **P-2 (resuelto 2026-09-24):** al volver desde segundo plano se conserva la pantalla en la que estaba el usuario si pasaron **menos de 10 minutos**; si pasaron más, se muestra la tarea actual (se descarta lo que hubiera en el editor).
+
+## 10. Criterio añadido al aprobar
+
+- **CA-001-12 Vuelta desde segundo plano (P-2)**
+  - **Dado** que la app pasó a segundo plano
+  - **Cuando** vuelve a primer plano
+  - **Entonces** si pasaron menos de 10 minutos se ve la misma pantalla; si pasaron 10 minutos o más, se ve la tarea actual (o el editor de la primera tarea si no hay ninguna).

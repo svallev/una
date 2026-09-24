@@ -1,6 +1,6 @@
 # Tareas — Spec 001: Primer uso y tarea actual
 
-Requisitos: F0 completa (Xcode, Android Studio, FVM/Flutter, repo), F1 en verde y spec + plan aprobados. `[P]` = puede hacerse en paralelo con la anterior.
+Requisitos: F0 completa para Android (D17: sin Xcode; el job iOS de CI compila sin firmar), F1 en verde y spec + plan aprobados. ✅ 2026-09-24. `[P]` = puede hacerse en paralelo con la anterior.
 
 | ID | Tarea | Depende de | Verificación | CA |
 |---|---|---|---|---|

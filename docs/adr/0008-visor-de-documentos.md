@@ -32,4 +32,4 @@
 
 - pdfrx: visor listo en 18–20 ms (PDF de 9 MB, 300 páginas, PDF con JavaScript); **ningún JavaScript ejecutado**; los enlaces piden confirmación.
 - FileProvider en solo lectura correcto. En un Android sin app de Office, el sistema muestra un selector vacío y en inglés: **comprobar antes con `queryIntentActivities`** y mostrar nuestro mensaje (CA-008-08).
-- **[Pendiente PD-8]** Mostrar TXT, CSV y MD **dentro de la app** como texto plano (sin interpretar marcado): riesgo nulo y mejor que abrir Chrome o "HTML Viewer". Cambia D6; lo decide el propietario.
+- **Decidido (D19, 2026-09-24):** TXT, CSV y MD se muestran **dentro de la app** como texto plano (sin interpretar marcado), hasta 1 MB de texto UTF-8; si no, tarjeta con "Abrir". Ver CA-008-10.

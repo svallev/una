@@ -2,7 +2,7 @@
 
 - **Spec:** `specs/001-primer-uso-y-tarea-actual/spec.md`
 - **ADR aplicables:** 0001 (Flutter, provisional), 0002 (drift + repositorio), 0009 (monorepo), 0010 (web)
-- **Estado del plan:** Borrador. **Requisitos previos:** F1 cerrada (spikes en verde) y spec aprobada.
+- **Estado del plan:** Aprobado (2026-09-24). F1 cerrada para Android (ADR-0001 aceptado para Android); spec aprobada.
 
 ## 1. Resumen del enfoque
 
