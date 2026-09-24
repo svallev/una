@@ -102,6 +102,9 @@ abstract final class UnaFontSizes {
   /// Estados vacíos (Todo hecho.)
   static const double hero = 56.0;
 
+  /// Texto de la bienvenida
+  static const double intro = 52.0;
+
   /// {value: 34, unit: px}
   static const double display = 34.0;
 
@@ -110,6 +113,9 @@ abstract final class UnaFontSizes {
 
   /// {value: 22, unit: px}
   static const double heading = 22.0;
+
+  /// Botón de completar
+  static const double button = 20.0;
 
   /// Filas de menú y botones
   static const double bodyL = 19.0;
@@ -133,6 +139,7 @@ abstract final class UnaFontSizes {
 /// Interletrado en em (multiplicar por el tamaño de fuente).
 abstract final class UnaLetterSpacing {
   static const double tightest = -0.04;
+  static const double intro = -0.035;
   static const double tighter = -0.03;
   static const double tight = -0.02;
   static const double snug = -0.01;
@@ -160,7 +167,14 @@ abstract final class UnaSizes {
   static const double frameHeight = 844.0;
   static const double contentMaxWidth = 600.0;
   static const double icon = 22.0;
+  static const double iconM = 24.0;
+  static const double iconL = 26.0;
   static const double iconStroke = 2.4;
+  static const double iconStrokeBold = 3.0;
+  static const double iconButton = 46.0;
+  static const double button = 64.0;
+  static const double holdButton = 72.0;
+  static const double caretWidth = 6.0;
 }
 
 abstract final class UnaBorders {
@@ -241,6 +255,9 @@ abstract final class UnaMotion {
 
   /// Máquina de escribir de la bienvenida
   static const Duration introCharStep = Duration(milliseconds: 62);
+
+  /// Parpadeo del cursor de la bienvenida (steps(1))
+  static const Duration caretBlink = Duration(milliseconds: 1000);
 
   /// {value: 800, unit: ms}
   static const Duration introFade = Duration(milliseconds: 800);

@@ -91,6 +91,7 @@ class HomeRouter extends ConsumerWidget {
     } else if (!firstRunDone) {
       child = WelcomeIntro(
         key: const ValueKey('intro'),
+        colorKey: ref.read(firstTaskColorProvider),
         onShown: () => ref.read(firstRunDoneProvider.notifier).persistSeen(),
         onDone: () => ref.read(firstRunDoneProvider.notifier).markDone(),
       );

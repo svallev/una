@@ -7,33 +7,50 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/pump_app.dart';
 
-BrutalButton _save(WidgetTester t) =>
-    t.widget<BrutalButton>(find.byType(BrutalButton));
+/// "Guardar" (el otro botón grande es el "+" de adjuntar).
+final _saveFinder = find.byWidgetPredicate(
+  (w) => w is BrutalButton && !w.iconOnly,
+);
+BrutalButton _save(WidgetTester t) => t.widget<BrutalButton>(_saveFinder);
 
 void main() {
   testWidgets(
-    'CA-001-02: etiqueta, placeholder, Guardar deshabilitado y sin Cancelar',
+    'CA-001-02: como el prototipo: sin etiqueta visible, placeholder, «+» y Guardar activos, sin Cancelar',
     (tester) async {
       await pumpWithApp(tester, const FirstTaskEditorScreen());
-      expect(find.text('TU PRIMERA TAREA'), findsOneWidget);
+      // La etiqueta del prototipo está oculta: solo nombra el campo (§6).
+      expect(find.text('TU PRIMERA TAREA'), findsNothing);
+      expect(
+        find.bySemanticsLabel('Añadir foto, imagen o archivo'),
+        findsOneWidget,
+      );
       expect(
         find.text('¿Qué es eso que tienes que hacer y no has hecho?'),
         findsOneWidget,
       );
       expect(find.text('Guardar'), findsOneWidget);
-      expect(_save(tester).onPressed, isNull);
+      expect(_save(tester).onPressed, isNotNull);
+      expect(_save(tester).trailingIcon, isNotNull, reason: 'flecha →');
       expect(find.text('Cancelar'), findsNothing);
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.autofocus, isTrue);
     },
   );
 
-  testWidgets('CL-001-1: solo espacios no habilita Guardar', (tester) async {
-    await pumpWithApp(tester, const FirstTaskEditorScreen());
-    await tester.enterText(find.byType(TextField), '   \n  ');
-    await tester.pump();
-    expect(_save(tester).onPressed, isNull);
-  });
+  testWidgets(
+    'CL-001-1: con solo espacios, Guardar no guarda y devuelve el foco al campo',
+    (tester) async {
+      final repo = await pumpWithApp(tester, const FirstTaskEditorScreen());
+      await tester.enterText(find.byType(TextField), '   \n  ');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump();
+      await tester.tap(_saveFinder);
+      await tester.pumpAndSettle();
+      expect(await repo.currentTask(), isNull);
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.focusNode!.hasFocus, isTrue);
+    },
+  );
 
   testWidgets(
     'CA-001-04: guardar crea la tarea pendiente (recortada) como actual',
@@ -140,7 +157,7 @@ void main() {
     tester,
   ) async {
     await pumpWithApp(tester, const FirstTaskEditorScreen());
-    final button = tester.getRect(find.byType(BrutalButton));
+    final button = tester.getRect(_saveFinder);
     expect(button.bottom, lessThanOrEqualTo(844 - 24 + 0.01));
   });
 }

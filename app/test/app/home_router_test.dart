@@ -6,6 +6,7 @@ import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
 import 'package:app/ui/brutal_button.dart';
+import 'package:app/ui/sticky_note.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,7 +85,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Comprar pan');
       await tester.pump();
       await tester.tap(
-        find.byType(BrutalButton),
+        find.byWidgetPredicate((w) => w is BrutalButton && !w.iconOnly),
       ); // UnaApp usa el idioma del sistema (en test, inglés)
       await tester.pumpAndSettle();
       expect(find.byType(CurrentTaskScreen), findsOneWidget);
@@ -205,6 +206,30 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Save'), findsOneWidget);
       expect(find.text('Guardar'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'CA-001-01: la bienvenida tiene el color de la primera nota y se funde con el editor del mismo color',
+    (tester) async {
+      await _pumpApp(tester);
+      Color noteColor() {
+        final box = tester.widget<DecoratedBox>(
+          find
+              .descendant(
+                of: find.byType(StickyNote),
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
+        );
+        return (box.decoration as BoxDecoration).color!;
+      }
+
+      final introColor = noteColor();
+      await tester.tap(find.byType(WelcomeIntro));
+      await tester.pumpAndSettle();
+      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+      expect(noteColor(), introColor);
     },
   );
 }

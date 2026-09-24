@@ -18,10 +18,8 @@ class StickyNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: palette[colorKey % palette.length],
-        border: Border.all(color: UnaColors.ink, width: UnaBorders.strongWidth),
-      ),
+      // Sin marco: en el prototipo la nota ocupa la pantalla entera.
+      decoration: BoxDecoration(color: palette[colorKey % palette.length]),
       child: child,
     );
   }

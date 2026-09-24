@@ -30,6 +30,8 @@
   "@retry": { "description": "Botón de reintentar" },
   "skipIntroHint": "continuar",
   "@skipIntroHint": { "description": "Acción del lector de pantalla para saltar la bienvenida; se lee tras «Toca dos veces para». Sección 6" },
+  "attachButton": "Añadir foto, imagen o archivo",
+  "@attachButton": { "description": "Botón + del editor (nombre accesible). Funciona a partir de las specs 007–009" },
   "webPreviewBanner": "Versión de pruebas · los datos se borran al recargar",
   "@webPreviewBanner": { "description": "Aviso fijo de la web de pruebas (ADR-0010). Los datos viven en memoria" },
   "editorSaveError": "No hemos podido guardar la tarea",

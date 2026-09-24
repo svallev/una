@@ -6,11 +6,13 @@ library;
 
 import 'dart:io';
 
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/features/app_error/storage_error_screen.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
 import 'package:app/ui/brutal_button.dart';
+import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -119,7 +121,9 @@ void main() {
               const SizedBox(height: 24),
               BrutalButton(
                 label: 'Pulsa para completar',
-                icon: Icons.check,
+                icon: UnaIcons.check,
+                height: UnaSizes.holdButton,
+                fontSize: UnaFontSizes.button,
                 singleLine: true,
                 onPressed: () {},
               ),

@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'continuar'**
   String get skipIntroHint;
 
+  /// Botón + del editor (nombre accesible). Funciona a partir de las specs 007–009
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir foto, imagen o archivo'**
+  String get attachButton;
+
   /// Aviso fijo de la web de pruebas (ADR-0010). Los datos viven en memoria
   ///
   /// In es, this message translates to:

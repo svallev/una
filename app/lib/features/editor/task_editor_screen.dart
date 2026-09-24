@@ -12,6 +12,7 @@ import '../../domain/entities/task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
 import '../../ui/sticky_note.dart';
+import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../current_task/current_task_screen.dart';
 
@@ -30,7 +31,8 @@ class FirstTaskEditorScreen extends ConsumerStatefulWidget {
 
 class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
   final _controller = TextEditingController();
-  late final int _colorKey = ref.read(colorPickerProvider).pick();
+  final _fieldFocus = FocusNode();
+  late final int _colorKey = ref.read(firstTaskColorProvider);
   bool _saving = false;
 
   bool get _canSave => !_saving && _controller.text.trim().isNotEmpty;
@@ -65,11 +67,18 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _fieldFocus.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (!_canSave) return;
+    if (_saving) return;
+    if (!_canSave) {
+      // "Guardar" nunca está desactivado (decisión del propietario): sin texto
+      // no guarda y devuelve el foco al campo (CL-001-1).
+      _fieldFocus.requestFocus();
+      return;
+    }
     setState(() => _saving = true);
     try {
       await ref
@@ -98,6 +107,14 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
     final l10n = AppLocalizations.of(context);
     final length = _controller.text.characters.length;
     final mq = MediaQuery.of(context);
+    const textStyle = TextStyle(
+      fontFamily: UnaFonts.display,
+      fontSize: UnaFontSizes.display,
+      fontWeight: UnaFontWeights.extrabold,
+      height: 1.05,
+      letterSpacing: UnaLetterSpacing.tighter * UnaFontSizes.display,
+      color: UnaColors.ink,
+    );
     return Scaffold(
       backgroundColor: UnaColors.paper,
       body: StickyNote(
@@ -107,113 +124,134 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
           // teclado abierto), se desplaza en lugar de cortarse (CL-001-9).
           child: CustomScrollView(
             slivers: [
-              // El margen va dentro: con SliverPadding, SliverFillRemaining
-              // ocupa la pantalla entera y el margen inferior la desborda.
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(UnaSpace.l),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Sin "Cancelar" ni menú: hasta crear la primera tarea no se puede hacer nada más (R2).
-                      const Wordmark(),
-                      const SizedBox(height: UnaSpace.xl),
-                      // La etiqueta visual se anuncia como nombre del campo (§6).
-                      ExcludeSemantics(child: _Tag(text: l10n.editorTagFirst)),
-                      const SizedBox(height: UnaSpace.sm),
-                      Expanded(
-                        child: MediaQuery(
-                          // Mismo límite de escala que la nota (CA-001-07, CL-001-9).
-                          data: mq.copyWith(
-                            textScaler: mq.textScaler.clamp(
-                              maxScaleFactor:
-                                  CurrentTaskScreen.maxNoteTextScale,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Misma cabecera que la tarea actual. Sin "Cancelar" ni
+                    // menú: hasta crear la primera tarea no hay nada más (R2).
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        UnaSpace.l,
+                        UnaSpace.l,
+                        UnaSpace.l,
+                        0,
+                      ),
+                      child: SizedBox(
+                        height: kMinInteractiveDimension,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Wordmark(),
+                        ),
+                      ),
+                    ),
+                    // Texto centrado en la nota, como en el prototipo.
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          UnaSpace.m,
+                          0,
+                          UnaSpace.m,
+                          UnaSpace.l,
+                        ),
+                        child: Center(
+                          child: MediaQuery(
+                            // Mismo límite de escala que la nota (CA-001-07, CL-001-9).
+                            data: mq.copyWith(
+                              textScaler: mq.textScaler.clamp(
+                                maxScaleFactor:
+                                    CurrentTaskScreen.maxNoteTextScale,
+                              ),
                             ),
-                          ),
-                          // Un solo nodo: campo de texto con la etiqueta como nombre.
-                          child: MergeSemantics(
-                            child: Semantics(
-                              label: l10n.editorTagFirst,
-                              child: TextField(
-                                controller: _controller,
-                                autofocus: true,
-                                maxLines: null,
-                                maxLength: Task.maxTextLength,
-                                // El teclado no aprende del texto de las tareas
-                                // (MASVS-STORAGE-2, decisión del propietario).
-                                enableIMEPersonalizedLearning: false,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                style: UnaTheme.noteText(_controller.text),
-                                cursorColor: UnaColors.ink,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: l10n.editorPlaceholder,
-                                  hintStyle: UnaTheme.noteText(
-                                    l10n.editorPlaceholder,
-                                  ).copyWith(color: UnaColors.placeholder),
-                                  semanticCounterText: '',
-                                  counterText: '',
+                            // La etiqueta del prototipo está oculta: solo da
+                            // nombre al campo (spec 001 §6). Un solo nodo.
+                            child: MergeSemantics(
+                              child: Semantics(
+                                label: l10n.editorTagFirst,
+                                child: TextField(
+                                  controller: _controller,
+                                  focusNode: _fieldFocus,
+                                  autofocus: true,
+                                  maxLines: null,
+                                  maxLength: Task.maxTextLength,
+                                  // El teclado no aprende del texto de las tareas
+                                  // (MASVS-STORAGE-2, decisión del propietario).
+                                  enableIMEPersonalizedLearning: false,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  style: textStyle,
+                                  cursorColor: UnaColors.ink,
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                    isCollapsed: true,
+                                    contentPadding: const EdgeInsets.all(
+                                      UnaSpace.s,
+                                    ),
+                                    hintText: l10n.editorPlaceholder,
+                                    hintStyle: textStyle.copyWith(
+                                      color: UnaColors.placeholder,
+                                    ),
+                                    semanticCounterText: '',
+                                    counterText: '',
+                                  ),
+                                  buildCounter: (
+                                    _, {
+                                    required currentLength,
+                                    required isFocused,
+                                    maxLength,
+                                  }) => null,
                                 ),
-                                buildCounter: (
-                                  _, {
-                                  required currentLength,
-                                  required isFocused,
-                                  maxLength,
-                                }) => null,
                               ),
                             ),
                           ),
                         ),
                       ),
-                      if (length >= FirstTaskEditorScreen.counterFrom)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: UnaSpace.s),
-                          child: Text(
-                            l10n.editorCharsLeft(Task.maxTextLength - length),
-                            style: UnaTheme.mono.copyWith(color: UnaColors.ink),
-                          ),
+                    ),
+                    if (length >= FirstTaskEditorScreen.counterFrom)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: UnaSpace.l,
                         ),
-                      BrutalButton(
-                        label: l10n.editorSaveFirst,
-                        onPressed: _canSave ? _save : null,
+                        child: Text(
+                          l10n.editorCharsLeft(Task.maxTextLength - length),
+                          style: UnaTheme.mono.copyWith(color: UnaColors.ink),
+                        ),
                       ),
-                    ],
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        UnaSpace.l,
+                        UnaSpace.sm,
+                        UnaSpace.l,
+                        UnaSpace.xxl,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Adjuntar llega con las specs 007–009.
+                          BrutalButton.icon(
+                            label: l10n.attachButton,
+                            icon: UnaIcons.plus,
+                            onPressed: () {},
+                          ),
+                          const SizedBox(width: UnaSpace.m),
+                          Flexible(
+                            child: BrutalButton(
+                              label: l10n.editorSaveFirst,
+                              trailingIcon: UnaIcons.arrowRight,
+                              iconSize: UnaSizes.iconM,
+                              expand: false,
+                              singleLine: true,
+                              onPressed: _save,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Etiqueta negra en mayúsculas del prototipo (`.tag`).
-class _Tag extends StatelessWidget {
-  const _Tag({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      header: true,
-      child: Container(
-        color: UnaColors.ink,
-        padding: const EdgeInsets.symmetric(
-          horizontal: UnaSpace.s,
-          vertical: UnaSpace.xs,
-        ),
-        child: Text(
-          text.toUpperCase(),
-          style: const TextStyle(
-            fontFamily: UnaFonts.mono,
-            fontSize: UnaFontSizes.tag,
-            fontWeight: UnaFontWeights.bold,
-            letterSpacing: UnaLetterSpacing.tagWide * UnaFontSizes.tag,
-            color: UnaColors.onInk,
           ),
         ),
       ),

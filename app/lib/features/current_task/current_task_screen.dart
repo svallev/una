@@ -6,7 +6,9 @@ import '../../app/theme/una_theme.dart';
 import '../../domain/entities/task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
+import '../../ui/focus_ring.dart';
 import '../../ui/sticky_note.dart';
+import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
@@ -30,7 +32,13 @@ class CurrentTaskScreen extends StatelessWidget {
           colorKey: task.colorKey,
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(UnaSpace.l),
+              // Abajo, el margen del prototipo (~38).
+              padding: const EdgeInsets.fromLTRB(
+                UnaSpace.l,
+                UnaSpace.l,
+                UnaSpace.l,
+                UnaSpace.xxl,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -38,16 +46,16 @@ class CurrentTaskScreen extends StatelessWidget {
                     children: [
                       const Wordmark(),
                       const Spacer(),
-                      // El menú llega con la spec 005.
+                      // Abre el menú a partir de la spec 005.
                       _Order(
                         1,
                         child: _SquareIconButton(
-                          icon: Icons.menu,
+                          icon: UnaIcons.menu,
                           label: l10n.menuButton,
                           fill:
                               UnaPalettes.classic[task.colorKey %
                                   UnaPalettes.classic.length],
-                          onPressed: null,
+                          onPressed: () {},
                         ),
                       ),
                     ],
@@ -94,9 +102,11 @@ class CurrentTaskScreen extends StatelessWidget {
                     2,
                     child: BrutalButton(
                       label: l10n.completeButton,
-                      icon: Icons.check,
+                      icon: UnaIcons.check,
+                      height: UnaSizes.holdButton,
+                      fontSize: UnaFontSizes.button,
                       singleLine: true,
-                      onPressed: null,
+                      onPressed: () {},
                     ),
                   ),
                 ],
@@ -124,50 +134,89 @@ class _Order extends StatelessWidget {
   );
 }
 
-class _SquareIconButton extends StatelessWidget {
+/// Botón cuadrado de barra del prototipo (`.sq`): 46 px, sombra de 3 px y
+/// hundimiento al pulsar. Zona táctil de 48 dp (Android).
+class _SquareIconButton extends StatefulWidget {
   const _SquareIconButton({
     required this.icon,
     required this.label,
     required this.fill,
     required this.onPressed,
   });
-  final IconData icon;
+  final UnaIconData icon;
   final String label;
 
   /// En Flutter la sombra también se pinta bajo la caja: sin relleno se vería
   /// un cuadrado negro (en el CSS del prototipo, la sombra solo va por fuera).
   final Color fill;
-  final VoidCallback? onPressed;
+  final VoidCallback onPressed;
+
+  @override
+  State<_SquareIconButton> createState() => _SquareIconButtonState();
+}
+
+class _SquareIconButtonState extends State<_SquareIconButton> {
+  bool _down = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      enabled: onPressed != null,
-      label: label,
-      excludeSemantics: true,
-      onTap: onPressed,
-      // Zona táctil de 48 dp (Android) con la caja visual de 44 del prototipo.
-      child: InkResponse(
-        onTap: onPressed,
-        child: SizedBox.square(
-          dimension: kMinInteractiveDimension,
-          child: Center(child: _box()),
+    const sink = UnaShadows.iconButton;
+    return FocusableActionDetector(
+      mouseCursor: SystemMouseCursors.click,
+      onShowFocusHighlight: (v) => setState(() => _focused = v),
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onPressed();
+            return null;
+          },
+        ),
+      },
+      child: Semantics(
+        button: true,
+        label: widget.label,
+        excludeSemantics: true,
+        onTap: widget.onPressed,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => setState(() => _down = true),
+          onTapCancel: () => setState(() => _down = false),
+          onTapUp: (_) => setState(() => _down = false),
+          onTap: widget.onPressed,
+          child: SizedBox.square(
+            dimension: kMinInteractiveDimension,
+            child: Center(
+              child: FocusRing(
+                visible: _focused,
+                child: AnimatedContainer(
+                  duration: UnaMotion.press,
+                  transform: _down
+                      ? Matrix4.translationValues(
+                          sink.offset.dx,
+                          sink.offset.dy,
+                          0,
+                        )
+                      : Matrix4.identity(),
+                  width: UnaSizes.iconButton,
+                  height: UnaSizes.iconButton,
+                  decoration: BoxDecoration(
+                    border: const Border.fromBorderSide(
+                      BorderSide(
+                        color: UnaColors.ink,
+                        width: UnaBorders.strongWidth,
+                      ),
+                    ),
+                    boxShadow: [if (!_down) sink],
+                    color: widget.fill,
+                  ),
+                  child: Center(child: UnaIcon(widget.icon)),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
-
-  Widget _box() => Container(
-    width: UnaSizes.minTouchTarget,
-    height: UnaSizes.minTouchTarget,
-    decoration: BoxDecoration(
-      border: const Border.fromBorderSide(
-        BorderSide(color: UnaColors.ink, width: UnaBorders.strongWidth),
-      ),
-      boxShadow: const [UnaShadows.iconButton],
-      color: fill,
-    ),
-    child: Icon(icon, size: UnaSizes.icon, color: UnaColors.ink),
-  );
 }

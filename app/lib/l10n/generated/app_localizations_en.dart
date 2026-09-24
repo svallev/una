@@ -57,6 +57,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get skipIntroHint => 'continue';
 
   @override
+  String get attachButton => 'Add a photo, image or file';
+
+  @override
   String get webPreviewBanner =>
       'Test version · data is erased when you reload';
 

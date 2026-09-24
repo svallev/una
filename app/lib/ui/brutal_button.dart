@@ -2,28 +2,62 @@ import 'package:flutter/material.dart';
 
 import '../app/theme/tokens.g.dart';
 import 'focus_ring.dart';
+import 'una_icons.dart';
 
-/// Botón "brutalista" del prototipo: borde de 3 px, sombra dura y hundimiento al pulsar.
+/// Botón "brutalista" del prototipo (`.bb`): borde de 3 px, sombra dura de 5 px
+/// y hundimiento al pulsar.
 class BrutalButton extends StatefulWidget {
   const BrutalButton({
     super.key,
     required this.label,
     required this.onPressed,
     this.icon,
+    this.trailingIcon,
+    this.iconSize = UnaSizes.iconL,
+    this.height = UnaSizes.button,
+    this.fontSize = UnaFontSizes.bodyL,
     this.background = UnaColors.surface,
     this.expand = true,
     this.singleLine = false,
-  });
+  }) : iconOnly = false;
+
+  /// Botón cuadrado solo con icono (p. ej. "+"). [label] es su nombre accesible.
+  const BrutalButton.icon({
+    super.key,
+    required this.label,
+    required UnaIconData this.icon,
+    required this.onPressed,
+    this.iconSize = UnaSizes.iconL,
+    this.height = UnaSizes.button,
+    this.background = UnaColors.surface,
+  }) : trailingIcon = null,
+       fontSize = UnaFontSizes.bodyL,
+       expand = false,
+       singleLine = true,
+       iconOnly = true;
 
   final String label;
   final VoidCallback? onPressed;
-  final IconData? icon;
+
+  /// Icono delante del texto (completar: ✓).
+  final UnaIconData? icon;
+
+  /// Icono detrás del texto (Guardar: →).
+  final UnaIconData? trailingIcon;
+  final double iconSize;
+
+  /// Alto mínimo; con texto grande del sistema, el botón crece.
+  final double height;
+  final double fontSize;
   final Color background;
+
+  /// Ocupa todo el ancho disponible.
   final bool expand;
 
   /// El texto nunca pasa a una segunda línea: si no cabe (texto grande del
   /// sistema, pantallas estrechas) se reduce lo justo, sin cortarse.
   final bool singleLine;
+  final bool iconOnly;
 
   @override
   State<BrutalButton> createState() => _BrutalButtonState();
@@ -55,11 +89,18 @@ class _BrutalButtonState extends State<BrutalButton> {
     );
   }
 
+  Widget _icon(UnaIconData data) => UnaIcon(
+    data,
+    size: widget.iconSize,
+    strokeWidth: UnaSizes.iconStrokeBold,
+  );
+
   Widget _label() {
-    const style = TextStyle(
+    final style = TextStyle(
       fontFamily: UnaFonts.display,
-      fontSize: UnaFontSizes.bodyL,
+      fontSize: widget.fontSize,
       fontWeight: UnaFontWeights.extrabold,
+      letterSpacing: UnaLetterSpacing.snug * widget.fontSize,
       color: UnaColors.ink,
     );
     if (!widget.singleLine) {
@@ -68,6 +109,25 @@ class _BrutalButtonState extends State<BrutalButton> {
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Text(widget.label, maxLines: 1, softWrap: false, style: style),
+    );
+  }
+
+  Widget _content() {
+    if (widget.iconOnly) return Center(child: _icon(widget.icon!));
+    return Row(
+      mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (widget.icon != null) ...[
+          _icon(widget.icon!),
+          const SizedBox(width: UnaSpace.sm),
+        ],
+        Flexible(child: _label()),
+        if (widget.trailingIcon != null) ...[
+          const SizedBox(width: UnaSpace.sm),
+          _icon(widget.trailingIcon!),
+        ],
+      ],
     );
   }
 
@@ -91,13 +151,17 @@ class _BrutalButtonState extends State<BrutalButton> {
           child: AnimatedContainer(
             duration: UnaMotion.press,
             transform: Matrix4.translationValues(offset.dx, offset.dy, 0),
-            constraints: const BoxConstraints(
-              minHeight: UnaSizes.minTouchTarget + UnaSpace.m,
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: UnaSpace.ml,
-              vertical: UnaSpace.sm,
-            ),
+            width: widget.iconOnly ? widget.height : null,
+            constraints: BoxConstraints(minHeight: widget.height),
+            padding: widget.iconOnly
+                ? EdgeInsets.zero
+                // Prototipo: 28 delante y 22 detrás si hay flecha.
+                : EdgeInsets.fromLTRB(
+                    UnaSpace.xl,
+                    UnaSpace.sm,
+                    widget.trailingIcon != null ? UnaSpace.ml : UnaSpace.xl,
+                    UnaSpace.sm,
+                  ),
             decoration: BoxDecoration(
               color: widget.background,
               border: Border.all(
@@ -111,17 +175,7 @@ class _BrutalButtonState extends State<BrutalButton> {
                   UnaShadows.buttonPressed,
               ],
             ),
-            child: Row(
-              mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (widget.icon != null) ...[
-                  Icon(widget.icon, size: UnaSizes.icon, color: UnaColors.ink),
-                  const SizedBox(width: UnaSpace.s),
-                ],
-                Flexible(child: _label()),
-              ],
-            ),
+            child: _content(),
           ),
         ),
       ),

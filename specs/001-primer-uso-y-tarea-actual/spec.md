@@ -27,7 +27,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 - **CA-001-02 Editor de la primera tarea**
   - **Dado** que ha terminado la bienvenida
   - **Cuando** aparece el editor
-  - **Entonces** muestra la etiqueta "Tu primera tarea", el campo de texto con el foco y el teclado abierto, el placeholder "¿Qué es eso que tienes que hacer y no has hecho?" y el botón "Guardar" deshabilitado; **no** aparece "Cancelar" ni el acceso al menú.
+  - **Entonces** se ve como el prototipo: el logotipo arriba, el campo de texto **centrado** en la nota (del mismo color que la bienvenida) con el foco y el teclado abierto, el placeholder "¿Qué es eso que tienes que hacer y no has hecho?" y, abajo, el botón cuadrado "+" a la izquierda y "Guardar →" a la derecha, **ambos activos y con sombra**. La etiqueta "Tu primera tarea" **no se ve**: es el nombre accesible del campo. **No** aparece "Cancelar" ni el acceso al menú.
 - **CA-001-03 Nada más hasta crearla (R2)**
   - **Dado** que no existe ninguna tarea
   - **Cuando** el usuario intenta salir del editor (gesto atrás de Android, deslizar para cerrar o reabrir la app)
@@ -75,7 +75,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 
 | ID | Situación | Comportamiento esperado |
 |---|---|---|
-| CL-001-1 | Texto solo con espacios o saltos de línea | "Guardar" sigue deshabilitado |
+| CL-001-1 | Texto solo con espacios o saltos de línea | "Guardar" no guarda nada y devuelve el foco al campo (el botón nunca se ve desactivado) |
 | CL-001-2 | Texto de 10 000 caracteres (máximo) | Se acepta; no se pueden escribir más (contador visible a partir de 9 000); la nota se desplaza |
 | CL-001-3 | Emojis, RTL, CJK, texto sin espacios (URL larga pegada) | Se muestra sin desbordar; las palabras largas se parten |
 | CL-001-4 | La app se mata durante la bienvenida | Al reabrir, se abre el editor (CA-001-05) |
@@ -154,3 +154,5 @@ Salen de las revisiones de cierre (subagentes `spec-reviewer`, `a11y-reviewer` y
 - Privacidad (decisión del propietario): el teclado del sistema **no aprende** del texto de las tareas (`enableIMEPersonalizedLearning: false`; en Android, `IME_FLAG_NO_PERSONALIZED_LEARNING`).
 - Texto del botón de completar (decisión del propietario): **"Pulsa para completar"** en una sola línea, como en el prototipo. Se revoca DEV-06.
 - CA-001-07 (hallado con los goldens): si la palabra más larga no cabe en una línea, el tamaño de la nota se reduce lo justo (sin bajar de `noteS`) para no partirla; por debajo de `noteS`, las palabras enormes se parten (CL-001-3).
+- Fidelidad al prototipo (decisión del propietario, 2026-09-25): editor sin etiqueta visible y con el texto centrado; botones "+" y "Guardar →" (alineado a la derecha); la bienvenida con el color de la primera nota, texto de 52 px centrado y cursor de bloque; las notas sin marco; iconos del sistema de diseño (trazos SVG del prototipo, `UnaIcons`), no los de Material. **Ningún botón se ve desactivado**: "+" (specs 007–009), el menú (005) y completar (003) aún no hacen nada hasta sus specs.
+
