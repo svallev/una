@@ -1,0 +1,29 @@
+name: Idea o funcionalidad
+description: Propuesta que puede acabar en una spec
+title: "idea: "
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema o necesidad
+      description: Qué le pasa al usuario hoy (sin hablar de soluciones técnicas)
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+  - type: checkboxes
+    id: constitution
+    attributes:
+      label: Encaje con la constitución
+      options:
+        - label: Mantiene "una tarea a la vez" (P1)
+        - label: Funciona sin conexión y sin cuentas (P3, P4)
+        - label: Tiene alternativa accesible (P6)
+  - type: dropdown
+    id: block
+    attributes:
+      label: Bloque de la hoja de ruta
+      options: [MVP, "Bloque 1 · Fechas", "Bloque 2 · Subtareas y creación en bloque", "Bloque 3 · Importar", "Bloque 4 · Histórico, theming y alertas", "Bloque 5 · Configuración, legal y ayuda", Landing, Widgets, Otro]

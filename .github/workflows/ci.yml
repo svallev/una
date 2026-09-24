@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    name: Título de PR (Conventional Commits)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar título
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          re='^(feat|fix|docs|test|refactor|perf|chore|ci|build|revert)(\([a-z0-9._/-]+\))?!?: .{3,}$'
+          if [[ ! "$TITLE" =~ $re ]]; then
+            echo "::error::El título '$TITLE' no sigue Conventional Commits (p. ej. 'feat(003): completar manteniendo pulsado')"
+            exit 1
+          fi
+
+  docs:
+    name: Documentación y tokens
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validar design/tokens.json (estructura y contraste AA)
+        run: node tools/validate-tokens.mjs
+      - name: Validar JSON del repo
+        run: |
+          find . -name '*.json' -not -path './node_modules/*' -not -path './app/build/*' -print0 \
+            | xargs -0 -n1 node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))'
+
+  detect:
+    name: ¿Existe la app?
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.check.outputs.app }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: check
+        run: |
+          if [ -f app/pubspec.yaml ]; then echo "app=true" >> "$GITHUB_OUTPUT"; else echo "app=false" >> "$GITHUB_OUTPUT"; fi
+
+  flutter:
+    name: Flutter · format, analyze, test, web
+    needs: detect
+    if: needs.detect.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Instalar Flutter (versión de .fvmrc)
+        working-directory: .
+        run: bash tools/install-flutter.sh && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter --version
+      - run: flutter pub get --enforce-lockfile
+      - name: Código generado al día (drift, l10n, tokens)
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          flutter gen-l10n
+          git diff --exit-code || (echo "::error::Hay código generado sin actualizar" && exit 1)
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze --fatal-infos
+      - name: Tests (unitarios, widgets, goldens, migraciones, l10n, tokens)
+        run: flutter test --coverage
+      - run: flutter build web --release --wasm --no-web-resources-cdn
+
+  android:
+    name: Android · build debug
+    needs: [detect, flutter]
+    if: needs.detect.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: bash tools/install-flutter.sh && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - working-directory: app
+        run: |
+          flutter pub get --enforce-lockfile
+          flutter build apk --debug
+      - name: Permisos del manifiesto combinado (solo los esperados)
+        working-directory: app
+        run: bash ../tools/check-android-permissions.sh
+
+  ios:
+    name: iOS · build sin firmar
+    needs: [detect, flutter]
+    if: needs.detect.outputs.app == 'true'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash tools/install-flutter.sh && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - working-directory: app
+        run: |
+          flutter pub get --enforce-lockfile
+          flutter build ios --debug --no-codesign

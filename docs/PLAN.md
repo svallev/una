@@ -1,0 +1,158 @@
+# Plan maestro
+
+> Versión 1.0 · 2026-09-24 · Estado: **planificación cerrada; F0 pendiente**.
+> Etiquetas: **[Hecho]**, **[Suposición]** y **[Pendiente]**. Las decisiones D1–D16 salen de la ronda de preguntas con el propietario; los ADR, en `docs/adr/`.
+
+## 1. Resumen
+
+App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la vez** y permite que un único elemento (foto, PDF, web) quede **a pantalla completa nada más abrirla**. Stack provisional: **Flutter** (ADR-0001), a confirmar con pruebas técnicas desechables (spikes, F1). Metodología: SDD con la constitución de `specs/constitution.md`.
+
+## 2. Decisiones cerradas con el propietario
+
+| # | Decisión |
+|---|---|
+| D1 | No domina TS ni Dart → stack elegido por criterios técnicos |
+| D2 | Sin cuentas de Apple Developer ni Google Play todavía → hasta crearlas: simulador, emulador, APK directo y web |
+| D3 | Repo **público, todos los derechos reservados** |
+| D4 | Web en Vercel **solo para pruebas** |
+| D5 | Los documentos van **siempre arriba** (manda R5, no el prototipo) |
+| D6 | **PDF dentro** de la tarea; el resto, con el visor del sistema |
+| D7 | Eliminar = **deshacer durante 6 s** + tombstone |
+| D8 | Las completadas **conservan el adjunto** |
+| D9 | URL: **captura de página completa** para verla sin conexión |
+| D10 | Visor: **zoom + pantalla encendida**; sin brillo máximo ni horizontal |
+| D11 | Sin biometría en la v1 |
+| D12 | Mínimos: **iOS 16 / Android 8 (API 26)** |
+| D13 | Menú: **"Configuración"** mínima, sin perfil |
+| D14 | Backups del sistema **incluidos** |
+| D15 | Bundle ID con un dominio neutro que se comprará → **[Pendiente]** |
+| D16 | Código en inglés; documentación en español |
+| — | Skills, plugins y MCP **solo a nivel de proyecto**, revisados antes de instalar y nunca con `-g`/`-y` |
+
+## 3. Fases e hitos
+
+Tamaños relativos: **S** (≈ 1–3 días de trabajo efectivo), **M** (≈ 1 semana), **L** (≈ 2 semanas), **XL** (≈ 3–4 semanas). **[Suposición]** Son estimaciones para una persona con Claude Code; se recalibran tras F2.
+
+```mermaid
+flowchart LR
+  F0[F0 Preparación · S] --> F1[F1 Spikes · M]
+  F1 -->|go Flutter| F2[F2 Esqueleto + 001 · L]
+  F1 -->|no-go| ALT[Replanificar con Expo · ADR nuevo]
+  F2 --> F3[F3 Núcleo 002–006 · L]
+  F3 --> F4[F4 Adjuntos 007–009 · XL]
+  F3 --> F5a[010 Configuración · S]
+  F4 --> F5[F5 Endurecimiento y tiendas · M]
+  F5a --> F5
+  F5 --> F6[F6 Beta y v1.0 · M + 14 días de Play]
+```
+
+| Fase | Contenido | Tamaño | Depende de | Criterio de salida |
+|---|---|---|---|---|
+| **F0 Preparación** | Liberar espacio (≥ 60 GB libres); Xcode 26 desde la App Store + simulador; Android Studio + emulador; Homebrew (opcional) → `gh`, FVM → Flutter estable; crear el repo en GitHub (público) y activar la seguridad; conectar Vercel; comprar el dominio neutro; decidir las cuentas de tienda | S | — | `flutter doctor` sin errores; repo con CI verde (solo docs); reglas de rama en `main`; dominio → bundle ID definitivo en ADR |
+| **F1 Spikes** | S1 arranque · S2 animaciones · S3 PDF y visor del sistema · S4 captura web · S5 importación y backup · S6 web + Vercel (ADR-0001). Código **desechable** en `spikes/` (rama propia, no se fusiona). **Requiere aprobación.** | M | F0 | Todos los criterios de ADR-0001 cumplidos → ADR-0001 **Aceptado**; si no → ADR de cambio a Expo |
+| **F2 Esqueleto + 001** | `app/` + identidad + l10n + tokens + BD v1 + repositorio + CI + web + la spec 001 completa | L | F1 | CA-001 en verde; arranque p50 < 1 s medido; preview en Vercel por PR |
+| **F3 Núcleo** | 002 crear y posición → 003 completar → 004 eliminar y deshacer → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
+| **F4 Adjuntos** | 007 imagen (canal de importación + visor) → 008 documento → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
+| **010** | Idioma y Configuración (tras diseñar la pantalla) | S | F3 (se puede hacer en paralelo con F4) | CA-010 en verde |
+| **F5 Endurecimiento** | Auditoría de accesibilidad (VoiceOver, TalkBack, Switch, texto grande), pruebas MASTG, presupuesto de rendimiento y tamaño, política de privacidad, fichas de tienda, capturas, manifiesto de privacidad y Data Safety, iconos | M | F4, 010 | Checklist de publicación completa; 0 hallazgos altos |
+| **F6 Beta y v1.0** | TestFlight (interno y externo), Play: prueba cerrada con **12 testers durante 14 días** (cuenta personal nueva), corrección de errores, v1.0 | M + 14 días | F5 + cuentas | Crash-free observado por los testers (sin telemetría: formulario o correo), aprobación en ambas tiendas |
+
+**Camino crítico:** F0 → F1 → F2 → F3 → F4 → F5 → F6. **Tareas con plazo propio que conviene adelantar:** la cuenta de Google Play y el reclutamiento de 12 testers (el reloj de 14 días) y la compra del dominio (bloquea la primera subida).
+
+## 4. Orden de implementación dentro de F3/F4 y motivo
+
+1. **002** antes que 003/004: sin varias tareas no se pueden probar completar ni reordenar.
+2. **003** antes que **004**: comparten la infraestructura de animación y el estado vacío; completar es más central.
+3. **005** después de 004: el menú enlaza con eliminar.
+4. **006** cierra el núcleo (depende de todo lo anterior).
+5. **007** establece el canal de importación y el visor que reutilizan 008 y 009.
+6. **009** al final: mayor riesgo técnico (captura web) y de seguridad.
+
+## 5. Registro de riesgos
+
+Probabilidad (P) e impacto (I): Baja/Media/Alta.
+
+| ID | Riesgo | P | I | Mitigación | Disparador o seguimiento |
+|---|---|---|---|---|---|
+| R-01 | **Espacio en disco** insuficiente (30 GB libres) para Xcode, simuladores, Android y compilaciones | Alta | Alta | Liberar ≥ 60 GB antes de F0; un solo runtime de simulador; limpiar DerivedData y AVD que no se usen | F0 |
+| R-02 | Arranque en frío > 1 s en Android de gama media | Media | Alta | S1 temprano; tarea actual antes del primer fotograma; miniaturas pregeneradas; caché de la tarea actual; plan B Expo | S1, test de rendimiento en CI con dispositivo (F2) |
+| R-03 | Animaciones (arrugar y romper) con tirones o costosas de implementar | Media | Media | S2 con shaders precompilados; versión simplificada aceptable (con aprobación de producto) | S2 |
+| R-04 | `flutter_inappwebview` sin mantenimiento o con fallos | Media | Media | Aislarlo tras el puerto `WebSnapshotter`; plan B `webview_flutter` + código de plataforma | Dependabot, releases |
+| R-05 | Captura de página completa poco fiable en Android | Media | Media | S4; plan B: desplazar y coser o PDF → raster | S4 |
+| R-06 | Migraciones de datos que rompen datos reales tras publicar | Baja | Alta | Tests de migración obligatorios desde la v1; *fixtures* de BD reales anonimizadas | Cada cambio de esquema |
+| R-07 | **Google Play: 12 testers durante 14 días** retrasa la v1.0 | Alta | Media | Crear la cuenta en F0–F2 y reclutar testers en paralelo | F2 |
+| R-08 | Bundle ID sin dominio definitivo | Media | Alta (permanente) | Comprar el dominio en F0; marcador solo en desarrollo; prohibido subir a una tienda con el marcador | F0 |
+| R-09 | Curva de aprendizaje de Dart y Flutter del propietario | Alta | Media | CLAUDE.md, specs en español, subagentes revisores, explicaciones en cada PR | Continuo |
+| R-10 | Límite de 25 MB del backup de Android hace perder adjuntos al cambiar de móvil | Alta | Media | ADR-0004: exclusión controlada + estado "Adjunto no disponible" + exportación manual (Bloque 5) | F4 |
+| R-11 | Documentos no PDF sin app para abrirlos en Android | Media | Baja | Mensaje claro; D6 revisable | F4 |
+| R-12 | Rechazo en App Store (p. ej. por la guideline 4.2 de funcionalidad mínima o por la WebView) | Baja | Media | Funcionalidad nativa clara; la WebView es secundaria; notas de revisión | F6 |
+| R-13 | Clones de la app (repo público) | Media | Baja | "Todos los derechos reservados"; marca; se puede hacer privado en cualquier momento (la historia ya publicada queda expuesta) | Continuo |
+| R-14 | Dependencia o acción de CI comprometida | Baja | Alta | Lockfiles, SHA fijados, OSV, dependency-review, permisos mínimos | CI |
+| R-15 | Web de pruebas poco representativa (canvas, accesibilidad) | Alta | Baja | Los criterios de accesibilidad y rendimiento se verifican solo en dispositivo | — |
+| R-16 | Deriva entre prototipo e implementación | Media | Media | `screen-map.md`, `prototype-deviations.md` y *goldens* | Cada PR de UI |
+| R-17 | Pantallas sin diseño (Configuración, aviso de deshacer, visor, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (010, 004, 007–009) | Antes de F3/F4 |
+
+## 6. Trazabilidad de reglas → specs
+
+| Regla | Spec(s) | Criterios clave |
+|---|---|---|
+| R1 bienvenida | 001 | CA-001-01, 05 |
+| R2 nada hasta la primera tarea | 001 | CA-001-02, 03, 04 |
+| R3 crear con texto / foto / imagen / documento / URL | 002, 007, 008, 009 | CA-002-01; CA-007-02/03; CA-008-01; CA-009-01/03 |
+| R4 ¿dónde va? (texto) | 002 | CA-002-02 a 06 |
+| R5 adjuntos siempre arriba | 002, 007, 008, 009 | CA-002-09, CA-007-05, CA-008-03, CA-009-03 |
+| R6 solo una tarea | 001 | CA-001-06 |
+| R7 listado en ≥ 2 interacciones | 005, 006 | CA-005-01/03, CA-006-01 |
+| R8 abrir → tarea actual rápido | 001, 007, 008, 009 | CA-001-09, CA-007-07, CA-008-04, CA-009-05/06 |
+| R9 completar manteniendo pulsado + refuerzo | 003 | CA-003-01 a 04, 07, 08 |
+| R10 eliminar con confirmación y arrugado | 004 | CA-004-01 a 05 |
+| R11 editar, crear y menú | 005 | CA-005-01 a 09 |
+| R12 estados vacíos | 003, 004 | CA-003-05, CA-004-07 |
+| R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-03 a 07, 10 |
+| R14 histórico | 003 | CA-003-06 |
+| R15 idioma | 010 (y P7 en todas) | CA-010-01 a 05 |
+
+## 7. Decisiones pendientes
+
+| ID | Pendiente | Quién | Cuándo | Recomendación |
+|---|---|---|---|---|
+| PD-1 | Usuario u organización de GitHub | Propietario | F0 | Organización gratuita con un nombre neutro (separa el producto de la cuenta personal) |
+| PD-2 | Dominio neutro → bundle ID y package name | Propietario | F0 | `com.<estudio>.<identificador-neutro>`, sin "una" |
+| PD-3 | Cuentas de Apple Developer y Google Play | Propietario | Antes de F5 (Play, antes de F2 por R-07) | Crear la de Play pronto |
+| PD-4 | Aprobación de los spikes S1–S6 | Propietario | Inicio de F1 | — |
+| PD-5 | Diseño de las pantallas que faltan (R-17) | Propietario + Claude Design | Antes de F3 | — |
+| P-1 | ¿Guardar el borrador del editor? | Producto | Spec 001 | No en la v1 |
+| P-2 | Vuelta desde segundo plano: ¿conservar la pantalla? | Producto | Spec 001 | Sí si pasan < 10 min |
+| P-3 | ¿Confirmar al cancelar con texto? | Producto | Spec 002 | No |
+| P-4 | ¿Deshacer al completar? | Producto | Spec 003 | No |
+| P-5 | ¿Descripción alternativa de las imágenes escrita por el usuario? | Producto | Spec 007 | Sí, opcional, en la v1.1 |
+| P-6 | ¿Una URL que apunta a un PDF se guarda como documento? | Producto | Spec 009 | Sí |
+
+## 8. Hoja de ruta posterior (no se desarrolla ahora; la arquitectura la admite)
+
+| Bloque | Contenido | Preparación ya incluida |
+|---|---|---|
+| 1 | Fecha límite, vista "hoy" con más de una tarea, agrupación por fecha en el listado | `dueDate`; **requiere un ADR** porque "hoy" puede mostrar más de una tarea (tensión con P1) |
+| 2 | Creación en bloque, subtareas | `parentId`, `rank` por nivel |
+| 3 | Importar de Todoist, Google Keep, Google Tasks, Microsoft To Do y Any.do | `source`, `externalId`, flag `imports`, T-14 |
+| 4 | Histórico visible y borrable, theming (paletas), alertas (notificaciones locales) | `completedAt`, `palette.*`, flag `notifications` |
+| 5 | Configuración completa, páginas legales, ayuda, exportar/importar `.zip` | Pantalla Configuración, ADR-0004 |
+| — | Landing | ADR-0009 (`landing/`) |
+| — | Widgets de pantalla de inicio y bloqueo | ADR-0001 (home_widget), ADR-0005 (clase de protección) |
+| Mucho después | Cuentas, sincronización, compartir | UUIDv7, `updatedAt`, tombstones, `TaskRepository` |
+
+### Formatos de exportación para el Bloque 3 (sin APIs en la nube)
+
+| Servicio | Exportación del usuario | Formato | Estado |
+|---|---|---|---|
+| Todoist | Copias de seguridad automáticas (Configuración → Copias de seguridad) y exportar proyecto como plantilla | ZIP con CSV por proyecto / CSV | **[Suposición]** Verificar el esquema actual de columnas |
+| Google Keep | Google Takeout | Por nota: JSON (título, `textContent`, `listContent`, fechas, archivada o en la papelera) + HTML + adjuntos | **[Suposición]** Verificar campos |
+| Google Tasks | Google Takeout | JSON (`Tasks.json`: listas, título, notas, fecha, estado, `parent`) | **[Suposición]** Verificar |
+| Microsoft To Do | No hay exportación de archivo propia conocida; vía Outlook clásico (tareas → PST/CSV) o solicitud de datos de la cuenta Microsoft | PST/CSV | **[Pendiente]** Investigar antes del Bloque 3 |
+| Any.do | Exportación no documentada claramente; posible solicitud de datos (RGPD) | Desconocido | **[Pendiente]** Investigar |
+
+Además: recibir texto, URL y archivos desde "Compartir" del sistema (*share extension* / intent), que resuelve parte de la importación sin parsers.
+
+## 9. Siguiente paso concreto
+
+**F0:** liberar espacio → instalar Xcode desde la App Store → decidir el usuario de GitHub (PD-1) → crear el repo y hacer el primer push de esta planificación (con tu aprobación) → aprobar los spikes (PD-4).

@@ -1,0 +1,94 @@
+# ─── Secretos y firma (NUNCA en el repo) ─────────────────────────────
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+key.properties
+**/android/key.properties
+*.p8
+*.p12
+*.pem
+*.key
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.certSigningRequest
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+secrets/
+*.secret
+.vercel
+
+# ─── Claude Code (local) ─────────────────────────────────────────────
+.claude/settings.local.json
+.claude/*.local.*
+CLAUDE.local.md
+
+# ─── Flutter / Dart ──────────────────────────────────────────────────
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/generated_plugin_registrant.*
+coverage/
+*.g.dart.bak
+.fvm/flutter_sdk
+.fvm/versions
+**/failures/
+
+# ─── iOS / Xcode ─────────────────────────────────────────────────────
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.ipa
+*.dSYM.zip
+
+# ─── Android ─────────────────────────────────────────────────────────
+**/android/.gradle/
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+*.apk
+*.aab
+.cxx/
+.externalNativeBuild/
+
+# ─── Web / Node ──────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ─── Spikes (código desechable de F1: nunca en main) ─────────────────
+spikes/
+
+# ─── SO y editores ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

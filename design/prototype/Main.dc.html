@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Una — prototipo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&amp;family=Space+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0;font-family:Archivo,system-ui,sans-serif;color:#111111;background:#F4F1EA}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer;color:#111111}
+button:disabled{cursor:default}
+button:focus-visible,textarea:focus-visible{outline:3px solid #111111;outline-offset:3px}
+textarea::placeholder{color:rgba(17,17,17,.42)}
+.ic{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:square;stroke-linejoin:miter}
+.mono{font-family:'Space Mono',ui-monospace,monospace}
+
+/* Botones brutalistas */
+.bb{border:3px solid #111111;border-radius:0;background:#FFFFFF;color:#111111;box-shadow:5px 5px 0 #111111;transition:transform .08s ease,box-shadow .08s ease}
+.bb:active:not(:disabled){transform:translate(4px,4px);box-shadow:1px 1px 0 #111111}
+.bb.danger{background:#FF5A4E}
+.bb:disabled{opacity:.4;box-shadow:none;transform:translate(4px,4px);cursor:not-allowed}
+.bb.ghost{background:transparent;box-shadow:none}
+.bb.ghost:active{transform:translate(1px,1px)}
+.sq{border:3px solid #111111;border-radius:0;background:transparent;box-shadow:3px 3px 0 #111111;transition:transform .08s ease,box-shadow .08s ease}
+.sq:active:not(:disabled){transform:translate(3px,3px);box-shadow:0 0 0 #111111}
+.tag{display:inline-block;align-self:flex-start;background:#111111;color:#FFFFFF;font-family:'Space Mono',ui-monospace,monospace;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 8px}
+
+/* La hoja que se arruga */
+.sheet{transform-origin:50% 50%}
+.sheet .facets{opacity:0}
+.sheet .ballshade{position:absolute;inset:0;opacity:0;pointer-events:none;
+  background:radial-gradient(ellipse at 36% 32%,rgba(255,255,255,.5),transparent 42%),radial-gradient(ellipse at 64% 70%,rgba(17,17,17,.32),transparent 58%)}
+.sheet.crumpling{filter:url(#crumpleFx);will-change:transform,clip-path;animation:crumple 2.2s linear forwards}
+.sheet.crumpling .facets{animation:facetsIn 1.2s cubic-bezier(.3,0,.3,1) forwards}
+.sheet.crumpling .ballshade{animation:shadeIn 2.2s linear forwards}
+.wrap.crumpling{animation:lift 2.2s linear forwards}
+@keyframes facetsIn{0%{opacity:0}25%{opacity:.55}100%{opacity:1}}
+@keyframes shadeIn{0%,24%{opacity:0}55%,100%{opacity:1}}
+@keyframes lift{0%{filter:drop-shadow(0 0 0 rgba(17,17,17,0))}14%{filter:drop-shadow(6px 8px 0 rgba(17,17,17,.9))}55%,100%{filter:drop-shadow(4px 5px 0 rgba(17,17,17,.9))}}
+@keyframes crumple{
+  0%{clip-path:polygon(0% 0%,33% 0%,67% 0%,100% 0%,100% 33%,100% 67%,100% 100%,67% 100%,33% 100%,0% 100%,0% 67%,0% 33%);transform:none;animation-timing-function:cubic-bezier(.4,0,.6,1)}
+  6%{clip-path:polygon(1% 1%,34% 2%,66% 0%,99% 2%,98% 33%,100% 67%,98% 99%,67% 98%,34% 100%,2% 98%,0% 66%,2% 34%);transform:rotate(-.4deg) scale(.995,.99)}
+  13%{clip-path:polygon(4% 3%,35% 7%,64% 2%,96% 6%,93% 34%,98% 66%,94% 96%,65% 92%,37% 98%,6% 94%,2% 64%,8% 35%);transform:rotate(-1.5deg) scale(.97,.93)}
+  22%{clip-path:polygon(11% 10%,37% 17%,61% 7%,88% 13%,82% 37%,91% 62%,84% 88%,62% 80%,39% 92%,15% 86%,19% 61%,9% 37%);transform:rotate(-3deg) scale(.86,.56)}
+  32%{clip-path:polygon(20% 21%,41% 26%,59% 17%,78% 24%,73% 40%,81% 58%,74% 77%,58% 71%,42% 80%,23% 75%,28% 57%,18% 41%);transform:rotate(-6deg) scale(.66,.36)}
+  43%{clip-path:polygon(28% 29%,44% 32%,58% 26%,72% 31%,69% 44%,74% 58%,69% 70%,56% 67%,43% 73%,30% 69%,34% 56%,26% 43%);transform:rotate(-11deg) scale(.52,.25)}
+  55%{clip-path:polygon(31% 31%,46% 29%,60% 30%,71% 36%,72% 47%,70% 60%,66% 69%,54% 71%,42% 70%,32% 66%,28% 55%,29% 42%);transform:rotate(-18deg) scale(.47,.22);animation-timing-function:cubic-bezier(.2,.6,.4,1)}
+  64%{clip-path:polygon(31% 31%,46% 29%,60% 30%,71% 36%,72% 47%,70% 60%,66% 69%,54% 71%,42% 70%,32% 66%,28% 55%,29% 42%);transform:translateY(-70px) rotate(-70deg) scale(.43,.21);animation-timing-function:cubic-bezier(.55,0,1,.45)}
+  88%{clip-path:polygon(31% 31%,46% 29%,60% 30%,71% 36%,72% 47%,70% 60%,66% 69%,54% 71%,42% 70%,32% 66%,28% 55%,29% 42%);transform:translateY(334px) rotate(-240deg) scale(.24,.115);opacity:1}
+  91%,100%{clip-path:polygon(31% 31%,46% 29%,60% 30%,71% 36%,72% 47%,70% 60%,66% 69%,54% 71%,42% 70%,32% 66%,28% 55%,29% 42%);transform:translateY(354px) rotate(-250deg) scale(.2,.097);opacity:0}
+}
+
+/* Botón completar y papelera */
+.cta{transition:opacity .3s ease,transform .3s ease}
+.cta.hide{opacity:0;transform:translateY(16px);transition-delay:.15s}
+.trash{position:absolute;left:50%;bottom:30px;width:64px;height:76px;margin-left:-32px;opacity:0;pointer-events:none;color:#111111}
+.trash.show{animation:trashIn 2.2s ease forwards}
+.trash .lid{transform-box:fill-box;transform-origin:100% 100%}
+.trash.show .lid{animation:lid 2.2s ease forwards}
+.trash.show .can{transform-box:fill-box;transform-origin:50% 100%;animation:thud 2.2s ease forwards}
+@keyframes trashIn{0%,18%{opacity:0;transform:translateY(24px)}30%{opacity:1;transform:none}94%{opacity:1;transform:none}100%{opacity:0;transform:translateY(10px)}}
+@keyframes lid{0%,52%{transform:none}62%,86%{transform:rotate(38deg) translate(4px,-2px)}91%{transform:rotate(-6deg)}95%,100%{transform:none}}
+@keyframes thud{0%,88%{transform:none}91%{transform:scale(1.06,.92)}95%{transform:scale(.97,1.03)}98%,100%{transform:none}}
+
+/* Pantallas que entran */
+.paper{position:relative}
+.paper.enter{animation:enter .45s cubic-bezier(.2,.8,.2,1) both}
+@keyframes enter{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+/* Intro: el texto se escribe solo */
+.ch{opacity:0;filter:blur(6px);transition:opacity .38s ease,filter .38s ease}
+.ch.on{opacity:1;filter:none}
+.caret{display:inline-block;width:6px;height:.8em;margin:0 -6px 0 0;vertical-align:-0.04em;background:#111111;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.intro{z-index:5;transition:opacity .8s ease}
+.intro.out{opacity:0;pointer-events:none}
+.fadein{animation:fadeInSoft .8s ease both}
+@keyframes fadeInSoft{from{opacity:0}to{opacity:1}}
+
+/* Listado */
+.li{position:relative;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:4px 4px 0 #111111;transition:transform .2s ease,box-shadow .2s ease}
+.li.still{transition:none}
+.li.fixed{cursor:default;touch-action:auto}
+.li.dragging{z-index:3;cursor:grabbing;transition:box-shadow .15s ease;box-shadow:10px 10px 0 #111111}
+.li.flash{animation:flash .9s ease}
+@keyframes flash{0%,40%{box-shadow:9px 9px 0 #111111}100%{box-shadow:4px 4px 0 #111111}}
+.mrow:active:not(:disabled){background:rgba(17,17,17,.06)}
+.mrow:disabled{opacity:.35;cursor:not-allowed}
+
+
+/* Completar: mantener pulsado */
+.hold{position:relative;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.hold .holdfill{position:absolute;inset:0;background:#111111;color:#FFFFFF;clip-path:inset(0 100% 0 0);transition:clip-path .28s ease-out;pointer-events:none}
+.hold.holding .holdfill{clip-path:inset(0 0 0 0);transition:clip-path 1.2s linear}
+.hold.done .holdfill{clip-path:inset(0 0 0 0);transition:none}
+.hold.holding,.hold.done{transform:translate(4px,4px);box-shadow:1px 1px 0 #111111}
+
+/* Completar: el post-it se parte por la mitad */
+.tear{position:absolute;inset:0;z-index:11;pointer-events:none}
+.half{position:absolute;inset:0;transform-origin:50% 100%;filter:drop-shadow(4px 6px 0 rgba(17,17,17,.85))}
+.half .fiber{position:absolute;inset:0;background:#FFFDF3}
+.half .face{position:absolute;inset:0}
+.half.l .face{clip-path:polygon(0.00% 0.00%,49.08% 0.00%,50.78% 2.50%,50.19% 4.85%,47.70% 7.78%,47.59% 10.99%,47.76% 14.06%,49.61% 16.44%,48.04% 20.30%,50.66% 22.94%,50.40% 27.04%,52.48% 30.03%,51.86% 32.32%,48.15% 35.10%,49.00% 37.54%,48.34% 41.37%,50.72% 44.73%,50.25% 47.68%,47.71% 50.00%,50.94% 52.62%,49.03% 55.67%,49.76% 59.04%,51.53% 61.84%,48.67% 65.44%,50.13% 68.79%,51.19% 72.74%,52.50% 75.52%,49.57% 77.95%,48.19% 81.67%,47.60% 84.84%,51.38% 88.38%,51.95% 91.73%,51.02% 94.55%,50.42% 97.94%,51.36% 100.00%,0.00% 100.00%)}
+.half.l .fiber{clip-path:polygon(0.00% 0.00%,50.38% 0.00%,52.08% 2.50%,51.49% 4.85%,49.00% 7.78%,48.89% 10.99%,49.06% 14.06%,50.91% 16.44%,49.34% 20.30%,51.96% 22.94%,51.70% 27.04%,53.78% 30.03%,53.16% 32.32%,49.45% 35.10%,50.30% 37.54%,49.64% 41.37%,52.02% 44.73%,51.55% 47.68%,49.01% 50.00%,52.24% 52.62%,50.33% 55.67%,51.06% 59.04%,52.83% 61.84%,49.97% 65.44%,51.43% 68.79%,52.49% 72.74%,53.80% 75.52%,50.87% 77.95%,49.49% 81.67%,48.90% 84.84%,52.68% 88.38%,53.25% 91.73%,52.32% 94.55%,51.72% 97.94%,52.66% 100.00%,0.00% 100.00%)}
+.half.r .face{clip-path:polygon(100.00% 0.00%,49.08% 0.00%,50.78% 2.50%,50.19% 4.85%,47.70% 7.78%,47.59% 10.99%,47.76% 14.06%,49.61% 16.44%,48.04% 20.30%,50.66% 22.94%,50.40% 27.04%,52.48% 30.03%,51.86% 32.32%,48.15% 35.10%,49.00% 37.54%,48.34% 41.37%,50.72% 44.73%,50.25% 47.68%,47.71% 50.00%,50.94% 52.62%,49.03% 55.67%,49.76% 59.04%,51.53% 61.84%,48.67% 65.44%,50.13% 68.79%,51.19% 72.74%,52.50% 75.52%,49.57% 77.95%,48.19% 81.67%,47.60% 84.84%,51.38% 88.38%,51.95% 91.73%,51.02% 94.55%,50.42% 97.94%,51.36% 100.00%,100.00% 100.00%)}
+.half.r .fiber{clip-path:polygon(100.00% 0.00%,47.78% 0.00%,49.48% 2.50%,48.89% 4.85%,46.40% 7.78%,46.29% 10.99%,46.46% 14.06%,48.31% 16.44%,46.74% 20.30%,49.36% 22.94%,49.10% 27.04%,51.18% 30.03%,50.56% 32.32%,46.85% 35.10%,47.70% 37.54%,47.04% 41.37%,49.42% 44.73%,48.95% 47.68%,46.41% 50.00%,49.64% 52.62%,47.73% 55.67%,48.46% 59.04%,50.23% 61.84%,47.37% 65.44%,48.83% 68.79%,49.89% 72.74%,51.20% 75.52%,48.27% 77.95%,46.89% 81.67%,46.30% 84.84%,50.08% 88.38%,50.65% 91.73%,49.72% 94.55%,49.12% 97.94%,50.06% 100.00%,100.00% 100.00%)}
+.half.l{animation:tearL 1.25s cubic-bezier(.3,0,.2,1) forwards}
+.half.r{animation:tearR 1.25s cubic-bezier(.3,0,.2,1) forwards}
+@keyframes tearL{0%{transform:none}8%{transform:translateX(-2px) rotate(-.6deg)}14%{transform:translateX(1px) rotate(.3deg)}38%{transform:translate(-16px,4px) rotate(-7deg);animation-timing-function:cubic-bezier(.55,0,1,.45)}100%{transform:translate(-150px,980px) rotate(-34deg)}}
+@keyframes tearR{0%{transform:none}8%{transform:translateX(2px) rotate(.6deg)}14%{transform:translateX(-1px) rotate(-.3deg)}38%{transform:translate(16px,4px) rotate(7deg);animation-timing-function:cubic-bezier(.55,0,1,.45)}100%{transform:translate(150px,980px) rotate(34deg)}}
+
+/* Enhorabuena */
+.success{position:absolute;inset:0;z-index:10;background:#111111;color:#FFFFFF;display:flex;flex-direction:column;justify-content:center;padding:0 24px 60px;gap:22px;box-sizing:border-box;opacity:1;transition:opacity .7s ease}
+.success.out{opacity:0}
+.success .stamp{animation:stamp .55s cubic-bezier(.2,1.6,.4,1) .3s both}
+.success .big{animation:rise .5s cubic-bezier(.2,.8,.2,1) .45s both}
+.success .small{animation:rise .5s cubic-bezier(.2,.8,.2,1) .65s both}
+@keyframes stamp{0%{transform:scale(0) rotate(-30deg);opacity:0}100%{transform:scale(1) rotate(-6deg);opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.confetti{position:absolute;left:72px;top:50%;width:0;height:0;pointer-events:none}
+.cf{position:absolute;left:0;top:0;display:block;border:2px solid #111111}
+.cf1{width:10px;height:10px;background:#FF9EC4;animation:cf1 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf1{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 162px),calc(-50% + -9px)) rotate(-194deg) scale(1);opacity:0}}
+.cf2{width:14px;height:14px;background:#8FD3F4;animation:cf2 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf2{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + -18px),calc(-50% + -103px)) rotate(196deg) scale(1);opacity:0}}
+.cf3{width:10px;height:10px;background:#A6E88F;animation:cf3 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf3{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + -45px),calc(-50% + -163px)) rotate(95deg) scale(1);opacity:0}}
+.cf4{width:16px;height:16px;background:#FFB870;animation:cf4 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf4{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 148px),calc(-50% + -8px)) rotate(-141deg) scale(1);opacity:0}}
+.cf5{width:12px;height:12px;background:#FFFFFF;animation:cf5 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf5{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 191px),calc(-50% + 124px)) rotate(-128deg) scale(1);opacity:0}}
+.cf6{width:10px;height:10px;background:#FFE55C;animation:cf6 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf6{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + -177px),calc(-50% + 182px)) rotate(248deg) scale(1);opacity:0}}
+.cf7{width:12px;height:12px;background:#FF9EC4;animation:cf7 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf7{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 82px),calc(-50% + 192px)) rotate(24deg) scale(1);opacity:0}}
+.cf8{width:16px;height:16px;background:#8FD3F4;animation:cf8 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf8{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 91px),calc(-50% + -145px)) rotate(25deg) scale(1);opacity:0}}
+.cf9{width:12px;height:12px;background:#A6E88F;animation:cf9 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf9{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 194px),calc(-50% + 33px)) rotate(129deg) scale(1);opacity:0}}
+.cf10{width:12px;height:12px;background:#FFB870;animation:cf10 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf10{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 81px),calc(-50% + 163px)) rotate(-23deg) scale(1);opacity:0}}
+.cf11{width:14px;height:14px;background:#FFFFFF;animation:cf11 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf11{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 211px),calc(-50% + 66px)) rotate(-74deg) scale(1);opacity:0}}
+.cf12{width:14px;height:14px;background:#FFE55C;animation:cf12 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf12{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + -27px),calc(-50% + 183px)) rotate(118deg) scale(1);opacity:0}}
+.cf13{width:16px;height:16px;background:#FF9EC4;animation:cf13 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf13{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 188px),calc(-50% + -7px)) rotate(-205deg) scale(1);opacity:0}}
+.cf14{width:16px;height:16px;background:#8FD3F4;animation:cf14 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf14{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 166px),calc(-50% + -71px)) rotate(141deg) scale(1);opacity:0}}
+.cf15{width:10px;height:10px;background:#A6E88F;animation:cf15 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf15{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + -106px),calc(-50% + 128px)) rotate(150deg) scale(1);opacity:0}}
+.cf16{width:12px;height:12px;background:#FFB870;animation:cf16 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf16{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 83px),calc(-50% + 263px)) rotate(191deg) scale(1);opacity:0}}
+.cf17{width:10px;height:10px;background:#FFFFFF;animation:cf17 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf17{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + 143px),calc(-50% + 169px)) rotate(-156deg) scale(1);opacity:0}}
+.cf18{width:10px;height:10px;background:#FFE55C;animation:cf18 1.1s cubic-bezier(.15,.7,.3,1) .38s both}@keyframes cf18{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%{opacity:1}100%{transform:translate(calc(-50% + -163px),calc(-50% + -23px)) rotate(112deg) scale(1);opacity:0}}
+
+/* Inputs de archivo ocultos (los activan sus <label>) */
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+label.mrow{cursor:pointer}
+
+/* Menús: entran de abajo a arriba, muy rápido */
+.sheetbg{animation:bgIn .16s ease-out both}
+.sheetup{animation:sheetUp .2s cubic-bezier(.2,.9,.3,1) both}
+@keyframes bgIn{from{opacity:0}to{opacity:1}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+.sheetbg.out{animation:bgOut .16s ease-in both}
+.sheetup.out{animation:sheetDown .16s cubic-bezier(.5,0,.8,.4) both}
+@keyframes bgOut{from{opacity:1}to{opacity:0}}
+@keyframes sheetDown{from{transform:none}to{transform:translateY(100%)}}
+
+@media (prefers-reduced-motion: reduce){
+  .sheet.crumpling{filter:none;animation:fadeOut .6s ease forwards}
+  .sheet.crumpling .facets,.sheet.crumpling .ballshade,.wrap.crumpling{animation:none}
+  .paper.enter{animation:fadeIn .3s ease both}
+  .trash.show,.trash.show .lid,.trash.show .can{animation:none}
+  .half.l,.half.r{animation:fadeOut .4s ease forwards}
+  .cf,.success .stamp,.success .big,.success .small{animation:none}
+  .sheetup{animation:none}
+  @keyframes fadeOut{to{opacity:0}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F4F1EA; color: #111111; font-family: Archivo, system-ui, sans-serif;">
+
+<!-- INTRO: el texto se escribe y pasa directo a crear la nota -->
+<sc-if value="{{isIntro}}" hint-placeholder-val="{{ true }}">
+<div class="{{introClass}}" style="position: absolute; inset: 0; display: flex; flex-direction: column; padding: 22px 24px 40px; box-sizing: border-box; background: {{introColor}};">
+<span style="font-size: 26px; font-weight: 900; letter-spacing: -0.04em;">una.</span>
+<div style="flex-grow: 1; display: flex; align-items: center; padding-bottom: 60px;">
+<h1 aria-label="Ya puedes crear tu primera tarea" style="margin: 0; font-size: 52px; font-weight: 800; line-height: 1; letter-spacing: -0.035em; white-space: pre-wrap;"><sc-if value="{{caretStart}}" hint-placeholder-val="{{ false }}"><span class="caret" aria-hidden="true"></span></sc-if><sc-for list="{{introChars}}" as="c" hint-placeholder-count="0"><span class="{{c.cls}}" aria-hidden="true">{{c.ch}}</span><sc-if value="{{c.caret}}" hint-placeholder-val="{{ false }}"><span class="caret" aria-hidden="true"></span></sc-if></sc-for></h1>
+</div>
+</div>
+</sc-if>
+
+<!-- VACÍO: tras completar o eliminar la última nota -->
+<sc-if value="{{isVacio}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; display: flex; flex-direction: column; padding: 22px 24px 40px; box-sizing: border-box; background: #F4F1EA;">
+<span style="font-size: 26px; font-weight: 900; letter-spacing: -0.04em;">una.</span>
+<div class="paper enter" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; gap: 20px;">
+<h1 style="margin: 0; font-size: 56px; font-weight: 800; line-height: 0.98; letter-spacing: -0.04em;"><span style="display: block;">{{headA}}</span><span style="display: block;">{{headB}}</span></h1>
+<p class="mono" style="margin: 0; font-size: 15px; line-height: 1.5; max-width: 300px;">{{emptyText}}</p>
+</div>
+<button type="button" class="bb" onClick="{{create}}" style="height: 68px; font-size: 19px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M12 4v16M4 12h16"></path></svg>
+<span>{{emptyCta}}</span>
+</button>
+</div>
+</sc-if>
+
+<!-- LA NOTA: logo, menú y botón fijos; la nota es el post-it que se arruga -->
+<sc-if value="{{isNota}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: {{nextColor}};">
+
+<svg width="0" height="0" aria-hidden="true" style="position: absolute;">
+<filter id="crumpleFx" ref="{{fxRef}}" x="-15%" y="-15%" width="130%" height="130%">
+<feTurbulence type="fractalNoise" result="noise"></feTurbulence>
+<feDiffuseLighting in="noise" result="light"><feDistantLight azimuth="225" elevation="52"></feDistantLight></feDiffuseLighting>
+<feComposite in="SourceGraphic" in2="light" operator="arithmetic" result="shaded"></feComposite>
+<feDisplacementMap in="shaded" in2="noise"></feDisplacementMap>
+</filter>
+</svg>
+
+<!-- La siguiente, esperando detrás -->
+<div aria-hidden="{{notAnim}}" style="position: absolute; inset: 0; isolation: isolate;">
+<sc-if value="{{hasNext}}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{nx.isText}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; padding: 0 24px 12px; display: flex; flex-direction: column; justify-content: center; gap: 18px;">
+<p style="margin: 0; font-size: {{nx.size}}; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; overflow-wrap: anywhere;">{{nx.text}}</p>
+</div>
+</sc-if>
+<sc-if value="{{nx.isImage}}" hint-placeholder-val="{{ false }}">
+<img src="{{nx.url}}" alt="{{nx.alt}}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;">
+<sc-if value="{{nx.hasCaption}}" hint-placeholder-val="{{ false }}"><p style="position: absolute; left: 24px; right: 24px; bottom: 146px; margin: 0; padding: 12px 14px; background: #111111; color: #FFFFFF; font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; overflow-wrap: anywhere;">{{nx.text}}</p></sc-if>
+</sc-if>
+<sc-if value="{{nx.isUrl}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #FFFFFF; isolation: isolate;">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; overflow: auto; border-top: 3px solid #111111; border-bottom: 3px solid #111111; display: flex; flex-direction: column;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 8px 24px; background: #111111; color: #FFFFFF; font-size: 11px;"><svg width="12" height="12" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M5 11h14v10H5z"></path><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{nx.host}}</span><span style="font-weight: 700;">WEB</span></div>
+<div style="padding: 26px 24px 8px; display: flex; flex-direction: column; gap: 10px;">
+<p style="margin: 0; font-size: 34px; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; overflow-wrap: anywhere;">{{nx.host}}</p>
+<p class="mono" style="margin: 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere;">{{nx.href}}</p>
+</div>
+<div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div>
+<div style="padding: 0 24px 24px; display: flex; flex-direction: column; gap: 12px;">
+<a href="{{nx.href}}" target="_blank" rel="noopener noreferrer" style="height: 56px; box-sizing: border-box; border: 3px solid #111111; background: #FFFFFF; box-shadow: 5px 5px 0 #111111; color: #111111; text-decoration: none; font-size: 17px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">Abrir página ↗</a>
+<p class="mono" style="margin: 0; font-size: 11px; line-height: 1.5; color: #55534E;">En la app la página se carga aquí, dentro de la tarea.</p>
+</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{nx.isDoc}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #FFFFFF; isolation: isolate;">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; overflow: auto; border-top: 3px solid #111111; border-bottom: 3px solid #111111;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 8px 24px; background: #111111; color: #FFFFFF; font-size: 11px;"><span style="font-weight: 700;">{{nx.ext}}</span><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{nx.name}}</span><span>{{nx.fsize}}</span></div>
+<sc-if value="{{nx.hasCaption}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; padding: 16px 24px; background: {{nx.color}}; border-bottom: 3px solid #111111; font-size: 24px; font-weight: 800; line-height: 1.08; letter-spacing: -0.02em; overflow-wrap: anywhere;">{{nx.text}}</p></sc-if>
+<sc-if value="{{nx.loading}}" hint-placeholder-val="{{ false }}"><p class="mono" style="margin: 0; padding: 28px 24px; font-size: 13px;">Abriendo documento…</p></sc-if>
+<sc-if value="{{nx.kPdf}}" hint-placeholder-val="{{ false }}"><sc-for list="{{nx.pages}}" as="pg" hint-placeholder-count="1"><canvas ref="{{pg.ref}}" role="img" aria-label="{{pg.label}}" style="display: block; width: 100%; background: #FFFFFF; border-bottom: 3px solid #111111;"></canvas></sc-for></sc-if>
+<sc-if value="{{nx.kWord}}" hint-placeholder-val="{{ false }}"><div style="padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 12px;"><sc-for list="{{nx.paras}}" as="pa" hint-placeholder-count="4"><p style="margin: 0; font-size: {{pa.fs}}; font-weight: {{pa.fw}}; line-height: 1.45; overflow-wrap: anywhere;">{{pa.text}}</p></sc-for></div></sc-if>
+<sc-if value="{{nx.kGrid}}" hint-placeholder-val="{{ false }}"><div style="overflow-x: auto;"><div style="display: grid; grid-template-columns: {{nx.gridCols}}; width: max-content;"><sc-for list="{{nx.cells}}" as="ce" hint-placeholder-count="8"><span style="min-height: 34px; box-sizing: border-box; padding: 8px 10px; border-right: 1px solid #D8D4CA; border-bottom: 1px solid #D8D4CA; background: {{ce.bg}}; color: {{ce.fg}}; font-size: 13px; font-weight: {{ce.fw}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ce.v}}</span></sc-for></div></div></sc-if>
+<sc-if value="{{nx.kText}}" hint-placeholder-val="{{ false }}"><pre class="mono" style="margin: 0; padding: 20px 24px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;">{{nx.body}}</pre></sc-if>
+<sc-if value="{{nx.kOther}}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column;"><div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div><p class="mono" style="margin: 0; padding: 0 24px 24px; font-size: 12px;">Vista previa no disponible para .{{nx.ext}} en el prototipo. En la app se abre con el visor del teléfono.</p></div></sc-if>
+</div>
+</div>
+</sc-if>
+</sc-if>
+<sc-if value="{{noNext}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; padding: 0 24px 12px; display: flex; flex-direction: column; justify-content: center;">
+<p style="margin: 0; font-size: 56px; font-weight: 800; line-height: 0.98; letter-spacing: -0.04em;">Todo hecho.</p>
+</div>
+</sc-if>
+</div>
+
+<!-- La nota actual: el post-it -->
+<div class="{{wrapClass}}" style="position: absolute; inset: 0;">
+<div class="{{sheetClass}}" style="position: absolute; inset: 0; background-color: {{curColor}}; overflow: hidden;">
+<sc-if value="{{cv.isText}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; padding: 0 24px 12px; display: flex; flex-direction: column; justify-content: center; gap: 18px;">
+<p style="margin: 0; font-size: {{cv.size}}; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; overflow-wrap: anywhere;">{{cv.text}}</p>
+</div>
+</sc-if>
+<sc-if value="{{cv.isImage}}" hint-placeholder-val="{{ false }}">
+<img src="{{cv.url}}" alt="{{cv.alt}}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;">
+<sc-if value="{{cv.hasCaption}}" hint-placeholder-val="{{ false }}"><p style="position: absolute; left: 24px; right: 24px; bottom: 146px; margin: 0; padding: 12px 14px; background: #111111; color: #FFFFFF; font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; overflow-wrap: anywhere;">{{cv.text}}</p></sc-if>
+</sc-if>
+<sc-if value="{{cv.isUrl}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #FFFFFF; isolation: isolate;">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; overflow: auto; border-top: 3px solid #111111; border-bottom: 3px solid #111111; display: flex; flex-direction: column;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 8px 24px; background: #111111; color: #FFFFFF; font-size: 11px;"><svg width="12" height="12" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M5 11h14v10H5z"></path><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{cv.host}}</span><span style="font-weight: 700;">WEB</span></div>
+<div style="padding: 26px 24px 8px; display: flex; flex-direction: column; gap: 10px;">
+<p style="margin: 0; font-size: 34px; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; overflow-wrap: anywhere;">{{cv.host}}</p>
+<p class="mono" style="margin: 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere;">{{cv.href}}</p>
+</div>
+<div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div>
+<div style="padding: 0 24px 24px; display: flex; flex-direction: column; gap: 12px;">
+<a href="{{cv.href}}" target="_blank" rel="noopener noreferrer" style="height: 56px; box-sizing: border-box; border: 3px solid #111111; background: #FFFFFF; box-shadow: 5px 5px 0 #111111; color: #111111; text-decoration: none; font-size: 17px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">Abrir página ↗</a>
+<p class="mono" style="margin: 0; font-size: 11px; line-height: 1.5; color: #55534E;">En la app la página se carga aquí, dentro de la tarea.</p>
+</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{cv.isDoc}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #FFFFFF; isolation: isolate;">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; overflow: auto; border-top: 3px solid #111111; border-bottom: 3px solid #111111;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 8px 24px; background: #111111; color: #FFFFFF; font-size: 11px;"><span style="font-weight: 700;">{{cv.ext}}</span><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{cv.name}}</span><span>{{cv.fsize}}</span></div>
+<sc-if value="{{cv.hasCaption}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; padding: 16px 24px; background: {{cv.color}}; border-bottom: 3px solid #111111; font-size: 24px; font-weight: 800; line-height: 1.08; letter-spacing: -0.02em; overflow-wrap: anywhere;">{{cv.text}}</p></sc-if>
+<sc-if value="{{cv.loading}}" hint-placeholder-val="{{ false }}"><p class="mono" style="margin: 0; padding: 28px 24px; font-size: 13px;">Abriendo documento…</p></sc-if>
+<sc-if value="{{cv.kPdf}}" hint-placeholder-val="{{ false }}"><sc-for list="{{cv.pages}}" as="pg" hint-placeholder-count="1"><canvas ref="{{pg.ref}}" role="img" aria-label="{{pg.label}}" style="display: block; width: 100%; background: #FFFFFF; border-bottom: 3px solid #111111;"></canvas></sc-for></sc-if>
+<sc-if value="{{cv.kWord}}" hint-placeholder-val="{{ false }}"><div style="padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 12px;"><sc-for list="{{cv.paras}}" as="pa" hint-placeholder-count="4"><p style="margin: 0; font-size: {{pa.fs}}; font-weight: {{pa.fw}}; line-height: 1.45; overflow-wrap: anywhere;">{{pa.text}}</p></sc-for></div></sc-if>
+<sc-if value="{{cv.kGrid}}" hint-placeholder-val="{{ false }}"><div style="overflow-x: auto;"><div style="display: grid; grid-template-columns: {{cv.gridCols}}; width: max-content;"><sc-for list="{{cv.cells}}" as="ce" hint-placeholder-count="8"><span style="min-height: 34px; box-sizing: border-box; padding: 8px 10px; border-right: 1px solid #D8D4CA; border-bottom: 1px solid #D8D4CA; background: {{ce.bg}}; color: {{ce.fg}}; font-size: 13px; font-weight: {{ce.fw}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ce.v}}</span></sc-for></div></div></sc-if>
+<sc-if value="{{cv.kText}}" hint-placeholder-val="{{ false }}"><pre class="mono" style="margin: 0; padding: 20px 24px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;">{{cv.body}}</pre></sc-if>
+<sc-if value="{{cv.kOther}}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column;"><div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div><p class="mono" style="margin: 0; padding: 0 24px 24px; font-size: 12px;">Vista previa no disponible para .{{cv.ext}} en el prototipo. En la app se abre con el visor del teléfono.</p></div></sc-if>
+</div>
+</div>
+</sc-if>
+<svg class="facets" viewBox="0 0 390 844" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+<sc-for list="{{facets}}" as="f" hint-placeholder-count="0"><polygon points="{{f.pts}}" fill="{{f.fill}}" stroke="{{f.stroke}}" style="stroke-width: 0.8;"></polygon></sc-for>
+</svg>
+<span class="ballshade" aria-hidden="true"></span>
+</div>
+</div>
+
+<!-- Logo y menú: se quedan -->
+<div style="position: absolute; left: 0; right: 0; top: 0; height: 68px; padding: 12px 20px 0 24px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 26px; font-weight: 900; letter-spacing: -0.04em; padding: 0 {{logoPad}}; margin-left: -{{logoPad}}; background: {{chromeBg}};">una.</span>
+<button type="button" class="sq" aria-label="Menú de la tarea" onClick="{{openMenu}}" disabled="{{busy}}" style="width: 46px; height: 46px; background: {{chromeBg}}; display: flex; align-items: center; justify-content: center;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+</button>
+</div>
+
+<!-- Botón: mantener pulsado para completar (la barra rellena el fondo) -->
+<div class="{{ctaClass}}" style="position: absolute; left: 0; right: 0; bottom: 0; padding: 0 24px 38px;">
+<button type="button" class="{{holdClass}}" aria-label="Pulsa y mantén para completar la tarea" onPointerDown="{{holdStart}}" onPointerUp="{{holdCancel}}" onPointerLeave="{{holdCancel}}" onPointerCancel="{{holdCancel}}" onKeyDown="{{holdKeyDown}}" onKeyUp="{{holdKeyUp}}" onContextMenu="{{noMenu}}" disabled="{{busy}}" style="width: 100%; height: 72px; padding: 0;">
+<span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 12px;">
+<svg width="26" height="26" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M4 12.5l5 5L20 6.5"></path></svg>
+<span style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">Pulsa para completar</span>
+</span>
+<span class="holdfill" aria-hidden="true" style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+<svg width="26" height="26" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M4 12.5l5 5L20 6.5"></path></svg>
+<span style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">Pulsa para completar</span>
+</span>
+</button>
+</div>
+<div class="{{trashClass}}" aria-hidden="true">
+<svg width="64" height="76" viewBox="0 0 64 76" class="ic" style="stroke-width: 3.2;">
+<g class="lid"><path d="M6 18h52"></path><path d="M24 18v-7h16v7"></path></g>
+<g class="can"><path d="M12 24l4 46h32l4-46z"></path><path d="M26 34v26M38 34v26"></path></g>
+</svg>
+</div>
+
+<!-- COMPLETAR: la tarea se parte por la mitad -->
+<sc-if value="{{tearing}}" hint-placeholder-val="{{ false }}">
+<div class="tear" aria-hidden="true">
+<div class="half l"><div class="fiber"></div><div class="face" style="background: {{tearColor}};">
+<sc-if value="{{tv.isText}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; padding: 0 24px 12px; display: flex; flex-direction: column; justify-content: center; gap: 18px;">
+<p style="margin: 0; font-size: {{tv.size}}; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; overflow-wrap: anywhere;">{{tv.text}}</p>
+</div>
+</sc-if>
+<sc-if value="{{tv.isImage}}" hint-placeholder-val="{{ false }}">
+<img src="{{tv.url}}" alt="{{tv.alt}}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;">
+<sc-if value="{{tv.hasCaption}}" hint-placeholder-val="{{ false }}"><p style="position: absolute; left: 24px; right: 24px; bottom: 146px; margin: 0; padding: 12px 14px; background: #111111; color: #FFFFFF; font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; overflow-wrap: anywhere;">{{tv.text}}</p></sc-if>
+</sc-if>
+<sc-if value="{{tv.isUrl}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #FFFFFF; isolation: isolate;">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; overflow: auto; border-top: 3px solid #111111; border-bottom: 3px solid #111111; display: flex; flex-direction: column;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 8px 24px; background: #111111; color: #FFFFFF; font-size: 11px;"><svg width="12" height="12" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M5 11h14v10H5z"></path><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{tv.host}}</span><span style="font-weight: 700;">WEB</span></div>
+<div style="padding: 26px 24px 8px; display: flex; flex-direction: column; gap: 10px;">
+<p style="margin: 0; font-size: 34px; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; overflow-wrap: anywhere;">{{tv.host}}</p>
+<p class="mono" style="margin: 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere;">{{tv.href}}</p>
+</div>
+<div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div>
+<div style="padding: 0 24px 24px; display: flex; flex-direction: column; gap: 12px;">
+<a href="{{tv.href}}" target="_blank" rel="noopener noreferrer" style="height: 56px; box-sizing: border-box; border: 3px solid #111111; background: #FFFFFF; box-shadow: 5px 5px 0 #111111; color: #111111; text-decoration: none; font-size: 17px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">Abrir página ↗</a>
+<p class="mono" style="margin: 0; font-size: 11px; line-height: 1.5; color: #55534E;">En la app la página se carga aquí, dentro de la tarea.</p>
+</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{tv.isDoc}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #FFFFFF; isolation: isolate;">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; overflow: auto; border-top: 3px solid #111111; border-bottom: 3px solid #111111;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 8px 24px; background: #111111; color: #FFFFFF; font-size: 11px;"><span style="font-weight: 700;">{{tv.ext}}</span><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{tv.name}}</span><span>{{tv.fsize}}</span></div>
+<sc-if value="{{tv.hasCaption}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; padding: 16px 24px; background: {{tv.color}}; border-bottom: 3px solid #111111; font-size: 24px; font-weight: 800; line-height: 1.08; letter-spacing: -0.02em; overflow-wrap: anywhere;">{{tv.text}}</p></sc-if>
+<sc-if value="{{tv.loading}}" hint-placeholder-val="{{ false }}"><p class="mono" style="margin: 0; padding: 28px 24px; font-size: 13px;">Abriendo documento…</p></sc-if>
+<sc-if value="{{tv.kPdf}}" hint-placeholder-val="{{ false }}"><sc-for list="{{tv.pages}}" as="pg" hint-placeholder-count="1"><canvas ref="{{pg.ref}}" role="img" aria-label="{{pg.label}}" style="display: block; width: 100%; background: #FFFFFF; border-bottom: 3px solid #111111;"></canvas></sc-for></sc-if>
+<sc-if value="{{tv.kWord}}" hint-placeholder-val="{{ false }}"><div style="padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 12px;"><sc-for list="{{tv.paras}}" as="pa" hint-placeholder-count="4"><p style="margin: 0; font-size: {{pa.fs}}; font-weight: {{pa.fw}}; line-height: 1.45; overflow-wrap: anywhere;">{{pa.text}}</p></sc-for></div></sc-if>
+<sc-if value="{{tv.kGrid}}" hint-placeholder-val="{{ false }}"><div style="overflow-x: auto;"><div style="display: grid; grid-template-columns: {{tv.gridCols}}; width: max-content;"><sc-for list="{{tv.cells}}" as="ce" hint-placeholder-count="8"><span style="min-height: 34px; box-sizing: border-box; padding: 8px 10px; border-right: 1px solid #D8D4CA; border-bottom: 1px solid #D8D4CA; background: {{ce.bg}}; color: {{ce.fg}}; font-size: 13px; font-weight: {{ce.fw}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ce.v}}</span></sc-for></div></div></sc-if>
+<sc-if value="{{tv.kText}}" hint-placeholder-val="{{ false }}"><pre class="mono" style="margin: 0; padding: 20px 24px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;">{{tv.body}}</pre></sc-if>
+<sc-if value="{{tv.kOther}}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column;"><div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div><p class="mono" style="margin: 0; padding: 0 24px 24px; font-size: 12px;">Vista previa no disponible para .{{tv.ext}} en el prototipo. En la app se abre con el visor del teléfono.</p></div></sc-if>
+</div>
+</div>
+</sc-if>
+<div style="position: absolute; left: 0; right: 0; top: 0; height: 68px; padding: 12px 20px 0 24px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 26px; font-weight: 900; letter-spacing: -0.04em;">una.</span>
+<span style="width: 46px; height: 46px; box-sizing: border-box; border: 3px solid #111111; box-shadow: 3px 3px 0 #111111; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" class="ic"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></span>
+</div>
+
+<div style="position: absolute; left: 28px; right: 20px; bottom: 34px; height: 72px; box-sizing: border-box; border: 3px solid #111111; background: #111111; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 12px;">
+<svg width="26" height="26" viewBox="0 0 24 24" class="ic" style="stroke-width: 3;"><path d="M4 12.5l5 5L20 6.5"></path></svg>
+<span style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">Pulsa para completar</span>
+</div>
+</div></div>
+<div class="half r"><div class="fiber"></div><div class="face" style="background: {{tearColor}};">
+<sc-if value="{{tv.isText}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; padding: 0 24px 12px; display: flex; flex-direction: column; justify-content: center; gap: 18px;">
+<p style="margin: 0; font-size: {{tv.size}}; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; overflow-wrap: anywhere;">{{tv.text}}</p>
+</div>
+</sc-if>
+<sc-if value="{{tv.isImage}}" hint-placeholder-val="{{ false }}">
+<img src="{{tv.url}}" alt="{{tv.alt}}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;">
+<sc-if value="{{tv.hasCaption}}" hint-placeholder-val="{{ false }}"><p style="position: absolute; left: 24px; right: 24px; bottom: 146px; margin: 0; padding: 12px 14px; background: #111111; color: #FFFFFF; font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; overflow-wrap: anywhere;">{{tv.text}}</p></sc-if>
+</sc-if>
+<sc-if value="{{tv.isUrl}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #FFFFFF; isolation: isolate;">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; overflow: auto; border-top: 3px solid #111111; border-bottom: 3px solid #111111; display: flex; flex-direction: column;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 8px 24px; background: #111111; color: #FFFFFF; font-size: 11px;"><svg width="12" height="12" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M5 11h14v10H5z"></path><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{tv.host}}</span><span style="font-weight: 700;">WEB</span></div>
+<div style="padding: 26px 24px 8px; display: flex; flex-direction: column; gap: 10px;">
+<p style="margin: 0; font-size: 34px; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; overflow-wrap: anywhere;">{{tv.host}}</p>
+<p class="mono" style="margin: 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere;">{{tv.href}}</p>
+</div>
+<div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div>
+<div style="padding: 0 24px 24px; display: flex; flex-direction: column; gap: 12px;">
+<a href="{{tv.href}}" target="_blank" rel="noopener noreferrer" style="height: 56px; box-sizing: border-box; border: 3px solid #111111; background: #FFFFFF; box-shadow: 5px 5px 0 #111111; color: #111111; text-decoration: none; font-size: 17px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">Abrir página ↗</a>
+<p class="mono" style="margin: 0; font-size: 11px; line-height: 1.5; color: #55534E;">En la app la página se carga aquí, dentro de la tarea.</p>
+</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{tv.isDoc}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #FFFFFF; isolation: isolate;">
+<div style="position: absolute; left: 0; right: 0; top: 68px; bottom: 128px; overflow: auto; border-top: 3px solid #111111; border-bottom: 3px solid #111111;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 8px 24px; background: #111111; color: #FFFFFF; font-size: 11px;"><span style="font-weight: 700;">{{tv.ext}}</span><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{tv.name}}</span><span>{{tv.fsize}}</span></div>
+<sc-if value="{{tv.hasCaption}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; padding: 16px 24px; background: {{tv.color}}; border-bottom: 3px solid #111111; font-size: 24px; font-weight: 800; line-height: 1.08; letter-spacing: -0.02em; overflow-wrap: anywhere;">{{tv.text}}</p></sc-if>
+<sc-if value="{{tv.loading}}" hint-placeholder-val="{{ false }}"><p class="mono" style="margin: 0; padding: 28px 24px; font-size: 13px;">Abriendo documento…</p></sc-if>
+<sc-if value="{{tv.kPdf}}" hint-placeholder-val="{{ false }}"><sc-for list="{{tv.pages}}" as="pg" hint-placeholder-count="1"><canvas ref="{{pg.ref}}" role="img" aria-label="{{pg.label}}" style="display: block; width: 100%; background: #FFFFFF; border-bottom: 3px solid #111111;"></canvas></sc-for></sc-if>
+<sc-if value="{{tv.kWord}}" hint-placeholder-val="{{ false }}"><div style="padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 12px;"><sc-for list="{{tv.paras}}" as="pa" hint-placeholder-count="4"><p style="margin: 0; font-size: {{pa.fs}}; font-weight: {{pa.fw}}; line-height: 1.45; overflow-wrap: anywhere;">{{pa.text}}</p></sc-for></div></sc-if>
+<sc-if value="{{tv.kGrid}}" hint-placeholder-val="{{ false }}"><div style="overflow-x: auto;"><div style="display: grid; grid-template-columns: {{tv.gridCols}}; width: max-content;"><sc-for list="{{tv.cells}}" as="ce" hint-placeholder-count="8"><span style="min-height: 34px; box-sizing: border-box; padding: 8px 10px; border-right: 1px solid #D8D4CA; border-bottom: 1px solid #D8D4CA; background: {{ce.bg}}; color: {{ce.fg}}; font-size: 13px; font-weight: {{ce.fw}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ce.v}}</span></sc-for></div></div></sc-if>
+<sc-if value="{{tv.kText}}" hint-placeholder-val="{{ false }}"><pre class="mono" style="margin: 0; padding: 20px 24px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;">{{tv.body}}</pre></sc-if>
+<sc-if value="{{tv.kOther}}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column;"><div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div><p class="mono" style="margin: 0; padding: 0 24px 24px; font-size: 12px;">Vista previa no disponible para .{{tv.ext}} en el prototipo. En la app se abre con el visor del teléfono.</p></div></sc-if>
+</div>
+</div>
+</sc-if>
+<div style="position: absolute; left: 0; right: 0; top: 0; height: 68px; padding: 12px 20px 0 24px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 26px; font-weight: 900; letter-spacing: -0.04em;">una.</span>
+<span style="width: 46px; height: 46px; box-sizing: border-box; border: 3px solid #111111; box-shadow: 3px 3px 0 #111111; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" class="ic"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></span>
+</div>
+
+<div style="position: absolute; left: 28px; right: 20px; bottom: 34px; height: 72px; box-sizing: border-box; border: 3px solid #111111; background: #111111; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 12px;">
+<svg width="26" height="26" viewBox="0 0 24 24" class="ic" style="stroke-width: 3;"><path d="M4 12.5l5 5L20 6.5"></path></svg>
+<span style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">Pulsa para completar</span>
+</div>
+</div></div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<!-- EDITOR: nueva nota o editar, escrito sobre el post-it -->
+<sc-if value="{{isEditor}}" hint-placeholder-val="{{ false }}">
+<div class="fadein" style="position: absolute; inset: 0; display: flex; flex-direction: column; background: {{editorColor}};">
+<div style="height: 68px; padding: 12px 16px 0 24px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 26px; font-weight: 900; letter-spacing: -0.04em;">una.</span>
+<sc-if value="{{canCancel}}" hint-placeholder-val="{{ true }}"><button type="button" class="mono" onClick="{{cancelEditor}}" style="height: 44px; border: none; background: transparent; font-size: 14px; font-weight: 700; padding: 0 8px; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px;">Cancelar</button></sc-if>
+</div>
+<label for="nota-texto" class="tag" style="margin: 56px 24px 0; display: none">{{editorTag}}</label>
+<sc-if value="{{noDraftAtt}}" hint-placeholder-val="{{ true }}">
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 0 16px 24px;">
+<textarea id="nota-texto" class="grow" rows="1" ref="{{taRef}}" value="{{draft}}" onChange="{{onDraft}}" placeholder="¿Qué eso que tienes que hacer y no has hecho?" style="flex-shrink: 0; margin: auto 0; padding: 8px; overflow: hidden; border: none; background: transparent; resize: none; font-family: Archivo, system-ui, sans-serif; font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; color: #111111; outline: none;"></textarea>
+</div>
+</sc-if>
+<sc-if value="{{hasDraftAtt}}" hint-placeholder-val="{{ false }}">
+<div style="position: relative; flex-grow: 1; min-height: 0; margin: 14px 24px 0 20px; border: 3px solid #111111; box-shadow: 5px 5px 0 #111111; background: #FFFFFF; display: flex; flex-direction: column; overflow: hidden;">
+<sc-if value="{{da.isImage}}" hint-placeholder-val="{{ false }}"><img src="{{da.url}}" alt="{{da.name}}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;"></sc-if>
+<sc-if value="{{da.isDoc}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; overflow: auto;">
+<div class="mono" style="position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 8px 56px 8px 12px; min-height: 36px; box-sizing: border-box; background: #111111; color: #FFFFFF; font-size: 11px;"><span style="font-weight: 700;">{{da.ext}}</span><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{da.name}}</span><span>{{da.fsize}}</span></div>
+<sc-if value="{{da.loading}}" hint-placeholder-val="{{ false }}"><p class="mono" style="margin: 0; padding: 28px 24px; font-size: 13px;">Abriendo documento…</p></sc-if>
+<sc-if value="{{da.kPdf}}" hint-placeholder-val="{{ false }}"><sc-for list="{{da.pages}}" as="pg" hint-placeholder-count="1"><canvas ref="{{pg.ref}}" role="img" aria-label="{{pg.label}}" style="display: block; width: 100%; background: #FFFFFF; border-bottom: 3px solid #111111;"></canvas></sc-for></sc-if>
+<sc-if value="{{da.kWord}}" hint-placeholder-val="{{ false }}"><div style="padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 12px;"><sc-for list="{{da.paras}}" as="pa" hint-placeholder-count="4"><p style="margin: 0; font-size: {{pa.fs}}; font-weight: {{pa.fw}}; line-height: 1.45; overflow-wrap: anywhere;">{{pa.text}}</p></sc-for></div></sc-if>
+<sc-if value="{{da.kGrid}}" hint-placeholder-val="{{ false }}"><div style="overflow-x: auto;"><div style="display: grid; grid-template-columns: {{da.gridCols}}; width: max-content;"><sc-for list="{{da.cells}}" as="ce" hint-placeholder-count="8"><span style="min-height: 34px; box-sizing: border-box; padding: 8px 10px; border-right: 1px solid #D8D4CA; border-bottom: 1px solid #D8D4CA; background: {{ce.bg}}; color: {{ce.fg}}; font-size: 13px; font-weight: {{ce.fw}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ce.v}}</span></sc-for></div></div></sc-if>
+<sc-if value="{{da.kText}}" hint-placeholder-val="{{ false }}"><pre class="mono" style="margin: 0; padding: 20px 24px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;">{{da.body}}</pre></sc-if>
+<sc-if value="{{da.kOther}}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column;"><div aria-hidden="true" style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 18px 16px; display: flex; flex-direction: column; gap: 9px;"><span style="display: block; width: 60%; height: 14px; background: #111111;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 94%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 98%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 70%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 88%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 96%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 52%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 0; height: 6px; background: transparent;"></span><span style="display: block; width: 100%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 91%; height: 8px; background: #D8D4CA;"></span><span style="display: block; width: 76%; height: 8px; background: #D8D4CA;"></span></div><p class="mono" style="margin: 0; padding: 0 24px 24px; font-size: 12px;">Vista previa no disponible para .{{da.ext}} en el prototipo. En la app se abre con el visor del teléfono.</p></div></sc-if>
+</div>
+</sc-if>
+<button type="button" aria-label="Quitar adjunto" onClick="{{removeAtt}}" style="position: absolute; z-index: 2; top: 6px; right: 6px; width: 40px; height: 40px; border: 3px solid #111111; background: #FFFFFF; display: flex; align-items: center; justify-content: center;">
+<svg width="14" height="14" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3.4;"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+</button>
+</div>
+<textarea id="nota-texto" ref="{{taRef}}" value="{{draft}}" onChange="{{onDraft}}" placeholder="Añade un texto (opcional)" style="flex-shrink: 0; height: 96px; margin: 10px 16px 0; padding: 8px; border: none; background: transparent; resize: none; font-family: Archivo, system-ui, sans-serif; font-size: 24px; font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; color: #111111; outline: none;"></textarea>
+</sc-if>
+<div style="padding: 12px 24px 38px; display: flex; justify-content: space-between; align-items: center;">
+<button type="button" class="bb" aria-label="Añadir foto, imagen o archivo" onClick="{{openAttach}}" style="width: 64px; height: 64px; padding: 0; display: flex; align-items: center; justify-content: center;">
+<svg width="26" height="26" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M12 4v16M4 12h16"></path></svg>
+</button>
+<button type="button" class="bb" onClick="{{save}}" style="height: 64px; padding: 0 22px 0 28px; font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 12px;"><span>{{saveLabel}}</span><svg width="24" height="24" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M4 12h15M13 6l6 6-6 6"></path></svg></button>
+</div>
+</div>
+</sc-if>
+
+<!-- LISTADO: post-its apilados; arrastra para reordenar -->
+<sc-if value="{{isLista}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; display: flex; flex-direction: column; background: #F4F1EA;">
+<div style="height: 68px; padding: 12px 20px 0; box-sizing: border-box; display: flex; align-items: center; gap: 14px;">
+<button type="button" class="sq" aria-label="Volver a la tarea" onClick="{{backToNote}}" style="width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M20 12H5M11 6l-6 6 6 6"></path></svg>
+</button>
+<span style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em;">Todas las tareas</span>
+</div>
+<div style="padding: 14px 24px 18px;">
+<p class="mono" style="margin: 0; font-size: 13px; line-height: 1.5;">La primera es la que tienes ahora. Arrastra otra por encima para que ocupe su lugar. Toca dos veces una tarea para editarla.</p>
+</div>
+<div ref="{{listRef}}" style="flex-grow: 1; overflow: auto; padding: 4px 24px 20px 20px; display: flex; flex-direction: column; gap: 12px;">
+<sc-for list="{{items}}" as="item" hint-placeholder-count="4">
+<div data-row="1" class="{{item.cls}}" onPointerDown="{{item.down}}" onPointerUp="{{item.up}}" style="transform: {{item.tf}}; background: {{item.bg}}; border: 3px solid #111111; display: flex; align-items: center; gap: 2px; padding: 4px 4px 4px 4px;">
+<sc-if value="{{item.rest}}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="width: 34px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="3.4" height="3.4" fill="currentColor"></rect><rect x="13.6" y="4" width="3.4" height="3.4" fill="currentColor"></rect><rect x="7" y="10.3" width="3.4" height="3.4" fill="currentColor"></rect><rect x="13.6" y="10.3" width="3.4" height="3.4" fill="currentColor"></rect><rect x="7" y="16.6" width="3.4" height="3.4" fill="currentColor"></rect><rect x="13.6" y="16.6" width="3.4" height="3.4" fill="currentColor"></rect></svg>
+</span></sc-if>
+<sc-if value="{{item.isImg}}" hint-placeholder-val="{{ false }}"><img src="{{item.url}}" alt="" style="width: 44px; height: 44px; margin-left: {{item.thumbMl}}; object-fit: cover; box-sizing: border-box; border: 2px solid #111111; flex-shrink: 0;"></sc-if>
+<sc-if value="{{item.isDoc}}" hint-placeholder-val="{{ false }}"><span class="mono" aria-hidden="true" style="width: 44px; height: 44px; margin-left: {{item.thumbMl}}; flex-shrink: 0; background: #111111; color: #FFFFFF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{item.ext}}</span></sc-if>
+<div style="flex-grow: 1; min-width: 0; padding: {{item.pad}}; display: flex; flex-direction: column; gap: 8px;">
+<sc-if value="{{item.first}}" hint-placeholder-val="{{ false }}">
+<span class="tag" style="display: none;">Lo siguiente</span>
+<span style="font-size: 20px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em;">{{item.text}}</span>
+</sc-if>
+<sc-if value="{{item.rest}}" hint-placeholder-val="{{ true }}">
+<span style="font-size: 16px; font-weight: 600; line-height: 1.3;">{{item.text}}</span>
+</sc-if>
+</div>
+<button type="button" aria-label="Editar tarea" onClick="{{item.edit}}" style="width: 44px; height: 44px; flex-shrink: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center;">
+<svg width="20" height="20" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path><path d="M13 7l4 4"></path></svg>
+</button>
+<button type="button" aria-label="Eliminar tarea" onClick="{{item.del}}" style="width: 44px; height: 44px; flex-shrink: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center;">
+<svg width="20" height="20" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M3 7h18M10 11v6M14 11v6M5 7l1 14h12l1-14M9 7V3h6v4"></path></svg>
+</button>
+</div>
+</sc-for>
+</div>
+<div style="padding: 16px 24px 38px; border-top: 3px solid #111111; background: #F4F1EA;">
+<button type="button" class="bb" onClick="{{createFromList}}" style="width: 100%; height: 64px; font-size: 19px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M12 4v16M4 12h16"></path></svg>
+Nueva tarea
+</button>
+</div>
+</div>
+</sc-if>
+
+<!-- HOJA: menú de la nota -->
+<sc-if value="{{sheetMenu}}" hint-placeholder-val="{{ false }}">
+<div class="{{sheetBgClass}}" style="position: absolute; inset: 0; background: rgba(17, 17, 17, 0.55); display: flex; flex-direction: column; justify-content: flex-end;">
+<button type="button" tabindex="-1" aria-label="Cerrar menú" onClick="{{closeSheet}}" style="position: absolute; inset: 0; border: none; padding: 0; background: transparent; cursor: default;"></button>
+<div class="{{sheetUpClass}}" style="position: relative; border-top: 3px solid #111111; display: flex; flex-direction: column;">
+<!-- Menú A11 · Parte 1: acciones de esta tarea -->
+<div style="background: #F4F1EA; padding: 8px 24px 10px; border-bottom: 4px solid #C7C4BF; display: flex; flex-direction: column;">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<span class="mono" style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">Esta tarea</span>
+<button type="button" aria-label="Cerrar menú" onClick="{{closeSheet}}" style="width: 44px; height: 44px; margin-right: -14px; border: none; background: transparent; display: flex; align-items: center; justify-content: center;">
+<svg width="16" height="16" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+</button>
+</div>
+<button type="button" class="mrow" onClick="{{edit}}" style="height: 58px; padding: 0 4px; border: none; background: transparent; display: flex; align-items: center; gap: 16px; font-size: 19px; font-weight: 700; text-align: left;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path><path d="M13 7l4 4"></path></svg>
+Editar
+</button>
+<button type="button" class="mrow" onClick="{{askDelete}}" style="height: 58px; padding: 0 4px; border: none; border-top: 1px solid #C7C4BF; background: transparent; display: flex; align-items: center; gap: 16px; font-size: 19px; font-weight: 700; color: #B3241A; text-align: left;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M3 7h18M10 11v6M14 11v6M5 7l1 14h12l1-14M9 7V3h6v4"></path></svg>
+Eliminar
+</button>
+</div>
+<!-- Menú A11 · Parte 2: acciones generales -->
+<div style="background: #F4F1EA; padding: 10px 24px 26px; display: flex; flex-direction: column;">
+<button type="button" class="mrow" onClick="{{openList}}" disabled="{{onlyOne}}" style="height: 58px; padding: 0 4px; border: none; background: transparent; display: flex; align-items: center; gap: 16px; font-size: 19px; font-weight: 700; text-align: left;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12M3 5h2v2H3zM3 11h2v2H3zM3 17h2v2H3z"></path></svg>
+Todas mis tareas
+</button>
+<button type="button" class="bb" onClick="{{create}}" style="height: 64px; margin-top: 16px; font-size: 19px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M12 4v16M4 12h16"></path></svg>
+Nueva tarea
+</button>
+<button type="button" class="mono" onClick="{{closeSheet}}" style="height: 44px; margin-top: 14px; border: none; background: transparent; font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px;">Configuración y perfil</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<!-- HOJA: ¿dónde va la nota nueva? -->
+<sc-if value="{{sheetPos}}" hint-placeholder-val="{{ false }}">
+<div class="{{sheetBgClass}}" style="position: absolute; inset: 0; background: rgba(17, 17, 17, 0.55); display: flex; flex-direction: column; justify-content: flex-end;">
+<button type="button" tabindex="-1" aria-label="Cerrar" onClick="{{closeSheet}}" style="position: absolute; inset: 0; border: none; padding: 0; background: transparent; cursor: default;"></button>
+<div class="{{sheetUpClass}}" style="position: relative; background: #F4F1EA; border-top: 3px solid #111111; padding: 22px 24px 38px; display: flex; flex-direction: column; gap: 14px;">
+<h2 style="margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.03em;">¿Dónde la pones?</h2>
+<p class="mono" style="margin: 0 0 6px; font-size: 13px; line-height: 1.45;">“{{draftLabel}}”</p>
+<button type="button" class="bb" onClick="{{placeTop}}" style="padding: 16px; display: flex; align-items: center; gap: 16px; text-align: left; background: {{editorColor}};">
+<span style="width: 44px; height: 44px; flex-shrink: 0; background: #111111; color: #FFFFFF; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M12 20V5M6 11l6-6 6 6"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 18px; font-weight: 800;">Arriba del todo</span><span class="mono" style="font-size: 12px; line-height: 1.4;">Pasa a ser la única visible. La actual espera.</span></span>
+</button>
+<button type="button" class="bb" onClick="{{placeBottom}}" style="padding: 16px; display: flex; align-items: center; gap: 16px; text-align: left;">
+<span style="width: 44px; height: 44px; flex-shrink: 0; border: 3px solid #111111; box-sizing: border-box; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M12 4v15M6 13l6 6 6-6"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 18px; font-weight: 800;">A la cola</span><span class="mono" style="font-size: 12px; line-height: 1.4;">No la verás hasta completar las anteriores.</span></span>
+</button>
+<button type="button" class="mono" onClick="{{closeSheet}}" style="height: 48px; margin-top: 4px; border: none; background: transparent; font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px;">Seguir editando</button>
+</div>
+</div>
+</sc-if>
+
+<!-- HOJA: añadir foto, imagen o archivo -->
+<sc-if value="{{sheetAtt}}" hint-placeholder-val="{{ false }}">
+<div class="{{sheetBgClass}}" style="position: absolute; inset: 0; background: rgba(17, 17, 17, 0.55); display: flex; flex-direction: column; justify-content: flex-end;">
+<button type="button" tabindex="-1" aria-label="Cerrar" onClick="{{closeSheet}}" style="position: absolute; inset: 0; border: none; padding: 0; background: transparent; cursor: default;"></button>
+<div class="{{sheetUpClass}}" style="position: relative; background: #F4F1EA; border-top: 3px solid #111111; padding: 18px 24px 38px; display: flex; flex-direction: column;">
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+<span class="mono" style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">Añadir a la tarea</span>
+<button type="button" aria-label="Cerrar" onClick="{{closeSheet}}" style="width: 44px; height: 44px; margin-right: -14px; border: none; background: transparent; display: flex; align-items: center; justify-content: center;">
+<svg width="16" height="16" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+</button>
+</div>
+<label class="mrow" for="pick-foto" style="height: 64px; padding: 0 4px; border: none; border-bottom: 1px solid rgba(17, 17, 17, 0.18); background: transparent; display: flex; align-items: center; gap: 16px; font-size: 19px; font-weight: 700; text-align: left;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3z"></path><circle cx="12" cy="13.5" r="3.6"></circle></svg>
+<span style="display: flex; flex-direction: column; gap: 2px;"><span>Hacer foto</span><span class="mono" style="font-size: 11px; font-weight: 400;">Con la cámara · va arriba del todo</span></span>
+</label>
+<input id="pick-foto" class="vh" type="file" accept="image/*" capture="environment" onChange="{{onPick}}">
+<label class="mrow" for="pick-imagen" style="height: 64px; padding: 0 4px; border: none; border-bottom: 1px solid rgba(17, 17, 17, 0.18); background: transparent; display: flex; align-items: center; gap: 16px; font-size: 19px; font-weight: 700; text-align: left;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M3 4h18v16H3z"></path><path d="M3 16l5-5 4 4 3-3 6 6"></path><circle cx="16" cy="8.5" r="1.6"></circle></svg>
+<span style="display: flex; flex-direction: column; gap: 2px;"><span>Subir imagen</span><span class="mono" style="font-size: 11px; font-weight: 400;">Desde tu galería · va arriba del todo</span></span>
+</label>
+<input id="pick-imagen" class="vh" type="file" accept="image/*" onChange="{{onPick}}">
+<label class="mrow" for="pick-archivo" style="height: 64px; padding: 0 4px; border: none; background: transparent; display: flex; align-items: center; gap: 16px; font-size: 19px; font-weight: 700; text-align: left;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"></path><path d="M14 2v6h6M9 13h8M9 17h8"></path></svg>
+<span style="display: flex; flex-direction: column; gap: 2px;"><span>Subir archivo</span><span class="mono" style="font-size: 11px; font-weight: 400;">PDF, Word, Excel, TXT…</span></span>
+</label>
+<input id="pick-archivo" class="vh" type="file" accept=".pdf,.txt,.md,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pages,.numbers,.key,.odt,.ods,application/pdf,text/plain,text/csv" onChange="{{onPick}}">
+<button type="button" class="mrow" onClick="{{openUrl}}" style="height: 64px; padding: 0 4px; border: none; border-top: 1px solid #C7C4BF; background: transparent; display: flex; align-items: center; gap: 16px; font-size: 19px; font-weight: 700; text-align: left;">
+<svg width="22" height="22" viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="M10 14l4-4"></path><path d="M9 7l2-2a4 4 0 0 1 6 6l-2 2"></path><path d="M15 17l-2 2a4 4 0 0 1-6-6l2-2"></path></svg>
+<span style="display: flex; flex-direction: column; gap: 2px;"><span>Cargar URL</span><span class="mono" style="font-size: 11px; font-weight: 400;">Una página web · va arriba del todo</span></span>
+</button>
+</div>
+</div>
+</sc-if>
+
+<!-- HOJA: cargar una URL (la tarea pasa a ser esa página; siempre arriba, sin texto) -->
+<sc-if value="{{sheetUrl}}" hint-placeholder-val="{{ false }}">
+<div class="{{sheetBgClass}}" style="position: absolute; inset: 0; background: rgba(17, 17, 17, 0.55); display: flex; flex-direction: column; justify-content: flex-end;">
+<button type="button" tabindex="-1" aria-label="Cerrar" onClick="{{closeSheet}}" style="position: absolute; inset: 0; border: none; padding: 0; background: transparent; cursor: default;"></button>
+<div class="{{sheetUpClass}}" style="position: relative; background: #F4F1EA; border-top: 3px solid #111111; padding: 12px 24px 38px; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<label for="url-input" class="mono" style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">Cargar URL</label>
+<button type="button" aria-label="Cerrar" onClick="{{closeSheet}}" style="width: 44px; height: 44px; margin-right: -14px; border: none; background: transparent; display: flex; align-items: center; justify-content: center;">
+<svg width="16" height="16" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+</button>
+</div>
+<input id="url-input" ref="{{urlRef}}" type="url" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="https://" value="{{urlDraft}}" onChange="{{onUrl}}" onKeyDown="{{urlKey}}" style="height: 60px; box-sizing: border-box; border: 3px solid #111111; background: #FFFFFF; padding: 0 14px; font-family: 'Space Mono', ui-monospace, monospace; font-size: 16px; color: #111111; outline: none;">
+<sc-if value="{{hasUrlError}}" hint-placeholder-val="{{ false }}"><p class="mono" role="alert" style="margin: 0; font-size: 12px; color: #B3241A;">{{urlError}}</p></sc-if>
+<p class="mono" style="margin: 0; font-size: 11px; line-height: 1.5;">Se abre como tarea, arriba del todo.</p>
+<button type="button" class="bb" onClick="{{confirmUrl}}" style="height: 64px; margin-top: 4px; font-size: 19px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px;"><span>Abrir</span><svg width="24" height="24" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3;"><path d="M4 12h15M13 6l6 6-6 6"></path></svg></button>
+</div>
+</div>
+</sc-if>
+
+<!-- HOJA: confirmar eliminar -->
+<sc-if value="{{sheetDel}}" hint-placeholder-val="{{ false }}">
+<div class="{{sheetBgClass}}" style="position: absolute; inset: 0; background: rgba(17, 17, 17, 0.55); display: flex; flex-direction: column; justify-content: flex-end;">
+<button type="button" tabindex="-1" aria-label="Cerrar" onClick="{{closeSheet}}" style="position: absolute; inset: 0; border: none; padding: 0; background: transparent; cursor: default;"></button>
+<div class="{{sheetUpClass}}" style="position: relative; background: #F4F1EA; border-top: 3px solid #111111; padding: 22px 24px 38px; display: flex; flex-direction: column; gap: 14px;">
+<h2 style="margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.03em;">¿Eliminar esta tarea?</h2>
+<p class="mono" style="margin: 0 0 8px; font-size: 13px; line-height: 1.45;">“{{delText}}” desaparecerá sin marcarse como hecha.</p>
+<button type="button" class="bb danger" onClick="{{confirmDelete}}" style="height: 62px; font-size: 18px; font-weight: 800;">Eliminar</button>
+<button type="button" class="bb ghost" onClick="{{closeSheet}}" style="height: 56px; margin-top: 4px; font-size: 17px; font-weight: 800;">Cancelar</button>
+</div>
+</div>
+</sc-if>
+
+<!-- ENHORABUENA: refuerzo tras completar; funde hacia la siguiente -->
+<sc-if value="{{showSuccess}}" hint-placeholder-val="{{ false }}">
+<div class="{{successClass}}" role="status">
+<div class="confetti" aria-hidden="true"><i class="cf cf1"></i><i class="cf cf2"></i><i class="cf cf3"></i><i class="cf cf4"></i><i class="cf cf5"></i><i class="cf cf6"></i><i class="cf cf7"></i><i class="cf cf8"></i><i class="cf cf9"></i><i class="cf cf10"></i><i class="cf cf11"></i><i class="cf cf12"></i><i class="cf cf13"></i><i class="cf cf14"></i><i class="cf cf15"></i><i class="cf cf16"></i><i class="cf cf17"></i><i class="cf cf18"></i></div>
+<div class="stamp" style="width: 88px; height: 88px; box-sizing: border-box; background: {{tearColor}}; color: #111111; border: 3px solid #FFFFFF; box-shadow: 6px 6px 0 #FFFFFF; display: flex; align-items: center; justify-content: center;">
+<svg width="50" height="50" viewBox="0 0 24 24" class="ic" aria-hidden="true" style="stroke-width: 3.2;"><path d="M4 12.5l5 5L20 6.5"></path></svg>
+</div>
+<h2 class="big" style="margin: 0; max-width: 100%; font-size: 38px; font-weight: 900; line-height: 1.02; letter-spacing: -0.035em; overflow-wrap: anywhere;"><span style="display: block;">¡Enhorabuena!</span><span style="display: block; color: {{tearColor}};">Tarea completada.</span></h2>
+<sc-if value="{{doneMore}}" hint-placeholder-val="{{ true }}">
+<p class="small mono" style="margin: 0; font-size: 15px; line-height: 1.4;">Ahora a por la siguiente →</p>
+</sc-if>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"start":{"editor":"enum","options":["vacio","nota","menu","nueva","posicion","lista","eliminar","hecho","borrado","adjuntar","documento","web"],"default":"vacio"},"paleta":{"editor":"enum","options":["clasica","neon","amarillo"],"default":"clasica"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  seed() {
+    return [
+      { id: 5, text: 'Llamar a Marta para cerrar la fecha de la mudanza' },
+      { id: 6, text: 'Enviar el presupuesto revisado a Lucía' },
+      { id: 7, text: 'Comprar bombillas para el pasillo' },
+      { id: 8, text: 'Leer el capítulo 3 antes del jueves' }
+    ];
+  }
+  initial() {
+    var start = this.props.start || 'vacio';
+    var s = { start: start, notes: this.seed(), screen: 'nota', sheet: null, mode: 'nueva', draft: '',
+      editId: null, delId: null, returnTo: 'nota', openId: null, flashId: null, anim: false, allDone: false, lastDeleted: false, typed: 0, introOut: false, wantFocus: false, dragDy: 0, dragTo: null, dropFreeze: false, sheetClosing: false, urlDraft: '', urlError: '', urlEditId: null, draftAtt: null, tearNote: null, holding: false, holdDone: false, tear: null, tearText: '', tearSize: '40px', tearId: null, doneMore: false, nextId: 10 };
+    if (start === 'vacio') { s.notes = []; s.screen = 'vacio'; }
+    else if (start === 'menu') { s.sheet = 'menu'; }
+    else if (start === 'nueva') { s.screen = 'editor'; s.draft = 'Revisar el contrato del alquiler'; }
+    else if (start === 'posicion') { s.screen = 'editor'; s.draft = 'Revisar el contrato del alquiler'; s.sheet = 'posicion'; }
+    else if (start === 'lista') { s.screen = 'lista'; }
+    else if (start === 'web') { s.notes[0] = { id: 5, c: 0, text: '', att: { type: 'url', href: 'https://es.wikipedia.org/wiki/Post-it', host: 'es.wikipedia.org' } }; }
+    else if (start === 'adjuntar') { s.screen = 'editor'; s.sheet = 'adjuntar'; }
+    else if (start === 'documento') { s.notes[0] = { id: 5, c: 0, text: 'Revisar y firmar el contrato', att: { type: 'doc', kind: 'pdf', ext: 'PDF', name: 'contrato-alquiler.pdf', size: '3 KB', url: '/_blob/599f4c25e7e4fcc89a579c63b957b6fb' } }; }
+    else if (start === 'eliminar') { s.sheet = 'eliminar'; s.delId = 5; }
+    return s;
+  }
+  cur() {
+    var st = this.state;
+    var start = this.props.start || 'vacio';
+    if (!st || !st.notes || st.start !== start) return this.initial();
+    return st;
+  }
+  upd(p) { this.setState(Object.assign({}, this.cur(), p)); }
+
+  // Documentos: se abren dentro de la tarea (PDF, Word, Excel/CSV, texto)
+  libUrl(name) {
+    return { pdf: '/_blob/0319060b3d0a73facc3016b117cf78a8', worker: '/_blob/b5d684ee30ba1aada53d94c1eff141a3', mammoth: '/_blob/f934625002e708e5971196557e561ad5', xlsx: '/_blob/8a5f78af66704be924feea4a8166649c' }[name];
+  }
+  loadLib(name, globalName) {
+    var w = window;
+    w.__unaLibs = w.__unaLibs || {};
+    if (w[globalName]) return Promise.resolve(w[globalName]);
+    if (w.__unaLibs[name]) return w.__unaLibs[name];
+    var url = this.libUrl(name);
+    w.__unaLibs[name] = new Promise(function (res, rej) {
+      var sc = document.createElement('script');
+      sc.src = url; sc.async = true;
+      sc.onload = function () { w[globalName] ? res(w[globalName]) : rej(new Error('lib')); };
+      sc.onerror = rej;
+      document.head.appendChild(sc);
+    });
+    return w.__unaLibs[name];
+  }
+  kindOf(ext, mime) {
+    if (ext === 'PDF' || mime === 'application/pdf') return 'pdf';
+    if (ext === 'DOCX') return 'word';
+    if (/^(XLSX|XLS|XLSM|ODS|CSV)$/.test(ext)) return 'grid';
+    if (/^(TXT|MD|JSON|LOG)$/.test(ext) || (mime || '').indexOf('text/') === 0) return 'text';
+    return 'other';
+  }
+  updateAtt(url, patch) {
+    var c = this.cur(), p = {};
+    if (c.draftAtt && c.draftAtt.url === url) p.draftAtt = Object.assign({}, c.draftAtt, patch);
+    var touched = false;
+    var notes = c.notes.map(function (n) { if (n.att && n.att.url === url) { touched = true; return Object.assign({}, n, { att: Object.assign({}, n.att, patch) }); } return n; });
+    if (touched) p.notes = notes;
+    if (c.tearNote && c.tearNote.att && c.tearNote.att.url === url) p.tearNote = Object.assign({}, c.tearNote, { att: Object.assign({}, c.tearNote.att, patch) });
+    if (Object.keys(p).length) this.upd(p);
+  }
+  processAtt(att) {
+    var self = this, url = att.url, kind = att.kind;
+    if (!url || kind === 'other') return;
+    this.docs = this.docs || {};
+    if (this.docs[url]) return;
+    this.docs[url] = { status: 'loading' };
+    var fail = function () { self.docs[url].status = 'error'; self.updateAtt(url, { kind: 'other', ready: true }); };
+    var buf = function () { return fetch(url).then(function (r) { return r.arrayBuffer(); }); };
+    if (kind === 'pdf') {
+      this.loadLib('pdf', 'pdfjsLib').then(function (lib) {
+        lib.GlobalWorkerOptions.workerSrc = self.libUrl('worker');
+        return buf().then(function (ab) { return lib.getDocument({ data: ab }).promise; });
+      }).then(function (pdf) {
+        self.docs[url] = { status: 'ok', pdf: pdf };
+        self.updateAtt(url, { ready: true, pages: Math.min(pdf.numPages, 30) });
+      }).catch(fail);
+    } else if (kind === 'word') {
+      this.loadLib('mammoth', 'mammoth').then(function (m) {
+        return buf().then(function (ab) { return m.convertToHtml({ arrayBuffer: ab }); });
+      }).then(function (res) {
+        // Se lee el HTML como datos (DOMParser) y se pasa a párrafos; nunca se inyecta
+        var doc = new DOMParser().parseFromString(res.value || '', 'text/html');
+        var paras = [];
+        [].forEach.call(doc.body.children, function (el) {
+          var tag = el.tagName.toLowerCase();
+          var t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+          if (!t) return;
+          if (/^h[1-6]$/.test(tag)) paras.push({ h: tag === 'h1' ? 1 : 2, text: t });
+          else if (tag === 'ul' || tag === 'ol') [].forEach.call(el.children, function (li) { var x = (li.textContent || '').trim(); if (x) paras.push({ h: 0, text: '• ' + x }); });
+          else paras.push({ h: 0, text: t });
+        });
+        self.docs[url].status = 'ok';
+        self.updateAtt(url, { ready: true, paras: paras.slice(0, 400) });
+      }).catch(fail);
+    } else if (kind === 'grid') {
+      this.loadLib('xlsx', 'XLSX').then(function (X) {
+        return buf().then(function (ab) {
+          var wb = X.read(ab, { type: 'array' });
+          var ws = wb.Sheets[wb.SheetNames[0]];
+          var rows = X.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
+          return rows.slice(0, 200).map(function (r) { return r.slice(0, 12).map(function (v) { return v === null || v === undefined ? '' : String(v); }); });
+        });
+      }).then(function (rows) {
+        self.docs[url].status = 'ok';
+        self.updateAtt(url, { ready: true, rows: rows });
+      }).catch(fail);
+    } else if (kind === 'text') {
+      fetch(url).then(function (r) { return r.text(); }).then(function (t) {
+        self.docs[url].status = 'ok';
+        self.updateAtt(url, { ready: true, text: t.slice(0, 40000) });
+      }).catch(fail);
+    }
+  }
+  pageRef(url, i, slot) {
+    var self = this;
+    this.pgRefs = this.pgRefs || {};
+    var key = url + '#' + i + '#' + slot;
+    if (this.pgRefs[key]) return this.pgRefs[key];
+    this.pgRefs[key] = function (el) {
+      if (!el || el.__una === key) return;
+      el.__una = key;
+      var d = self.docs && self.docs[url];
+      if (!d || !d.pdf) return;
+      d.pdf.getPage(i + 1).then(function (page) {
+        var base = page.getViewport({ scale: 1 });
+        var w = el.clientWidth || el.parentNode && el.parentNode.clientWidth || 390;
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var vp = page.getViewport({ scale: (w * dpr) / base.width });
+        el.width = Math.floor(vp.width); el.height = Math.floor(vp.height);
+        page.render({ canvasContext: el.getContext('2d'), viewport: vp });
+      });
+    };
+    return this.pgRefs[key];
+  }
+  // El texto del editor crece con lo escrito y queda centrado en vertical
+  autosize(el) {
+    if (!el || !el.classList || !el.classList.contains('grow')) return;
+    el.style.height = 'auto';
+    var h;
+    if (!el.value && el.placeholder) { el.value = el.placeholder; h = el.scrollHeight; el.value = ''; }
+    else h = el.scrollHeight;
+    el.style.height = h + 'px';
+  }
+  // URL: la tarea pasa a ser esa página; sin texto y siempre arriba del todo
+  confirmUrl() {
+    var s = this.cur();
+    var raw = (s.urlDraft || '').trim();
+    if (!raw) { this.upd({ urlError: 'Escribe una dirección web.' }); return; }
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) raw = 'https://' + raw;
+    var u = null;
+    try { u = new URL(raw); } catch (err) { u = null; }
+    if (!u || !/^https?:$/.test(u.protocol) || u.hostname.indexOf('.') < 0) { this.upd({ urlError: 'Esa dirección no parece válida.' }); return; }
+    var att = { type: 'url', href: u.href, host: u.hostname.replace(/^www\./, '') };
+    if (s.urlEditId !== null && s.urlEditId !== undefined) {
+      var notesE = s.notes.map(function (x) { return x.id === s.urlEditId ? Object.assign({}, x, { text: '', att: att }) : x; });
+      this.upd({ notes: notesE, sheet: null, urlDraft: '', urlEditId: null });
+      return;
+    }
+    var pal = 5, key = function (n) { return n.c !== undefined ? n.c : n.id; };
+    var c = s.nextId % pal;
+    if (s.notes.length && ((key(s.notes[0]) % pal) + pal) % pal === c) c = (c + 1) % pal;
+    var n = { id: s.nextId, c: c, text: '', att: att };
+    var toList = s.returnTo === 'lista' && s.screen !== 'nota';
+    this.upd({ notes: [n].concat(s.notes), nextId: s.nextId + 1, screen: toList ? 'lista' : 'nota', sheet: null, draft: '', draftAtt: null, urlDraft: '', allDone: false, flashId: toList ? n.id : null });
+  }
+  // Adjuntar: la tarea pasa a ser ese elemento
+  pickFile(e) {
+    var self = this;
+    var input = e && e.target;
+    var f = input && input.files && input.files[0];
+    if (!f) return;
+    var name = f.name || 'archivo';
+    var ext = (name.indexOf('.') > -1 ? name.split('.').pop() : '').toUpperCase().slice(0, 5) || 'DOC';
+    var kb = f.size / 1024;
+    var size = kb < 1024 ? Math.max(1, Math.round(kb)) + ' KB' : (kb / 1024).toFixed(1).replace('.', ',') + ' MB';
+    var url = (typeof URL !== 'undefined' && URL.createObjectURL) ? URL.createObjectURL(f) : '';
+    var att;
+    if ((f.type || '').indexOf('image/') === 0) att = { type: 'image', url: url, name: name, ext: ext, size: size };
+    else {
+      att = { type: 'doc', kind: this.kindOf(ext, f.type || ''), url: url, name: name, ext: ext, size: size };
+    }
+    try { input.value = ''; } catch (err) {}
+    this.upd({ draftAtt: att, sheet: null, sheetClosing: false });
+    if (att.type === 'doc') this.processAtt(att);
+  }
+  // Mantener pulsado para completar
+  holdStart() {
+    var self = this, s = this.cur();
+    if (s.anim || s.tear || s.holding || s.holdDone || !s.notes.length) return;
+    this.upd({ holding: true });
+    clearTimeout(this.tHold);
+    this.tHold = setTimeout(function () { self.finishHold(); }, 1200);
+  }
+  holdCancel() {
+    var s = this.cur();
+    if (!s.holding) return;
+    clearTimeout(this.tHold);
+    this.upd({ holding: false });
+  }
+  finishHold() {
+    var self = this, s = this.cur();
+    if (!s.notes.length) return;
+    var n0 = s.notes[0], t = n0.text || (n0.att ? (n0.att.name || n0.att.host || '') : ''), l = t.length;
+    this.upd({ holding: false, holdDone: true });
+    clearTimeout(this.tTear);
+    this.tTear = setTimeout(function () {
+      var s1 = self.cur();
+      self.upd({ tear: 'tear', tearNote: s1.notes[0], tearText: t, tearSize: l < 40 ? '50px' : (l < 90 ? '40px' : (l < 160 ? '31px' : '26px')), tearId: (s1.notes[0].c !== undefined ? s1.notes[0].c : s1.notes[0].id), doneMore: s1.notes.length > 1 });
+      self.tTear2 = setTimeout(function () {
+        var s2 = self.cur();
+        var rest = s2.notes.slice(1);
+        self.upd({ tear: 'fade', holdDone: false, notes: rest, screen: rest.length ? 'nota' : 'vacio', allDone: !rest.length, lastDeleted: false });
+        self.tTear3 = setTimeout(function () { self.upd({ tear: null }); }, 750);
+      }, 2100);
+    }, 140);
+  }
+  // Eliminar la tarea visible: se arruga y va a la papelera
+  doComplete() {
+    var self = this;
+    var s = this.cur();
+    if (s.anim || !s.notes.length) return;
+    this.upd({ anim: true, sheet: null });
+    this.runFx();
+    clearTimeout(this.tDone);
+    this.tDone = setTimeout(function () {
+      var s2 = self.cur();
+      var rest = s2.notes.slice(1);
+      self.upd({ anim: false, notes: rest, screen: rest.length ? 'nota' : 'vacio', allDone: rest.length ? s2.allDone : true, lastDeleted: !rest.length });
+    }, 2250);
+  }
+  // Filtro del papel: arrugas (desplazamiento) y sombreado de pliegues (luz)
+  setupFx(el) {
+    this.fx = el;
+    if (!el) return;
+    var q = function (tag) { return el.getElementsByTagNameNS('http://www.w3.org/2000/svg', tag)[0] || el.querySelector(tag.toLowerCase()); };
+    this.fxT = q('feTurbulence'); this.fxL = q('feDiffuseLighting'); this.fxC = q('feComposite'); this.fxD = q('feDisplacementMap');
+    el.setAttribute('filterUnits', 'objectBoundingBox');
+    el.setAttribute('color-interpolation-filters', 'sRGB');
+    if (this.fxT) { this.fxT.setAttribute('type', 'fractalNoise'); this.fxT.setAttribute('baseFrequency', '0.021 0.016'); this.fxT.setAttribute('numOctaves', '4'); this.fxT.setAttribute('seed', '11'); }
+    if (this.fxL) { this.fxL.setAttribute('lighting-color', '#ffffff'); this.fxL.setAttribute('diffuseConstant', '1.15'); }
+    if (this.fxD) { this.fxD.setAttribute('xChannelSelector', 'R'); this.fxD.setAttribute('yChannelSelector', 'G'); }
+    this.setFx(0);
+  }
+  setFx(p) {
+    var e = 1 - Math.pow(1 - p, 3);
+    if (this.fxD) this.fxD.setAttribute('scale', String(46 * e));
+    if (this.fxL) this.fxL.setAttribute('surfaceScale', String(7 * e));
+    if (this.fxC) { this.fxC.setAttribute('k1', String(e)); this.fxC.setAttribute('k2', String(1 - e)); this.fxC.setAttribute('k3', '0'); this.fxC.setAttribute('k4', '0'); }
+  }
+  runFx() {
+    var self = this;
+    if (typeof requestAnimationFrame === 'undefined') return;
+    cancelAnimationFrame(this.raf);
+    var t0 = null;
+    var step = function (t) {
+      if (t0 === null) t0 = t;
+      var p = Math.min(1, (t - t0) / 1250);
+      self.setFx(p);
+      if ((t - t0) < 2250) self.raf = requestAnimationFrame(step);
+      else self.setFx(0);
+    };
+    this.raf = requestAnimationFrame(step);
+  }
+  facetMesh() {
+    if (this._mesh) return this._mesh;
+    var seed = 20250922;
+    var rnd = function () { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+    var cols = 6, rows = 11, W = 390, H = 844, pts = [];
+    for (var r = 0; r <= rows; r++) {
+      pts.push([]);
+      for (var c = 0; c <= cols; c++) {
+        var edge = r === 0 || r === rows || c === 0 || c === cols;
+        var x = c * W / cols + (edge && (c === 0 || c === cols) ? 0 : (rnd() - 0.5) * W / cols * 0.8);
+        var y = r * H / rows + (edge && (r === 0 || r === rows) ? 0 : (rnd() - 0.5) * H / rows * 0.8);
+        pts[r].push(x.toFixed(1) + ',' + y.toFixed(1));
+      }
+    }
+    var out = [];
+    var tri = function (a, b, c) {
+      var v = rnd();
+      var fill = v < 0.5 ? 'rgba(17,17,17,' + (0.03 + v * 0.2).toFixed(3) + ')' : 'rgba(255,255,255,' + ((v - 0.5) * 0.7).toFixed(3) + ')';
+      out.push({ pts: a + ' ' + b + ' ' + c, fill: fill, stroke: 'rgba(17,17,17,' + (0.08 + rnd() * 0.14).toFixed(3) + ')' });
+    };
+    for (var r2 = 0; r2 < rows; r2++) for (var c2 = 0; c2 < cols; c2++) {
+      var p00 = pts[r2][c2], p10 = pts[r2][c2 + 1], p01 = pts[r2 + 1][c2], p11 = pts[r2 + 1][c2 + 1];
+      if (rnd() < 0.5) { tri(p00, p10, p11); tri(p00, p11, p01); } else { tri(p00, p10, p01); tri(p10, p11, p01); }
+    }
+    this._mesh = out;
+    return out;
+  }
+  loopDemo(kind) {
+    var self = this;
+    this.setState(this.initial());
+    clearTimeout(this.tLoop);
+    this.tLoop = setTimeout(function () { if (kind === 'borrado') self.doComplete(); else self.holdStart(); }, 1000);
+  }
+  introText() { return 'Ya puedes crear tu primera tarea'; }
+  maybeIntro() {
+    var s = this.cur();
+    if (s.screen === 'vacio' && !s.allDone) this.startIntro();
+  }
+  startIntro() {
+    if (this.introOn) return;
+    this.introOn = true;
+    var self = this;
+    var total = this.introText().length;
+    var n = 0;
+    clearInterval(this.ivType);
+    this.tIntro0 = setTimeout(function () {
+      self.ivType = setInterval(function () {
+        n++;
+        self.upd({ typed: n });
+        if (n >= total) {
+          clearInterval(self.ivType);
+          self.tIntro = setTimeout(function () {
+            self.introOn = false;
+            self.upd({ introOut: true, typed: total, screen: 'editor', mode: 'nueva', draft: '', returnTo: 'nota', wantFocus: true });
+            self.tIntro2 = setTimeout(function () { self.upd({ introOut: false, typed: 0 }); }, 850);
+          }, 1000);
+        }
+      }, 62);
+    }, 500);
+  }
+  componentDidUpdate() { this.maybeIntro(); }
+  componentDidMount() {
+    var self = this;
+    this.maybeIntro();
+    var st = this.props.start;
+    var s0 = this.cur();
+    s0.notes.forEach(function (n) { if (n.att && n.att.type === 'doc') self.processAtt(n.att); });
+    if (st === 'hecho' || st === 'borrado') {
+      this.loopDemo(st);
+      this.iv = setInterval(function () { self.loopDemo(st); }, st === 'hecho' ? 6000 : 4400);
+    }
+  }
+  dragStart(e, id, index) {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (index === 0) return; // la nota actual no se reordena
+    if (!this.listEl) return;
+    var rows = [].slice.call(this.listEl.querySelectorAll('[data-row]'));
+    this.drag = { id: id, index: index, startY: e.clientY, active: false,
+      tops: rows.map(function (r) { return r.offsetTop; }), hs: rows.map(function (r) { return r.offsetHeight; }) };
+    this._mv = this._mv || this.dragMove.bind(this);
+    this._up = this._up || this.dragEnd.bind(this);
+    window.addEventListener('pointermove', this._mv);
+    window.addEventListener('pointerup', this._up);
+    window.addEventListener('pointercancel', this._up);
+  }
+  dragMove(e) {
+    var d = this.drag;
+    if (!d) return;
+    var dy = e.clientY - d.startY;
+    if (!d.active) { if (Math.abs(dy) < 6) return; d.active = true; }
+    if (e.cancelable) e.preventDefault();
+    var center = d.tops[d.index] + d.hs[d.index] / 2 + dy;
+    var to = 0;
+    for (var i = 0; i < d.tops.length; i++) {
+      if (i !== d.index && d.tops[i] + d.hs[i] / 2 < center) to++;
+    }
+    this.upd({ dragDy: dy, dragTo: to });
+  }
+  dragEnd() {
+    window.removeEventListener('pointermove', this._mv);
+    window.removeEventListener('pointerup', this._up);
+    window.removeEventListener('pointercancel', this._up);
+    var d = this.drag;
+    this.drag = null;
+    if (!d || !d.active) return;
+    var self = this;
+    var notes = this.cur().notes.slice();
+    var to = this.cur().dragTo;
+    if (to === null || to === undefined) to = d.index;
+    var moved = notes.splice(d.index, 1)[0];
+    notes.splice(to, 0, moved);
+    this.upd({ notes: notes, dragDy: 0, dragTo: null, dropFreeze: true });
+    clearTimeout(this.tFreeze);
+    this.tFreeze = setTimeout(function () { self.upd({ dropFreeze: false }); }, 60);
+  }
+  componentWillUnmount() {
+    if (typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(this.raf);
+    if (this._mv) { window.removeEventListener('pointermove', this._mv); window.removeEventListener('pointerup', this._up); window.removeEventListener('pointercancel', this._up); }
+    clearTimeout(this.tFreeze); clearTimeout(this.tSheet); clearTimeout(this.tHold); clearTimeout(this.tTear); clearTimeout(this.tTear2); clearTimeout(this.tTear3);
+    clearTimeout(this.tDone); clearTimeout(this.tLoop); clearTimeout(this.tFlash); clearInterval(this.iv);
+    clearTimeout(this.tIntro0); clearTimeout(this.tIntro); clearTimeout(this.tIntro2); clearInterval(this.ivType); this.introOn = false;
+  }
+
+  renderVals() {
+    var self = this;
+    var s = this.cur();
+    var notes = s.notes;
+    var palettes = {
+      clasica: ['#FFE55C', '#FF9EC4', '#8FD3F4', '#A6E88F', '#FFB870'],
+      neon: ['#F4FF3A', '#FF6FAE', '#45E0FF', '#63FF84', '#FF9D3F'],
+      amarillo: ['#FFE55C', '#FFE55C', '#FFE55C', '#FFE55C', '#FFE55C']
+    };
+    var pal = palettes[this.props.paleta] || palettes.clasica;
+    var colorOf = function (k) { return pal[((k % pal.length) + pal.length) % pal.length]; };
+    var keyOf = function (n) { return n.c !== undefined ? n.c : n.id; };
+    // Color de la tarea nueva: nunca el mismo que la que está en pantalla
+    var newC = s.nextId % 5;
+    if (notes.length && ((keyOf(notes[0]) % 5) + 5) % 5 === newC) newC = (newC + 1) % 5;
+    var current = notes.length ? (notes[0].text || (notes[0].att ? (notes[0].att.name || notes[0].att.host || '') : '')) : '';
+    var len = current.length;
+    var sizeFor = function (t) { var l = t.length; return l < 40 ? '50px' : (l < 90 ? '40px' : (l < 160 ? '31px' : '26px')); };
+    var noteSize = sizeFor(current);
+    var SHEETS = /^(XLS|XLSX|NUMBERS|ODS)$/;
+    var view = function (n, slot) {
+      if (!n) return { isText: false, isImage: false, isDoc: false, isUrl: false };
+      var a = n.att || null, t = n.text || '';
+      var isDoc = !!a && a.type === 'doc';
+      var kind = isDoc ? (a.kind || 'other') : '';
+      var ready = isDoc && (kind === 'other' || !!a.ready);
+      var v = {
+        isText: !a, isImage: !!a && a.type === 'image', isDoc: isDoc, isUrl: !!a && a.type === 'url',
+        host: a ? (a.host || '') : '', href: a ? (a.href || '') : '',
+        url: a ? (a.url || '') : '', alt: t || (a ? a.name : ''), text: t, hasCaption: !!t, size: sizeFor(t),
+        name: a ? a.name : '', ext: a ? a.ext : '', fsize: a ? (a.size || '') : '',
+        color: n.c !== undefined || n.id !== undefined ? colorOf(keyOf(n)) : '#FFFFFF',
+        loading: isDoc && !ready,
+        kPdf: isDoc && ready && kind === 'pdf', kWord: isDoc && ready && kind === 'word',
+        kGrid: isDoc && ready && kind === 'grid', kText: isDoc && ready && kind === 'text', kOther: isDoc && ready && kind === 'other',
+        body: a && a.text ? a.text : '', pages: [], paras: [], cells: [], gridCols: 'none'
+      };
+      if (v.kPdf) for (var i = 0; i < (a.pages || 0); i++) v.pages.push({ ref: self.pageRef(a.url, i, slot || 'x'), label: a.name + ', página ' + (i + 1) });
+      if (v.kWord) v.paras = (a.paras || []).map(function (p) { return { text: p.text, fs: p.h === 1 ? '22px' : (p.h === 2 ? '18px' : '15px'), fw: p.h ? '800' : '400' }; });
+      if (v.kGrid) {
+        var rows = a.rows || [], cols = 0;
+        rows.forEach(function (r) { cols = Math.max(cols, r.length); });
+        cols = Math.max(cols, 1);
+        v.gridCols = 'repeat(' + cols + ', 128px)';
+        rows.forEach(function (r, ri) { for (var ci = 0; ci < cols; ci++) v.cells.push({ v: r[ci] || '', bg: ri === 0 ? '#111111' : '#FFFFFF', fg: ri === 0 ? '#FFFFFF' : '#111111', fw: ri === 0 ? '700' : '400' }); });
+      }
+      return v;
+    };
+    var labelOf = function (n) { return n ? (n.text || (n.att ? (n.att.name || n.att.host || '') : '')) : ''; };
+    var home = function (list) { return list.length ? 'nota' : 'vacio'; };
+    var find = function (id) { for (var i = 0; i < notes.length; i++) if (notes[i].id === id) return notes[i]; return null; };
+    var delNote = find(s.delId);
+    var remaining = notes.length - 1;
+
+    var openEditor = function (n, from) {
+      if (n.att && n.att.type === 'url') { self.upd({ sheet: 'url', sheetClosing: false, urlDraft: n.att.href, urlError: '', urlEditId: n.id, openId: null }); return; }
+      self.upd({ screen: 'editor', mode: 'editar', editId: n.id, draft: n.text || '', draftAtt: n.att || null, returnTo: from, sheet: null, openId: null, wantFocus: true });
+    };
+    var askDel = function (n, from) { self.upd({ sheet: 'eliminar', sheetClosing: false, delId: n.id, returnTo: from }); };
+
+    var editNote = find(s.editId);
+    return {
+      cv: view(notes[0], 'cv'),
+      nx: view(notes[1], 'nx'),
+      tv: view(s.tearNote, 'tv'),
+      da: view(s.draftAtt ? { text: '', att: s.draftAtt } : null, 'da'),
+      hasDraftAtt: !!s.draftAtt,
+      noDraftAtt: !s.draftAtt,
+      draftLabel: (s.draft || '').trim() || (s.draftAtt ? s.draftAtt.name : ''),
+      chromeBg: (notes.length && notes[0].att) ? '#FFFFFF' : 'transparent',
+      logoPad: (notes.length && notes[0].att && notes[0].att.type === 'image') ? '8px' : '0px',
+      sheetAtt: s.sheet === 'adjuntar',
+      sheetUrl: s.sheet === 'url',
+      urlDraft: s.urlDraft || '',
+      urlError: s.urlError || '',
+      hasUrlError: !!s.urlError,
+      openUrl: function () { self.upd({ sheet: 'url', sheetClosing: false, urlDraft: '', urlError: '', urlEditId: null }); },
+      onUrl: function (e) { self.upd({ urlDraft: e.target.value, urlError: '' }); },
+      urlKey: function (e) { if (e.key === 'Enter') { e.preventDefault(); self.confirmUrl(); } },
+      confirmUrl: function () { self.confirmUrl(); },
+      urlRef: this.urlRef || (this.urlRef = function (el) {
+        if (!el || el === self.urlEl) { if (!el) self.urlEl = null; return; }
+        self.urlEl = el;
+        setTimeout(function () { try { el.focus(); } catch (e) {} }, 220);
+      }),
+      openAttach: function () { self.upd({ sheet: 'adjuntar', sheetClosing: false }); },
+      onPick: function (e) { self.pickFile(e); },
+      removeAtt: function () { self.upd({ draftAtt: null }); },
+      curColor: notes.length ? colorOf(keyOf(notes[0])) : '#F4F1EA',
+      nextColor: notes.length > 1 ? colorOf(keyOf(notes[1])) : '#F4F1EA',
+      introColor: colorOf(newC),
+      editorColor: (s.mode === 'editar' && editNote) ? colorOf(keyOf(editNote)) : colorOf(newC),
+      isIntro: (s.screen === 'vacio' && !s.allDone) || !!s.introOut,
+      isVacio: s.screen === 'vacio' && !!s.allDone,
+      introClass: s.introOut ? 'intro out' : 'intro',
+      caretStart: (s.typed || 0) === 0,
+      introChars: this.introText().split('').map(function (ch, i) {
+        return { ch: ch, cls: i < (s.typed || 0) ? 'ch on' : 'ch', caret: i === (s.typed || 0) - 1 };
+      }),
+      canCancel: notes.length > 0,
+      noCancel: notes.length === 0,
+      taRef: this.taRef || (this.taRef = function (el) {
+        if (!el) { self.ta = null; return; }
+        if (el === self.ta) return;
+        self.ta = el;
+        self.autosize(el);
+        if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(function () { self.autosize(el); });
+        if (!self.cur().wantFocus) return;
+        setTimeout(function () {
+          try { el.focus(); var l = el.value.length; el.setSelectionRange(l, l); } catch (e) {}
+          self.upd({ wantFocus: false });
+        }, 60);
+      }),
+      isNota: s.screen === 'nota',
+      isEditor: s.screen === 'editor',
+      isLista: s.screen === 'lista',
+      sheetMenu: s.sheet === 'menu',
+      sheetPos: s.sheet === 'posicion',
+      sheetDel: s.sheet === 'eliminar',
+      headA: s.lastDeleted ? 'Nada' : 'Todo',
+      headB: s.lastDeleted ? 'pendiente.' : 'hecho.',
+      emptyText: s.lastDeleted ? 'No tienes ninguna tarea. Apunta lo siguiente cuando lo sepas.' : 'No queda nada pendiente. Disfrútalo, o apunta lo siguiente.',
+      emptyCta: 'Crear una tarea',
+      current: current,
+      noteSize: noteSize,
+      anim: !!s.anim,
+      sheetClass: s.anim ? 'sheet crumpling' : 'sheet',
+      wrapClass: s.anim ? 'wrap crumpling' : 'wrap',
+      notAnim: !s.anim,
+      facets: this.facetMesh(),
+      fxRef: this.fxRef || (this.fxRef = function (el) { if (el !== self.fx) self.setupFx(el); }),
+      hasNext: notes.length > 1,
+      noNext: notes.length <= 1,
+      nextText: notes.length > 1 ? labelOf(notes[1]) : '',
+      nextSize: sizeFor(notes.length > 1 ? labelOf(notes[1]) : ''),
+      ctaClass: s.anim ? 'cta hide' : 'cta',
+      busy: !!(s.anim || s.tear),
+      holdClass: 'bb hold' + (s.holding ? ' holding' : '') + (s.holdDone ? ' done' : ''),
+      holdHint: s.holding ? 'Sigue pulsando…' : (s.holdDone ? '¡Hecho!' : 'Mantén pulsado'),
+      holdStart: function (e) { if (e && e.button !== undefined && e.button !== 0) return; self.holdStart(); },
+      holdCancel: function () { self.holdCancel(); },
+      holdKeyDown: function (e) { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); self.holdStart(); } },
+      holdKeyUp: function (e) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); self.holdCancel(); } },
+      noMenu: function (e) { e.preventDefault(); },
+      tearing: s.tear === 'tear',
+      showSuccess: !!s.tear,
+      successClass: s.tear === 'fade' ? 'success out' : 'success',
+      tearText: s.tearText,
+      tearSize: s.tearSize,
+      tearColor: s.tearId !== null ? colorOf(s.tearId) : '#FFE55C',
+      doneMore: !!s.doneMore,
+      trashClass: s.anim ? 'trash show' : 'trash',
+      draft: s.draft,
+      delText: delNote ? delNote.text : current,
+      onlyOne: notes.length <= 1,
+      listHint: notes.length <= 1 ? 'Solo tienes esta tarea' : 'Las demás esperan su turno',
+      saveDisabled: s.screen === 'editor' && s.mode === 'nueva' && !(s.draft || '').trim() && !s.draftAtt,
+      editorTitle: s.mode === 'editar' ? 'Editar tarea' : 'Nueva tarea',
+      editorTag: s.mode === 'editar' ? 'Editar tarea' : (notes.length ? 'Nueva tarea' : 'Tu primera tarea'),
+      saveLabel: s.mode === 'editar' ? 'Guardar cambios' : (notes.length ? 'Continuar' : 'Guardar'),
+      listRef: this.listRef || (this.listRef = function (el) { self.listEl = el; }),
+      items: notes.map(function (n, i) {
+        var d = self.drag && self.drag.active ? self.drag : null;
+        var tf = 'none';
+        var dragging = false;
+        if (d) {
+          if (n.id === d.id) { tf = 'translateY(' + s.dragDy + 'px) rotate(-1.5deg)'; dragging = true; }
+          else {
+            var from = d.index, to = s.dragTo, shift = d.hs[from] + 12;
+            if (from < to && i > from && i <= to) tf = 'translateY(-' + shift + 'px)';
+            else if (from > to && i >= to && i < from) tf = 'translateY(' + shift + 'px)';
+          }
+        }
+        var cls = (i === 0 ? 'li fixed' : 'li') + (dragging ? ' dragging' : '') + (s.dropFreeze ? ' still' : '') + (s.flashId === n.id ? ' flash' : '');
+        var isFirst = i === 0;
+        return {
+          text: labelOf(n), first: isFirst, rest: !isFirst, cls: cls, tf: tf,
+          isImg: !!(n.att && n.att.type === 'image'), isDoc: !!(n.att && (n.att.type === 'doc' || n.att.type === 'url')),
+          url: n.att ? (n.att.url || '') : '', ext: n.att ? (n.att.ext || 'WEB') : '', thumbMl: isFirst ? '8px' : '0px',
+          pad: isFirst ? '12px 4px 12px 13px' : '12px 4px',
+          bg: colorOf(keyOf(n)),
+          down: function (e) { self.dragStart(e, n.id, i); },
+          up: function (e) {
+            // Doble toque sobre la tarea: editar
+            if (e.target && e.target.closest && e.target.closest('button')) return;
+            if (self.drag && self.drag.active) { self.lastTap = null; return; }
+            var now = Date.now();
+            if (self.lastTap && self.lastTap.id === n.id && now - self.lastTap.t < 350) { self.lastTap = null; openEditor(n, 'lista'); }
+            else self.lastTap = { id: n.id, t: now };
+          },
+          edit: function () { openEditor(n, 'lista'); },
+          del: function () { askDel(n, 'lista'); }
+        };
+      }),
+      create: function () { self.upd({ screen: 'editor', mode: 'nueva', draft: '', draftAtt: null, sheet: null, returnTo: 'nota', wantFocus: true }); },
+      createFromList: function () { self.upd({ screen: 'editor', mode: 'nueva', draft: '', draftAtt: null, sheet: null, returnTo: 'lista', openId: null, wantFocus: true }); },
+      onDraft: function (e) { self.autosize(e.target); self.upd({ draft: e.target.value }); },
+      cancelEditor: function () {
+        var back = (s.returnTo === 'lista' && notes.length) ? 'lista' : home(notes);
+        self.upd({ screen: back, sheet: null, draft: '', draftAtt: null });
+      },
+      save: function () {
+        var t = (s.draft || '').trim();
+        if (!t && !s.draftAtt) return;
+        if (s.mode === 'editar') {
+          var edited = notes.map(function (x) { return x.id === s.editId ? Object.assign({}, x, { text: t, att: s.draftAtt }) : x; });
+          self.upd({ notes: edited, screen: s.returnTo === 'lista' ? 'lista' : 'nota', draft: '', draftAtt: null });
+        } else if (!notes.length) {
+          self.upd({ notes: [{ id: s.nextId, c: newC, text: t, att: s.draftAtt }], nextId: s.nextId + 1, screen: 'nota', draft: '', draftAtt: null, allDone: false });
+        } else if (s.draftAtt && s.draftAtt.type === 'image') {
+          // Fotos e imágenes: siempre arriba del todo, sin preguntar
+          var nImg = { id: s.nextId, c: newC, text: t, att: s.draftAtt };
+          var toListI = s.returnTo === 'lista';
+          self.upd({ notes: [nImg].concat(notes), nextId: s.nextId + 1, screen: toListI ? 'lista' : 'nota', sheet: null, draft: '', draftAtt: null, flashId: toListI ? nImg.id : null });
+        } else {
+          self.upd({ sheet: 'posicion', sheetClosing: false });
+        }
+      },
+      placeTop: function () {
+        var n = { id: s.nextId, c: newC, text: (s.draft || '').trim(), att: s.draftAtt };
+        var toList = s.returnTo === 'lista';
+        self.upd({ notes: [n].concat(notes), nextId: s.nextId + 1, screen: toList ? 'lista' : 'nota', sheet: null, draft: '', draftAtt: null, flashId: toList ? n.id : null });
+        if (toList) { clearTimeout(self.tFlash); self.tFlash = setTimeout(function () { self.upd({ flashId: null }); }, 950); }
+      },
+      placeBottom: function () {
+        var n = { id: s.nextId, c: newC, text: (s.draft || '').trim(), att: s.draftAtt };
+        var toList = s.returnTo === 'lista';
+        self.upd({ notes: notes.concat([n]), nextId: s.nextId + 1, screen: toList ? 'lista' : 'nota', sheet: null, draft: '', draftAtt: null, flashId: toList ? n.id : null });
+        if (toList) { clearTimeout(self.tFlash); self.tFlash = setTimeout(function () { self.upd({ flashId: null }); }, 950); }
+      },
+      complete: function () { self.doComplete(); },
+      openMenu: function () { self.upd({ sheet: 'menu', sheetClosing: false }); },
+      closeSheet: function () {
+        if (!s.sheet || s.sheetClosing) return;
+        self.upd({ sheetClosing: true });
+        clearTimeout(self.tSheet);
+        self.tSheet = setTimeout(function () { self.upd({ sheet: null, sheetClosing: false }); }, 170);
+      },
+      sheetBgClass: s.sheetClosing ? 'sheetbg out' : 'sheetbg',
+      sheetUpClass: s.sheetClosing ? 'sheetup out' : 'sheetup',
+      edit: function () { if (notes.length) openEditor(notes[0], 'nota'); },
+      openList: function () { self.upd({ screen: 'lista', sheet: null, openId: null }); },
+      backToNote: function () { self.upd({ screen: home(notes), openId: null }); },
+      askDelete: function () { if (notes.length) askDel(notes[0], 'nota'); },
+      confirmDelete: function () {
+        if (s.returnTo === 'nota' && notes.length && s.delId === notes[0].id) {
+          self.upd({ sheet: null, delId: null });
+          setTimeout(function () { self.doComplete(); }, 220);
+          return;
+        }
+        var rest = notes.filter(function (x) { return x.id !== s.delId; });
+        var back = (s.returnTo === 'lista' && rest.length) ? 'lista' : home(rest);
+        self.upd({ notes: rest, screen: back, sheet: null, openId: null, delId: null, allDone: rest.length ? s.allDone : true, lastDeleted: !rest.length });
+      }
+    };
+  }
+}
+</script>
+
+</body>
+</html>
