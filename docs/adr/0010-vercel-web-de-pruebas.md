@@ -1,6 +1,6 @@
 # ADR-0010: Web de pruebas en Vercel con integración Git, Flutter fijado y cabeceras estrictas
 
-- **Estado:** Aceptado (S6 validado en local el 2026-09-24); falta el primer despliegue real en Vercel
+- **Estado:** Aceptado; **primer despliegue real el 2026-09-24** (preview de la PR #3)
 - **Fecha:** 2026-09-24
 - **Relacionado:** D4, ADR-0001, `docs/environments.md`, modelo de amenazas (T-9)
 
@@ -45,3 +45,11 @@ La opción 1 no guarda tokens de Vercel en GitHub (menos superficie) y usa las p
 - **Todas las peticiones al propio dominio** (ni CDN ni Google Fonts: la fuente de respaldo se sirve en local).
 - La CSP inicial con `base-uri 'none'` generaba un error de consola (corregido a `'self'`).
 - Falta: conectar el repo en Vercel (lo hace el propietario) y comprobar el tiempo de build con la instalación de Flutter.
+
+## Primer despliegue real (2026-09-24)
+
+- **[Hecho]** Proyecto `una` en Vercel conectado por el propietario (Root Directory: raíz del repo). La configuración vive en `vercel.json` (instalación de Flutter verificada por commit, build `--wasm --no-web-resources-cdn`, salida `app/build/web`, cabeceras de arriba), así que no depende de ajustes del panel.
+- **[Hecho]** Las previews y producción están detrás de Vercel Authentication (redirección 302 a `vercel.com/sso-api`); `x-robots-tag: noindex`.
+- **[Hecho]** `web/flutter_bootstrap.js` fija `fontFallbackBaseUrl` al propio dominio: el motor ya no intenta pedir fuentes de respaldo a `fonts.gstatic.com` (la CSP lo bloquearía de todos modos).
+- **[Hecho]** Aviso fijo "Versión de pruebas · los datos se borran al recargar" (los datos viven en memoria; la persistencia en OPFS/IndexedDB queda pendiente y solo si hace falta para probar).
+

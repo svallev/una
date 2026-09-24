@@ -39,7 +39,7 @@ Requisitos: F0 completa para Android (D17: sin Xcode; el job iOS de CI compila s
 | T-001-02 CI activa | ✅ Flutter, Android e iOS en verde; release sin permisos, tamaño < 25 MB y licencias comprobadas en CI. "Revisión de dependencias" solo mira vulnerabilidades (`license-check: false`, decisión del propietario) |
 | T-001-03 Identidad | ✅ |
 | T-001-04 Tokens | ✅ |
-| T-001-05 Tema y componentes | 🟡 Tema, `StickyNote`, `BrutalButton` y **fuentes Archivo (variable) y Space Mono empaquetadas** con sus licencias OFL registradas. Faltan los *goldens* (el render de texto difiere entre macOS y el Linux de CI; se decidirá dónde generarlos) |
+| T-001-05 Tema y componentes | 🟡 Tema, `StickyNote`, `BrutalButton` y **fuentes Archivo (variable) y Space Mono empaquetadas** con sus licencias OFL registradas. ✅ *Goldens* (9) generados y comparados en Linux (workflow `Goldens`; docs/testing.md) |
 | T-001-06 l10n | ✅ |
 | T-001-07 Dominio | ✅ |
 | T-001-08 BD drift v1 + migraciones | ✅ (columna SQL `body` en lugar de `text`, que choca con el código generado de drift) |
@@ -52,7 +52,7 @@ Requisitos: F0 completa para Android (D17: sin Xcode; el job iOS de CI compila s
 | T-001-15 Enrutado + P-2 (10 min) | ✅ |
 | T-001-16 Integración persistencia / sin red | 🟡 `integration_test/first_run_flow_test.dart` (BD real en disco, rearranque, `HttpOverrides` que falla) ✅ en el emulador y en el Xiaomi 15T Pro. La release no declara ningún permiso de red |
 | T-001-17 Rendimiento de arranque en dispositivo | ✅ p50 = 198 ms, p90 = 211 ms en el Xiaomi 15T Pro (`docs/perf/baseline.md`). Gama media pendiente (R-02) |
-| T-001-18 Web de pruebas (Vercel) | ⏳ (en web, repositorio en memoria) |
+| T-001-18 Web de pruebas (Vercel) | ✅ Preview por PR desplegada (`vercel.json`: cabeceras de ADR-0010, Flutter fijado, protección de Vercel). Aviso "Versión de pruebas"; datos en memoria; fuentes de respaldo del propio dominio. Falta que el propietario la abra y compruebe |
 | T-001-19 Revisiones (spec, a11y, seguridad) | 🟡 Hechas; corregidos todos los hallazgos bloqueantes e importantes (ver abajo). Quedan decisiones del propietario |
 
 Verificado a mano en el emulador (release): bienvenida → editor → guardar → tarea actual → cerrar y reabrir conserva la tarea.
