@@ -88,6 +88,7 @@ class HomeRouter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final completion = ref.watch(completionProvider);
+    final focusSignal = ref.watch(completionFocusProvider);
     final task = ref.watch(currentTaskProvider);
     final firstRunDone = ref.watch(firstRunDoneProvider);
     final hasCompleted = ref.watch(hasCompletedProvider);
@@ -97,10 +98,15 @@ class HomeRouter extends ConsumerWidget {
     final Widget child;
     if (shown != null) {
       // Mientras se guarda, la tarea sigue en pantalla con el relleno lleno.
-      child = CurrentTaskScreen(key: ValueKey('task-${shown.id}'), task: shown);
+      child = CurrentTaskScreen(
+        key: ValueKey('task-${shown.id}'),
+        task: shown,
+        focusSignal: focusSignal,
+      );
     } else if (hasCompleted) {
       child = AllDoneScreen(
         key: const ValueKey('all-done'),
+        focusSignal: focusSignal,
         onCreate: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => FirstTaskEditorScreen(
@@ -150,7 +156,11 @@ class HomeRouter extends ConsumerWidget {
         children: [
           AbsorbPointer(
             absorbing: completion.busy,
-            child: ExcludeSemantics(excluding: celebrating, child: screens),
+            // Ni lector ni teclado desde que empieza a guardar.
+            child: ExcludeSemantics(
+              excluding: completion.busy,
+              child: ExcludeFocus(excluding: completion.busy, child: screens),
+            ),
           ),
           if (celebrating && completed != null)
             CelebrationOverlay(

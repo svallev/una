@@ -7,6 +7,7 @@ import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../domain/entities/task.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../ui/focus_on_signal.dart';
 import '../../ui/focus_ring.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
@@ -20,6 +21,7 @@ class CurrentTaskScreen extends ConsumerWidget {
     super.key,
     required this.task,
     this.faceOnly = false,
+    this.focusSignal = 0,
   });
 
   final Task task;
@@ -27,6 +29,9 @@ class CurrentTaskScreen extends ConsumerWidget {
   /// Solo la nota (color y texto), sin logotipo, menú ni botón, que ocupan su
   /// sitio pero no se ven: es lo que se rompe en dos al completar (spec 003).
   final bool faceOnly;
+
+  /// Al cambiar, el foco va a la tarea (tras completar la anterior, CA-003-07).
+  final int focusSignal;
 
   /// Límite de escala de texto para la nota (docs/design/tokens.md).
   static const maxNoteTextScale = 1.6;
@@ -95,29 +100,34 @@ class CurrentTaskScreen extends ConsumerWidget {
                                 maxScaleFactor: maxNoteTextScale,
                               ),
                             ),
-                            child: Semantics(
-                              label: l10n.currentTaskSemantics(text),
-                              // También se completa desde la tarea (CA-003-07).
-                              customSemanticsActions: faceOnly
-                                  ? null
-                                  : {
-                                      CustomSemanticsAction(
-                                        label: l10n.completeA11yAction,
-                                      ): complete,
-                                    },
-                              excludeSemantics: true,
-                              child: LayoutBuilder(
-                                builder: (context, constraints) => SizedBox(
-                                  width: double.infinity,
-                                  child: Text(
-                                    text,
-                                    style: UnaTheme.fitNoteText(
+                            child: FocusOnSignal(
+                              signal: focusSignal,
+                              child: Semantics(
+                                label: l10n.currentTaskSemantics(text),
+                                // También se completa desde la tarea (CA-003-07).
+                                customSemanticsActions: faceOnly
+                                    ? null
+                                    : {
+                                        CustomSemanticsAction(
+                                          label: l10n.completeA11yAction,
+                                        ): complete,
+                                      },
+                                excludeSemantics: true,
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) => SizedBox(
+                                    width: double.infinity,
+                                    child: Text(
                                       text,
-                                      maxWidth: constraints.maxWidth,
-                                      textScaler: MediaQuery.textScalerOf(
-                                        context,
+                                      style: UnaTheme.fitNoteText(
+                                        text,
+                                        maxWidth: constraints.maxWidth,
+                                        textScaler: MediaQuery.textScalerOf(
+                                          context,
+                                        ),
+                                        textDirection: Directionality.of(
+                                          context,
+                                        ),
                                       ),
-                                      textDirection: Directionality.of(context),
                                     ),
                                   ),
                                 ),

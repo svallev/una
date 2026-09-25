@@ -210,6 +210,10 @@ class _Success extends StatelessWidget {
             UnaMotion.confetti,
             UnaMotion.confettiCurve,
           );
+    // La opacidad del confeti va por tiempo, no por la curva (CSS: 70 %).
+    final confettiTime = reduced
+        ? 0.0
+        : segment(UnaMotion.confettiDelay, UnaMotion.confetti, Curves.linear);
     const titleStyle = TextStyle(
       fontFamily: UnaFonts.display,
       fontSize: UnaFontSizes.success,
@@ -223,9 +227,10 @@ class _Success extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) => Stack(
           children: [
-            if (confetti > 0 && confetti < 1)
+            if (confettiTime > 0 && confettiTime < 1)
               _Confetti(
                 progress: confetti,
+                time: confettiTime,
                 origin: Offset(_confettiX, constraints.maxHeight / 2),
               ),
             SafeArea(
@@ -237,47 +242,53 @@ class _Success extends StatelessWidget {
                   UnaSpace.l,
                   UnaSpace.xxl + UnaSpace.ml,
                 ),
-                child: Semantics(
-                  container: true,
-                  label: '${l10n.successTitle1} ${l10n.successTitle2}',
-                  excludeSemantics: true,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Stamp(progress: stamp, color: color),
-                      const SizedBox(height: _gap),
-                      _Rise(
-                        progress: rise1,
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(text: '${l10n.successTitle1}\n'),
-                              TextSpan(
-                                text: l10n.successTitle2,
-                                style: TextStyle(color: color),
+                // No se anuncia aparte: ya hubo un único anuncio (CA-003-07).
+                child: ExcludeSemantics(
+                  // Con texto grande se desplaza en lugar de cortarse (§6).
+                  child: LayoutBuilder(
+                    builder: (context, box) => SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: box.maxHeight),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _Stamp(progress: stamp, color: color),
+                            const SizedBox(height: _gap),
+                            _Rise(
+                              progress: rise1,
+                              child: Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(text: '${l10n.successTitle1}\n'),
+                                    TextSpan(
+                                      text: l10n.successTitle2,
+                                      style: TextStyle(color: color),
+                                    ),
+                                  ],
+                                ),
+                                style: titleStyle,
+                              ),
+                            ),
+                            if (hasNext) ...[
+                              const SizedBox(height: _gap),
+                              _Rise(
+                                progress: rise2,
+                                child: Text(
+                                  l10n.successNext,
+                                  style: const TextStyle(
+                                    fontFamily: UnaFonts.mono,
+                                    fontSize: UnaFontSizes.bodyS,
+                                    height: 1.4,
+                                    color: UnaColors.onInk,
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
-                          style: titleStyle,
+                          ],
                         ),
                       ),
-                      if (hasNext) ...[
-                        const SizedBox(height: _gap),
-                        _Rise(
-                          progress: rise2,
-                          child: Text(
-                            l10n.successNext,
-                            style: const TextStyle(
-                              fontFamily: UnaFonts.mono,
-                              fontSize: UnaFontSizes.bodyS,
-                              height: 1.4,
-                              color: UnaColors.onInk,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -379,14 +390,23 @@ const _pieces = <(double, int, double, double, double)>[
 ];
 
 class _Confetti extends StatelessWidget {
-  const _Confetti({required this.progress, required this.origin});
+  const _Confetti({
+    required this.progress,
+    required this.time,
+    required this.origin,
+  });
+
+  /// Posición (con la curva `confetti`).
   final double progress;
+
+  /// Tiempo transcurrido (0–1), para la opacidad.
+  final double time;
   final Offset origin;
 
   @override
   Widget build(BuildContext context) {
     // Opacidad 1 hasta el 70 % y después se apaga (prototipo).
-    final opacity = progress < 0.7 ? 1.0 : 1 - (progress - 0.7) / 0.3;
+    final opacity = time < 0.7 ? 1.0 : 1 - (time - 0.7) / 0.3;
     return IgnorePointer(
       child: Stack(
         children: [

@@ -24,7 +24,9 @@ Future<bool> completeTask(
   final messenger = ScaffoldMessenger.maybeOf(context);
   try {
     final result = await ref.read(completionProvider.notifier).complete(task);
-    if (result == null) return true; // Ya había una en curso.
+    if (result == null) return false; // Ya había una en curso: no cuenta.
+    // Si quedaba un aviso de un intento fallido, ya no aplica (CA-003-12).
+    messenger?.hideCurrentSnackBar();
     // Un único anuncio (CA-003-07); la enhorabuena no se anuncia aparte.
     final next = result.next;
     unawaited(

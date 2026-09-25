@@ -3,13 +3,21 @@ import 'package:flutter/material.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
+import '../../ui/focus_on_signal.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 
 /// "Todo hecho." (R12, spec 003, CA-003-05): no queda nada pendiente.
 /// Prototipo: estado `vacio` con `allDone` (fondo papel, texto de 56 px).
 class AllDoneScreen extends StatefulWidget {
-  const AllDoneScreen({super.key, required this.onCreate});
+  const AllDoneScreen({
+    super.key,
+    required this.onCreate,
+    this.focusSignal = 0,
+  });
+
+  /// Al cambiar, el foco va al título (tras completar la última, CA-003-07).
+  final int focusSignal;
 
   /// Abre el editor para crear una tarea (CA-003-10).
   final VoidCallback onCreate;
@@ -101,14 +109,31 @@ class _AllDoneScreenState extends State<AllDoneScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Se lee como un solo texto (CA-003-07).
-                              Semantics(
-                                header: true,
-                                label:
-                                    '${l10n.emptyDoneTitle1} ${l10n.emptyDoneTitle2}',
-                                excludeSemantics: true,
-                                child: Text(
-                                  '${l10n.emptyDoneTitle1}\n${l10n.emptyDoneTitle2}',
-                                  style: titleStyle,
+                              FocusOnSignal(
+                                signal: widget.focusSignal,
+                                child: Semantics(
+                                  header: true,
+                                  label:
+                                      '${l10n.emptyDoneTitle1} ${l10n.emptyDoneTitle2}',
+                                  excludeSemantics: true,
+                                  // Con texto grande, cada línea se reduce lo
+                                  // justo antes que partir la palabra (como la
+                                  // nota, CA-001-07).
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      for (final line in [
+                                        l10n.emptyDoneTitle1,
+                                        l10n.emptyDoneTitle2,
+                                      ])
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(line, style: titleStyle),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: UnaSpace.ml),

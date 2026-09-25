@@ -13,7 +13,7 @@ import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show CustomSemanticsAction;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -128,6 +128,43 @@ void main() {
       expect(find.byType(CelebrationOverlay), findsNothing);
       expect(find.text('Segunda'), findsOneWidget);
       expect(find.text('Primera'), findsNothing);
+      // CA-003-07: el foco pasa a la nueva tarea.
+      expect(Focus.of(tester.element(find.text('Segunda'))).hasFocus, isTrue);
+    },
+  );
+
+  testWidgets('CA-003-04: la enhorabuena dura 2,1 s y un toque no la salta', (
+    tester,
+  ) async {
+    await _app(tester, tasks: ['Primera', 'Segunda']);
+    await _hold(tester);
+    await tester.pump(UnaMotion.holdDonePause);
+    await tester.pump(_frame);
+    await tester.tapAt(const Offset(195, 400));
+    await tester.pump(
+      UnaMotion.successHold - const Duration(milliseconds: 100),
+    );
+    expect(find.byType(CelebrationOverlay), findsOneWidget);
+    await _celebrate(tester, hold: Duration.zero);
+    expect(find.text('Segunda'), findsOneWidget);
+  });
+
+  testWidgets(
+    'CA-003-09: durante la animación la pantalla de debajo no existe para el lector',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await _app(tester, tasks: ['Primera', 'Segunda']);
+      await _hold(tester);
+      expect(find.semantics.byLabel(RegExp('Tarea actual')), findsNothing);
+      expect(find.semantics.byLabel('Menú de la tarea'), findsNothing);
+      await tester.pump(UnaMotion.holdDonePause);
+      await tester.pump(_frame);
+      expect(find.semantics.byLabel('Menú de la tarea'), findsNothing);
+      await tester.pump(UnaMotion.successHold + UnaMotion.successFade);
+      await tester.pump(_frame);
+      await tester.pump(UnaMotion.introFade);
+      expect(find.semantics.byLabel('Tarea actual: Segunda'), findsOneWidget);
+      handle.dispose();
     },
   );
 
@@ -141,7 +178,8 @@ void main() {
     expect(find.text('Ahora a por la siguiente →'), findsNothing);
     await _celebrate(tester, hold: Duration.zero);
     expect(find.byType(AllDoneScreen), findsOneWidget);
-    expect(find.text('Todo\nhecho.'), findsOneWidget);
+    expect(find.text('Todo'), findsOneWidget);
+    expect(find.text('hecho.'), findsOneWidget);
     expect(
       find.text('No queda nada pendiente. Disfrútalo, o apunta lo siguiente.'),
       findsOneWidget,
@@ -249,6 +287,11 @@ void main() {
       expect((await repo.findById('t0'))!.status, TaskStatus.completed);
       await _celebrate(tester);
       expect(find.text('Segunda'), findsOneWidget);
+      expect(
+        find.text('No hemos podido completar la tarea'),
+        findsNothing,
+        reason: 'el aviso se cierra al completar',
+      );
     },
   );
 
@@ -257,7 +300,17 @@ void main() {
     (tester) async {
       await _app(tester, tasks: ['Primera', 'Segunda'], reduced: true);
       await _hold(tester);
-      await _celebrate(tester);
+      await tester.pump(UnaMotion.holdDonePause);
+      await tester.pump(UnaMotion.tear ~/ 2);
+      // Sin mitades rotas (ClipPath) ni confeti: solo el fundido.
+      expect(
+        find.descendant(
+          of: find.byType(CelebrationOverlay),
+          matching: find.byType(ClipPath),
+        ),
+        findsNothing,
+      );
+      await _celebrate(tester, hold: Duration.zero);
       expect(find.byType(CelebrationOverlay), findsNothing);
       expect(find.text('Segunda'), findsOneWidget);
     },
@@ -295,6 +348,38 @@ void main() {
       expect(find.byType(AllDoneScreen), findsOneWidget);
       expect(find.byType(FirstTaskEditorScreen), findsNothing);
       await tester.pump(UnaMotion.enter);
+    },
+  );
+
+  testWidgets(
+    'CL-001-9 en "Todo hecho.": al 200 % en 360 dp no se parte ninguna palabra y es accesible',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpWithApp(
+        tester,
+        AllDoneScreen(onCreate: () {}),
+        textScale: 2.0,
+        size: const Size(360, 640),
+      );
+      await tester.pump(UnaMotion.enter);
+      expect(tester.takeException(), isNull);
+      for (final word in ['Todo', 'hecho.']) {
+        final p = tester.renderObject<RenderParagraph>(find.text(word));
+        expect(
+          p
+              .getBoxesForSelection(
+                TextSelection(baseOffset: 0, extentOffset: word.length),
+              )
+              .map((b) => b.top)
+              .toSet(),
+          hasLength(1),
+          reason: word,
+        );
+      }
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      handle.dispose();
     },
   );
 

@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -34,6 +34,19 @@ class CompletionState {
 
   CompletionState copyWith(CompletionPhase phase) =>
       CompletionState(phase, task: task, hasNext: hasNext);
+}
+
+/// Aumenta al terminar cada secuencia: la pantalla que queda debajo lleva el
+/// foco a la nueva tarea o a "Todo hecho." (CA-003-07).
+final completionFocusProvider = NotifierProvider<CompletionFocus, int>(
+  CompletionFocus.new,
+);
+
+class CompletionFocus extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void signal() => state++;
 }
 
 final completionProvider =
@@ -73,7 +86,12 @@ class CompletionController extends Notifier<CompletionState> {
       hasNext: result.next != null,
     );
     _pause = Timer(UnaMotion.holdDonePause, () {
-      if (state.phase == CompletionPhase.completing) {
+      if (state.phase != CompletionPhase.completing) return;
+      // En segundo plano no se celebra: al volver se ve la siguiente (CL-003-7).
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (lifecycle != null && lifecycle != AppLifecycleState.resumed) {
+        finish();
+      } else {
         state = state.copyWith(CompletionPhase.celebrating);
       }
     });
@@ -91,5 +109,6 @@ class CompletionController extends Notifier<CompletionState> {
   void finish() {
     _pause?.cancel();
     state = const CompletionState.idle();
+    ref.read(completionFocusProvider.notifier).signal();
   }
 }

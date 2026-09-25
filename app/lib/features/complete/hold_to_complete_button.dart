@@ -110,9 +110,12 @@ class HoldToCompleteButtonState extends State<HoldToCompleteButton>
   }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    final isActivate =
-        e.logicalKey == LogicalKeyboardKey.space ||
-        e.logicalKey == LogicalKeyboardKey.enter;
+    final isActivate = {
+      LogicalKeyboardKey.space,
+      LogicalKeyboardKey.enter,
+      LogicalKeyboardKey.numpadEnter,
+      LogicalKeyboardKey.select, // Botón central del mando (D-pad)
+    }.contains(e.logicalKey);
     if (!isActivate) return KeyEventResult.ignored;
     if (e is KeyDownEvent) _start();
     if (e is KeyUpEvent && !_done) _cancel();
@@ -150,15 +153,22 @@ class HoldToCompleteButtonState extends State<HoldToCompleteButton>
       customSemanticsActions: {
         CustomSemanticsAction(label: widget.a11yAction): _completeNow,
       },
+      // "Doble toque y mantener" (TalkBack), mantener pulsado (Switch Access,
+      // Voice Access): lo mismo que el gesto. El doble toque simple no completa.
+      onLongPress: _completeNow,
       excludeSemantics: true,
       child: Focus(
         onKeyEvent: _onKey,
-        onFocusChange: (v) => setState(
-          () => _focused =
-              v &&
-              FocusManager.instance.highlightMode ==
-                  FocusHighlightMode.traditional,
-        ),
+        onFocusChange: (v) {
+          // Si el foco se va (p. ej., Tab) mientras se mantiene, se cancela.
+          if (!v && !_done) _cancel();
+          setState(
+            () => _focused =
+                v &&
+                FocusManager.instance.highlightMode ==
+                    FocusHighlightMode.traditional,
+          );
+        },
         child: Listener(
           behavior: HitTestBehavior.opaque,
           onPointerDown: _onPointerDown,

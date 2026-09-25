@@ -215,4 +215,36 @@ void main() {
       handle.dispose();
     },
   );
+
+  testWidgets(
+    'accesibilidad: "doble toque y mantener" del lector (pulsación larga) completa',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      final h = await _pump(tester);
+      tester.semantics.longPress(
+        find.semantics.byLabel('Pulsa para completar'),
+      );
+      await tester.pump(_frame);
+      expect(h.completions, 1);
+      handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'CA-003-08: si el foco se va (Tab) mientras se mantiene Espacio, se cancela',
+    (tester) async {
+      final h = await _pump(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+      await tester.pump(); // Arranca la animación.
+      await tester.pump(_half());
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump(_frame);
+      await tester.pump(UnaMotion.holdToComplete);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+      expect(h.completions, 0);
+      expect(_state(tester).progress, 0);
+    },
+  );
 }
