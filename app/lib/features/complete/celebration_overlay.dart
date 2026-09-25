@@ -39,9 +39,25 @@ class CelebrationOverlay extends StatefulWidget {
 class _CelebrationOverlayState extends State<CelebrationOverlay>
     with SingleTickerProviderStateMixin {
   AnimationController? _t;
+  late final AppLifecycleListener _lifecycle;
   late Duration _hold;
   late bool _reduced;
   bool _fadeStarted = false;
+  bool _finished = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Si la app pasa a segundo plano, al volver ya se ve la siguiente tarea,
+    // sin repetir la animación (CL-003-7).
+    _lifecycle = AppLifecycleListener(onHide: _finish);
+  }
+
+  void _finish() {
+    if (_finished) return;
+    _finished = true;
+    widget.onFinished();
+  }
 
   @override
   void didChangeDependencies() {
@@ -58,7 +74,7 @@ class _CelebrationOverlayState extends State<CelebrationOverlay>
           )
           ..addListener(_onTick)
           ..addStatusListener((s) {
-            if (s == AnimationStatus.completed) widget.onFinished();
+            if (s == AnimationStatus.completed) _finish();
           })
           ..forward();
   }
@@ -74,6 +90,7 @@ class _CelebrationOverlayState extends State<CelebrationOverlay>
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _t?.dispose();
     super.dispose();
   }
