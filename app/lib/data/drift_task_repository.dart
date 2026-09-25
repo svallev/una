@@ -63,7 +63,46 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
+  Future<Task?> findById(String id) async {
+    final row = await (db.select(
+      db.tasks,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    return row == null ? null : _toTask(row);
+  }
+
+  @override
+  Future<bool> hasCompleted() async {
+    final q = db.select(db.tasks)
+      ..where(
+        (t) =>
+            t.status.equals(TaskStatus.completed.name) & t.deletedAt.isNull(),
+      )
+      ..limit(1);
+    return (await q.getSingleOrNull()) != null;
+  }
+
+  @override
   Future<void> insert(Task task) => db.into(db.tasks).insert(_toRow(task));
+
+  @override
+  Future<bool> complete(String id, DateTime at) async {
+    final ms = at.millisecondsSinceEpoch;
+    final rows =
+        await (db.update(db.tasks)..where(
+              (t) =>
+                  t.id.equals(id) &
+                  t.status.equals(TaskStatus.pending.name) &
+                  t.deletedAt.isNull(),
+            ))
+            .write(
+              TasksCompanion(
+                status: Value(TaskStatus.completed.name),
+                completedAt: Value(ms),
+                updatedAt: Value(ms),
+              ),
+            );
+    return rows > 0;
+  }
 
   @override
   Future<bool> firstRunDone() async {

@@ -1,31 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OrdinalSortKey;
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../domain/entities/task.dart';
 import '../../l10n/generated/app_localizations.dart';
-import '../../ui/brutal_button.dart';
+import '../../ui/focus_on_signal.dart';
 import '../../ui/focus_ring.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
+import '../complete/complete_task_action.dart';
+import '../complete/hold_to_complete_button.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
-class CurrentTaskScreen extends StatelessWidget {
-  const CurrentTaskScreen({super.key, required this.task});
+class CurrentTaskScreen extends ConsumerWidget {
+  const CurrentTaskScreen({
+    super.key,
+    required this.task,
+    this.faceOnly = false,
+    this.focusSignal = 0,
+  });
 
   final Task task;
+
+  /// Solo la nota (color y texto), sin logotipo, menú ni botón, que ocupan su
+  /// sitio pero no se ven: es lo que se rompe en dos al completar (spec 003).
+  final bool faceOnly;
+
+  /// Al cambiar, el foco va a la tarea (tras completar la anterior, CA-003-07).
+  final int focusSignal;
 
   /// Límite de escala de texto para la nota (docs/design/tokens.md).
   static const maxNoteTextScale = 1.6;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final text = task.text ?? '';
     final mq = MediaQuery.of(context);
-    return Scaffold(
+    Future<bool> complete() => completeTask(context, ref, task);
+    Widget chrome(Widget child) => faceOnly
+        ? Visibility(
+            visible: false,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: child,
+          )
+        : child;
+    final screen = Scaffold(
       body: FocusTraversalGroup(
         policy: OrderedTraversalPolicy(),
         child: StickyNote(
@@ -42,23 +68,25 @@ class CurrentTaskScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      const Wordmark(),
-                      const Spacer(),
-                      // Abre el menú a partir de la spec 005.
-                      _Order(
-                        1,
-                        child: _SquareIconButton(
-                          icon: UnaIcons.menu,
-                          label: l10n.menuButton,
-                          fill:
-                              UnaPalettes.classic[task.colorKey %
-                                  UnaPalettes.classic.length],
-                          onPressed: () {},
+                  chrome(
+                    Row(
+                      children: [
+                        const Wordmark(),
+                        const Spacer(),
+                        // Abre el menú a partir de la spec 005.
+                        _Order(
+                          1,
+                          child: _SquareIconButton(
+                            icon: UnaIcons.menu,
+                            label: l10n.menuButton,
+                            fill:
+                                UnaPalettes.classic[task.colorKey %
+                                    UnaPalettes.classic.length],
+                            onPressed: () {},
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   Expanded(
                     // La zona desplazable es su propio nodo: el orden va aquí.
@@ -72,21 +100,34 @@ class CurrentTaskScreen extends StatelessWidget {
                                 maxScaleFactor: maxNoteTextScale,
                               ),
                             ),
-                            child: Semantics(
-                              label: l10n.currentTaskSemantics(text),
-                              excludeSemantics: true,
-                              child: LayoutBuilder(
-                                builder: (context, constraints) => SizedBox(
-                                  width: double.infinity,
-                                  child: Text(
-                                    text,
-                                    style: UnaTheme.fitNoteText(
+                            child: FocusOnSignal(
+                              signal: focusSignal,
+                              child: Semantics(
+                                label: l10n.currentTaskSemantics(text),
+                                // También se completa desde la tarea (CA-003-07).
+                                customSemanticsActions: faceOnly
+                                    ? null
+                                    : {
+                                        CustomSemanticsAction(
+                                          label: l10n.completeA11yAction,
+                                        ): complete,
+                                      },
+                                excludeSemantics: true,
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) => SizedBox(
+                                    width: double.infinity,
+                                    child: Text(
                                       text,
-                                      maxWidth: constraints.maxWidth,
-                                      textScaler: MediaQuery.textScalerOf(
-                                        context,
+                                      style: UnaTheme.fitNoteText(
+                                        text,
+                                        maxWidth: constraints.maxWidth,
+                                        textScaler: MediaQuery.textScalerOf(
+                                          context,
+                                        ),
+                                        textDirection: Directionality.of(
+                                          context,
+                                        ),
                                       ),
-                                      textDirection: Directionality.of(context),
                                     ),
                                   ),
                                 ),
@@ -97,16 +138,15 @@ class CurrentTaskScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Completar (mantener pulsado) llega con la spec 003.
-                  _Order(
-                    2,
-                    child: BrutalButton(
-                      label: l10n.completeButton,
-                      icon: UnaIcons.check,
-                      height: UnaSizes.holdButton,
-                      fontSize: UnaFontSizes.button,
-                      singleLine: true,
-                      onPressed: () {},
+                  chrome(
+                    _Order(
+                      2,
+                      child: HoldToCompleteButton(
+                        label: l10n.completeButton,
+                        a11yAction: l10n.completeA11yAction,
+                        a11yHint: l10n.completeA11yHint,
+                        onComplete: complete,
+                      ),
                     ),
                   ),
                 ],
@@ -116,6 +156,7 @@ class CurrentTaskScreen extends StatelessWidget {
         ),
       ),
     );
+    return faceOnly ? ExcludeSemantics(child: screen) : screen;
   }
 }
 

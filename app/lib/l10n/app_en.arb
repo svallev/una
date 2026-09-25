@@ -14,5 +14,17 @@
   "skipIntroHint": "continue",
   "attachButton": "Add a photo, image or file",
   "webPreviewBanner": "Test version · data is erased when you reload",
-  "editorSaveError": "We couldn't save your task"
+  "editorSaveError": "We couldn't save your task",
+  "completeA11yAction": "Complete task",
+  "completeA11yHint": "Press and hold, or use actions, to complete",
+  "successTitle1": "Well done!",
+  "successTitle2": "Task completed.",
+  "successNext": "Now on to the next one →",
+  "a11yCompletedNext": "Task completed. Next: {text}",
+  "a11yCompletedAllDone": "Task completed. All done.",
+  "emptyDoneTitle1": "All",
+  "emptyDoneTitle2": "done.",
+  "emptyDoneBody": "Nothing left to do. Enjoy it, or jot down what's next.",
+  "emptyCreate": "Create a task",
+  "completeError": "We couldn't complete the task"
 }

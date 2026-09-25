@@ -8,6 +8,7 @@ import '../domain/entities/task.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
 import '../domain/ports/task_repository.dart';
+import '../domain/usecases/complete_current_task.dart';
 import '../domain/usecases/create_task.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
@@ -44,6 +45,26 @@ final createTaskProvider = Provider<CreateTask>(
     colors: ref.watch(colorPickerProvider),
   ),
 );
+
+final completeCurrentTaskProvider = Provider<CompleteCurrentTask>(
+  (ref) => CompleteCurrentTask(
+    repository: ref.watch(taskRepositoryProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
+/// ¿Hay tareas completadas? Sin pendientes, decide entre "Todo hecho." y el
+/// editor (spec 003, CA-003-11).
+final hasCompletedProvider = NotifierProvider<HasCompletedController, bool>(
+  HasCompletedController.new,
+);
+
+class HasCompletedController extends Notifier<bool> {
+  @override
+  bool build() => ref.read(bootStateProvider).hasCompleted;
+
+  void markCompleted() => state = true;
+}
 
 /// Tarea actual: arranca con la leída en el arranque y sigue los cambios de la BD.
 final currentTaskProvider = NotifierProvider<CurrentTaskController, Task?>(
@@ -95,9 +116,14 @@ class FirstRunController extends Notifier<bool> {
 
 /// Resultado del arranque.
 class BootState {
-  const BootState({required this.currentTask, required this.firstRunDone});
+  const BootState({
+    required this.currentTask,
+    required this.firstRunDone,
+    this.hasCompleted = false,
+  });
   final Task? currentTask;
   final bool firstRunDone;
+  final bool hasCompleted;
 }
 
 class UuidV7Ids implements IdGenerator {

@@ -90,6 +90,64 @@ void _contract(
       expect(seen, [null, 'b', 'a']);
     });
 
+    test('CA-003-03a / CA-003-06: completar saca la tarea de la cola y la conserva en el histórico', () async {
+      await repo.insert(_task('a', 'C', color: 2));
+      await repo.insert(_task('b', 'M'));
+      expect(await repo.hasCompleted(), isFalse);
+      final at = DateTime.utc(2026, 9, 25, 9, 30);
+
+      expect(await repo.complete('a', at), isTrue);
+
+      expect((await repo.currentTask())!.id, 'b');
+      expect(await repo.countPending(), 1);
+      expect(await repo.hasCompleted(), isTrue);
+      final done = (await repo.findById('a'))!;
+      expect(done.status, TaskStatus.completed);
+      expect(done.completedAt, at);
+      expect(done.updatedAt, at);
+      expect(done.text, 'Tarea a');
+      expect(done.colorKey, 2);
+      expect(done.rank, 'C');
+    });
+
+    test('completar una tarea que ya no está pendiente no hace nada', () async {
+      await repo.insert(_task('done', 'A', status: TaskStatus.completed));
+      await repo.insert(_task('gone', 'B', deletedAt: DateTime.utc(2026)));
+      final later = DateTime.utc(2027);
+      expect(await repo.complete('done', later), isFalse);
+      expect(await repo.complete('gone', later), isFalse);
+      expect(await repo.complete('missing', later), isFalse);
+      expect((await repo.findById('done'))!.completedAt, isNot(later));
+      expect((await repo.findById('gone'))!.status, TaskStatus.pending);
+      expect(await repo.findById('missing'), isNull);
+    });
+
+    test('las completadas eliminadas no cuentan para "Todo hecho."', () async {
+      await repo.insert(
+        _task(
+          'x',
+          'A',
+          status: TaskStatus.completed,
+          deletedAt: DateTime.utc(2026),
+        ),
+      );
+      expect(await repo.hasCompleted(), isFalse);
+    });
+
+    test('watchCurrentTask emite la siguiente al completar', () async {
+      await repo.insert(_task('a', 'C'));
+      await repo.insert(_task('b', 'M'));
+      final seen = <String?>[];
+      final sub = repo.watchCurrentTask().listen((t) => seen.add(t?.id));
+      await pumpEventQueue();
+      await repo.complete('a', DateTime.utc(2026, 9, 25));
+      await pumpEventQueue();
+      await repo.complete('b', DateTime.utc(2026, 9, 25));
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(seen, ['a', 'b', null]);
+    });
+
     test('ajuste de primer uso', () async {
       expect(await settings.firstRunDone(), isFalse);
       await settings.setFirstRunDone();

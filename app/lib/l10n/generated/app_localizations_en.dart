@@ -65,4 +65,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorSaveError => 'We couldn\'t save your task';
+
+  @override
+  String get completeA11yAction => 'Complete task';
+
+  @override
+  String get completeA11yHint => 'Press and hold, or use actions, to complete';
+
+  @override
+  String get successTitle1 => 'Well done!';
+
+  @override
+  String get successTitle2 => 'Task completed.';
+
+  @override
+  String get successNext => 'Now on to the next one →';
+
+  @override
+  String a11yCompletedNext(String text) {
+    return 'Task completed. Next: $text';
+  }
+
+  @override
+  String get a11yCompletedAllDone => 'Task completed. All done.';
+
+  @override
+  String get emptyDoneTitle1 => 'All';
+
+  @override
+  String get emptyDoneTitle2 => 'done.';
+
+  @override
+  String get emptyDoneBody =>
+      'Nothing left to do. Enjoy it, or jot down what\'s next.';
+
+  @override
+  String get emptyCreate => 'Create a task';
+
+  @override
+  String get completeError => 'We couldn\'t complete the task';
 }

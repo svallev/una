@@ -21,9 +21,12 @@ Future<void> bootstrap({
 }) async {
   try {
     final repos = await open();
+    final current = await repos.tasks.currentTask();
     final boot = BootState(
-      currentTask: await repos.tasks.currentTask(),
+      currentTask: current,
       firstRunDone: await repos.settings.firstRunDone(),
+      // Solo importa si no hay pendientes ("Todo hecho.", CA-003-11).
+      hasCompleted: current == null && await repos.tasks.hasCompleted(),
     );
     runApp(
       ProviderScope(

@@ -18,6 +18,20 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 - **[Hecho]** Tras matar el proceso, la app reabre en la tarea actual (lectura del árbol de accesibilidad: "Tarea actual: …", "Menú de la tarea", "Pulsa para completar").
 - **[Pendiente, riesgo R-02]** Falta un Android de gama media. El spike S1 midió la misma arquitectura en el emulador (tiempo propio de la app ≈ 80 ms); se confirmará en la beta o con un dispositivo prestado.
 
+## Completar: rotura y enhorabuena (spec 003, T-003-09)
+
+- **Fecha:** 2026-09-25 · **Dispositivo:** Xiaomi 15T Pro (pantalla de 120 Hz, presupuesto de 8,3 ms por fotograma)
+- **Método:** `flutter drive --profile --no-dds --keep-app-running --driver=test_driver/perf_driver.dart --target=integration_test/complete_perf_test.dart -d <serial>` (fotogramas reales, `fullyLive`); se completa con el controlador (como la acción accesible) y se mide toda la secuencia (pausa, rotura, enhorabuena y fundido, ~2,9 s). App de pruebas `invalid.pending.app.profile`, que se desinstala a mano después (ver `docs/testing.md`).
+
+| Ejecución | Fotogramas | Build medio / p90 / peor | Raster medio / p90 / p99 / peor |
+|---|---|---|---|
+| 1 | 243 | 1,4 / 2,1 / 11,9 ms | 2,6 / 3,4 / 10,6 / 12,5 ms |
+| 2 | 232 | 1,5 / 2,3 / 20,0 ms | 2,5 / 3,4 / 10,6 / 14,1 ms |
+| 3 | 231 | 1,5 / 2,1 / 22,9 ms | 2,4 / 3,4 / 8,9 / 13,7 ms |
+
+- **[Hecho]** Fluida: el 90 % de los fotogramas cuesta ~6 ms en total, muy por debajo del presupuesto de 120 Hz. El recorte con `ClipPath` (sin capturar la nota como imagen) evita el tirón del spike S2.
+- **[Hecho]** El único fotograma lento (12–23 ms) es el primero de la enhorabuena, al montar la capa. **[Pendiente]** Si se nota en gama media, precargar la capa (I-3).
+
 ## Cómo repetir la medición
 
 ```bash

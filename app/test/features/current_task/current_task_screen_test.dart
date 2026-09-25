@@ -25,7 +25,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
-      expect(find.text('Pulsa para completar'), findsOneWidget);
+      // El texto se pinta dos veces: normal y en blanco sobre el relleno.
+      expect(find.text('Pulsa para completar'), findsNWidgets(2));
     },
   );
 
@@ -165,8 +166,9 @@ void main() {
             size: size,
           );
           expect(tester.takeException(), isNull);
-          final text = find.text(label);
-          expect(text, findsOneWidget);
+          // El primero es el texto normal; el segundo, el del relleno.
+          expect(find.text(label), findsNWidgets(2));
+          final text = find.text(label).first;
           final p = tester.renderObject<RenderParagraph>(text);
           expect(
             p

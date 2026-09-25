@@ -43,9 +43,26 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   Future<int> countPending() async => _pending.length;
 
   @override
+  Future<Task?> findById(String id) async => _tasks[id];
+
+  @override
+  Future<bool> hasCompleted() async => _tasks.values.any(
+    (t) => t.status == TaskStatus.completed && t.deletedAt == null,
+  );
+
+  @override
   Future<void> insert(Task task) async {
     _tasks[task.id] = task;
     _changes.add(null);
+  }
+
+  @override
+  Future<bool> complete(String id, DateTime at) async {
+    final task = _tasks[id];
+    if (task == null || !task.isPending) return false;
+    _tasks[id] = task.complete(at);
+    _changes.add(null);
+    return true;
   }
 
   @override

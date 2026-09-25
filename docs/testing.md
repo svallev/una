@@ -34,3 +34,10 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 ## En CI (ver `.github/workflows/ci.yml`)
 
 `format` → `analyze` → `unit+widget+golden` → `migrations` → `l10n/tokens` → `build web` / `build apk (debug)` / `build ios (no-codesign)` → `integration (android emulator)` (en `main` y de forma nocturna para no alargar las PR).
+
+## Pruebas en el móvil del propietario (lecciones aprendidas)
+
+- Las pruebas de integración se instalan como apps aparte: `invalid.pending.app.debug` (debug) e `invalid.pending.app.profile` (profile). Solo esas pueden borrar su base de datos (las pruebas lo comprueban).
+- **`flutter drive` desinstala al terminar el paquete *base* (`invalid.pending.app`), no el que ha instalado**: el 2026-09-25 borró así la app real del propietario y sus tareas de prueba. En el móvil del propietario se usa **siempre** `--keep-app-running` y después se desinstala a mano solo `invalid.pending.app.profile`.
+- No se maneja el móvil por `adb` mientras el propietario lo está usando.
+

@@ -14,6 +14,7 @@ class BrutalButton extends StatefulWidget {
     this.icon,
     this.trailingIcon,
     this.iconSize = UnaSizes.iconL,
+    this.iconStroke = UnaSizes.iconStrokeBold,
     this.height = UnaSizes.button,
     this.fontSize = UnaFontSizes.bodyL,
     this.background = UnaColors.surface,
@@ -28,6 +29,7 @@ class BrutalButton extends StatefulWidget {
     required UnaIconData this.icon,
     required this.onPressed,
     this.iconSize = UnaSizes.iconL,
+    this.iconStroke = UnaSizes.iconStrokeBold,
     this.height = UnaSizes.button,
     this.background = UnaColors.surface,
   }) : trailingIcon = null,
@@ -45,6 +47,9 @@ class BrutalButton extends StatefulWidget {
   /// Icono detrás del texto (Guardar: →).
   final UnaIconData? trailingIcon;
   final double iconSize;
+
+  /// Grosor del trazo del icono (los botones grandes usan el grueso).
+  final double iconStroke;
 
   /// Alto mínimo; con texto grande del sistema, el botón crece.
   final double height;
@@ -89,11 +94,8 @@ class _BrutalButtonState extends State<BrutalButton> {
     );
   }
 
-  Widget _icon(UnaIconData data) => UnaIcon(
-    data,
-    size: widget.iconSize,
-    strokeWidth: UnaSizes.iconStrokeBold,
-  );
+  Widget _icon(UnaIconData data) =>
+      UnaIcon(data, size: widget.iconSize, strokeWidth: widget.iconStroke);
 
   Widget _label() {
     final style = TextStyle(

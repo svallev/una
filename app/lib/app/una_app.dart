@@ -2,7 +2,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/all_done/all_done_screen.dart';
 import '../features/app_error/storage_error_screen.dart';
+import '../features/complete/celebration_overlay.dart';
+import '../features/complete/completion_controller.dart';
 import '../features/current_task/current_task_screen.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
@@ -75,19 +78,43 @@ class _UnaAppState extends ConsumerState<UnaApp> {
   }
 }
 
-/// Decide qué se ve (CA-001-03/05/09): tarea actual; si no hay, la bienvenida
-/// (solo la primera vez) o el editor de la primera tarea.
+/// Decide qué se ve (CA-001-03/05/09, CA-003-05/11): tarea actual; si no hay,
+/// "Todo hecho." (si ya se completó alguna), la bienvenida (solo la primera
+/// vez) o el editor de la primera tarea. Encima, la rotura y la enhorabuena al
+/// completar (spec 003).
 class HomeRouter extends ConsumerWidget {
   const HomeRouter({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final completion = ref.watch(completionProvider);
+    final focusSignal = ref.watch(completionFocusProvider);
     final task = ref.watch(currentTaskProvider);
     final firstRunDone = ref.watch(firstRunDoneProvider);
+    final hasCompleted = ref.watch(hasCompletedProvider);
     final reduced = MediaQuery.disableAnimationsOf(context);
+    final completing = completion.phase == CompletionPhase.completing;
+    final shown = completing ? completion.task : task;
     final Widget child;
-    if (task != null) {
-      child = CurrentTaskScreen(key: ValueKey('task-${task.id}'), task: task);
+    if (shown != null) {
+      // Mientras se guarda, la tarea sigue en pantalla con el relleno lleno.
+      child = CurrentTaskScreen(
+        key: ValueKey('task-${shown.id}'),
+        task: shown,
+        focusSignal: focusSignal,
+      );
+    } else if (hasCompleted) {
+      child = AllDoneScreen(
+        key: const ValueKey('all-done'),
+        focusSignal: focusSignal,
+        onCreate: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => FirstTaskEditorScreen(
+              colorKey: ref.read(colorPickerProvider).pick(),
+            ),
+          ),
+        ),
+      );
     } else if (!firstRunDone) {
       child = WelcomeIntro(
         key: const ValueKey('intro'),
@@ -98,7 +125,7 @@ class HomeRouter extends ConsumerWidget {
     } else {
       child = const FirstTaskEditorScreen(key: ValueKey('first-editor'));
     }
-    return AnimatedSwitcher(
+    final screens = AnimatedSwitcher(
       duration: reduced ? UnaMotion.reducedMotionFade : UnaMotion.introFade,
       // Cada pantalla es una "ruta" para el lector (se anuncia el cambio) y la
       // que sale no se lee durante el fundido.
@@ -114,6 +141,38 @@ class HomeRouter extends ConsumerWidget {
         scopesRoute: true,
         explicitChildNodes: true,
         child: child,
+      ),
+    );
+    final celebrating =
+        completion.phase == CompletionPhase.celebrating ||
+        completion.phase == CompletionPhase.fading;
+    final completed = completion.task;
+    // Durante toda la secuencia se ignoran toques, acciones y el gesto atrás,
+    // sin cambiar el aspecto de nada (CA-003-09, DEV-17).
+    return PopScope(
+      canPop: !completion.busy,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          AbsorbPointer(
+            absorbing: completion.busy,
+            // Ni lector ni teclado desde que empieza a guardar.
+            child: ExcludeSemantics(
+              excluding: completion.busy,
+              child: ExcludeFocus(excluding: completion.busy, child: screens),
+            ),
+          ),
+          if (celebrating && completed != null)
+            CelebrationOverlay(
+              key: ValueKey('celebration-${completed.id}'),
+              face: CurrentTaskScreen(task: completed, faceOnly: true),
+              colorKey: completed.colorKey,
+              hasNext: completion.hasNext,
+              onFadeStart: () =>
+                  ref.read(completionProvider.notifier).startFade(),
+              onFinished: () => ref.read(completionProvider.notifier).finish(),
+            ),
+        ],
       ),
     );
   }

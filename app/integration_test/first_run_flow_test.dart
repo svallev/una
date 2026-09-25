@@ -27,6 +27,13 @@ class _NoNetwork extends HttpOverrides {
 /// Borra la BD real de la app para empezar como en una instalación nueva.
 Future<void> _wipeDatabase() async {
   final dir = await getApplicationDocumentsDirectory();
+  // Solo en las apps de pruebas (`.debug`, `.profile`): nunca borra las
+  // tareas reales.
+  if (!dir.path.contains('.debug') && !dir.path.contains('.profile')) {
+    throw StateError(
+      'Pruebas de integración fuera de la app .debug: ${dir.path}',
+    );
+  }
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${dir.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();
@@ -53,7 +60,9 @@ void main() {
       expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'Llamar a Marta');
       await tester.pump();
-      await tester.tap(find.byType(BrutalButton));
+      await tester.tap(
+        find.byWidgetPredicate((w) => w is BrutalButton && !w.iconOnly),
+      );
       await tester.pumpAndSettle();
       final created = tester
           .widget<CurrentTaskScreen>(find.byType(CurrentTaskScreen))
