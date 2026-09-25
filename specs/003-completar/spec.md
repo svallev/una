@@ -1,6 +1,6 @@
 # Spec 003: Completar la tarea actual
 
-- **Estado:** En revisión (revisada el 2026-09-25 tras `spec-reviewer` y decisiones del propietario; pendiente de aprobación)
+- **Estado:** Aprobada provisionalmente (2026-09-25: el propietario pidió avanzar sin esperar a sus aprobaciones; se revisa con él al volver). Revisada tras `spec-reviewer` y sus decisiones.
 - **Reglas de producto:** R9, R12 ("Todo hecho."), R14
 - **Pantallas del prototipo:** 1 "La tarea", 7 "Completar (mantener pulsado)", estado vacío dentro de `Main`
 - **Decisiones y ADR:** D8, DEV-06 (revocada), DEV-13, DEV-17, DEV-18, DEV-19; tokens `motion.duration.holdToComplete`, `holdRelease`, `tear`, `successHold`, `successFade`, `reducedMotionFade`

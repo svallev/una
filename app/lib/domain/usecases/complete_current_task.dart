@@ -1,0 +1,27 @@
+import '../entities/task.dart';
+import '../ports/clock.dart';
+import '../ports/task_repository.dart';
+
+/// Resultado de completar: la tarea completada y la nueva tarea actual (o
+/// null si no queda ninguna: "Todo hecho.", R12).
+typedef CompletionResult = ({Task completed, Task? next});
+
+/// Completa la tarea actual (R9). Se guarda **antes** de cualquier animación:
+/// si la app muere a mitad, la tarea ya consta como completada (CL-003-1).
+class CompleteCurrentTask {
+  CompleteCurrentTask({required this.repository, required this.clock});
+
+  final TaskRepository repository;
+  final Clock clock;
+
+  /// Completa [task] si sigue siendo la tarea actual.
+  Future<CompletionResult> call(Task task) async {
+    final current = await repository.currentTask();
+    if (current == null || current.id != task.id) {
+      throw StateError('La tarea ya no es la actual');
+    }
+    final at = clock.now();
+    await repository.complete(task.id, at);
+    return (completed: task.complete(at), next: await repository.currentTask());
+  }
+}

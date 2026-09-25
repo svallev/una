@@ -46,6 +46,24 @@ class Task {
 
   bool get isPending => status == TaskStatus.pending && deletedAt == null;
 
+  /// La misma tarea, completada en [at] (spec 003, CA-003-03a). Conserva su
+  /// texto, su color y su adjunto: queda en el histórico (R14, D8).
+  Task complete(DateTime at) => Task(
+    id: id,
+    text: text,
+    status: TaskStatus.completed,
+    rank: rank,
+    colorKey: colorKey,
+    createdAt: createdAt,
+    updatedAt: at,
+    completedAt: at,
+    deletedAt: deletedAt,
+    dueDate: dueDate,
+    parentId: parentId,
+    source: source,
+    externalId: externalId,
+  );
+
   @override
   bool operator ==(Object other) =>
       other is Task &&
