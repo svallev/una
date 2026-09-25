@@ -1,9 +1,9 @@
 # Spec 001: Primer uso y tarea actual
 
-- **Estado:** En revisión
+- **Estado:** Implementada (2026-09-25) · Aprobada (2026-09-24)
 - **Reglas de producto:** R1, R2, R6, R8 (y R3 solo para texto; los adjuntos, en 007–009)
 - **Pantallas del prototipo:** 0 "Prototipo (empieza vacío)", 1 "La tarea", 3 "Nueva tarea" (variante "Tu primera tarea")
-- **Decisiones y ADR:** P1, P2, P7; ADR-0001, 0002; DEV-06, DEV-07, DEV-08
+- **Decisiones y ADR:** P1, P2, P7; ADR-0001, 0002, 0004, 0010; DEV-06 (revocada), DEV-07, DEV-08, DEV-17, DEV-18
 - **Dependencias:** ninguna (es la primera funcionalidad y arrastra el esqueleto técnico)
 
 ## 1. Objetivo
@@ -27,7 +27,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 - **CA-001-02 Editor de la primera tarea**
   - **Dado** que ha terminado la bienvenida
   - **Cuando** aparece el editor
-  - **Entonces** muestra la etiqueta "Tu primera tarea", el campo de texto con el foco y el teclado abierto, el placeholder "¿Qué es eso que tienes que hacer y no has hecho?" y el botón "Guardar" deshabilitado; **no** aparece "Cancelar" ni el acceso al menú.
+  - **Entonces** se ve como el prototipo: el logotipo arriba, el campo de texto **centrado** en la nota (del mismo color que la bienvenida) con el foco y el teclado abierto, el placeholder "¿Qué es eso que tienes que hacer y no has hecho?" y, abajo, el botón cuadrado "+" a la izquierda y "Guardar →" a la derecha, **ambos activos y con sombra**. La etiqueta "Tu primera tarea" **no se ve**: es el nombre accesible del campo. **No** aparece "Cancelar" ni el acceso al menú.
 - **CA-001-03 Nada más hasta crearla (R2)**
   - **Dado** que no existe ninguna tarea
   - **Cuando** el usuario intenta salir del editor (gesto atrás de Android, deslizar para cerrar o reabrir la app)
@@ -46,7 +46,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 - **CA-001-06 Solo una tarea**
   - **Dado** que hay una o más tareas pendientes
   - **Cuando** se muestra la pantalla principal
-  - **Entonces** se ve **solo** la primera tarea pendiente (según el orden de la cola), como nota adhesiva a pantalla completa con su color, el logotipo arriba a la izquierda, el botón de menú arriba a la derecha y el botón "Mantén pulsado para completar" abajo. No se muestra ni número ni vista previa de otras tareas.
+  - **Entonces** se ve **solo** la primera tarea pendiente (según el orden de la cola), como nota adhesiva a pantalla completa con su color, el logotipo arriba a la izquierda, el botón de menú arriba a la derecha y el botón "Pulsa para completar" abajo, en una sola línea. No se muestra ni número ni vista previa de otras tareas.
 - **CA-001-07 Tamaño del texto**
   - **Dado** una tarea de texto
   - **Cuando** se muestra
@@ -54,7 +54,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 - **CA-001-08 Color de la nota**
   - **Dado** que se crea una tarea
   - **Cuando** se le asigna color
-  - **Entonces** recibe uno de los 5 colores de la paleta, distinto del de la tarea actual en ese momento, y lo conserva siempre (también tras reordenar o reiniciar).
+  - **Entonces** la **primera** tarea es **amarilla** (como un pósit; es el `introColor` del prototipo, el mismo de la bienvenida). Cada tarea nueva recibe un color **al azar** de la paleta activa, siempre distinto del de la tarea visible en ese momento (para que se vea que es otra). Cada tarea conserva su color siempre (también tras reordenar o reiniciar).
 
 **Volver a abrir (R8)**
 
@@ -75,11 +75,11 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 
 | ID | Situación | Comportamiento esperado |
 |---|---|---|
-| CL-001-1 | Texto solo con espacios o saltos de línea | "Guardar" sigue deshabilitado |
+| CL-001-1 | Texto solo con espacios o saltos de línea | "Guardar" no guarda nada y devuelve el foco al campo (el botón nunca se ve desactivado) |
 | CL-001-2 | Texto de 10 000 caracteres (máximo) | Se acepta; no se pueden escribir más (contador visible a partir de 9 000); la nota se desplaza |
 | CL-001-3 | Emojis, RTL, CJK, texto sin espacios (URL larga pegada) | Se muestra sin desbordar; las palabras largas se parten |
 | CL-001-4 | La app se mata durante la bienvenida | Al reabrir, se abre el editor (CA-001-05) |
-| CL-001-5 | La app se mata mientras se escribe la primera tarea | Al reabrir, editor vacío (el borrador no se guarda en la v1) **[Pendiente P-1]** |
+| CL-001-5 | La app se mata mientras se escribe la primera tarea | Al reabrir, editor vacío (el borrador no se guarda en la v1; P-1 resuelto) |
 | CL-001-6 | Fallo al abrir la BD (corrupta o sin espacio) | Pantalla de error recuperable (ver §5); nunca se pierde la BD de forma silenciosa |
 | CL-001-7 | Rotación o pantallas grandes (tablet, plegable) | Solo vertical en la v1 (iPad/tablet: centrado a 390–600 pt de ancho) |
 | CL-001-8 | Cambio de idioma del sistema con la app abierta | Los textos se actualizan al volver a la app |
@@ -90,14 +90,17 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 | Estado | Cuándo | Qué ve el usuario |
 |---|---|---|
 | Sin tareas y primer uso completado | Nunca en la pantalla principal: se va al editor | — |
-| Error de almacenamiento | La BD no abre o no se puede escribir | "No hemos podido abrir tus tareas" + "Reintentar"; si es por falta de espacio: "Tu teléfono no tiene espacio libre" |
+| Error de almacenamiento | La BD no abre | Pantalla "No hemos podido abrir tus tareas" + "Reintentar"; si es por falta de espacio: "Tu teléfono no tiene espacio libre" |
+| Error al guardar | No se puede escribir la tarea | Aviso "No hemos podido guardar la tarea" (o el de falta de espacio) con "Reintentar"; el texto escrito se conserva |
 
 (Los estados "Todo hecho." y "Nada pendiente." se definen en las specs 003 y 004.)
 
 ## 6. Accesibilidad
 
 - La bienvenida se anuncia como un único texto completo ("Ya puedes crear tu primera tarea"), no letra a letra; con **reducir movimiento**, el texto aparece de golpe y el paso al editor es un fundido de 400 ms.
-- Se puede saltar la bienvenida con un toque o con la tecla Intro/Espacio (y con la acción por defecto del lector de pantalla).
+- Se puede saltar la bienvenida con un toque o con la tecla Intro/Espacio (y con la acción por defecto del lector de pantalla, que se anuncia como "Toca dos veces para continuar"). **Con el lector de pantalla activo la bienvenida no avanza sola**: espera a que el usuario la salte, para no cortar la lectura.
+- Todo lo que se pulsa se alcanza con teclado e interruptores y muestra el anillo de foco del prototipo (3 px `ink`, desplazado 3 px).
+- El contador de caracteres se anuncia al aparecer (9 000) y al llegar al máximo.
 - La tarea actual se anuncia como "Tarea actual: {texto}". El logotipo es decorativo (excluido de la semántica). El botón de menú: "Menú de la tarea".
 - Orden de foco: tarea → menú → completar.
 - Contraste: texto `ink` sobre cualquier color de nota ≥ 9,8:1.
@@ -116,10 +119,13 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 | `editorCharsLeft` | {count, plural, =1{Queda 1 carácter} other{Quedan {count} caracteres}} | {count, plural, =1{1 character left} other{{count} characters left}} | A partir de 9 000 |
 | `currentTaskSemantics` | Tarea actual: {text} | Current task: {text} | Lector de pantalla |
 | `menuButton` | Menú de la tarea | Task menu | |
-| `completeButton` | Mantén pulsado para completar | Press and hold to complete | DEV-06; comportamiento en la spec 003 |
+| `completeButton` | Pulsa para completar | Press to complete | Una sola línea; texto del prototipo (DEV-06 revocada); comportamiento en la spec 003 |
 | `storageErrorTitle` | No hemos podido abrir tus tareas | We couldn't open your tasks | |
 | `storageErrorNoSpace` | Tu teléfono no tiene espacio libre | Your phone is out of storage | |
 | `retry` | Reintentar | Try again | |
+| `skipIntroHint` | continuar | continue | Acción del lector: "Toca dos veces para continuar" |
+| `editorSaveError` | No hemos podido guardar la tarea | We couldn't save your task | §5 |
+| `webPreviewBanner` | Versión de pruebas · los datos se borran al recargar | Test version · data is erased when you reload | Solo en la web de pruebas (ADR-0010) |
 
 ## 8. Fuera de alcance
 
@@ -127,5 +133,26 @@ Posición de las tareas nuevas (002), completar (003), menú (005), adjuntos (00
 
 ## 9. Preguntas abiertas
 
-- **[Pendiente P-1]** ¿Se guarda el borrador del editor si la app se cierra? Recomendación: no en la v1 (simplicidad); sí en el futuro si hay quejas. Decide: producto.
-- **[Pendiente P-2]** Vuelta desde segundo plano (arranque en caliente): recomendación, conservar la pantalla en la que estaba el usuario (comportamiento estándar del SO) si pasaron < 10 min; si pasaron más, volver a la tarea actual (cumple el espíritu de R8). Decide: producto.
+- **P-1 (resuelto 2026-09-24):** el borrador del editor **no** se guarda en la v1.
+- **P-2 (resuelto 2026-09-24):** al volver desde segundo plano se conserva la pantalla en la que estaba el usuario si pasaron **menos de 10 minutos**; si pasaron más, se muestra la tarea actual (se descarta lo que hubiera en el editor).
+
+## 10. Criterio añadido al aprobar
+
+- **CA-001-12 Vuelta desde segundo plano (P-2)**
+  - **Dado** que la app pasó a segundo plano
+  - **Cuando** vuelve a primer plano
+  - **Entonces** si pasaron menos de 10 minutos se ve la misma pantalla; si pasaron 10 minutos o más, se ve la tarea actual (o el editor de la primera tarea si no hay ninguna).
+
+## 11. Ajustes durante la implementación (aprobados por el propietario el 2026-09-24)
+
+Salen de las revisiones de cierre (subagentes `spec-reviewer`, `a11y-reviewer` y `security-reviewer`). No cambian ningún CA; concretan accesibilidad y errores:
+
+- §5: nueva fila "Error al guardar" (antes la BD que no escribe mostraba el mensaje de "no hemos podido abrir").
+- §6: la bienvenida no avanza sola con lector de pantalla; foco visible y teclado en todos los botones; anuncio del contador.
+- §7: textos `skipIntroHint` y `editorSaveError`.
+- CL-001-4: el primer uso se marca al **mostrarse** la bienvenida (antes, al terminar), para que al matar la app a mitad se abra el editor.
+- Privacidad (decisión del propietario): el teclado del sistema **no aprende** del texto de las tareas (`enableIMEPersonalizedLearning: false`; en Android, `IME_FLAG_NO_PERSONALIZED_LEARNING`).
+- Texto del botón de completar (decisión del propietario): **"Pulsa para completar"** en una sola línea, como en el prototipo. Se revoca DEV-06.
+- CA-001-07 (hallado con los goldens): si la palabra más larga no cabe en una línea, el tamaño de la nota se reduce lo justo (sin bajar de `noteS`) para no partirla; por debajo de `noteS`, las palabras enormes se parten (CL-001-3).
+- Fidelidad al prototipo (decisión del propietario, 2026-09-25): editor sin etiqueta visible y con el texto centrado; botones "+" y "Guardar →" (alineado a la derecha); la bienvenida con el color de la primera nota, texto de 52 px centrado y cursor de bloque; las notas sin marco; iconos del sistema de diseño (trazos SVG del prototipo, `UnaIcons`), no los de Material. **Ningún botón se ve desactivado**: "+" (specs 007–009), el menú (005) y completar (003) aún no hacen nada hasta sus specs.
+

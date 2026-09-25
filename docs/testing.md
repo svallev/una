@@ -24,7 +24,11 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 - **Sin red en los tests:** `HttpOverrides` que falla ante cualquier conexión (salvo los tests de URL, que usan un servidor local).
 - **Datos de prueba:** *fixtures* en `app/test/fixtures/` (imágenes con EXIF, PDF variados, documentos, BD de versiones anteriores).
 - **Cobertura:** objetivo ≥ 90 % en `domain/`, ≥ 70 % global. La cobertura es un indicador, no un fin; los criterios de aceptación cubiertos son lo que cuenta.
-- **Goldens:** solo se regeneran de forma explícita (`--update-goldens`) y la PR muestra el antes y el después.
+- **Goldens:** solo se regeneran de forma explícita y la PR muestra el antes y el después. **[Hecho]** El texto se dibuja distinto en macOS y en Linux, así que los goldens (`app/test/goldens/`, etiqueta `golden`) **se generan y se comparan solo en Linux**:
+  1. En local se omiten. Para revisarlos sin subirlos: `GOLDENS_ANY_OS=1 flutter test --update-goldens test/goldens` (las imágenes del Mac **no** se suben).
+  2. Para actualizarlos: poner la etiqueta `actualizar-goldens` en la PR → el workflow `Goldens` los genera en Linux y los deja como artefacto → se descargan (`gh run download <id> -n goldens -D app/test/goldens/goldens`), se revisan y se suben en un commit.
+  3. Si un golden falla en CI, el artefacto `goldens-diferencias` contiene las imágenes con la diferencia.
+  4. Los tests de pantalla cargan las fuentes reales (`test/support/fonts.dart`) y usan un color de nota con semilla fija.
 - **Tests inestables:** se ponen en cuarentena con un issue enlazado; nunca se ignoran en silencio.
 
 ## En CI (ver `.github/workflows/ci.yml`)

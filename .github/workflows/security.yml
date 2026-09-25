@@ -47,7 +47,10 @@ jobs:
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
-          deny-licenses: GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later
+          # pub.dev publica las licencias en minúsculas ("bsd-3-clause") y la acción
+          # las rechaza como SPDX no válido. Las licencias las comprueba CI con
+          # app/tool/check_licenses.dart (threat-model §5); aquí solo vulnerabilidades.
+          license-check: false
           comment-summary-in-pr: on-failure
 
   detect:

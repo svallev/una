@@ -1,0 +1,3 @@
+# Commit esperado de cada versión de Flutter de .fvmrc (una etiqueta de git puede moverse).
+# Al subir de versión: añade la línea con `git -C <sdk> rev-parse HEAD` de la etiqueta oficial.
+3.47.5 6a19cca56475dbfba1478ee68d7bd0c2ef891da1

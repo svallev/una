@@ -34,3 +34,14 @@
 2. La transferencia entre dispositivos (`device-transfer`) incluye **todo** (no tiene cuota).
 3. La app **nunca** depende de que exista el archivo de un adjunto para arrancar ni para mostrar la tarea: estado "Adjunto no disponible" (CL-007-4) con test de integración de restauración.
 4. iOS (F-iOS): iCloud no tiene esta cuota por app; se mantiene "incluir todo".
+
+## Revisión: solo copias cifradas de extremo a extremo (2026-09-24, decisión del propietario)
+
+- **[Hecho]** Sin bloqueo de pantalla, o en Android 8.x, Auto Backup sube la copia a Google Drive **sin** cifrado de extremo a extremo (revisión de seguridad de la spec 001, MASVS-STORAGE-2).
+- **Decisión:** la copia en la nube se hace **solo si va cifrada de extremo a extremo**:
+  - Android 12+: `<cloud-backup disableIfNoEncryptionCapabilities="true">`.
+  - Android 9–11: `requireFlags="clientSideEncryption"` en cada `<include>` (`res/xml-v28/backup_rules.xml`).
+  - Android 8.x: no hay cifrado de extremo a extremo, así que **no se copia nada** (`res/xml/backup_rules.xml` lo excluye todo).
+  - La transferencia entre dispositivos (cable o Wi-Fi directo) no cambia.
+  - El futuro `BackupAgent` (F4) respeta la misma condición (`BackupDataOutput.getTransportFlags()`).
+- **Consecuencia:** quien no tenga bloqueo de pantalla no tiene copia en la nube. El texto de "Acerca de" (spec 010) lo explica y recomienda activar el bloqueo.

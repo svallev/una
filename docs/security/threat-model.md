@@ -62,6 +62,11 @@
 
 Mantenida (release en los últimos 12 meses o estable y sin issues de seguridad abiertas), licencia compatible (MIT/BSD/Apache/OFL/zlib; nada de GPL en la app), **sin telemetría**, con publicador verificado en pub.dev si es posible, tamaño justificado, sin alternativa razonable en el SDK. Se registra en la PR con la sección "Nueva dependencia" de la plantilla.
 
+- **[Hecho]** CI comprueba la licencia de todos los paquetes de pub.dev de `pubspec.lock` con `app/tool/check_licenses.dart` (lee el `LICENSE` de cada paquete; falla ante GPL/LGPL/AGPL/SSPL o una licencia no reconocida). La revisión de dependencias de GitHub no reconoce las licencias que publica pub.dev.
+- **[Hecho]** `sqlite3` (vía drift) **descarga al compilar** un binario precompilado de SQLite desde las *releases* de GitHub de su autor (`simolus3/sqlite3.dart`) y lo verifica con un sha256 fijado dentro del paquete; el paquete, a su vez, está fijado por sha256 en `pubspec.lock`. Cadena de confianza aceptada. Alternativa si hiciera falta: compilar SQLite desde el código fuente con `hooks: user_defines: sqlite3: source: source`.
+- **[Hecho]** El SDK de Flutter se instala en CI por etiqueta y se verifica contra el commit de `tools/flutter-sdk.lock`.
+- **[Hecho]** CI exige que el manifiesto de **release** no pida ningún permiso (`tools/check-android-permissions.sh release`) hasta la spec 009 (INTERNET para la WebView).
+
 ## 6. Gestión de las claves de firma
 
 - Android: **Play App Signing** activado desde la primera subida; la *upload key* en un `.jks` fuera del repo (`~/.config/<app>/upload.jks`) con `key.properties` en `.gitignore`; copia cifrada en el gestor de contraseñas.

@@ -1,0 +1,48 @@
+name: app
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  drift: ^2.35.0
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
+  intl: ^0.20.3
+  path_provider: ^2.1.6
+  uuid: ^4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  yaml: ^3.1.4
+  drift_dev: ^2.35.0
+  build_runner: ^2.16.1
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  # Fuentes empaquetadas (licencia OFL 1.1, P4: nunca se descargan). Origen:
+  # github.com/google/fonts @ 23e54b51ddffbc7713c583748e3bd86f62b1fa4a (docs/design/tokens.md).
+  assets:
+    - assets/fonts/archivo/OFL.txt
+    - assets/fonts/space_mono/OFL.txt
+  fonts:
+    - family: Archivo
+      fonts:
+        # Variable (ejes wght 100–900 y wdth): FontWeight ajusta el grosor.
+        - asset: assets/fonts/archivo/Archivo-Variable.ttf
+    - family: Space Mono
+      fonts:
+        - asset: assets/fonts/space_mono/SpaceMono-Regular.ttf
+        - asset: assets/fonts/space_mono/SpaceMono-Bold.ttf
+          weight: 700

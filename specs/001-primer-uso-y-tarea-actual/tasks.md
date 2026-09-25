@@ -1,6 +1,6 @@
 # Tareas — Spec 001: Primer uso y tarea actual
 
-Requisitos: F0 completa (Xcode, Android Studio, FVM/Flutter, repo), F1 en verde y spec + plan aprobados. `[P]` = puede hacerse en paralelo con la anterior.
+Requisitos: F0 completa para Android (D17: sin Xcode; el job iOS de CI compila sin firmar), F1 en verde y spec + plan aprobados. ✅ 2026-09-24. `[P]` = puede hacerse en paralelo con la anterior.
 
 | ID | Tarea | Depende de | Verificación | CA |
 |---|---|---|---|---|
@@ -26,7 +26,48 @@ Requisitos: F0 completa (Xcode, Android Studio, FVM/Flutter, repo), F1 en verde 
 
 ## Cierre
 
-- [ ] Todos los CA-001 tienen test en verde (tabla del plan).
-- [ ] Definition of Done completa.
-- [ ] Preguntas P-1 y P-2 resueltas por producto (o aplicada la recomendación).
-- [ ] Spec marcada como **Implementada**.
+- [x] Todos los CA-001 tienen test en verde (tabla del plan). CA-001-09 medido en dispositivo (`docs/perf/baseline.md`).
+- [x] Definition of Done completa: CI en verde (Flutter, Android, iOS sin firmar, seguridad, Vercel), revisiones de spec, accesibilidad y seguridad hechas, pruebas manuales en el Xiaomi 15T Pro.
+- [x] Preguntas P-1 y P-2 resueltas por producto.
+- [x] Spec marcada como **Implementada** (2026-09-25).
+
+## Progreso (2026-09-24)
+
+| Tarea | Estado |
+|---|---|
+| T-001-01 Proyecto `app/` | ✅ |
+| T-001-02 CI activa | ✅ Flutter, Android e iOS en verde; release sin permisos, tamaño < 25 MB y licencias comprobadas en CI. "Revisión de dependencias" solo mira vulnerabilidades (`license-check: false`, decisión del propietario) |
+| T-001-03 Identidad | ✅ |
+| T-001-04 Tokens | ✅ |
+| T-001-05 Tema y componentes | 🟡 Tema, `StickyNote`, `BrutalButton` y **fuentes Archivo (variable) y Space Mono empaquetadas** con sus licencias OFL registradas. ✅ *Goldens* (9) generados y comparados en Linux (workflow `Goldens`; docs/testing.md) |
+| T-001-06 l10n | ✅ |
+| T-001-07 Dominio | ✅ |
+| T-001-08 BD drift v1 + migraciones | ✅ (columna SQL `body` en lugar de `text`, que choca con el código generado de drift) |
+| T-001-09 Repositorios + contrato | ✅ |
+| T-001-10 Casos de uso | ✅ |
+| T-001-11 Arranque (tarea antes del primer fotograma) + error de almacenamiento | ✅ (medición en dispositivo pendiente: T-001-17) |
+| T-001-12 Bienvenida | ✅ |
+| T-001-13 Editor de la primera tarea | ✅ |
+| T-001-14 Tarea actual | ✅ (menú y completar se activan en las specs 005 y 003) |
+| T-001-15 Enrutado + P-2 (10 min) | ✅ |
+| T-001-16 Integración persistencia / sin red | 🟡 `integration_test/first_run_flow_test.dart` (BD real en disco, rearranque, `HttpOverrides` que falla) ✅ en el emulador y en el Xiaomi 15T Pro. La release no declara ningún permiso de red |
+| T-001-17 Rendimiento de arranque en dispositivo | ✅ p50 = 198 ms, p90 = 211 ms en el Xiaomi 15T Pro (`docs/perf/baseline.md`). Gama media pendiente (R-02) |
+| T-001-18 Web de pruebas (Vercel) | ✅ Preview por PR desplegada (`vercel.json`: cabeceras de ADR-0010, Flutter fijado, protección de Vercel). Aviso "Versión de pruebas"; datos en memoria; fuentes de respaldo del propio dominio. Falta que el propietario la abra y compruebe |
+| T-001-19 Revisiones (spec, a11y, seguridad) | ✅ Hechas y corregidas; decisiones del propietario aplicadas; pruebas manuales en el dispositivo superadas (abajo) |
+
+Verificado a mano en el emulador (release): bienvenida → editor → guardar → tarea actual → cerrar y reabrir conserva la tarea.
+
+### Revisiones de cierre (T-001-19)
+
+| Revisión | Corregido | Pendiente |
+|---|---|---|
+| Spec | CL-001-4 (primer uso al mostrarse la bienvenida); orden de foco; nombre del campo; error al guardar con "Reintentar"; CL-001-6 con test; pantalla de error desplazable; tablets centradas (CL-001-7); tests de CA-001-03/06/07, CL-001-3/4/8/9; color literal | — |
+| Accesibilidad | Botones con teclado y anillo de foco; orden tarea → menú → completar; campo con etiqueta; pantallas como "rutas" para el lector; menú con acción semántica y zona de 48 dp; editor al 200 % con teclado; guías de accesibilidad en editor, bienvenida y error; bienvenida que espera con lector; contador anunciado | ✅ TalkBack en el Xiaomi 15T Pro (2026-09-25): bienvenida leída entera y sin avanzar sola, doble toque para continuar; editor con foco y "Tu primera tarea"; orden "+" → "Guardar"; tarea actual → menú → completar. Texto del sistema al máximo (×1,45): sin cortes ni palabras partidas, completar en una línea. Pendiente: Switch Access y teclado físico (cubiertos por tests de widget) |
+| Seguridad | Copia en la nube solo cifrada de extremo a extremo (ADR-0004); teclado sin aprendizaje; permisos de la release en CI; licencias en CI; `drift_flutter` eliminado (arrastraba dos paquetes *eol*); commit de Flutter verificado; errores del stream sin volcar a logcat; descarga de SQLite documentada | Release firmada con la clave de debug (F5); web sin fuentes remotas (depende de empaquetar las fuentes) |
+
+### Verificación en el dispositivo (2026-09-25, Xiaomi 15T Pro, release)
+
+- Pantallas iguales al prototipo de Claude Design (bienvenida amarilla con cursor, editor centrado con "+" y "Guardar →", tarea actual), con las fuentes y los iconos del sistema de diseño.
+- Teclado abierto al llegar al editor (corregido: la bienvenida retenía el foco).
+- Persistencia tras cerrar la app a la fuerza; arranque en frío 341 ms (p50 de referencia: 198 ms).
+

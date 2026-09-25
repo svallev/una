@@ -54,6 +54,11 @@ Tener a mano un PDF (entradas, un programa, instrucciones) a pantalla completa y
   - **Cuando** la tarea actual con PDF o documento está visible
   - **Entonces** la pantalla no se apaga (como en 007).
 
+- **CA-008-10 Texto plano dentro de la tarea (D19)**
+  - **Dado** que la tarea actual tiene un documento TXT, CSV o MD
+  - **Cuando** se muestra
+  - **Entonces** su contenido se ve **dentro de la tarea** como texto plano (fuente monoespaciada, sin interpretar marcado Markdown ni HTML, sin ejecutar nada), con desplazamiento, texto seleccionable y sin conexión; si no es UTF-8 válido o supera 1 MB de texto, se muestra la tarjeta con "Abrir" como el resto de documentos.
+
 ## 4. Casos límite
 
 | ID | Situación | Comportamiento |
