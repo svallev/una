@@ -53,7 +53,9 @@ void main() {
       expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'Llamar a Marta');
       await tester.pump();
-      await tester.tap(find.byType(BrutalButton));
+      await tester.tap(
+        find.byWidgetPredicate((w) => w is BrutalButton && !w.iconOnly),
+      );
       await tester.pumpAndSettle();
       final created = tester
           .widget<CurrentTaskScreen>(find.byType(CurrentTaskScreen))
