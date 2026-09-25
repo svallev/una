@@ -33,7 +33,7 @@ Requisitos: spec 001 implementada ✅; spec 003 y este plan **aprobados**. `[P]`
 | T-003-06 Rotura + enhorabuena | ✅ Mitades con `ClipPath` (sin captura), sello, títulos, 18 piezas de confeti, reducir movimiento |
 | T-003-07 "Todo hecho." + enrutado | ✅ Arranque con `hasCompleted`; "Crear una tarea" como ruta (atrás vuelve) |
 | T-003-08 Accesibilidad | 🟡 Anuncio único, 4 s con lector, foco a la nueva tarea o a "Todo hecho.", bloqueo de lector y teclado, "doble toque y mantener": probados en widget. TalkBack manual pendiente |
-| T-003-09 Integración y fluidez en dispositivo | 🟡 `integration_test/complete_flow_test.dart` verde en el emulador; flujo visto en el Xiaomi (completar → "Todo hecho." → crear). Falta medir la fluidez de la rotura en el Xiaomi |
+| T-003-09 Integración y fluidez en dispositivo | ✅ `complete_flow_test` verde en el emulador; fluidez medida en el Xiaomi: p90 ~6 ms por fotograma (`docs/perf/baseline.md`) |
 | T-003-10 Revisiones y goldens | ✅ Revisiones de spec, accesibilidad y seguridad hechas y corregidas (abajo); goldens en Linux |
 
 ### Revisiones de cierre (T-003-10)
