@@ -171,4 +171,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuClose => 'Close menu';
+
+  @override
+  String menuAllTasksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tasks',
+      one: '1 task',
+    );
+    return '$_temp0';
+  }
 }

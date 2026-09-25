@@ -47,5 +47,6 @@
   "menuAllTasksOnlyOne": "This is your only task",
   "menuNewTask": "New task",
   "menuSettings": "Settings and profile",
-  "menuClose": "Close menu"
+  "menuClose": "Close menu",
+  "menuAllTasksCount": "{count, plural, =1{1 task} other{{count} tasks}}"
 }

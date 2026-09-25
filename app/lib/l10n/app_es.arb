@@ -101,5 +101,7 @@
   "menuSettings": "Configuración y perfil",
   "@menuSettings": { "description": "Enlace del menú (spec 010). CA-005-09" },
   "menuClose": "Cerrar menú",
-  "@menuClose": { "description": "Botón X y fondo del menú. CA-005-02" }
+  "@menuClose": { "description": "Botón X y fondo del menú. CA-005-02" },
+  "menuAllTasksCount": "{count, plural, =1{1 tarea} other{{count} tareas}}",
+  "@menuAllTasksCount": { "description": "Lectura del total junto a Todas mis tareas. CA-005-12", "placeholders": { "count": { "type": "int" } } }
 }

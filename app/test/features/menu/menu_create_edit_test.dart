@@ -118,6 +118,42 @@ void main() {
     );
 
     testWidgets(
+      'CA-005-12: con varias tareas, el total aparece a la derecha, alineado con "Nueva tarea"',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpUnaApp(
+          tester,
+          repo: _Repo(),
+          tasks: ['Primera', 'Segunda', 'Tercera'],
+        );
+        await _openMenu(tester);
+        final count = find.text('3');
+        expect(count, findsOneWidget);
+        final button = find.ancestor(
+          of: find.text('Nueva tarea'),
+          matching: find.byType(BrutalButton),
+        );
+        expect(
+          tester.getRect(count).right,
+          closeTo(tester.getRect(button).right, 0.5),
+        );
+        expect(
+          find.bySemanticsLabel('Todas mis tareas, 3 tareas'),
+          findsOneWidget,
+        );
+        handle.dispose();
+      },
+    );
+
+    testWidgets('CA-005-12: con una sola tarea no se muestra el total', (
+      tester,
+    ) async {
+      await pumpUnaApp(tester, repo: _Repo(), tasks: ['Única']);
+      await _openMenu(tester);
+      expect(find.text('1'), findsNothing);
+    });
+
+    testWidgets(
       'CA-005-11 / CA-005-09: Eliminar no hace nada aún; Configuración cierra el menú',
       (tester) async {
         final repo = await pumpUnaApp(

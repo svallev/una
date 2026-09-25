@@ -385,6 +385,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar menú'**
   String get menuClose;
+
+  /// Lectura del total junto a Todas mis tareas. CA-005-12
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 tarea} other{{count} tareas}}'**
+  String menuAllTasksCount(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -168,9 +168,9 @@ class CurrentTaskScreen extends ConsumerWidget {
 Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
   final task = ref.read(currentTaskProvider);
   if (task == null) return;
-  final onlyOne = await ref.read(taskRepositoryProvider).countPending() <= 1;
+  final pending = await ref.read(taskRepositoryProvider).countPending();
   if (!context.mounted) return;
-  final action = await showMenuSheet(context, onlyOne: onlyOne);
+  final action = await showMenuSheet(context, pendingCount: pending);
   if (!context.mounted || action == null) return;
   final editor = switch (action) {
     MenuAction.edit => TaskEditorScreen(mode: EditorMode.edit, task: task),

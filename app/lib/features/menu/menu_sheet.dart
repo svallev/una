@@ -13,11 +13,11 @@ enum MenuAction { edit, newTask }
 /// Abre el menú de la tarea actual (spec 005). Devuelve la acción elegida, o null.
 Future<MenuAction?> showMenuSheet(
   BuildContext context, {
-  required bool onlyOne,
+  required int pendingCount,
 }) => showUnaSheet<MenuAction>(
   context,
   builder: (sheet) => MenuSheet(
-    onlyOne: onlyOne,
+    pendingCount: pendingCount,
     onEdit: () => Navigator.of(sheet).pop(MenuAction.edit),
     // Llegan con las specs 004 y 006: se ven activos y no hacen nada (DEV-18).
     onDelete: () {},
@@ -34,7 +34,7 @@ Future<MenuAction?> showMenuSheet(
 class MenuSheet extends StatelessWidget {
   const MenuSheet({
     super.key,
-    required this.onlyOne,
+    required this.pendingCount,
     required this.onEdit,
     required this.onDelete,
     required this.onAllTasks,
@@ -42,8 +42,11 @@ class MenuSheet extends StatelessWidget {
     required this.onSettings,
   });
 
-  /// Con una sola tarea, "Todas mis tareas" se ve desactivado (DEV-11).
-  final bool onlyOne;
+  /// Tareas pendientes. Con una sola, "Todas mis tareas" se ve desactivado
+  /// (DEV-11); con más, muestra el total a la derecha (CA-005-12, DEV-22).
+  final int pendingCount;
+
+  bool get onlyOne => pendingCount <= 1;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onAllTasks;
@@ -155,6 +158,10 @@ class MenuSheet extends StatelessWidget {
                   label: l10n.menuAllTasks,
                   enabled: !onlyOne,
                   disabledHint: l10n.menuAllTasksOnlyOne,
+                  trailing: onlyOne ? null : '$pendingCount',
+                  trailingSemantics: onlyOne
+                      ? null
+                      : l10n.menuAllTasksCount(pendingCount),
                   onTap: onAllTasks,
                 ),
                 const SizedBox(height: UnaSpace.m),
@@ -191,7 +198,15 @@ class _MenuRow extends StatelessWidget {
     this.divider = false,
     this.enabled = true,
     this.disabledHint,
+    this.trailing,
+    this.trailingSemantics,
   });
+
+  /// Texto pequeño alineado a la derecha (el total de tareas, CA-005-12).
+  final String? trailing;
+
+  /// Cómo lo lee el lector de pantalla ("3 tareas").
+  final String? trailingSemantics;
 
   final UnaIconData icon;
   final String label;
@@ -209,7 +224,7 @@ class _MenuRow extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: enabled,
-      label: label,
+      label: trailingSemantics == null ? label : '$label, $trailingSemantics',
       hint: enabled ? null : disabledHint,
       excludeSemantics: true,
       onTap: enabled ? onTap : null,
@@ -223,7 +238,9 @@ class _MenuRow extends StatelessWidget {
             splashFactory: NoSplash.splashFactory,
             child: Container(
               height: UnaSizes.menuRow,
-              padding: const EdgeInsets.symmetric(horizontal: UnaSpace.xs),
+              // A la derecha, sin margen: el total queda alineado con el borde
+              // del botón "Nueva tarea".
+              padding: const EdgeInsets.only(left: UnaSpace.xs),
               decoration: divider
                   ? const BoxDecoration(
                       border: Border(
@@ -249,6 +266,16 @@ class _MenuRow extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (trailing != null)
+                    Text(
+                      trailing!,
+                      style: TextStyle(
+                        fontFamily: UnaFonts.mono,
+                        fontSize: UnaFontSizes.link,
+                        fontWeight: UnaFontWeights.bold,
+                        color: color,
+                      ),
+                    ),
                 ],
               ),
             ),

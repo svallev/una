@@ -24,4 +24,5 @@ El prototipo es la fuente de verdad visual y de interacción (constitución, P12
 | DEV-18 | "+" y las opciones del menú funcionan | Se ven activos pero no hacen nada hasta sus specs: "+" (007–009), "Eliminar" (004), "Todas mis tareas" (006); "Configuración" cierra el menú hasta la 010. Completar (003), Editar y Nueva tarea (005/002) ya funcionan | Implementación por fases | Temporal (propietario, 2026-09-25) |
 | DEV-19 | Sin vibración al completar | Vibración ligera al completar, si los ajustes del sistema la permiten | Refuerza el gesto | Propietario (2026-09-25, spec 003) |
 | DEV-21 | Las hojas (menú, "¿Dónde la pones?") se cierran con la X, tocando fuera o con el gesto atrás | Además, deslizando hacia abajo (sin asa visible) | Gesto habitual en Android | Propietario (2026-09-25) |
+| DEV-22 | "Todas mis tareas" sin contador | Con más de una tarea, el total a la derecha en Space Mono 14 px, alineado con el botón "Nueva tarea" (CA-005-12) | Saber cuántas tareas esperan sin abrir el listado | Propietario (2026-09-25) |
 

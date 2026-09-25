@@ -53,6 +53,10 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
   - **Dado** el menú
   - **Cuando** elige "Nueva tarea" o "Configuración"
   - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" cierra el menú (como el prototipo) hasta que exista la spec 010.
+- **CA-005-12 Total de tareas (añadido por el propietario, DEV-22)**
+  - **Dado** el menú con más de una tarea pendiente
+  - **Cuando** se muestra
+  - **Entonces** la fila "Todas mis tareas" muestra a la derecha el número total de tareas pendientes, en texto pequeño (Space Mono de 14 px en negrita, como "Configuración y perfil"), alineado con el borde derecho del botón "Nueva tarea"; el lector lo lee como "Todas mis tareas, 3 tareas". Con una sola tarea no aparece.
 - **CA-005-11 Acciones aún no disponibles**
   - **Dado** el menú antes de las specs 004 y 006
   - **Cuando** elige "Eliminar" o "Todas mis tareas" (con varias tareas)
@@ -92,6 +96,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 | `menuDelete` | Eliminar | Delete |
 | `menuAllTasks` | Todas mis tareas | All my tasks |
 | `menuAllTasksOnlyOne` | Solo tienes esta tarea | This is your only task |
+| `menuAllTasksCount` | {count, plural, =1{1 tarea} other{{count} tareas}} | {count, plural, =1{1 task} other{{count} tasks}} |
 | `menuNewTask` | Nueva tarea | New task |
 | `menuSettings` | Configuración y perfil | Settings and profile |
 | `menuClose` | Cerrar menú | Close menu |
