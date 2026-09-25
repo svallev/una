@@ -74,7 +74,7 @@ void main() {
         'Eliminar',
         'Todas mis tareas',
         'Nueva tarea',
-        'Configuración',
+        'Configuración y perfil',
       ]) {
         expect(find.text(text), findsOneWidget, reason: text);
       }
@@ -130,7 +130,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(MenuSheet), findsOneWidget);
         expect(await repo.countPending(), 2);
-        await tester.tap(find.text('Configuración'));
+        await tester.tap(find.text('Configuración y perfil'));
         await tester.pumpAndSettle();
         expect(find.byType(MenuSheet), findsNothing);
       },

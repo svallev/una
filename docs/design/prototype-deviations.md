@@ -8,7 +8,7 @@ El prototipo es la fuente de verdad visual y de interacción (constitución, P12
 | DEV-02 | "Subir archivo · PDF, Word, Excel, TXT…" (no dice dónde va) | "Subir archivo · PDF, Word, Excel… · va arriba del todo" | Coherencia con DEV-01 | D5 |
 | DEV-03 | Word, Excel/CSV y TXT se muestran **dentro** de la tarea (mammoth, SheetJS) | Solo el **PDF** se muestra dentro. El resto: tarjeta con nombre, tipo y tamaño y el botón "Abrir" (QuickLook / intent del sistema) | Riesgo y fidelidad: conversión simplificada y parsers de archivos no confiables | D6, ADR-0008 |
 | DEV-04 | Tarea web: "En la app la página se carga aquí" y el enlace "Abrir página ↗" | WebView endurecida con la página en vivo si hay conexión; si no, captura de página completa con el aviso "Copia del dd/mm" | Funcionar sin conexión (P3) | D9, ADR-0007 |
-| DEV-05 | Menú: "Configuración y perfil" (sin acción) | "Configuración", con pantalla propia | No hay perfil sin login | D13 |
+| DEV-05 | Menú: "Configuración y perfil" | **Revocada (2026-09-25, decisión del propietario):** se mantiene "Configuración y perfil", como en el prototipo | — | Propietario |
 | DEV-06 | Botón: "Pulsa para completar" | **Revocada (2026-09-24, decisión del propietario):** se mantiene "Pulsa para completar", en una sola línea. Como en el prototipo, el texto **no** cambia al mantener: sobre el relleno se ve el mismo texto en blanco (los textos `holdHint` "Sigue pulsando…" / "¡Hecho!" del prototipo se calculan pero no se muestran) | — | Propietario |
 | DEV-07 | Placeholder: "¿Qué eso que tienes que hacer y no has hecho?" | "¿Qué es eso que tienes que hacer y no has hecho?" | Errata | Decisión propia |
 | DEV-08 | Placeholder con opacidad 0,42 (contraste 2,3–2,75:1) | 0,66 (≥ 4,59:1) | WCAG AA | Decisión propia |

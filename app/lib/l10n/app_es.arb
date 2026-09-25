@@ -98,7 +98,7 @@
   "@menuAllTasksOnlyOne": { "description": "Descripción accesible con una sola tarea. CA-005-03" },
   "menuNewTask": "Nueva tarea",
   "@menuNewTask": { "description": "Botón principal del menú. CA-005-09" },
-  "menuSettings": "Configuración",
+  "menuSettings": "Configuración y perfil",
   "@menuSettings": { "description": "Enlace del menú (spec 010). CA-005-09" },
   "menuClose": "Cerrar menú",
   "@menuClose": { "description": "Botón X y fondo del menú. CA-005-02" }

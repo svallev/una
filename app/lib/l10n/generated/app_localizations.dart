@@ -377,7 +377,7 @@ abstract class AppLocalizations {
   /// Enlace del menú (spec 010). CA-005-09
   ///
   /// In es, this message translates to:
-  /// **'Configuración'**
+  /// **'Configuración y perfil'**
   String get menuSettings;
 
   /// Botón X y fondo del menú. CA-005-02

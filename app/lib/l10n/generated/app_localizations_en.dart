@@ -167,7 +167,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuNewTask => 'New task';
 
   @override
-  String get menuSettings => 'Settings';
+  String get menuSettings => 'Settings and profile';
 
   @override
   String get menuClose => 'Close menu';

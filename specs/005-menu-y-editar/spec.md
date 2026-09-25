@@ -3,7 +3,7 @@
 - **Estado:** Implementada (2026-09-25; aprobada por el propietario tras probarla en el móvil). Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009, eliminar 004, configuración 010)
 - **Reglas de producto:** R7 (primer paso), R11
 - **Pantallas del prototipo:** 2 "Menú", 3 "Nueva tarea" (modo editar)
-- **Decisiones y ADR:** D13, DEV-05, DEV-11, DEV-17, DEV-18, DEV-21
+- **Decisiones y ADR:** D13, DEV-05 (revocada), DEV-11, DEV-17, DEV-18, DEV-21
 - **Dependencias:** 001, 002
 
 ## 1. Objetivo
@@ -20,7 +20,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 - **CA-005-01 Abrir el menú**
   - **Dado** la pantalla principal con una tarea actual
   - **Cuando** pulsa el botón de menú
-  - **Entonces**, como en el prototipo, el fondo se oscurece (`ink` al 55 %, fundido de 0,16 s) y sube en 0,2 s una hoja de color papel con borde superior de 3 px, sin esquinas redondeadas ni asa, con dos bloques: **"Esta tarea"** (etiqueta en monoespaciada, X para cerrar, **Editar** y **Eliminar** en rojo, separados por una línea) y, tras un separador de 4 px, el bloque general (**Todas mis tareas**, **+ Nueva tarea** como botón principal y el enlace subrayado **Configuración**).
+  - **Entonces**, como en el prototipo, el fondo se oscurece (`ink` al 55 %, fundido de 0,16 s) y sube en 0,2 s una hoja de color papel con borde superior de 3 px, sin esquinas redondeadas ni asa, con dos bloques: **"Esta tarea"** (etiqueta en monoespaciada, X para cerrar, **Editar** y **Eliminar** en rojo, separados por una línea) y, tras un separador de 4 px, el bloque general (**Todas mis tareas**, **+ Nueva tarea** como botón principal y el enlace subrayado **Configuración y perfil**).
 - **CA-005-02 Cerrar el menú**
   - **Dado** el menú abierto
   - **Cuando** toca la X, toca fuera, desliza hacia abajo (DEV-21) o usa el gesto atrás
@@ -52,7 +52,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 - **CA-005-09 Nueva tarea y Configuración**
   - **Dado** el menú
   - **Cuando** elige "Nueva tarea" o "Configuración"
-  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración" cierra el menú (como el prototipo) hasta que exista la spec 010.
+  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" cierra el menú (como el prototipo) hasta que exista la spec 010.
 - **CA-005-11 Acciones aún no disponibles**
   - **Dado** el menú antes de las specs 004 y 006
   - **Cuando** elige "Eliminar" o "Todas mis tareas" (con varias tareas)
@@ -93,7 +93,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 | `menuAllTasks` | Todas mis tareas | All my tasks |
 | `menuAllTasksOnlyOne` | Solo tienes esta tarea | This is your only task |
 | `menuNewTask` | Nueva tarea | New task |
-| `menuSettings` | Configuración | Settings |
+| `menuSettings` | Configuración y perfil | Settings and profile |
 | `menuClose` | Cerrar menú | Close menu |
 | `editorTagEdit` | Editar tarea | Edit task |
 | `editorSaveChanges` | Guardar cambios | Save changes |

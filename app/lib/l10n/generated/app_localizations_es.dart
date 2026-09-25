@@ -167,7 +167,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuNewTask => 'Nueva tarea';
 
   @override
-  String get menuSettings => 'Configuración';
+  String get menuSettings => 'Configuración y perfil';
 
   @override
   String get menuClose => 'Cerrar menú';
