@@ -68,6 +68,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
       expect(await repo.firstRunDone(), isTrue);
+      // CA-001-02: el campo tiene el foco (y en el móvil, el teclado abierto).
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.focusNode!.hasFocus, isTrue);
     },
   );
 

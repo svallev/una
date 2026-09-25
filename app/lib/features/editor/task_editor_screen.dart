@@ -41,6 +41,11 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
   void initState() {
     super.initState();
     _controller.addListener(_onChanged);
+    // `autofocus` no basta: al venir de la bienvenida, esta aún tiene el foco
+    // mientras se funde y el campo no lo recibiría (ni se abriría el teclado).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fieldFocus.requestFocus();
+    });
   }
 
   int _lastLength = 0;
