@@ -57,6 +57,15 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
+  Future<bool> updateText(String id, String text, DateTime at) async {
+    final task = _tasks[id];
+    if (task == null || task.deletedAt != null) return false;
+    _tasks[id] = task.withText(text, at);
+    _changes.add(null);
+    return true;
+  }
+
+  @override
   Future<bool> complete(String id, DateTime at) async {
     final task = _tasks[id];
     if (task == null || !task.isPending) return false;

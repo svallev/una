@@ -10,6 +10,7 @@ import '../domain/ports/id_generator.dart';
 import '../domain/ports/task_repository.dart';
 import '../domain/usecases/complete_current_task.dart';
 import '../domain/usecases/create_task.dart';
+import '../domain/usecases/update_task_text.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
 final taskRepositoryProvider = Provider<TaskRepository>(
@@ -43,6 +44,13 @@ final createTaskProvider = Provider<CreateTask>(
     clock: ref.watch(clockProvider),
     ids: ref.watch(idGeneratorProvider),
     colors: ref.watch(colorPickerProvider),
+  ),
+);
+
+final updateTaskTextProvider = Provider<UpdateTaskText>(
+  (ref) => UpdateTaskText(
+    repository: ref.watch(taskRepositoryProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 

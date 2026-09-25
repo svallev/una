@@ -46,6 +46,23 @@ class Task {
 
   bool get isPending => status == TaskStatus.pending && deletedAt == null;
 
+  /// La misma tarea con otro texto (spec 005): conserva posición y color.
+  Task withText(String newText, DateTime at) => Task(
+    id: id,
+    text: newText,
+    status: status,
+    rank: rank,
+    colorKey: colorKey,
+    createdAt: createdAt,
+    updatedAt: at,
+    completedAt: completedAt,
+    deletedAt: deletedAt,
+    dueDate: dueDate,
+    parentId: parentId,
+    source: source,
+    externalId: externalId,
+  );
+
   /// La misma tarea, completada en [at] (spec 003, CA-003-03a). Conserva su
   /// texto, su color y su adjunto: queda en el histórico (R14, D8).
   Task complete(DateTime at) => Task(
