@@ -14,12 +14,14 @@ El prototipo es la fuente de verdad visual y de interacción (constitución, P12
 | DEV-08 | Placeholder con opacidad 0,42 (contraste 2,3–2,75:1) | 0,66 (≥ 4,59:1) | WCAG AA | Decisión propia |
 | DEV-09 | Eliminar desde el listado: sin animación ni deshacer | Sin animación de arrugado (como el prototipo), pero **con** el aviso "Deshacer" | Deshacer para toda eliminación | D7, ADR-0006 |
 | DEV-10 | Sin aviso de deshacer tras arrugar | Aviso "Tarea eliminada · Deshacer" durante 6 s tras la animación | Deshacer | D7 |
-| DEV-11 | "Todas mis tareas" deshabilitado con una sola tarea | Se mantiene, con la etiqueta accesible "Solo tienes esta tarea" | — (se documenta para no perderlo) | Prototipo |
-| DEV-12 | El prototipo genera colores por `id % 5` | `colorKey` guardado con la tarea; misma regla de no repetir el color de la tarea actual | Estabilidad del color tras reordenar o restaurar | ADR-0002 |
+| DEV-11 | "Todas mis tareas" deshabilitado con una sola tarea | Se mantiene, con la etiqueta accesible "Solo tienes esta tarea" | — (se documenta para no perderlo) | Prototipo; confirmado por el propietario el 2026-09-25 como excepción a DEV-17 |
+| DEV-12 | El prototipo genera colores por `id % 5` (y salta al siguiente si coincide con el de la tarea actual) | `colorKey` guardado con la tarea; la primera, amarilla; las nuevas, **al azar** y distintas de la tarea visible (CA-001-08) | Estabilidad del color tras reordenar o restaurar; decisión del propietario | ADR-0002, propietario |
 | DEV-13 | Sin alternativa accesible para completar salvo Espacio/Enter mantenidos | Además: acción semántica "Completar tarea" (TalkBack/VoiceOver), **sin confirmación extra** (la acción es deliberada); el doble toque del lector sobre el botón no completa | P6 | Decisión propia (spec 003) |
 | DEV-14 | Reordenar solo arrastrando | Además: acciones semánticas "Mover arriba", "Mover abajo" y "Hacer actual" | P6 | Decisión propia |
 | DEV-15 | Fuentes cargadas de Google Fonts | Fuentes empaquetadas en la app | P3/P4: sin red | Decisión propia |
 | DEV-16 | Texto de ayuda en `textMuted` sobre las notas | Sobre las notas, el texto secundario va en `ink` | Contraste (rosa 4,0:1; neón < 3:1) | Decisión propia |
 | DEV-17 | "Guardar" desactivado (opacidad 0,4) mientras el texto está vacío | "Guardar" siempre activo y con sombra; sin texto no guarda y devuelve el foco al campo | Así se ve en el diseño estático y lo pide el propietario | Propietario (2026-09-25) |
-| DEV-18 | "+" y menú funcionan | Se ven activos pero no hacen nada hasta sus specs (007–009 y 005). Completar ya funciona (spec 003) | Implementación por fases | Temporal, spec 001 |
+| DEV-18 | "+" y las opciones del menú funcionan | Se ven activos pero no hacen nada hasta sus specs: "+" (007–009), "Eliminar" (004), "Todas mis tareas" (006); "Configuración" cierra el menú hasta la 010. Completar (003), Editar y Nueva tarea (005/002) ya funcionan | Implementación por fases | Temporal (propietario, 2026-09-25) |
 | DEV-19 | Sin vibración al completar | Vibración ligera al completar, si los ajustes del sistema la permiten | Refuerza el gesto | Propietario (2026-09-25, spec 003) |
+| DEV-21 | Las hojas (menú, "¿Dónde la pones?") se cierran con la X, tocando fuera o con el gesto atrás | Además, deslizando hacia abajo (sin asa visible) | Gesto habitual en Android | Propietario (2026-09-25) |
+
