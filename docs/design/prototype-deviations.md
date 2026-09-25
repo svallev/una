@@ -21,5 +21,5 @@ El prototipo es la fuente de verdad visual y de interacción (constitución, P12
 | DEV-15 | Fuentes cargadas de Google Fonts | Fuentes empaquetadas en la app | P3/P4: sin red | Decisión propia |
 | DEV-16 | Texto de ayuda en `textMuted` sobre las notas | Sobre las notas, el texto secundario va en `ink` | Contraste (rosa 4,0:1; neón < 3:1) | Decisión propia |
 | DEV-17 | "Guardar" desactivado (opacidad 0,4) mientras el texto está vacío | "Guardar" siempre activo y con sombra; sin texto no guarda y devuelve el foco al campo | Así se ve en el diseño estático y lo pide el propietario | Propietario (2026-09-25) |
-| DEV-18 | "+", menú y completar funcionan | Se ven activos pero no hacen nada hasta sus specs (007–009, 005 y 003) | Implementación por fases | Temporal, spec 001 |
+| DEV-18 | "+" y menú funcionan | Se ven activos pero no hacen nada hasta sus specs (007–009 y 005). Completar ya funciona (spec 003) | Implementación por fases | Temporal, spec 001 |
 | DEV-19 | Sin vibración al completar | Vibración ligera al completar, si los ajustes del sistema la permiten | Refuerza el gesto | Propietario (2026-09-25, spec 003) |

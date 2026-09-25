@@ -38,7 +38,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
 - **CA-003-03b Animación (prototipo)**
   - **Dado** que la tarea se ha guardado como completada
   - **Cuando** empieza la animación
-  - **Entonces** la nota se rompe en dos mitades con borde irregular que caen durante `tear` (1,25 s) **por encima** de la pantalla de enhorabuena, que aparece a la vez: sello ✓, "¡Enhorabuena!" y "Tarea completada." (este en el color de la tarea), confeti y, si quedan tareas, "Ahora a por la siguiente →".
+  - **Entonces**, tras `holdDonePause` (140 ms), la nota se rompe en dos mitades con borde irregular y filo de papel que caen durante `tear` (1,25 s) **por encima** de la pantalla de enhorabuena, que aparece a la vez sobre fondo `ink`: sello ✓ del color de la tarea, "¡Enhorabuena!" (blanco) y "Tarea completada." (en el color de la tarea), 18 piezas de confeti y, si quedan tareas, "Ahora a por la siguiente →".
 - **CA-003-04 Pasar a la siguiente**
   - **Dado** la pantalla de enhorabuena y que quedan tareas pendientes
   - **Cuando** pasa `successHold` (2,1 s) desde el inicio de la rotura

@@ -20,3 +20,19 @@ Requisitos: spec 001 implementada ✅; spec 003 y este plan **aprobados**. `[P]`
 - [ ] Todos los CA-003 con test en verde.
 - [ ] Definition of Done completa (CI, revisiones, prueba en el Xiaomi).
 - [ ] Spec marcada como **Implementada**.
+
+## Progreso (2026-09-25, trabajo autónomo mientras el propietario no puede aprobar)
+
+| Tarea | Estado |
+|---|---|
+| T-003-01 Dominio | ✅ `Task.complete`, `CompleteCurrentTask`, puerto `complete`/`hasCompleted`/`findById` |
+| T-003-02 Repositorios + contrato | ✅ Memoria y drift, sin cambio de esquema |
+| T-003-03 Textos y tokens | ✅ 12 claves ES/EN; tiempos, curvas y tamaños del prototipo |
+| T-003-04 `HoldToCompleteButton` | ✅ 9 tests (dedo, soltar, arrastrar, segundo plano, 2.º dedo, teclado, error, lector) |
+| T-003-05 `CompletionController` | ✅ Guarda antes de animar, vibración, fases, bloqueo |
+| T-003-06 Rotura + enhorabuena | ✅ Mitades con `ClipPath` (sin captura), sello, títulos, 18 piezas de confeti, reducir movimiento |
+| T-003-07 "Todo hecho." + enrutado | ✅ Arranque con `hasCompleted`; "Crear una tarea" como ruta (atrás vuelve) |
+| T-003-08 Accesibilidad | 🟡 Anuncio único y 4 s con lector probados en widget; foco a la siguiente y TalkBack: pendiente de prueba manual |
+| T-003-09 Integración y fluidez en dispositivo | 🟡 Flujo visto en el Xiaomi (completar → "Todo hecho." → crear); falta medir la fluidez de la rotura |
+| T-003-10 Revisiones y goldens | 🟡 Goldens nuevos (4) pendientes de generar en Linux; revisiones pendientes |
+
