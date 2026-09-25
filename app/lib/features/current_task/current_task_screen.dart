@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart' show OrdinalSortKey;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/providers.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../domain/entities/task.dart';
@@ -14,6 +15,8 @@ import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/hold_to_complete_button.dart';
+import '../editor/task_editor_screen.dart';
+import '../menu/menu_sheet.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
 class CurrentTaskScreen extends ConsumerWidget {
@@ -42,6 +45,7 @@ class CurrentTaskScreen extends ConsumerWidget {
     final text = task.text ?? '';
     final mq = MediaQuery.of(context);
     Future<bool> complete() => completeTask(context, ref, task);
+    Future<void> openMenu() => _openMenu(context, ref);
     Widget chrome(Widget child) => faceOnly
         ? Visibility(
             visible: false,
@@ -82,7 +86,7 @@ class CurrentTaskScreen extends ConsumerWidget {
                             fill:
                                 UnaPalettes.classic[task.colorKey %
                                     UnaPalettes.classic.length],
-                            onPressed: () {},
+                            onPressed: openMenu,
                           ),
                         ),
                       ],
@@ -158,6 +162,27 @@ class CurrentTaskScreen extends ConsumerWidget {
     );
     return faceOnly ? ExcludeSemantics(child: screen) : screen;
   }
+}
+
+/// Abre el menú (spec 005) y lo que se elija: editar o crear.
+Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
+  final task = ref.read(currentTaskProvider);
+  if (task == null) return;
+  final pending = await ref.read(taskRepositoryProvider).countPending();
+  if (!context.mounted) return;
+  final action = await showMenuSheet(context, pendingCount: pending);
+  if (!context.mounted || action == null) return;
+  final editor = switch (action) {
+    MenuAction.edit => TaskEditorScreen(mode: EditorMode.edit, task: task),
+    // Color al azar, distinto del de la tarea visible (CA-001-08, CA-002-01).
+    MenuAction.newTask => TaskEditorScreen(
+      mode: EditorMode.create,
+      colorKey: ref
+          .read(colorPickerProvider)
+          .pick(currentColorKey: task.colorKey),
+    ),
+  };
+  await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
 }
 
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de

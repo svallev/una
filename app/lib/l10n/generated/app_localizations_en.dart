@@ -104,4 +104,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get completeError => 'We couldn\'t complete the task';
+
+  @override
+  String get editorTagNew => 'New task';
+
+  @override
+  String get editorTagEdit => 'Edit task';
+
+  @override
+  String get editorCancel => 'Cancel';
+
+  @override
+  String get editorContinue => 'Continue';
+
+  @override
+  String get editorSaveChanges => 'Save changes';
+
+  @override
+  String get placementTitle => 'Where does it go?';
+
+  @override
+  String placementQuoted(String text) {
+    return '“$text”';
+  }
+
+  @override
+  String get placementTop => 'On top';
+
+  @override
+  String get placementTopHint =>
+      'It becomes the only one you see. The current one waits.';
+
+  @override
+  String get placementEnd => 'At the end';
+
+  @override
+  String get placementEndHint =>
+      'You won\'t see it until you finish the ones before it.';
+
+  @override
+  String get placementKeepEditing => 'Keep editing';
+
+  @override
+  String get a11yQueued => 'Task added to the queue';
+
+  @override
+  String get menuSectionThisTask => 'This task';
+
+  @override
+  String get menuEdit => 'Edit';
+
+  @override
+  String get menuDelete => 'Delete';
+
+  @override
+  String get menuAllTasks => 'All my tasks';
+
+  @override
+  String get menuAllTasksOnlyOne => 'This is your only task';
+
+  @override
+  String get menuNewTask => 'New task';
+
+  @override
+  String get menuSettings => 'Settings and profile';
+
+  @override
+  String get menuClose => 'Close menu';
+
+  @override
+  String menuAllTasksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tasks',
+      one: '1 task',
+    );
+    return '$_temp0';
+  }
 }

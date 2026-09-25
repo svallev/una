@@ -111,6 +111,15 @@ abstract final class UnaFontSizes {
   /// ¡Enhorabuena! Tarea completada.
   static const double success = 38.0;
 
+  /// ¿Dónde la pones?
+  static const double sheetTitle = 32.0;
+
+  /// Título de cada opción de la hoja
+  static const double option = 18.0;
+
+  /// Enlaces subrayados en monoespaciada
+  static const double link = 14.0;
+
   /// {value: 34, unit: px}
   static const double display = 34.0;
 
@@ -185,6 +194,9 @@ abstract final class UnaSizes {
   static const double stampIcon = 50.0;
   static const double stampIconStroke = 3.2;
   static const double emptyButton = 68.0;
+  static const double menuRow = 58.0;
+  static const double iconS = 16.0;
+  static const double linkButton = 44.0;
   static const double bodyMaxWidth = 300.0;
   static const double confettiBorder = 2.0;
 }
@@ -192,6 +204,8 @@ abstract final class UnaSizes {
 abstract final class UnaBorders {
   static const double strongWidth = 3.0;
   static const double focusWidth = 3.0;
+  static const double sectionWidth = 4.0;
+  static const double hairlineWidth = 1.0;
   static const double noneRadius = 0.0;
 }
 

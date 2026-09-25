@@ -2,8 +2,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 /// Lleva el foco (teclado y lector de pantalla) a [child] cada vez que cambia
-/// [signal]. No al montarse: la pantalla puede montarse tapada (spec 003, la
-/// siguiente tarea aparece bajo la enhorabuena) y el foco se pide al descubrirla.
+/// [signal], y al montarse si ya hubo alguna señal (p. ej., la tarea nueva que
+/// aparece al colocarla arriba del todo, spec 002). Si se monta tapada (bajo la
+/// enhorabuena, spec 003), está excluida del foco y lo recibe al descubrirse.
 class FocusOnSignal extends StatefulWidget {
   const FocusOnSignal({super.key, required this.signal, required this.child});
 
@@ -19,9 +20,18 @@ class _FocusOnSignalState extends State<FocusOnSignal> {
   final _node = FocusNode(skipTraversal: true);
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.signal > 0) _requestAfterFrame();
+  }
+
+  @override
   void didUpdateWidget(FocusOnSignal old) {
     super.didUpdateWidget(old);
-    if (widget.signal == old.signal) return;
+    if (widget.signal != old.signal) _requestAfterFrame();
+  }
+
+  void _requestAfterFrame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _node.requestFocus();

@@ -57,7 +57,7 @@ void main() {
       expect(find.byType(WelcomeIntro), findsOneWidget);
       await tester.tap(find.byType(WelcomeIntro)); // saltar
       await tester.pumpAndSettle();
-      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+      expect(find.byType(TaskEditorScreen), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'Llamar a Marta');
       await tester.pump();
       await tester.tap(
