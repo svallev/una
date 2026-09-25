@@ -115,50 +115,55 @@ class _CelebrationOverlayState extends State<CelebrationOverlay>
           UnaMotion.successFade,
           UnaMotion.easeCurve,
         );
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            Opacity(
-              opacity: 1 - fade,
-              child: _Success(
-                color: color,
-                hasNext: widget.hasNext,
-                reduced: _reduced,
-                segment: _segment,
-              ),
-            ),
-            if (_reduced)
+        // Va encima de la pantalla, fuera de su Scaffold: necesita su propio
+        // Material para el estilo de texto.
+        return Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
               Opacity(
-                opacity:
-                    1 -
-                    _segment(
-                      Duration.zero,
-                      UnaMotion.reducedMotionFade,
-                      UnaMotion.easeCurve,
-                    ),
-                child: IgnorePointer(child: widget.face),
-              )
-            else ...[
-              _TornHalf(
-                left: true,
-                progress: _segment(
-                  Duration.zero,
-                  UnaMotion.tear,
-                  Curves.linear,
+                opacity: 1 - fade,
+                child: _Success(
+                  color: color,
+                  hasNext: widget.hasNext,
+                  reduced: _reduced,
+                  segment: _segment,
                 ),
-                child: widget.face,
               ),
-              _TornHalf(
-                left: false,
-                progress: _segment(
-                  Duration.zero,
-                  UnaMotion.tear,
-                  Curves.linear,
+              if (_reduced)
+                Opacity(
+                  opacity:
+                      1 -
+                      _segment(
+                        Duration.zero,
+                        UnaMotion.reducedMotionFade,
+                        UnaMotion.easeCurve,
+                      ),
+                  child: IgnorePointer(child: widget.face),
+                )
+              else ...[
+                _TornHalf(
+                  left: true,
+                  progress: _segment(
+                    Duration.zero,
+                    UnaMotion.tear,
+                    Curves.linear,
+                  ),
+                  child: widget.face,
                 ),
-                child: widget.face,
-              ),
+                _TornHalf(
+                  left: false,
+                  progress: _segment(
+                    Duration.zero,
+                    UnaMotion.tear,
+                    Curves.linear,
+                  ),
+                  child: widget.face,
+                ),
+              ],
             ],
-          ],
+          ),
         );
       },
     );
