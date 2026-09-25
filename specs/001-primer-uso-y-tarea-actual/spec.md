@@ -1,9 +1,9 @@
 # Spec 001: Primer uso y tarea actual
 
-- **Estado:** Aprobada (2026-09-24)
+- **Estado:** Implementada (2026-09-25) · Aprobada (2026-09-24)
 - **Reglas de producto:** R1, R2, R6, R8 (y R3 solo para texto; los adjuntos, en 007–009)
 - **Pantallas del prototipo:** 0 "Prototipo (empieza vacío)", 1 "La tarea", 3 "Nueva tarea" (variante "Tu primera tarea")
-- **Decisiones y ADR:** P1, P2, P7; ADR-0001, 0002; DEV-06, DEV-07, DEV-08
+- **Decisiones y ADR:** P1, P2, P7; ADR-0001, 0002, 0004, 0010; DEV-06 (revocada), DEV-07, DEV-08, DEV-17, DEV-18
 - **Dependencias:** ninguna (es la primera funcionalidad y arrastra el esqueleto técnico)
 
 ## 1. Objetivo
