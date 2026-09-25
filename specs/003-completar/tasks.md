@@ -17,9 +17,9 @@ Requisitos: spec 001 implementada ✅; spec 003 y este plan **aprobados**. `[P]`
 
 ## Cierre
 
-- [ ] Todos los CA-003 con test en verde.
-- [ ] Definition of Done completa (CI, revisiones, prueba en el Xiaomi).
-- [ ] Spec marcada como **Implementada**.
+- [x] Todos los CA-003 con test en verde (CL-003-4/8 se completan con los adjuntos, specs 007–009).
+- [x] Definition of Done completa: CI, revisiones de spec, accesibilidad y seguridad, fluidez medida y prueba del propietario en el Xiaomi (flujo y TalkBack).
+- [x] Spec marcada como **Implementada** (2026-09-25).
 
 ## Progreso (2026-09-25, trabajo autónomo mientras el propietario no puede aprobar)
 
@@ -32,7 +32,7 @@ Requisitos: spec 001 implementada ✅; spec 003 y este plan **aprobados**. `[P]`
 | T-003-05 `CompletionController` | ✅ Guarda antes de animar, vibración, fases, bloqueo |
 | T-003-06 Rotura + enhorabuena | ✅ Mitades con `ClipPath` (sin captura), sello, títulos, 18 piezas de confeti, reducir movimiento |
 | T-003-07 "Todo hecho." + enrutado | ✅ Arranque con `hasCompleted`; "Crear una tarea" como ruta (atrás vuelve) |
-| T-003-08 Accesibilidad | 🟡 Anuncio único, 4 s con lector, foco a la nueva tarea o a "Todo hecho.", bloqueo de lector y teclado, "doble toque y mantener": probados en widget. TalkBack manual pendiente |
+| T-003-08 Accesibilidad | ✅ Probado en widget y con TalkBack en el Xiaomi por el propietario (anuncio y foco) |
 | T-003-09 Integración y fluidez en dispositivo | ✅ `complete_flow_test` verde en el emulador; fluidez medida en el Xiaomi: p90 ~6 ms por fotograma (`docs/perf/baseline.md`) |
 | T-003-10 Revisiones y goldens | ✅ Revisiones de spec, accesibilidad y seguridad hechas y corregidas (abajo); goldens en Linux |
 
