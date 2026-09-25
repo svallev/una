@@ -1,6 +1,8 @@
 import 'package:app/app/providers.dart';
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/color_picker.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
@@ -232,4 +234,21 @@ void main() {
       expect(noteColor(), introColor);
     },
   );
+
+  testWidgets('CA-001-08: la primera tarea es amarilla, como la bienvenida', (
+    tester,
+  ) async {
+    final repo = await _pumpApp(tester);
+    await tester.tap(find.byType(WelcomeIntro));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Comprar pan');
+    await tester.pump();
+    await tester.tap(
+      find.byWidgetPredicate((w) => w is BrutalButton && !w.iconOnly),
+    );
+    await tester.pumpAndSettle();
+    final task = await repo.currentTask();
+    expect(task?.colorKey, ColorPicker.firstTaskColorKey);
+    expect(UnaPalettes.classic[task!.colorKey], const Color(0xFFFFE55C));
+  });
 }

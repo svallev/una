@@ -30,10 +30,10 @@ final idGeneratorProvider = Provider<IdGenerator>((ref) => const UuidV7Ids());
 /// Colores de las tareas nuevas; en los tests, con semilla fija.
 final colorPickerProvider = Provider<ColorPicker>((ref) => ColorPicker());
 
-/// Color de la primera tarea: se elige una vez y lo comparten la bienvenida y
-/// el editor, que se funden en el mismo color (prototipo, `introColor`).
+/// Color de la primera tarea (amarillo, CA-001-08): lo comparten la bienvenida
+/// y el editor, que se funden en el mismo color (prototipo, `introColor`).
 final firstTaskColorProvider = Provider<int>(
-  (ref) => ref.read(colorPickerProvider).pick(),
+  (ref) => ColorPicker.firstTaskColorKey,
 );
 
 final createTaskProvider = Provider<CreateTask>(

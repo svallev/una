@@ -54,7 +54,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 - **CA-001-08 Color de la nota**
   - **Dado** que se crea una tarea
   - **Cuando** se le asigna color
-  - **Entonces** recibe uno de los 5 colores de la paleta, distinto del de la tarea actual en ese momento, y lo conserva siempre (también tras reordenar o reiniciar).
+  - **Entonces** la **primera** tarea es **amarilla** (como un pósit; es el `introColor` del prototipo, el mismo de la bienvenida). Cada tarea nueva recibe un color **al azar** de la paleta activa, siempre distinto del de la tarea visible en ese momento (para que se vea que es otra). Cada tarea conserva su color siempre (también tras reordenar o reiniciar).
 
 **Volver a abrir (R8)**
 
