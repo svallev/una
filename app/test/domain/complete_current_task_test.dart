@@ -56,7 +56,7 @@ void main() {
       await repo.insert(first);
       await repo.insert(sampleTask(id: 'b', rank: 'M'));
       await complete(first);
-      await expectLater(complete(first), throwsStateError);
+      await expectLater(complete(first), throwsA(isA<TaskNotCurrent>()));
       expect((await repo.currentTask())!.id, 'b');
     },
   );

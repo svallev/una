@@ -18,10 +18,20 @@ class CompleteCurrentTask {
   Future<CompletionResult> call(Task task) async {
     final current = await repository.currentTask();
     if (current == null || current.id != task.id) {
-      throw StateError('La tarea ya no es la actual');
+      throw const TaskNotCurrent();
     }
     final at = clock.now();
-    await repository.complete(task.id, at);
+    // La escritura solo afecta a tareas pendientes: si entre medias dejó de
+    // estarlo, no se anuncia como completada.
+    if (!await repository.complete(task.id, at)) {
+      throw const TaskNotCurrent();
+    }
     return (completed: task.complete(at), next: await repository.currentTask());
   }
+}
+
+/// La tarea ya no es la actual (se completó o cambió entre medias): no hay
+/// nada que completar ni que reintentar.
+class TaskNotCurrent implements Exception {
+  const TaskNotCurrent();
 }

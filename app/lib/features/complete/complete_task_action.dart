@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/storage_errors.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/usecases/complete_current_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'completion_controller.dart';
 
@@ -36,6 +37,11 @@ Future<bool> completeTask(
       ),
     );
     return true;
+  } on TaskNotCurrent {
+    // La tarea ya no es la actual (p. ej., "Reintentar" tras cambiar): no
+    // hay nada que completar ni que reintentar.
+    messenger?.hideCurrentSnackBar();
+    return false;
   } on Object catch (e) {
     // El aviso (SnackBar) ya se anuncia solo: no se duplica.
     messenger?.showSnackBar(

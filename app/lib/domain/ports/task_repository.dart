@@ -23,9 +23,9 @@ abstract interface class TaskRepository {
 
   Future<void> insert(Task task);
 
-  /// Marca como completada la tarea pendiente [id] (spec 003). No hace nada
-  /// si ya no está pendiente.
-  Future<void> complete(String id, DateTime at);
+  /// Marca como completada la tarea pendiente [id] (spec 003). Devuelve false
+  /// (y no cambia nada) si ya no está pendiente.
+  Future<bool> complete(String id, DateTime at);
 }
 
 /// Ajustes simples (docs/architecture.md §3).

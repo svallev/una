@@ -27,6 +27,12 @@ class _NoNetwork extends HttpOverrides {
 /// Borra la BD real de la app para empezar como en una instalación nueva.
 Future<void> _wipeDatabase() async {
   final dir = await getApplicationDocumentsDirectory();
+  // Solo en la app de pruebas (`.debug`): nunca borra las tareas reales.
+  if (!dir.path.contains('.debug')) {
+    throw StateError(
+      'Pruebas de integración fuera de la app .debug: ${dir.path}',
+    );
+  }
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${dir.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();

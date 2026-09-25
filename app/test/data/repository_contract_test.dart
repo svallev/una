@@ -96,7 +96,7 @@ void _contract(
       expect(await repo.hasCompleted(), isFalse);
       final at = DateTime.utc(2026, 9, 25, 9, 30);
 
-      await repo.complete('a', at);
+      expect(await repo.complete('a', at), isTrue);
 
       expect((await repo.currentTask())!.id, 'b');
       expect(await repo.countPending(), 1);
@@ -114,9 +114,9 @@ void _contract(
       await repo.insert(_task('done', 'A', status: TaskStatus.completed));
       await repo.insert(_task('gone', 'B', deletedAt: DateTime.utc(2026)));
       final later = DateTime.utc(2027);
-      await repo.complete('done', later);
-      await repo.complete('gone', later);
-      await repo.complete('missing', later);
+      expect(await repo.complete('done', later), isFalse);
+      expect(await repo.complete('gone', later), isFalse);
+      expect(await repo.complete('missing', later), isFalse);
       expect((await repo.findById('done'))!.completedAt, isNot(later));
       expect((await repo.findById('gone'))!.status, TaskStatus.pending);
       expect(await repo.findById('missing'), isNull);

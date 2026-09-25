@@ -26,7 +26,7 @@ class _Repo extends InMemoryTaskRepository {
   bool failComplete = false;
 
   @override
-  Future<void> complete(String id, DateTime at) async {
+  Future<bool> complete(String id, DateTime at) async {
     if (failComplete) throw StateError('disk I/O error');
     return super.complete(id, at);
   }
