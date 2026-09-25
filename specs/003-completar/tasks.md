@@ -32,7 +32,15 @@ Requisitos: spec 001 implementada ✅; spec 003 y este plan **aprobados**. `[P]`
 | T-003-05 `CompletionController` | ✅ Guarda antes de animar, vibración, fases, bloqueo |
 | T-003-06 Rotura + enhorabuena | ✅ Mitades con `ClipPath` (sin captura), sello, títulos, 18 piezas de confeti, reducir movimiento |
 | T-003-07 "Todo hecho." + enrutado | ✅ Arranque con `hasCompleted`; "Crear una tarea" como ruta (atrás vuelve) |
-| T-003-08 Accesibilidad | 🟡 Anuncio único y 4 s con lector probados en widget; foco a la siguiente y TalkBack: pendiente de prueba manual |
-| T-003-09 Integración y fluidez en dispositivo | 🟡 Flujo visto en el Xiaomi (completar → "Todo hecho." → crear); falta medir la fluidez de la rotura |
-| T-003-10 Revisiones y goldens | 🟡 Goldens nuevos (4) pendientes de generar en Linux; revisiones pendientes |
+| T-003-08 Accesibilidad | 🟡 Anuncio único, 4 s con lector, foco a la nueva tarea o a "Todo hecho.", bloqueo de lector y teclado, "doble toque y mantener": probados en widget. TalkBack manual pendiente |
+| T-003-09 Integración y fluidez en dispositivo | 🟡 `integration_test/complete_flow_test.dart` verde en el emulador; flujo visto en el Xiaomi (completar → "Todo hecho." → crear). Falta medir la fluidez de la rotura en el Xiaomi |
+| T-003-10 Revisiones y goldens | ✅ Revisiones de spec, accesibilidad y seguridad hechas y corregidas (abajo); goldens en Linux |
+
+### Revisiones de cierre (T-003-10)
+
+| Revisión | Corregido | Pendiente |
+|---|---|---|
+| Spec | Aviso de error que no se cerraba; teclado activo durante la animación; confeti que se apagaba antes que en el prototipo; segundo plano en la pausa de 140 ms | TalkBack manual (foco y anuncio); CL-003-4/8 con los adjuntos (007–009) |
+| Accesibilidad | Foco a la nueva tarea / "Todo hecho."; bloqueo de lector y teclado desde el guardado; cancelar al perder el foco; Intro numérico y D-pad; "doble toque y mantener"; enhorabuena sin doble anuncio y desplazable; "Todo hecho." sin palabras partidas al 200 % | Prueba con TalkBack, Switch Access y teclado físico en el dispositivo |
+| Seguridad | App de pruebas `.debug` separada (las pruebas de integración nunca borran tus tareas); `complete` confirma que actualizó una pendiente; "Reintentar" sin bucle | — |
 
