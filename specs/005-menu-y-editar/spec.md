@@ -1,6 +1,6 @@
 # Spec 005: Menú de la tarea y editar
 
-- **Estado:** Aprobada provisionalmente (2026-09-25: revisada tras `spec-reviewer` con las decisiones del propietario; se implementa junto con la 002)
+- **Estado:** Implementada (2026-09-25; aprobada por el propietario tras probarla en el móvil). Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009, eliminar 004, configuración 010)
 - **Reglas de producto:** R7 (primer paso), R11
 - **Pantallas del prototipo:** 2 "Menú", 3 "Nueva tarea" (modo editar)
 - **Decisiones y ADR:** D13, DEV-05, DEV-11, DEV-17, DEV-18, DEV-21

@@ -1,6 +1,6 @@
 # Spec 002: Crear una tarea de texto y elegir dónde va
 
-- **Estado:** Aprobada provisionalmente (2026-09-25: revisada tras `spec-reviewer` con las decisiones del propietario; se implementa junto con la 005 y se revisa con él en el móvil)
+- **Estado:** Implementada (2026-09-25; aprobada por el propietario tras probarla en el móvil). Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009, eliminar 004, configuración 010)
 - **Reglas de producto:** R3 (texto), R4, R5 (solo la excepción: los adjuntos no preguntan; detalle en 007–009)
 - **Pantallas del prototipo:** 3 "Nueva tarea", 4 "¿Dónde va?"
 - **Decisiones y ADR:** ADR-0002 (rank), D5, DEV-12, DEV-17, DEV-21
