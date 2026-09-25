@@ -36,19 +36,6 @@ class CompletionState {
       CompletionState(phase, task: task, hasNext: hasNext);
 }
 
-/// Aumenta al terminar cada secuencia: la pantalla que queda debajo lleva el
-/// foco a la nueva tarea o a "Todo hecho." (CA-003-07).
-final completionFocusProvider = NotifierProvider<CompletionFocus, int>(
-  CompletionFocus.new,
-);
-
-class CompletionFocus extends Notifier<int> {
-  @override
-  int build() => 0;
-
-  void signal() => state++;
-}
-
 final completionProvider =
     NotifierProvider<CompletionController, CompletionState>(
       CompletionController.new,
@@ -109,6 +96,7 @@ class CompletionController extends Notifier<CompletionState> {
   void finish() {
     _pause?.cancel();
     state = const CompletionState.idle();
-    ref.read(completionFocusProvider.notifier).signal();
+    // El foco va a la nueva tarea o a "Todo hecho." (CA-003-07).
+    ref.read(screenFocusProvider.notifier).signal();
   }
 }

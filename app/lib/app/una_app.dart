@@ -88,7 +88,7 @@ class HomeRouter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final completion = ref.watch(completionProvider);
-    final focusSignal = ref.watch(completionFocusProvider);
+    final focusSignal = ref.watch(screenFocusProvider);
     final task = ref.watch(currentTaskProvider);
     final firstRunDone = ref.watch(firstRunDoneProvider);
     final hasCompleted = ref.watch(hasCompletedProvider);
@@ -109,7 +109,7 @@ class HomeRouter extends ConsumerWidget {
         focusSignal: focusSignal,
         onCreate: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => FirstTaskEditorScreen(
+            builder: (_) => TaskEditorScreen(
               colorKey: ref.read(colorPickerProvider).pick(),
             ),
           ),
@@ -123,7 +123,7 @@ class HomeRouter extends ConsumerWidget {
         onDone: () => ref.read(firstRunDoneProvider.notifier).markDone(),
       );
     } else {
-      child = const FirstTaskEditorScreen(key: ValueKey('first-editor'));
+      child = const TaskEditorScreen(key: ValueKey('first-editor'));
     }
     final screens = AnimatedSwitcher(
       duration: reduced ? UnaMotion.reducedMotionFade : UnaMotion.introFade,

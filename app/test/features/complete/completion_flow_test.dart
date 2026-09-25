@@ -346,7 +346,7 @@ void main() {
     (tester) async {
       await _app(tester, hasCompleted: true);
       expect(find.byType(AllDoneScreen), findsOneWidget);
-      expect(find.byType(FirstTaskEditorScreen), findsNothing);
+      expect(find.byType(TaskEditorScreen), findsNothing);
       await tester.pump(UnaMotion.enter);
     },
   );
@@ -389,12 +389,12 @@ void main() {
       await _app(tester, hasCompleted: true);
       await tester.tap(find.text('Crear una tarea'));
       await tester.pumpAndSettle();
-      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+      expect(find.byType(TaskEditorScreen), findsOneWidget);
       expect(find.text('Cancelar'), findsNothing);
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.byType(FirstTaskEditorScreen), findsNothing);
+      expect(find.byType(TaskEditorScreen), findsNothing);
       expect(find.byType(AllDoneScreen), findsOneWidget);
 
       await tester.tap(find.text('Crear una tarea'));
@@ -405,7 +405,7 @@ void main() {
         find.byWidgetPredicate((w) => w is BrutalButton && !w.iconOnly),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(FirstTaskEditorScreen), findsNothing);
+      expect(find.byType(TaskEditorScreen), findsNothing);
       expect(find.byType(CurrentTaskScreen), findsOneWidget);
       expect(find.text('Llamar al fontanero'), findsOneWidget);
     },

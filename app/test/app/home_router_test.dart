@@ -66,7 +66,7 @@ void main() {
       expect(find.byType(WelcomeIntro), findsOneWidget);
       await tester.tap(find.byType(WelcomeIntro)); // saltar
       await tester.pumpAndSettle();
-      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+      expect(find.byType(TaskEditorScreen), findsOneWidget);
       expect(await repo.firstRunDone(), isTrue);
       // CA-001-02: el campo tiene el foco (y en el móvil, el teclado abierto).
       final field = tester.widget<TextField>(find.byType(TextField));
@@ -79,7 +79,7 @@ void main() {
     (tester) async {
       await _pumpApp(tester, firstRunDone: true);
       expect(find.byType(WelcomeIntro), findsNothing);
-      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+      expect(find.byType(TaskEditorScreen), findsOneWidget);
     },
   );
 
@@ -131,7 +131,7 @@ void main() {
       background(UnaApp.resetAfter);
       await tester.pumpAndSettle();
       expect(find.text('Borrador'), findsNothing);
-      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+      expect(find.byType(TaskEditorScreen), findsOneWidget);
     },
   );
 
@@ -168,7 +168,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(calls, contains('SystemNavigator.pop'));
-      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+      expect(find.byType(TaskEditorScreen), findsOneWidget);
     },
   );
 
@@ -233,7 +233,7 @@ void main() {
       final introColor = noteColor();
       await tester.tap(find.byType(WelcomeIntro));
       await tester.pumpAndSettle();
-      expect(find.byType(FirstTaskEditorScreen), findsOneWidget);
+      expect(find.byType(TaskEditorScreen), findsOneWidget);
       expect(noteColor(), introColor);
     },
   );

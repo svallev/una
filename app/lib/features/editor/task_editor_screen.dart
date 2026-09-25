@@ -8,36 +8,83 @@ import '../../app/providers.dart';
 import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
+import '../../domain/entities/queue_position.dart';
 import '../../domain/entities/task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
+import '../../ui/una_sheet.dart';
 import '../../ui/wordmark.dart';
 import '../current_task/current_task_screen.dart';
+import 'placement_sheet.dart';
 
-/// Editor en modo "primera tarea" (spec 001, CA-001-02/03/04). Los modos
-/// "nueva" y "editar" llegan con las specs 002 y 005.
-class FirstTaskEditorScreen extends ConsumerStatefulWidget {
-  const FirstTaskEditorScreen({super.key, this.colorKey});
+/// Modos del editor.
+enum EditorMode {
+  /// Primera tarea o desde "Todo hecho.": sin "Cancelar", "Guardar", sin
+  /// preguntar la posición (spec 001, CA-003-10).
+  first,
 
-  /// Color de la nota. Sin indicar, el de la primera tarea (amarillo); desde
-  /// "Todo hecho." se abre con uno al azar (CA-003-10).
+  /// Nueva tarea con otras pendientes: "Cancelar", "Continuar →" y la hoja
+  /// "¿Dónde la pones?" (spec 002).
+  create,
+
+  /// Editar el texto de una tarea: "Cancelar" y "Guardar cambios" (spec 005).
+  edit,
+}
+
+/// Editor de tareas (specs 001, 002 y 005), escrito sobre la nota.
+class TaskEditorScreen extends ConsumerStatefulWidget {
+  const TaskEditorScreen({
+    super.key,
+    this.mode = EditorMode.first,
+    this.colorKey,
+    this.task,
+  }) : assert(mode != EditorMode.edit || task != null);
+
+  final EditorMode mode;
+
+  /// Color de la nota. Sin indicar, el de la primera tarea (amarillo). Al
+  /// crear, uno al azar distinto del de la tarea actual (CA-001-08); al
+  /// editar, el de la tarea.
   final int? colorKey;
+
+  /// La tarea que se edita (modo [EditorMode.edit]).
+  final Task? task;
+
+  /// Abre el editor como ruta con el fundido del prototipo (`.fadein`, 0,8 s).
+  static Route<void> route(BuildContext context, TaskEditorScreen editor) {
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    final duration = reduced
+        ? UnaMotion.reducedMotionFade
+        : UnaMotion.introFade;
+    return PageRouteBuilder<void>(
+      transitionDuration: duration,
+      reverseTransitionDuration: reduced
+          ? UnaMotion.reducedMotionFade
+          : UnaMotion.sheetOut,
+      pageBuilder: (_, _, _) => editor,
+      transitionsBuilder: (_, animation, _, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: UnaMotion.easeCurve),
+        child: child,
+      ),
+    );
+  }
 
   /// El contador de caracteres aparece a partir de aquí (CL-001-2).
   static const counterFrom = 9000;
 
   @override
-  ConsumerState<FirstTaskEditorScreen> createState() =>
-      _FirstTaskEditorScreenState();
+  ConsumerState<TaskEditorScreen> createState() => _TaskEditorScreenState();
 }
 
-class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
-  final _controller = TextEditingController();
+class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
+  late final _controller = TextEditingController(text: widget.task?.text);
   final _fieldFocus = FocusNode();
   late final int _colorKey =
-      widget.colorKey ?? ref.read(firstTaskColorProvider);
+      widget.task?.colorKey ??
+      widget.colorKey ??
+      ref.read(firstTaskColorProvider);
   bool _saving = false;
 
   bool get _canSave => !_saving && _controller.text.trim().isNotEmpty;
@@ -45,6 +92,10 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
   @override
   void initState() {
     super.initState();
+    // Al editar, el cursor va al final del texto (CA-005-04).
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
+    );
     _controller.addListener(_onChanged);
     // `autofocus` no basta: al venir de la bienvenida, esta aún tiene el foco
     // mientras se funde y el campo no lo recibiría (ni se abriría el teclado).
@@ -58,8 +109,8 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
   void _onChanged() {
     final length = _controller.text.characters.length;
     // El contador es visual: se anuncia al aparecer y al llegar al máximo.
-    if ((_lastLength < FirstTaskEditorScreen.counterFrom &&
-            length >= FirstTaskEditorScreen.counterFrom) ||
+    if ((_lastLength < TaskEditorScreen.counterFrom &&
+            length >= TaskEditorScreen.counterFrom) ||
         (_lastLength < Task.maxTextLength && length >= Task.maxTextLength)) {
       unawaited(
         SemanticsService.sendAnnouncement(
@@ -84,25 +135,63 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
   Future<void> _save() async {
     if (_saving) return;
     if (!_canSave) {
-      // "Guardar" nunca está desactivado (decisión del propietario): sin texto
-      // no guarda y devuelve el foco al campo (CL-001-1).
+      // Ningún botón se ve desactivado (DEV-17): sin texto no guarda y
+      // devuelve el foco al campo (CL-001-1, CA-002-10, CA-005-06).
       _fieldFocus.requestFocus();
       return;
     }
+    switch (widget.mode) {
+      case EditorMode.first:
+        await _write(
+          () => ref
+              .read(createTaskProvider)
+              .call(_controller.text, colorKey: _colorKey),
+        );
+      case EditorMode.create:
+        // Sin adjunto se pregunta dónde va (CA-002-02).
+        final position = await showPlacementSheet(
+          context,
+          text: _controller.text.trim(),
+          color: UnaPalettes.classic[_colorKey % UnaPalettes.classic.length],
+        );
+        if (position == null || !mounted) return; // Seguir editando.
+        final saved = await _write(
+          () => ref
+              .read(createTaskProvider)
+              .call(_controller.text, position: position, colorKey: _colorKey),
+        );
+        if (saved && position == QueuePosition.end && mounted) {
+          // A la cola: sin aviso visible; solo el lector (CA-002-04).
+          unawaited(
+            SemanticsService.sendAnnouncement(
+              View.of(context),
+              AppLocalizations.of(context).a11yQueued,
+              Directionality.of(context),
+            ),
+          );
+        }
+      case EditorMode.edit:
+        await _write(
+          () => ref
+              .read(updateTaskTextProvider)
+              .call(widget.task!, _controller.text),
+        );
+    }
+  }
+
+  /// Escribe en la BD. Si sale bien, cierra el editor (si es una ruta) y la
+  /// tarea actual recupera el foco; si falla, se conserva el texto y se
+  /// ofrece reintentar (spec 001 §5, spec 002 §5, spec 005 §5).
+  Future<bool> _write(Future<Object?> Function() write) async {
     setState(() => _saving = true);
     try {
-      await ref
-          .read(createTaskProvider)
-          .call(_controller.text, colorKey: _colorKey);
-      // Abierto como ruta desde "Todo hecho." (CA-003-10): se cierra y se ve la
-      // nueva tarea actual.
-      if (mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      // La tarea actual cambia en la BD y el enrutado muestra la pantalla principal.
+      await write();
+      if (!mounted) return true;
+      if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+      ref.read(screenFocusProvider.notifier).signal();
+      return true;
     } on Object catch (e) {
-      // Error de escritura (spec 001 §5): el texto se conserva y se puede reintentar.
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _saving = false);
       final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -114,6 +203,7 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
           persist: true,
         ),
       );
+      return false;
     }
   }
 
@@ -144,20 +234,28 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Misma cabecera que la tarea actual. Sin "Cancelar" ni
-                    // menú: hasta crear la primera tarea no hay nada más (R2).
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(
+                    // Misma cabecera que la tarea actual. En la primera tarea,
+                    // sin "Cancelar" ni menú (R2); al crear o editar,
+                    // "Cancelar" descarta sin preguntar (P-3).
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
                         UnaSpace.l,
                         UnaSpace.l,
-                        UnaSpace.l,
+                        UnaSpace.m,
                         0,
                       ),
                       child: SizedBox(
                         height: kMinInteractiveDimension,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Wordmark(),
+                        child: Row(
+                          children: [
+                            const Wordmark(),
+                            const Spacer(),
+                            if (widget.mode != EditorMode.first)
+                              UnaLinkButton(
+                                label: l10n.editorCancel,
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -183,7 +281,11 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
                             // nombre al campo (spec 001 §6). Un solo nodo.
                             child: MergeSemantics(
                               child: Semantics(
-                                label: l10n.editorTagFirst,
+                                label: switch (widget.mode) {
+                                  EditorMode.first => l10n.editorTagFirst,
+                                  EditorMode.create => l10n.editorTagNew,
+                                  EditorMode.edit => l10n.editorTagEdit,
+                                },
                                 child: TextField(
                                   controller: _controller,
                                   focusNode: _fieldFocus,
@@ -223,7 +325,7 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
                         ),
                       ),
                     ),
-                    if (length >= FirstTaskEditorScreen.counterFrom)
+                    if (length >= TaskEditorScreen.counterFrom)
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: UnaSpace.l,
@@ -252,7 +354,11 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
                           const SizedBox(width: UnaSpace.m),
                           Flexible(
                             child: BrutalButton(
-                              label: l10n.editorSaveFirst,
+                              label: switch (widget.mode) {
+                                EditorMode.first => l10n.editorSaveFirst,
+                                EditorMode.create => l10n.editorContinue,
+                                EditorMode.edit => l10n.editorSaveChanges,
+                              },
                               trailingIcon: UnaIcons.arrowRight,
                               iconSize: UnaSizes.iconM,
                               expand: false,

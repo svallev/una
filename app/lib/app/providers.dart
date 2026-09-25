@@ -74,6 +74,18 @@ class HasCompletedController extends Notifier<bool> {
   void markCompleted() => state = true;
 }
 
+/// Aumenta cada vez que la pantalla principal debe recuperar el foco (tras
+/// completar, crear o editar): la tarea actual o "Todo hecho." lo toman
+/// (CA-003-07, spec 002 §6).
+final screenFocusProvider = NotifierProvider<ScreenFocus, int>(ScreenFocus.new);
+
+class ScreenFocus extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void signal() => state++;
+}
+
 /// Tarea actual: arranca con la leída en el arranque y sigue los cambios de la BD.
 final currentTaskProvider = NotifierProvider<CurrentTaskController, Task?>(
   CurrentTaskController.new,
