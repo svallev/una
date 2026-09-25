@@ -40,6 +40,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
   - **Dado** que ya se vio la bienvenida (aunque no se guardara ninguna tarea)
   - **Cuando** se reabre la app sin tareas
   - **Entonces** se abre directamente el editor de la primera tarea, sin animación.
+  - *Enmienda (spec 003, CA-003-11):* si hay tareas completadas y ninguna pendiente, se ve "Todo hecho." en lugar del editor.
 
 **Pantalla principal (R6)**
 
