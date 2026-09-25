@@ -19,7 +19,11 @@ import '../current_task/current_task_screen.dart';
 /// Editor en modo "primera tarea" (spec 001, CA-001-02/03/04). Los modos
 /// "nueva" y "editar" llegan con las specs 002 y 005.
 class FirstTaskEditorScreen extends ConsumerStatefulWidget {
-  const FirstTaskEditorScreen({super.key});
+  const FirstTaskEditorScreen({super.key, this.colorKey});
+
+  /// Color de la nota. Sin indicar, el de la primera tarea (amarillo); desde
+  /// "Todo hecho." se abre con uno al azar (CA-003-10).
+  final int? colorKey;
 
   /// El contador de caracteres aparece a partir de aquí (CL-001-2).
   static const counterFrom = 9000;
@@ -32,7 +36,8 @@ class FirstTaskEditorScreen extends ConsumerStatefulWidget {
 class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
   final _controller = TextEditingController();
   final _fieldFocus = FocusNode();
-  late final int _colorKey = ref.read(firstTaskColorProvider);
+  late final int _colorKey =
+      widget.colorKey ?? ref.read(firstTaskColorProvider);
   bool _saving = false;
 
   bool get _canSave => !_saving && _controller.text.trim().isNotEmpty;
@@ -89,6 +94,11 @@ class _FirstTaskEditorScreenState extends ConsumerState<FirstTaskEditorScreen> {
       await ref
           .read(createTaskProvider)
           .call(_controller.text, colorKey: _colorKey);
+      // Abierto como ruta desde "Todo hecho." (CA-003-10): se cierra y se ve la
+      // nueva tarea actual.
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
       // La tarea actual cambia en la BD y el enrutado muestra la pantalla principal.
     } on Object catch (e) {
       // Error de escritura (spec 001 §5): el texto se conserva y se puede reintentar.

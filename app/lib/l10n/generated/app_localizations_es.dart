@@ -65,4 +65,44 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get editorSaveError => 'No hemos podido guardar la tarea';
+
+  @override
+  String get completeA11yAction => 'Completar tarea';
+
+  @override
+  String get completeA11yHint =>
+      'Mantén pulsado o usa las acciones para completar';
+
+  @override
+  String get successTitle1 => '¡Enhorabuena!';
+
+  @override
+  String get successTitle2 => 'Tarea completada.';
+
+  @override
+  String get successNext => 'Ahora a por la siguiente →';
+
+  @override
+  String a11yCompletedNext(String text) {
+    return 'Tarea completada. Siguiente: $text';
+  }
+
+  @override
+  String get a11yCompletedAllDone => 'Tarea completada. Todo hecho.';
+
+  @override
+  String get emptyDoneTitle1 => 'Todo';
+
+  @override
+  String get emptyDoneTitle2 => 'hecho.';
+
+  @override
+  String get emptyDoneBody =>
+      'No queda nada pendiente. Disfrútalo, o apunta lo siguiente.';
+
+  @override
+  String get emptyCreate => 'Crear una tarea';
+
+  @override
+  String get completeError => 'No hemos podido completar la tarea';
 }

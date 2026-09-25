@@ -32,6 +32,9 @@ abstract final class UnaColors {
   /// Relleno del botón Eliminar; el texto es ink
   static const Color dangerFill = Color(0xFFFF5A4E);
 
+  /// Sombra dura de las mitades rotas (drop-shadow del prototipo)
+  static const Color tearShadow = Color(0xD9111111);
+
   /// Fibra del papel roto al completar
   static const Color paperFiber = Color(0xFFFFFDF3);
 
@@ -105,6 +108,9 @@ abstract final class UnaFontSizes {
   /// Texto de la bienvenida
   static const double intro = 52.0;
 
+  /// ¡Enhorabuena! Tarea completada.
+  static const double success = 38.0;
+
   /// {value: 34, unit: px}
   static const double display = 34.0;
 
@@ -175,6 +181,12 @@ abstract final class UnaSizes {
   static const double button = 64.0;
   static const double holdButton = 72.0;
   static const double caretWidth = 6.0;
+  static const double stamp = 88.0;
+  static const double stampIcon = 50.0;
+  static const double stampIconStroke = 3.2;
+  static const double emptyButton = 68.0;
+  static const double bodyMaxWidth = 300.0;
+  static const double confettiBorder = 2.0;
 }
 
 abstract final class UnaBorders {
@@ -199,6 +211,12 @@ abstract final class UnaShadows {
   static const BoxShadow iconButton = BoxShadow(
     color: Color(0xFF111111),
     offset: Offset(3.0, 3.0),
+    blurRadius: 0.0,
+    spreadRadius: 0.0,
+  );
+  static const BoxShadow stamp = BoxShadow(
+    color: Color(0xFFFFFFFF),
+    offset: Offset(6.0, 6.0),
     blurRadius: 0.0,
     spreadRadius: 0.0,
   );
@@ -273,11 +291,38 @@ abstract final class UnaMotion {
 
   /// Sustituto con 'reducir movimiento'
   static const Duration reducedMotionFade = Duration(milliseconds: 400);
+
+  /// Pausa entre completar (relleno lleno) y la rotura
+  static const Duration holdDonePause = Duration(milliseconds: 140);
+
+  /// Retraso del sello ✓
+  static const Duration stampDelay = Duration(milliseconds: 300);
+
+  /// Aparición del sello ✓
+  static const Duration stamp = Duration(milliseconds: 550);
+
+  /// Retraso de "¡Enhorabuena! Tarea completada."
+  static const Duration riseDelay = Duration(milliseconds: 450);
+
+  /// Retraso de "Ahora a por la siguiente →"
+  static const Duration riseDelaySecond = Duration(milliseconds: 650);
+
+  /// Subida de los textos de la enhorabuena
+  static const Duration rise = Duration(milliseconds: 500);
+
+  /// Retraso del confeti
+  static const Duration confettiDelay = Duration(milliseconds: 380);
+
+  /// Vuelo del confeti
+  static const Duration confetti = Duration(milliseconds: 1100);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);
   static const Cubic tearCurve = Cubic(0.3, 0.0, 0.2, 1.0);
   static const Cubic fallCurve = Cubic(0.55, 0.0, 1.0, 0.45);
   static const Cubic stampCurve = Cubic(0.2, 1.6, 0.4, 1.0);
+  static const Cubic confettiCurve = Cubic(0.15, 0.7, 0.3, 1.0);
+  static const Cubic easeOutCurve = Cubic(0.0, 0.0, 0.58, 1.0);
+  static const Cubic easeCurve = Cubic(0.25, 0.1, 0.25, 1.0);
   static const double dragThreshold = 6.0;
 }

@@ -187,6 +187,78 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No hemos podido guardar la tarea'**
   String get editorSaveError;
+
+  /// Acción del lector de pantalla para completar sin mantener pulsado. CA-003-07
+  ///
+  /// In es, this message translates to:
+  /// **'Completar tarea'**
+  String get completeA11yAction;
+
+  /// Pista del botón de completar para el lector. Spec 003 §6
+  ///
+  /// In es, this message translates to:
+  /// **'Mantén pulsado o usa las acciones para completar'**
+  String get completeA11yHint;
+
+  /// Enhorabuena tras completar. CA-003-03b
+  ///
+  /// In es, this message translates to:
+  /// **'¡Enhorabuena!'**
+  String get successTitle1;
+
+  /// Segunda línea, en el color de la tarea. CA-003-03b
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea completada.'**
+  String get successTitle2;
+
+  /// Solo si quedan tareas. CA-003-03b
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora a por la siguiente →'**
+  String get successNext;
+
+  /// Anuncio único al completar. CA-003-07
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea completada. Siguiente: {text}'**
+  String a11yCompletedNext(String text);
+
+  /// Anuncio al completar la última. CA-003-07
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea completada. Todo hecho.'**
+  String get a11yCompletedAllDone;
+
+  /// Estado vacío, primera línea. CA-003-05
+  ///
+  /// In es, this message translates to:
+  /// **'Todo'**
+  String get emptyDoneTitle1;
+
+  /// Estado vacío, segunda línea. CA-003-05
+  ///
+  /// In es, this message translates to:
+  /// **'hecho.'**
+  String get emptyDoneTitle2;
+
+  /// Estado vacío. CA-003-05
+  ///
+  /// In es, this message translates to:
+  /// **'No queda nada pendiente. Disfrútalo, o apunta lo siguiente.'**
+  String get emptyDoneBody;
+
+  /// Botón del estado vacío. CA-003-10
+  ///
+  /// In es, this message translates to:
+  /// **'Crear una tarea'**
+  String get emptyCreate;
+
+  /// Error al guardar al completar. CA-003-12
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido completar la tarea'**
+  String get completeError;
 }
 
 class _AppLocalizationsDelegate
