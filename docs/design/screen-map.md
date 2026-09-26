@@ -17,14 +17,13 @@ Todos los artboards son `Main.dc.html` arrancado en un estado (`start=…`). For
 | 9 | Añadir (+) · `Adjuntar.dc.html` | `adjuntar` | Hoja "Añadir a la tarea": Hacer foto · Subir imagen · Subir archivo · Cargar URL | 007, 008, 009 | R3, R5 |
 | 10 | Tarea con documento · `Documento.dc.html` | `documento` | Tarea con PDF abierto dentro de la tarea y texto opcional | 008 | R5 |
 | 11 | Tarea web · `Web.dc.html` | `web` | Tarea con URL: candado + dominio + "WEB"; página dentro de la tarea | 009 | R5 |
-| — | Estados vacíos (dentro de `Main`) | — | "Todo hecho." / "Nada pendiente." + "Crear una tarea" | 003, 004 | R12 |
+| — | Estados vacíos (dentro de `Main`) | — | "Todo hecho." + "Crear una tarea" (el "Nada pendiente." del prototipo no se usa, DEV-24) | 003, 004 | R12 |
 | — | Hoja "Cargar URL" (dentro de `Main`) | — | Campo `https://`, errores, "Se abre como tarea, arriba del todo." | 009 | R5 |
 | — | Configuración | — | **No existe en el prototipo** → hay que diseñarla (pendiente de diseño) | 010 | R15 |
 
 ## Elementos sin pantalla en el prototipo (pendientes de diseño)
 
 - Configuración (idioma, pantalla encendida, Acerca de, licencias): spec 010.
-- Aviso "Tarea eliminada · Deshacer": spec 004.
 - Visor a pantalla completa con zoom (imagen, PDF, captura): specs 007, 008, 009.
 - Tarjeta de documento no PDF con "Abrir": spec 008.
 - Aviso de captura sin conexión "Copia del dd/mm" y "Actualizar": spec 009.

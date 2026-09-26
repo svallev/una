@@ -71,11 +71,12 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
-  Future<bool> hasCompleted() async {
+  Future<bool> hasHistory() async {
     final q = db.select(db.tasks)
       ..where(
         (t) =>
-            t.status.equals(TaskStatus.completed.name) & t.deletedAt.isNull(),
+            t.status.equals(TaskStatus.completed.name) |
+            t.deletedAt.isNotNull(),
       )
       ..limit(1);
     return (await q.getSingleOrNull()) != null;
@@ -116,6 +117,27 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
               ),
             );
     return rows > 0;
+  }
+
+  @override
+  Future<bool> delete(String id, DateTime at) {
+    final ms = at.millisecondsSinceEpoch;
+    return db.transaction(() async {
+      final rows =
+          await (db.update(
+            db.tasks,
+          )..where((t) => t.id.equals(id) & t.deletedAt.isNull())).write(
+            TasksCompanion(
+              body: const Value(null),
+              deletedAt: Value(ms),
+              updatedAt: Value(ms),
+            ),
+          );
+      if (rows == 0) return false;
+      // Los archivos se borran con AttachmentStore (specs 007–009, CL-004-3).
+      await (db.delete(db.attachments)..where((a) => a.taskId.equals(id))).go();
+      return true;
+    });
   }
 
   @override

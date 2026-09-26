@@ -19,10 +19,9 @@ flowchart TB
     P1[currentTaskProvider]
     P2[queueProvider]
     P3[settingsProvider]
-    P4[undoController]
   end
   subgraph DOMAIN["Dominio (Dart puro, sin Flutter)"]
-    UC[Casos de uso: CreateTask · PlaceTask · CompleteTask · DeleteTask · UndoDelete · ReorderTask · EditTask · ImportAttachment · CaptureWebSnapshot]
+    UC[Casos de uso: CreateTask · PlaceTask · CompleteTask · DeleteTask · ReorderTask · EditTask · ImportAttachment · CaptureWebSnapshot]
     E[Entidades: Task · Attachment · Rank · QueuePosition · Settings]
     RP[[TaskRepository]]
     AS[[AttachmentStore]]
@@ -79,7 +78,7 @@ sequenceDiagram
   DB-->>M: Task + Attachment (rutas)
   M->>UI: primer fotograma: nota o miniatura en caché
   UI-->>OS: tarea visible (medida: TTFD)
-  Note over UI: después del primer fotograma: imagen/PDF a resolución completa,<br/>migraciones pesadas diferidas, purga de eliminadas, recuento de la cola
+  Note over UI: después del primer fotograma: imagen/PDF a resolución completa,<br/>migraciones pesadas diferidas, barrido de archivos huérfanos de tareas eliminadas, recuento de la cola
 ```
 
 - Fuentes empaquetadas (ya en el primer fotograma) y *shaders* precompilados.
@@ -97,7 +96,7 @@ erDiagram
   TASKS ||--o{ TASKS : "parentId (futuro)"
   TASKS {
     text id PK "UUIDv7"
-    text text "nullable; null si solo hay adjunto o si está purgada"
+    text text "nullable; null si solo hay adjunto o si está eliminada"
     text status "pending | completed"
     text rank "fractional index, único entre pendientes"
     int colorKey "0..4"
@@ -150,7 +149,7 @@ erDiagram
 | `CreateTask(text, position)` | inserta con `rank` antes de la primera (`top`) o después de la última (`end`); `colorKey` ≠ el de la actual | R3, R4 |
 | `CreateTask(attachment)` | importa el archivo → inserta **top** siempre | R5 |
 | `CompleteTask(current)` | `status = completed`, `completedAt = now`; conserva el adjunto | R9, R14, D8 |
-| `DeleteTask(id)` | `deletedAt = now`; deshacer 6 s; purga del contenido | R10, ADR-0006 |
+| `DeleteTask(id)` | en una transacción: `deletedAt = updatedAt = now`, `text = null` y se borran sus adjuntos; después, sus archivos. Sin deshacer | R10, ADR-0011 |
 | `ReorderTask(id, newIndex)` | nuevo `rank` entre los vecinos; el índice 0 ⇒ pasa a ser la actual | R13 |
 | `EditTask(id, text, attachment?)` | actualiza y conserva `rank` y `colorKey` | R11, R13 |
 

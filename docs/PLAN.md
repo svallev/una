@@ -17,7 +17,7 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D4 | Web en Vercel **solo para pruebas** |
 | D5 | Los documentos van **siempre arriba** (manda R5, no el prototipo) |
 | D6 | **PDF dentro** de la tarea; el resto, con el visor del sistema |
-| D7 | Eliminar = **deshacer durante 6 s** + tombstone |
+| D7 | Eliminar es **definitivo**: sin deshacer y sin "Nada pendiente."; queda una marca de borrado sin contenido (propietario, 2026-09-26; ADR-0011 sustituye a ADR-0006) |
 | D8 | Las completadas **conservan el adjunto** |
 | D9 | URL: **captura de página completa** para verla sin conexión |
 | D10 | Visor: **zoom + pantalla encendida**; sin brillo máximo ni horizontal |
@@ -55,7 +55,7 @@ flowchart LR
 | **F0 Preparación** | Liberar espacio ✅; Android Studio + SDK + Command-line Tools + emulador Pixel 6a (API 37) ✅; Flutter fijado en `.fvmrc` e instalado con `tools/install-flutter.sh` (FVM opcional); `gh` (opcional); repo en GitHub ✅ y seguridad activada; conectar Vercel; comprar el dominio neutro; cuenta de Google Play. **Xcode aplazado (D17)** | S | — | `flutter doctor` sin errores para Android y web; repo con CI verde ✅; reglas de rama en `main`; dominio → bundle ID definitivo en ADR |
 | **F1 Spikes (Android + web)** | S1 arranque (Android) · S2 animaciones · S3 PDF y visor del sistema (Android: intent) · S4 captura web (Android) · S5 importación y backup (Android) · S6 web + Vercel. Las partes iOS de S1, S3, S4 y S5 pasan a F-iOS (D17). Código **desechable** en `spikes/` (rama propia, no se fusiona). **Requiere aprobación.** | M | F0 | Criterios de ADR-0001 cumplidos en Android → ADR-0001 **Aceptado para Android**, provisional para iOS; si no → ADR de cambio a Expo |
 | **F2 Esqueleto + 001** *(✅ completada el 2026-09-25, PR #3)* | `app/` + identidad + l10n + tokens + BD v1 + repositorio + CI + web + la spec 001 completa | L | F1 | CA-001 en verde; arranque p50 < 1 s medido; preview en Vercel por PR |
-| **F3 Núcleo** *(en curso: 002, 003 y 005 ✅ 2026-09-25)* | 002 crear y posición → 003 completar → 004 eliminar y deshacer → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
+| **F3 Núcleo** *(en curso: 002, 003 y 005 ✅ 2026-09-25; 004 ✅ 2026-09-26)* | 002 crear y posición → 003 completar → 004 eliminar → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
 | **F4 Adjuntos** | 007 imagen (canal de importación + visor) → 008 documento → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
 | **010** | Idioma y Configuración (tras diseñar la pantalla) | S | F3 (se puede hacer en paralelo con F4) | CA-010 en verde |
 | **F5 Endurecimiento** | Auditoría de accesibilidad (VoiceOver, TalkBack, Switch, texto grande), pruebas MASTG, presupuesto de rendimiento y tamaño, política de privacidad, fichas de tienda, capturas, manifiesto de privacidad y Data Safety, iconos | M | F4, 010 | Checklist de publicación completa; 0 hallazgos altos |
@@ -96,7 +96,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R-15 | Web de pruebas poco representativa (canvas, accesibilidad) | Alta | Baja | Los criterios de accesibilidad y rendimiento se verifican solo en dispositivo | — |
 | R-16 | Deriva entre prototipo e implementación | Media | Media | `screen-map.md`, `prototype-deviations.md` y *goldens* | Cada PR de UI |
 | R-18 | **iOS aplazado (D17):** problemas propios de iOS (arranque, captura con WKWebView, QuickLook, Data Protection, revisión de App Store) se descubren tarde y obligan a rehacer trabajo | Media | Media | Toda la integración nativa detrás de puertos (`SystemViewer`, `WebSnapshotter`, `ImageSanitizer`) con implementación Android primero; nada de APIs solo de Android en el dominio; **CI compila iOS sin firmar desde F2** (macOS runner, gratis en repo público) para detectar roturas de compilación; F-iOS empieza por los spikes iOS | Cada PR (job iOS de CI); inicio de F-iOS |
-| R-17 | Pantallas sin diseño (Configuración, aviso de deshacer, visor, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (010, 004, 007–009) | Antes de F3/F4 |
+| R-17 | Pantallas sin diseño (Configuración, visor, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (010, 007–009) | Antes de F3/F4 |
 | R-19 | Tamaño del APK por encima del presupuesto (27,6 MB arm64 en el spike, con PDFium, SQLite y WebView) | Media | Baja | App bundle por ABI, sin símbolos, `--analyze-size` en CI; revisar dependencias | F2 |
 
 ## 6. Trazabilidad de reglas → specs
@@ -112,9 +112,9 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R7 listado en ≥ 2 interacciones | 005, 006 | CA-005-01/03, CA-006-01 |
 | R8 abrir → tarea actual rápido | 001, 007, 008, 009 | CA-001-09, CA-007-07, CA-008-04, CA-009-05/06 |
 | R9 completar manteniendo pulsado + refuerzo | 003 | CA-003-01 a 04, 07, 08 |
-| R10 eliminar con confirmación y arrugado | 004 | CA-004-01 a 05 |
+| R10 eliminar con confirmación y arrugado | 004 | CA-004-01 a 06 |
 | R11 editar, crear y menú | 005 | CA-005-01 a 09 |
-| R12 estados vacíos | 003, 004 | CA-003-05, CA-004-07 |
+| R12 estado vacío ("Todo hecho.") | 003, 004 | CA-003-05, CA-004-07/08 |
 | R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-03 a 07, 10 |
 | R14 histórico | 003 | CA-003-06 |
 | R15 idioma | 010 (y P7 en todas) | CA-010-01 a 05 |

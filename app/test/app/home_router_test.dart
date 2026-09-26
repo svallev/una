@@ -4,6 +4,7 @@ import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/color_picker.dart';
 import 'package:app/domain/ports/clock.dart';
+import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
@@ -254,4 +255,34 @@ void main() {
     expect(task?.colorKey, ColorPicker.firstTaskColorKey);
     expect(UnaPalettes.classic[task!.colorKey], const Color(0xFFFFE55C));
   });
+
+  testWidgets(
+    'CA-004-08: al reabrir con solo tareas eliminadas se ve "Todo hecho.", no el editor',
+    (tester) async {
+      final repo = InMemoryTaskRepository();
+      await repo.insert(sampleTask(id: 'a', rank: 'a'));
+      await repo.delete('a', DateTime.utc(2026, 9, 26));
+      await repo.setFirstRunDone();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            taskRepositoryProvider.overrideWithValue(repo),
+            settingsRepositoryProvider.overrideWithValue(repo),
+            bootStateProvider.overrideWithValue(
+              BootState(
+                currentTask: null,
+                firstRunDone: true,
+                // Igual que main.dart: solo se consulta si no hay pendientes.
+                hasHistory: await repo.hasHistory(),
+              ),
+            ),
+          ],
+          child: const UnaApp(),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(AllDoneScreen), findsOneWidget);
+      expect(find.byType(TaskEditorScreen), findsNothing);
+    },
+  );
 }

@@ -182,4 +182,29 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get deleteTitle => '¿Eliminar esta tarea?';
+
+  @override
+  String deleteBody(String label) {
+    return '“$label” desaparecerá sin marcarse como hecha.';
+  }
+
+  @override
+  String get deleteConfirm => 'Eliminar';
+
+  @override
+  String get deleteA11yAction => 'Eliminar tarea';
+
+  @override
+  String a11yDeletedNext(String text) {
+    return 'Tarea eliminada. Siguiente: $text';
+  }
+
+  @override
+  String get a11yDeletedAllDone => 'Tarea eliminada. Todo hecho.';
+
+  @override
+  String get deleteError => 'No hemos podido eliminar la tarea';
 }

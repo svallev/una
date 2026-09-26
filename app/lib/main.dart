@@ -25,8 +25,8 @@ Future<void> bootstrap({
     final boot = BootState(
       currentTask: current,
       firstRunDone: await repos.settings.firstRunDone(),
-      // Solo importa si no hay pendientes ("Todo hecho.", CA-003-11).
-      hasCompleted: current == null && await repos.tasks.hasCompleted(),
+      // Solo importa si no hay pendientes ("Todo hecho.", CA-003-11, CA-004-08).
+      hasHistory: current == null && await repos.tasks.hasHistory(),
     );
     runApp(
       ProviderScope(

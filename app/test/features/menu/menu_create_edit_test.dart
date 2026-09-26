@@ -154,18 +154,10 @@ void main() {
     });
 
     testWidgets(
-      'CA-005-11 / CA-005-09: Eliminar no hace nada aún; Configuración cierra el menú',
+      'CA-005-09: Configuración cierra el menú (Eliminar, spec 004: ver delete_confirm_test)',
       (tester) async {
-        final repo = await pumpUnaApp(
-          tester,
-          repo: _Repo(),
-          tasks: ['Primera', 'Segunda'],
-        );
+        await pumpUnaApp(tester, repo: _Repo(), tasks: ['Primera', 'Segunda']);
         await _openMenu(tester);
-        await tester.tap(find.text('Eliminar'));
-        await tester.pumpAndSettle();
-        expect(find.byType(MenuSheet), findsOneWidget);
-        expect(await repo.countPending(), 2);
         await tester.tap(find.text('Configuración y perfil'));
         await tester.pumpAndSettle();
         expect(find.byType(MenuSheet), findsNothing);

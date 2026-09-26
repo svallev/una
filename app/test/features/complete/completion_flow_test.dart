@@ -35,7 +35,7 @@ class _Repo extends InMemoryTaskRepository {
 Future<_Repo> _app(
   WidgetTester tester, {
   List<String> tasks = const [],
-  bool hasCompleted = false,
+  bool hasHistory = false,
   bool screenReader = false,
   bool reduced = false,
 }) async {
@@ -69,7 +69,7 @@ Future<_Repo> _app(
           BootState(
             currentTask: await repo.currentTask(),
             firstRunDone: true,
-            hasCompleted: hasCompleted,
+            hasHistory: hasHistory,
           ),
         ),
         colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
@@ -344,7 +344,7 @@ void main() {
   testWidgets(
     'CA-003-11: sin pendientes y con completadas, al abrir se ve "Todo hecho."',
     (tester) async {
-      await _app(tester, hasCompleted: true);
+      await _app(tester, hasHistory: true);
       expect(find.byType(AllDoneScreen), findsOneWidget);
       expect(find.byType(TaskEditorScreen), findsNothing);
       await tester.pump(UnaMotion.enter);
@@ -386,7 +386,7 @@ void main() {
   testWidgets(
     'CA-003-10: "Crear una tarea" abre el editor; atrás vuelve a "Todo hecho." y al guardar se ve la tarea',
     (tester) async {
-      await _app(tester, hasCompleted: true);
+      await _app(tester, hasHistory: true);
       await tester.tap(find.text('Crear una tarea'));
       await tester.pumpAndSettle();
       expect(find.byType(TaskEditorScreen), findsOneWidget);

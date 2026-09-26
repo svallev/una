@@ -63,6 +63,10 @@ Que un horario, un mapa o unos pasos fotografiados queden **a pantalla completa 
   - **Dado** que se completa una tarea con imagen
   - **Cuando** se consulta el almacenamiento
   - **Entonces** los archivos de la imagen se conservan.
+- **CA-007-12 Eliminar borra los archivos (spec 004, ADR-0011)**
+  - **Dado** que se elimina una tarea con imagen
+  - **Cuando** se confirma la eliminación
+  - **Entonces** después de la transacción se borran todos sus archivos (original, versión de pantalla y miniatura): no queda nada en `attachments/<id>/`. Si falla, al siguiente arranque (después del primer fotograma, sin retrasar CA-001-09) se barren los directorios de adjuntos cuyo id no está en la BD (CL-004-3). Se hereda en las specs 008 y 009 (PDF, documentos y capturas de páginas).
 
 ## 4. Casos límite
 

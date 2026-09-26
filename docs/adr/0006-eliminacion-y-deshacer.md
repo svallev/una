@@ -1,6 +1,6 @@
 # ADR-0006: Eliminar = borrado lógico con "Deshacer" durante 6 s y purga posterior
 
-- **Estado:** Aceptado (D7)
+- **Estado:** Sustituido por ADR-0011 (2026-09-26)
 - **Fecha:** 2026-09-24
 - **Relacionado:** spec 004, ADR-0002, tokens `motion.duration.undoWindow`
 

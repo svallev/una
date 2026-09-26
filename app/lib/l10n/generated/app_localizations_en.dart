@@ -182,4 +182,29 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get deleteTitle => 'Delete this task?';
+
+  @override
+  String deleteBody(String label) {
+    return '“$label” will disappear without being marked as done.';
+  }
+
+  @override
+  String get deleteConfirm => 'Delete';
+
+  @override
+  String get deleteA11yAction => 'Delete task';
+
+  @override
+  String a11yDeletedNext(String text) {
+    return 'Task deleted. Next: $text';
+  }
+
+  @override
+  String get a11yDeletedAllDone => 'Task deleted. All done.';
+
+  @override
+  String get deleteError => 'We couldn\'t delete the task';
 }
