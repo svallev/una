@@ -155,6 +155,9 @@ abstract final class UnaFontSizes {
 
   /// {value: 11, unit: px}
   static const double micro = 11.0;
+
+  /// Pie de la tarea con imagen (recuadro negro, peso 800, spec 007)
+  static const double imageCaption = 22.0;
 }
 
 /// Interletrado en em (multiplicar por el tamaño de fuente).
@@ -213,6 +216,17 @@ abstract final class UnaSizes {
   static const double linkButton = 44.0;
   static const double bodyMaxWidth = 300.0;
   static const double confettiBorder = 2.0;
+  static const double sheetRowTall = 64.0;
+  static const double imageCaptionBottom = 146.0;
+  static const double imageCaptionPadX = 14.0;
+  static const double imageCaptionMaxTextScale = 1.6;
+  static const double listThumb = 44.0;
+  static const double listThumbBorder = 2.0;
+  static const double attachPreviewTop = 14.0;
+  static const double removeAttachment = 48.0;
+  static const double removeAttachmentIcon = 14.0;
+  static const double removeAttachmentStroke = 3.4;
+  static const double viewerClose = 48.0;
 }
 
 abstract final class UnaBorders {
@@ -355,6 +369,12 @@ abstract final class UnaMotion {
 
   /// Vuelo del confeti
   static const Duration confetti = Duration(milliseconds: 1100);
+
+  /// "Preparando imagen…" solo aparece si la importación tarda más (CA-007-15)
+  static const Duration importIndicatorDelay = Duration(milliseconds: 400);
+
+  /// Animación del doble toque en el visor; con reducir movimiento, salta
+  static const Duration viewerZoom = Duration(milliseconds: 250);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);
@@ -366,4 +386,6 @@ abstract final class UnaMotion {
   static const Cubic easeCurve = Cubic(0.25, 0.1, 0.25, 1.0);
   static const double dragThreshold = 6.0;
   static const double dragTilt = -1.5;
+  static const double viewerZoomStep = 2.5;
+  static const double viewerZoomMax = 8.0;
 }

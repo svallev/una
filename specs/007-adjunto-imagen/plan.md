@@ -2,7 +2,7 @@
 
 - **Spec:** `specs/007-adjunto-imagen/spec.md` (estado: Aprobada, 2026-09-26)
 - **ADR aplicables:** ADR-0002 (repositorio y esquema v1), ADR-0004 (copias, R-10), ADR-0011 (eliminar sin deshacer), ADR-0010 (web de pruebas); decisiones de los spikes I-1, I-2, I-3, I-4 y H-6/H-7
-- **Estado del plan:** Borrador (pendiente de aprobación del propietario)
+- **Estado del plan:** Aprobado (propietario, 2026-09-26)
 - **Rama:** `feat/007-adjunto-imagen`, desde `main` (la 006 ya está fusionada)
 
 ## 1. Resumen del enfoque

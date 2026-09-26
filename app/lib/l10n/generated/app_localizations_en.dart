@@ -279,4 +279,119 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get attachSheetTitle => 'Add to the task';
+
+  @override
+  String get attachSheetClose => 'Close';
+
+  @override
+  String get attachTakePhoto => 'Take photo';
+
+  @override
+  String get attachTakePhotoHint => 'With the camera · goes on top';
+
+  @override
+  String get attachPickImage => 'Upload image';
+
+  @override
+  String get attachPickImageHint => 'From your gallery · goes on top';
+
+  @override
+  String get attachPickFile => 'Upload file';
+
+  @override
+  String get attachPickFileHint => 'PDF, Word, Excel… · goes on top';
+
+  @override
+  String get attachUrl => 'Load URL';
+
+  @override
+  String get attachUrlHint => 'A web page · goes on top';
+
+  @override
+  String get imagePreparing => 'Preparing image…';
+
+  @override
+  String get imagePreparingCancel => 'Cancel';
+
+  @override
+  String get attachmentPhoto => 'Photo';
+
+  @override
+  String get attachmentImage => 'Image';
+
+  @override
+  String a11yWithPhoto(String text) {
+    return '$text. With photo';
+  }
+
+  @override
+  String a11yWithImage(String text) {
+    return '$text. With image';
+  }
+
+  @override
+  String get a11yPhotoAdded => 'Photo added';
+
+  @override
+  String get a11yImageAdded => 'Image added';
+
+  @override
+  String get a11yAttachmentRemoved => 'Attachment removed';
+
+  @override
+  String get imageOpenHint => 'see the whole image';
+
+  @override
+  String get viewerTitle => 'Task image';
+
+  @override
+  String get viewerClose => 'Close';
+
+  @override
+  String get zoomIn => 'Zoom in';
+
+  @override
+  String get zoomOut => 'Zoom out';
+
+  @override
+  String get zoomFit => 'Fit to width';
+
+  @override
+  String a11yZoomLevel(double level) {
+    final intl.NumberFormat levelNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String levelString = levelNumberFormat.format(level);
+
+    return 'Zoom ×$levelString';
+  }
+
+  @override
+  String get errImageType =>
+      'This image type isn\'t supported. Try a JPEG, PNG or HEIC photo.';
+
+  @override
+  String errImageTooBig(int max) {
+    return 'The image is too large (max $max MB).';
+  }
+
+  @override
+  String errImageTooManyPixels(int max) {
+    return 'The image resolution is too high (max $max megapixels).';
+  }
+
+  @override
+  String get errImageUnreadable =>
+      'We couldn\'t read this image. Try another one.';
+
+  @override
+  String get errNoCamera => 'There\'s no camera app available.';
+
+  @override
+  String get attachmentMissing => 'Attachment unavailable';
+
+  @override
+  String get attachmentReplace => 'Replace';
 }
