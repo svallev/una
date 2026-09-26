@@ -1,6 +1,6 @@
 # Spec 006: Todas las tareas (listado)
 
-- **Estado:** En revisión. Reescrita el 2026-09-26 con las decisiones del propietario tras la revisión (spec-reviewer y a11y-reviewer); pendiente de su aprobación. Partes diferidas marcadas en los CA (adjuntos 007–009)
+- **Estado:** Aprobada (2026-09-26, propietario). Reescrita ese día con sus decisiones tras la revisión (spec-reviewer y a11y-reviewer). Partes diferidas marcadas en los CA (adjuntos 007–009)
 - **Reglas de producto:** R7 (acceso en dos pasos), R13 (reordenar, editar y eliminar desde el listado)
 - **Pantallas del prototipo:** 5 "Todas las tareas (con acciones)"
 - **Decisiones y ADR:** ADR-0002 (rank), ADR-0011 (eliminar es definitivo), DEV-09 (revocada), DEV-11, DEV-14, DEV-18, DEV-21, DEV-24, DEV-27 a DEV-34
