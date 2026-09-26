@@ -2,11 +2,14 @@ package invalid.pending.app
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorSpace
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
+import android.graphics.Rect
+import android.graphics.RectF
 import android.media.ExifInterface
 import android.os.Build
 import java.io.File
@@ -70,6 +73,92 @@ class ImageSanitizer(
             bitmap.recycle()
         }
     }
+
+    /**
+     * Rehace `screen.jpg` y `thumb.jpg` de un adjunto guardado en [dir] a partir
+     * de sus teselas (CA-007-19). Solo decodifica la zona recortada de cada
+     * versión, reducida, así que una captura larga no ocupa memoria de más.
+     * Lanza si falta o no se puede leer alguna tesela necesaria.
+     */
+    fun regenerateDerived(dir: File, width: Int, height: Int) {
+        writeDerived(dir, width, height, screenWidth, screenHeight, "screen.jpg", SCREEN_QUALITY)
+        writeDerived(dir, width, height, THUMB, THUMB, "thumb.jpg", THUMB_QUALITY)
+    }
+
+    private fun writeDerived(
+        dir: File, width: Int, height: Int,
+        targetW: Int, targetH: Int, name: String, quality: Int,
+    ) {
+        // Mismo recorte que [cover], sobre la imagen completa.
+        val scale = max(targetW.toDouble() / width, targetH.toDouble() / height)
+        val cropW = min(width, (targetW / scale).roundToInt().coerceAtLeast(1))
+        val cropH = min(height, (targetH / scale).roundToInt().coerceAtLeast(1))
+        val x0 = (width - cropW) / 2
+        val y0 = (height - cropH) / 2
+        val s = min(1.0, scale)
+        val outW = (cropW * s).roundToInt().coerceAtLeast(1)
+        val outH = (cropH * s).roundToInt().coerceAtLeast(1)
+        var sample = 1
+        while (sample * 2 <= 1 / s) sample *= 2
+        val out = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        try {
+            val canvas = Canvas(out)
+            canvas.drawColor(Color.WHITE)
+            val crop = Rect(x0, y0, x0 + cropW, y0 + cropH)
+            val rows = (height + TILE - 1) / TILE
+            val cols = (width + TILE - 1) / TILE
+            for (r in 0 until rows) {
+                for (c in 0 until cols) {
+                    val tile = Rect(
+                        c * TILE, r * TILE,
+                        min(width, (c + 1) * TILE), min(height, (r + 1) * TILE),
+                    )
+                    val part = Rect(tile)
+                    if (!part.intersect(crop)) continue
+                    val file = File(dir, "full-$r-$c.jpg")
+                    if (file.length() == 0L) throw ImportException("unreadable")
+                    val decoder = newRegionDecoder(file)
+                    try {
+                        val local = Rect(part)
+                        local.offset(-tile.left, -tile.top)
+                        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+                        val bmp = decoder.decodeRegion(local, opts)
+                            ?: throw ImportException("unreadable")
+                        try {
+                            val dst = RectF(
+                                ((part.left - x0) * s).toFloat(),
+                                ((part.top - y0) * s).toFloat(),
+                                ((part.right - x0) * s).toFloat(),
+                                ((part.bottom - y0) * s).toFloat(),
+                            )
+                            canvas.drawBitmap(bmp, null, dst, null)
+                        } finally {
+                            bmp.recycle()
+                        }
+                    } finally {
+                        decoder.recycle()
+                    }
+                }
+            }
+            // Se escribe aparte y se renombra: nunca queda una versión a medias.
+            val tmp = File(dir, "$name.tmp")
+            writeJpeg(out, tmp, quality)
+            if (!tmp.renameTo(File(dir, name))) {
+                tmp.delete()
+                throw ImportException("unreadable")
+            }
+        } finally {
+            out.recycle()
+        }
+    }
+
+    private fun newRegionDecoder(file: File): BitmapRegionDecoder =
+        if (Build.VERSION.SDK_INT >= 31) {
+            BitmapRegionDecoder.newInstance(file.path)
+        } else {
+            @Suppress("DEPRECATION")
+            BitmapRegionDecoder.newInstance(file.path, false)
+        } ?: throw ImportException("unreadable")
 
     private fun checkCancelled() {
         if (cancelled.get()) throw ImportException("cancelled")

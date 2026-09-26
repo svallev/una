@@ -30,4 +30,8 @@ class UnavailableImageImporter implements ImageImporter {
 
   @override
   Future<void> cancel(String id) async {}
+
+  @override
+  Future<void> regenerateDerived(Attachment attachment) =>
+      throw const ImageImportFailure(ImageImportError.unreadable);
 }

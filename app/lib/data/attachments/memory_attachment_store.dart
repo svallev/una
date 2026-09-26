@@ -24,6 +24,10 @@ class MemoryAttachmentStore implements AttachmentStore {
   /// Contenido de un archivo de la preparación [id].
   Uint8List? stagingBytes(String id, String name) => _staging[id]?[name];
 
+  /// Escribe un archivo del adjunto guardado [id] (regenerar sus derivadas).
+  void putStored(String id, String name, Uint8List bytes) =>
+      (_stored[id] ??= {})[name] = bytes;
+
   /// Simula que faltan o se estropean archivos (tests de CA-007-19).
   void removeFile(String id, String name) => _stored[id]?.remove(name);
 

@@ -217,5 +217,7 @@
   "attachmentMissing": "Adjunto no disponible",
   "@attachmentMissing": { "description": "Tarjeta de adjunto perdido. CA-007-19" },
   "attachmentReplace": "Sustituir",
-  "@attachmentReplace": { "description": "Acción de la tarjeta de adjunto perdido. CA-007-19" }
+  "@attachmentReplace": { "description": "Acción de la tarjeta de adjunto perdido. CA-007-19" },
+  "a11yAttachmentMissing": "{text}. Adjunto no disponible",
+  "@a11yAttachmentMissing": { "description": "Lectura de la tarea actual cuyo adjunto falta: {text} es el texto de la tarea o «Foto»/«Imagen». CA-007-19/21", "placeholders": { "text": { "type": "String", "example": "Horario del festival" } } }
 }

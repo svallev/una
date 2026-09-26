@@ -65,6 +65,7 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
             "copy" -> copy(call.argument<String>("token")!!, id(call), maxBytes(call), result)
             "sanitize" -> sanitize(call, result)
             "cancel" -> cancel(id(call), result)
+            "regenerate" -> regenerate(call, result)
             "debugCopyFile" -> debugCopyFile(call, result)
             else -> result.notImplemented()
         }
@@ -269,6 +270,44 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                 throw ImportException(if (isNoSpace(e)) "noSpace" else "unreadable")
             } finally {
                 source.delete() // No se conserva ningún byte del original.
+            }
+        }
+    }
+
+    /**
+     * Rehace la versión de pantalla y la miniatura de un adjunto **guardado**
+     * (`files/attachments/<id>/`) desde sus teselas (CA-007-19). No toca las
+     * teselas ni la preparación.
+     */
+    private fun regenerate(call: MethodCall, result: MethodChannel.Result) {
+        val id = id(call)
+        val width = call.argument<Number>("width")!!.toInt()
+        val height = call.argument<Number>("height")!!.toInt()
+        executor.execute {
+            val outcome: Result<Any?> = try {
+                val dir = File(File(activity.filesDir, "attachments"), id)
+                if (!dir.isDirectory) throw ImportException("unreadable")
+                val (w, h) = screenSize()
+                ImageSanitizer(
+                    maxPixels = Long.MAX_VALUE,
+                    storedMaxPixels = Long.MAX_VALUE,
+                    screenWidth = w,
+                    screenHeight = h,
+                    cancelled = AtomicBoolean(false),
+                ).regenerateDerived(dir, width, height)
+                Result.success(null)
+            } catch (e: IOException) {
+                Result.failure(ImportException(if (isNoSpace(e)) "noSpace" else "unreadable"))
+            } catch (e: OutOfMemoryError) {
+                Result.failure(ImportException("unreadable"))
+            } catch (e: Exception) {
+                Result.failure(e as? ImportException ?: ImportException("unreadable"))
+            }
+            main.post {
+                outcome.fold(
+                    { result.success(null) },
+                    { result.error((it as ImportException).code, null, null) },
+                )
             }
         }
     }

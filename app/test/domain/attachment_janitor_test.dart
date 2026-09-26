@@ -42,7 +42,7 @@ void main() {
       );
       await saved('huerfano');
       stageImage(store, 'temporal');
-      store.putStaging('camara.camera', 'x', tinyJpeg);
+      store.putStaging('camara.camera', 'x', tinyImage);
       await janitor.sweep();
       expect(await store.storedIds(), {'con-tarea'});
       expect(await store.stagingIds(), isEmpty);
@@ -66,7 +66,7 @@ void main() {
       ..add('guardando')
       ..add('camara');
     stageImage(store, 'en-curso');
-    store.putStaging('camara.camera', 'x', tinyJpeg);
+    store.putStaging('camara.camera', 'x', tinyImage);
     await saved('guardando');
     await janitor.sweep();
     expect(await store.stagingIds(), {'en-curso', 'camara.camera'});

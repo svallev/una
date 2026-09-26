@@ -751,6 +751,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sustituir'**
   String get attachmentReplace;
+
+  /// Lectura de la tarea actual cuyo adjunto falta: {text} es el texto de la tarea o «Foto»/«Imagen». CA-007-19/21
+  ///
+  /// In es, this message translates to:
+  /// **'{text}. Adjunto no disponible'**
+  String a11yAttachmentMissing(String text);
 }
 
 class _AppLocalizationsDelegate

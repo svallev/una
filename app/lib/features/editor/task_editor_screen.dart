@@ -9,7 +9,6 @@ import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../domain/entities/attachment.dart';
-import '../../domain/entities/image_type.dart';
 import '../../domain/entities/queue_position.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/ports/image_importer.dart';
@@ -23,6 +22,7 @@ import '../../ui/wordmark.dart';
 import '../attachments/attach_sheet.dart';
 import '../attachments/attachment_preview.dart';
 import '../attachments/image_import_controller.dart';
+import '../attachments/import_error_text.dart';
 import '../current_task/current_task_screen.dart';
 import 'placement_sheet.dart';
 
@@ -225,22 +225,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     if (error != null && before?.error == null) {
       final l10n = AppLocalizations.of(context);
       // El aviso se anuncia solo (spec 007 §5).
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(switch (error) {
-            ImageImportError.unsupportedType => l10n.errImageType,
-            ImageImportError.tooLarge => l10n.errImageTooBig(
-              ImageLimits.maxBytesInMb,
-            ),
-            ImageImportError.tooManyPixels => l10n.errImageTooManyPixels(
-              ImageLimits.maxMegapixels,
-            ),
-            ImageImportError.unreadable => l10n.errImageUnreadable,
-            ImageImportError.noCamera => l10n.errNoCamera,
-            ImageImportError.noSpace => l10n.storageErrorNoSpace,
-          }),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(importErrorText(l10n, error))));
       ref.read(imageImportProvider.notifier).clearError();
       _focusPlus();
     }

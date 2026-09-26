@@ -95,6 +95,15 @@ class NativeImageImporter implements ImageImporter {
   });
 
   @override
+  Future<void> regenerateDerived(Attachment attachment) => _guard(
+    () => _channel.invokeMethod<void>('regenerate', {
+      'id': attachment.id,
+      'width': attachment.width,
+      'height': attachment.height,
+    }),
+  );
+
+  @override
   Future<void> cancel(String id) =>
       _channel.invokeMethod<void>('cancel', {'id': id});
 

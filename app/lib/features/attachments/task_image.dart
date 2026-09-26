@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/attachment.dart';
+import 'attachment_health.dart';
 
 /// Tarea actual con imagen (CA-007-08, prototipo `cv.isImage`): la versión de
 /// pantalla a sangre, recortada para llenarla, y el texto como pie (recuadro
@@ -20,18 +21,31 @@ class TaskImage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final images = ref.watch(attachmentImagesProvider);
+    final health = ref.watch(attachmentHealthProvider(attachment));
     final caption = this.caption;
     final mq = MediaQuery.of(context);
     return Stack(
       fit: StackFit.expand,
       children: [
         Image(
+          // Tras regenerarla, se vuelve a leer (CA-007-19).
+          key: ValueKey(health.generation),
           image: images.stored(attachment.screenPath),
           fit: BoxFit.cover,
           gaplessPlayback: true,
-          // Sin la versión de pantalla se ve el color de la nota; el aviso de
-          // adjunto perdido llega con CA-007-19.
-          errorBuilder: (_, _, _) => const SizedBox.expand(),
+          // No se puede decodificar: se regenera desde la completa y, si
+          // tampoco sirve, se ve "Adjunto no disponible". Mientras, el color
+          // de la nota.
+          errorBuilder: (context, _, _) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                ref
+                    .read(attachmentHealthProvider(attachment).notifier)
+                    .reportBroken();
+              }
+            });
+            return const SizedBox.expand();
+          },
         ),
         if (caption != null && caption.isNotEmpty)
           Positioned(

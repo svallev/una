@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/image_type.dart';
+import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/domain/ports/image_importer.dart';
 
 import 'attachments.dart';
@@ -92,6 +93,24 @@ class FakeImageImporter implements ImageImporter {
     await _wait(id, sanitizeDelay);
     if (sanitizeError case final e?) throw e;
     return stageImage(store, id, origin: origin);
+  }
+
+  /// Adjuntos cuyas derivadas se han regenerado.
+  final regenerated = <String>[];
+
+  /// Si no es null, regenerar falla con este error.
+  Object? regenerateError;
+
+  @override
+  Future<void> regenerateDerived(Attachment attachment) async {
+    regenerated.add(attachment.id);
+    if (regenerateError case final e?) throw e;
+    if (await store.check(attachment) == AttachmentFiles.missing) {
+      throw const ImageImportFailure(ImageImportError.unreadable);
+    }
+    store
+      ..putStored(attachment.id, 'screen.jpg', tinyImage)
+      ..putStored(attachment.id, 'thumb.jpg', tinyImage);
   }
 
   @override

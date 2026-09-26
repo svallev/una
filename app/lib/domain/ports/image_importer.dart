@@ -74,4 +74,9 @@ abstract interface class ImageImporter {
 
   /// Aborta el trabajo en curso de `<id>` y borra su preparación.
   Future<void> cancel(String id);
+
+  /// Rehace la versión de pantalla y la miniatura del adjunto **guardado**
+  /// [attachment] desde su versión completa (CA-007-19). Lanza
+  /// [ImageImportFailure] si la completa falta o no se puede leer.
+  Future<void> regenerateDerived(Attachment attachment);
 }

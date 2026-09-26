@@ -1,20 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show OrdinalSortKey;
-import 'package:flutter/semantics.dart' show CustomSemanticsAction;
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
+import '../../domain/entities/attachment.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/focus_on_signal.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
+import '../attachments/attach_sheet.dart';
+import '../attachments/attachment_health.dart';
+import '../attachments/image_import_controller.dart';
 import '../attachments/image_viewer_screen.dart';
+import '../attachments/import_error_text.dart';
 import '../attachments/keep_screen_on_controller.dart';
+import '../attachments/missing_attachment_card.dart';
 import '../attachments/task_image.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/completion_controller.dart';
@@ -103,6 +112,13 @@ class CurrentTaskScreen extends ConsumerWidget {
 
     final attachment = task.attachment;
     final isPhoto = attachment?.isPhoto ?? false;
+    // Falta la versión completa: "Adjunto no disponible" (CA-007-19).
+    final missing =
+        attachment != null &&
+        ref.watch(attachmentHealthProvider(attachment)).health ==
+            AttachmentHealth.missing;
+    final showImage = attachment != null && !missing;
+    final kind = isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage;
 
     /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
     /// y sin decir "imagen" dos veces (CA-007-21).
@@ -111,15 +127,17 @@ class CurrentTaskScreen extends ConsumerWidget {
       child: Semantics(
         label: l10n.currentTaskSemantics(switch (attachment) {
           null => text,
-          _ when text.isEmpty =>
-            isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage,
+          _ when missing => l10n.a11yAttachmentMissing(
+            text.isEmpty ? kind : text,
+          ),
+          _ when text.isEmpty => kind,
           _ => isPhoto ? l10n.a11yWithPhoto(text) : l10n.a11yWithImage(text),
         }),
         // Papel de imagen, salvo si la lectura ya acaba en "imagen".
-        image: isPhoto,
+        image: isPhoto && showImage,
         // Activarla abre el visor (CA-007-09/21).
-        hint: attachment != null && !faceOnly ? l10n.imageOpenHint : null,
-        onTap: attachment != null && !faceOnly ? openViewer : null,
+        hint: showImage && !faceOnly ? l10n.imageOpenHint : null,
+        onTap: showImage && !faceOnly ? openViewer : null,
         // También se completa (CA-003-07) y se elimina (CA-004-10) desde la
         // tarea.
         customSemanticsActions: faceOnly
@@ -158,7 +176,7 @@ class CurrentTaskScreen extends ConsumerWidget {
     // Con imagen, logotipo y menú llevan fondo blanco (CA-007-08, prototipo
     // `chromeBg`); el logotipo, con 8 px a cada lado sin moverse.
     const logoPad = UnaSpace.s;
-    final Widget wordmark = attachment == null
+    final Widget wordmark = !showImage
         ? const Wordmark()
         : Transform.translate(
             offset: const Offset(-logoPad, 0),
@@ -193,7 +211,7 @@ class CurrentTaskScreen extends ConsumerWidget {
                     child: SquareIconButton(
                       icon: UnaIcons.menu,
                       label: l10n.menuButton,
-                      fill: attachment != null
+                      fill: showImage
                           ? UnaColors.surface
                           : UnaPalettes.classic[task.colorKey %
                                 UnaPalettes.classic.length],
@@ -205,8 +223,25 @@ class CurrentTaskScreen extends ConsumerWidget {
             ),
             Expanded(
               // Con imagen, la tarea está detrás, a sangre.
-              child: attachment != null
+              child: showImage
                   ? const SizedBox.shrink()
+                  : missing
+                  ? _Order(
+                      0,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: chromeOnly
+                              ? const SizedBox.shrink()
+                              : _MissingAttachment(
+                                  task: task,
+                                  header: faceOnly
+                                      ? (c) => c
+                                      : (c) => taskNode(c),
+                                  interactive: !faceOnly,
+                                ),
+                        ),
+                      ),
+                    )
                   // La zona desplazable es su propio nodo: el orden va aquí.
                   : _Order(
                       0,
@@ -240,7 +275,7 @@ class CurrentTaskScreen extends ConsumerWidget {
             ? content
             : StickyNote(
                 colorKey: task.colorKey,
-                child: attachment == null
+                child: !showImage
                     ? content
                     : Stack(
                         fit: StackFit.expand,
@@ -267,7 +302,7 @@ class CurrentTaskScreen extends ConsumerWidget {
     );
     if (faceOnly || chromeOnly) return ExcludeSemantics(child: screen);
     // Con imagen, la pantalla no se apaga mientras se usa (CA-007-12).
-    return KeepScreenOnWhileVisible(enabled: attachment != null, child: screen);
+    return KeepScreenOnWhileVisible(enabled: showImage, child: screen);
   }
 }
 
@@ -298,6 +333,122 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
   if (action == MenuAction.allTasks) return openTaskList(context, ref);
   if (editor == null) return confirmAndDeleteTask(context, ref, task);
   await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
+}
+
+/// "Adjunto no disponible" en la pantalla principal, con sus acciones
+/// (CA-007-19). "Sustituir" usa su propia importación, aparte del editor.
+class _MissingAttachment extends ConsumerWidget {
+  const _MissingAttachment({
+    required this.task,
+    required this.header,
+    required this.interactive,
+  });
+
+  final Task task;
+  final Widget Function(Widget) header;
+  final bool interactive;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final import = ref.watch(missingReplaceImportProvider);
+    ref.listen(missingReplaceImportProvider, (before, now) {
+      final error = now.error;
+      if (error == null || before?.error != null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(importErrorText(AppLocalizations.of(context), error)),
+        ),
+      );
+      ref.read(missingReplaceImportProvider.notifier).clearError();
+    });
+    return MissingAttachmentCard(
+      text: task.text ?? '',
+      header: header,
+      preparing: import.showPreparing,
+      onCancelPreparing: () =>
+          ref.read(missingReplaceImportProvider.notifier).cancel(),
+      onReplace: interactive ? () => _replace(context, ref) : () {},
+      onRemove: interactive ? () => _remove(context, ref) : () {},
+      onDelete: interactive
+          ? () => confirmAndDeleteTask(context, ref, task)
+          : () {},
+    );
+  }
+
+  bool _busy(WidgetRef ref) =>
+      ref.read(completionProvider).busy ||
+      ref.read(deletionProvider).busy ||
+      ref.read(missingReplaceImportProvider).preparing;
+
+  /// "Sustituir": la hoja "Añadir" y, con la imagen lista, se guarda en la
+  /// tarea sin moverla (CA-007-06).
+  Future<void> _replace(BuildContext context, WidgetRef ref) async {
+    if (_busy(ref)) return;
+    final choice = await showAttachSheet(context);
+    if (choice == null || !context.mounted) return;
+    final controller = ref.read(missingReplaceImportProvider.notifier);
+    final outcome = await controller.pick(switch (choice) {
+      AttachChoice.camera => AttachmentOrigin.camera,
+      AttachChoice.gallery => AttachmentOrigin.gallery,
+    });
+    if (outcome != ImportOutcome.added || !context.mounted) return;
+    final image = ref.read(missingReplaceImportProvider).image!;
+    final saved = await _save(
+      context,
+      ref,
+      () => ref
+          .read(editTaskProvider)
+          .call(task, task.text ?? '', attachment: ReplaceAttachment(image)),
+    );
+    if (saved && context.mounted) controller.saved();
+  }
+
+  /// "Quitar adjunto" (con texto).
+  Future<void> _remove(BuildContext context, WidgetRef ref) async {
+    if (_busy(ref)) return;
+    final l10n = AppLocalizations.of(context);
+    final view = View.of(context);
+    final direction = Directionality.of(context);
+    final saved = await _save(
+      context,
+      ref,
+      () => ref
+          .read(editTaskProvider)
+          .call(task, task.text ?? '', attachment: const RemoveAttachment()),
+    );
+    if (!saved) return;
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        view,
+        l10n.a11yAttachmentRemoved,
+        direction,
+      ),
+    );
+  }
+
+  Future<bool> _save(
+    BuildContext context,
+    WidgetRef ref,
+    Future<Object?> Function() write,
+  ) async {
+    try {
+      await write();
+      // El foco vuelve a la tarea (ya sin la tarjeta o con la imagen nueva).
+      ref.read(screenFocusProvider.notifier).signal();
+      return true;
+    } on Object catch (e) {
+      if (!context.mounted) return false;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isNoSpaceError(e) ? l10n.storageErrorNoSpace : l10n.editorSaveError,
+          ),
+        ),
+      );
+      return false;
+    }
+  }
 }
 
 /// Visor de la imagen (CA-007-09); al cerrarlo, el foco vuelve a la tarea.

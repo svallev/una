@@ -400,4 +400,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attachmentReplace => 'Replace';
+
+  @override
+  String a11yAttachmentMissing(String text) {
+    return '$text. Attachment unavailable';
+  }
 }
