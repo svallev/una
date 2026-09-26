@@ -15,3 +15,4 @@ Formato MADR simplificado ([plantilla](0000-template.md)). Nuevos ADR con la ski
 | [0009](0009-monorepo-y-landing.md) | Monorepo: `app/` y `landing/` | Aceptado |
 | [0010](0010-vercel-web-de-pruebas.md) | Web de pruebas en Vercel | Aceptado (S6 en local) |
 | [0011](0011-eliminar-sin-deshacer.md) | Eliminar es definitivo (sin deshacer), con marca de borrado sin contenido | Aceptado |
+| [0012](0012-sin-historico.md) | Sin histórico: completar y eliminar borran la tarea del todo | Propuesto |

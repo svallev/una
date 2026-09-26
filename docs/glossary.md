@@ -14,7 +14,7 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Mantener pulsado | Press and hold | `HoldToComplete` | Gesto de 1,2 s que completa la tarea. |
 | Eliminar | Delete | `delete()` | Quitar una tarea **sin** completarla. Es definitivo: no hay deshacer (ADR-0011). |
 | Marca de borrado | Tombstone | `deletedAt` | Registro mínimo de que una tarea se eliminó. Sirve para una futura sincronización. |
-| Histórico | History | `history` | Tareas completadas con su fecha. En la v1 se guarda pero no se muestra. |
+| Histórico | History | `history` | Tareas completadas con su fecha. En la v1 se guarda pero no se muestra. *Se retira con el ADR-0012 (propuesto): no se guarda lo hecho.* |
 | Adjunto | Attachment | `Attachment` | Archivo copiado dentro de la app y asociado a una tarea: imagen, PDF, documento o captura de URL. |
 | Tipo de adjunto | Attachment kind | `AttachmentKind` | `image`, `pdf`, `document`, `web`. |
 | Foto | Photo | `AttachmentKind.image` (origen `camera`) | Imagen hecha con la cámara desde la app. |

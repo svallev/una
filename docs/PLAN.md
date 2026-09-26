@@ -18,7 +18,7 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D5 | Los documentos van **siempre arriba** (manda R5, no el prototipo) |
 | D6 | **PDF dentro** de la tarea; el resto, con el visor del sistema |
 | D7 | Eliminar es **definitivo**: sin deshacer y sin "Nada pendiente."; queda una marca de borrado sin contenido (propietario, 2026-09-26; ADR-0011 sustituye a ADR-0006) |
-| D8 | Las completadas **conservan el adjunto** |
+| D8 | Las completadas **conservan el adjunto** — *Propuesta de sustitución (ADR-0012, pendiente de aceptar): no hay histórico; completar y eliminar borran la tarea del todo* |
 | D9 | URL: **captura de página completa** para verla sin conexión |
 | D10 | Visor: **zoom + pantalla encendida** (hasta 10 min sin tocar); sin brillo máximo; **gira solo el visor** (enmienda del propietario, 2026-09-26, spec 007) |
 | D11 | Sin biometría en la v1 |
@@ -116,7 +116,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R11 editar, crear y menú | 005 | CA-005-01 a 09 |
 | R12 estado vacío ("Todo hecho.") | 003, 004 | CA-003-05, CA-004-07/08 |
 | R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-04 a 16 |
-| R14 histórico | 003 | CA-003-06 |
+| R14 histórico | 003 | CA-003-06 — *se retira con el ADR-0012 (propuesto)* |
 | R15 idioma | 010 (y P7 en todas) | CA-010-01 a 05 |
 
 ## 7. Decisiones pendientes
@@ -144,7 +144,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | 1 | Fecha límite, vista "hoy" con más de una tarea, agrupación por fecha en el listado | `dueDate`; **requiere un ADR** porque "hoy" puede mostrar más de una tarea (tensión con P1) |
 | 2 | Creación en bloque, subtareas | `parentId`, `rank` por nivel |
 | 3 | Importar de Todoist, Google Keep, Google Tasks, Microsoft To Do y Any.do | `source`, `externalId`, flag `imports`, T-14 |
-| 4 | Histórico visible y borrable, theming (paletas), alertas (notificaciones locales) | `completedAt`, `palette.*`, flag `notifications` |
+| 4 | ~~Histórico visible y borrable~~ (retirado por el ADR-0012, propuesto), theming (paletas), alertas (notificaciones locales) | `palette.*`, flag `notifications` |
 | 5 | Configuración completa, páginas legales, ayuda, exportar/importar `.zip` | Pantalla Configuración, ADR-0004 |
 | — | Landing | ADR-0009 (`landing/`) |
 | — | Widgets de pantalla de inicio y bloqueo | ADR-0001 (home_widget), ADR-0005 (clase de protección) |

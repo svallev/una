@@ -51,6 +51,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
   - **Dado** una tarea completada
   - **Cuando** se consulta la BD
   - **Entonces** la tarea se conserva con su texto, su adjunto (archivos intactos) y la fecha de finalización; no aparece en ninguna pantalla de la v1.
+  - *Enmienda propuesta (ADR-0012, pendiente de aceptar):* **se sustituye:** al completar, la tarea se borra del todo (fila, adjunto y archivos) antes de la animación; no queda histórico. Nueva redacción: «Dado una tarea completada, cuando se consulta la BD, entonces no queda nada de ella: ni fila, ni adjunto, ni archivos». R14 y D8 se retiran.
 
 **Después de "Todo hecho."**
 
@@ -63,6 +64,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
   - **Cuando** se abre la app en frío (o vuelve de segundo plano tras 10 min, CA-001-12)
   - **Entonces** se ve "Todo hecho." (no el editor). Enmienda CA-001-05, que queda para cuando no hay ninguna tarea, ni pendiente ni completada.
   - *Enmienda (spec 004, CA-004-08):* también con tareas eliminadas y ninguna completada.
+  - *Enmienda propuesta (ADR-0012, pendiente de aceptar):* "hay al menos una completada o eliminada" pasa a ser "ya se guardó alguna tarea" (ajuste sí/no).
 
 **Errores**
 
