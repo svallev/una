@@ -1,14 +1,19 @@
 import 'dart:math';
 
+import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/color_picker.dart';
 import 'package:app/domain/entities/queue_position.dart';
 import 'package:app/domain/entities/rank.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/domain/ports/id_generator.dart';
+import 'package:app/domain/services/attachment_janitor.dart';
 import 'package:app/domain/usecases/create_task.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/attachments.dart';
 
 class _FixedClock implements Clock {
   DateTime value = DateTime.utc(2026, 9, 24, 10);
@@ -24,12 +29,18 @@ class _SeqIds implements IdGenerator {
 
 void main() {
   late InMemoryTaskRepository repo;
+  late MemoryAttachmentStore store;
+  late ImportRegistry registry;
   late CreateTask create;
 
   setUp(() {
     repo = InMemoryTaskRepository();
+    store = MemoryAttachmentStore();
+    registry = ImportRegistry();
     create = CreateTask(
       repository: repo,
+      store: store,
+      janitor: janitorFor(repo, store, registry),
       clock: _FixedClock(),
       ids: _SeqIds(),
       colors: ColorPicker(Random(3)),
@@ -102,4 +113,67 @@ void main() {
       }
     },
   );
+
+  group('Con imagen (spec 007)', () {
+    test(
+      'CA-007-05: va arriba del todo aunque se pida a la cola, sin texto',
+      () async {
+        await create('Primera');
+        await create('Segunda', position: QueuePosition.end);
+        registry.add('img');
+        final staged = stageImage(store, 'img');
+        final t = await create(
+          '   ',
+          position: QueuePosition.end,
+          image: staged,
+        );
+        expect(t.text, isNull);
+        expect(t.attachment!.id, 'img');
+        expect(t.attachment!.origin, AttachmentOrigin.camera);
+        expect((await repo.currentTask())!.id, t.id);
+        expect(await store.stagingIds(), isEmpty);
+        expect(await store.storedIds(), {'img'});
+        expect(registry.active, isEmpty);
+      },
+    );
+
+    test('CA-007-04: con imagen, el texto se guarda recortado', () async {
+      final t = await create(
+        '  Horario  ',
+        image: stageImage(store, 'img', origin: AttachmentOrigin.gallery),
+      );
+      expect(t.text, 'Horario');
+      expect(
+        (await repo.findById(t.id))!.attachment!.origin,
+        AttachmentOrigin.gallery,
+      );
+    });
+
+    test(
+      'CA-007-16 / CL-007-3: si falla al guardar, la imagen vuelve a la '
+      'preparación para reintentar y no queda ningún adjunto guardado',
+      () async {
+        final failing = _FailingInsertRepository();
+        final c = CreateTask(
+          repository: failing,
+          store: store,
+          janitor: janitorFor(failing, store, registry),
+          clock: _FixedClock(),
+          ids: _SeqIds(),
+        );
+        registry.add('img');
+        final staged = stageImage(store, 'img');
+        await expectLater(c('x', image: staged), throwsA(isA<StateError>()));
+        expect(await store.storedIds(), isEmpty);
+        expect(await store.stagingIds(), {'img'});
+        expect(registry.active, {'img'});
+        await failing.dispose();
+      },
+    );
+  });
+}
+
+class _FailingInsertRepository extends InMemoryTaskRepository {
+  @override
+  Future<void> insert(Task task) async => throw StateError('disco lleno');
 }

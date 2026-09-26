@@ -181,9 +181,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         }
       case EditorMode.edit:
         await _write(
-          () => ref
-              .read(updateTaskTextProvider)
-              .call(widget.task!, _controller.text),
+          () => ref.read(editTaskProvider).call(widget.task!, _controller.text),
         );
     }
   }

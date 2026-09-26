@@ -1,9 +1,11 @@
+import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/domain/usecases/complete_current_task.dart';
 import 'package:app/domain/usecases/delete_current_task.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/attachments.dart';
 import '../support/pump_app.dart';
 
 class _FixedClock implements Clock {
@@ -14,13 +16,19 @@ class _FixedClock implements Clock {
 
 void main() {
   late InMemoryTaskRepository repo;
+  late MemoryAttachmentStore store;
   late _FixedClock clock;
   late DeleteCurrentTask delete;
 
   setUp(() {
     repo = InMemoryTaskRepository();
     clock = _FixedClock();
-    delete = DeleteCurrentTask(repository: repo, clock: clock);
+    store = MemoryAttachmentStore();
+    delete = DeleteCurrentTask(
+      repository: repo,
+      janitor: janitorFor(repo, store),
+      clock: clock,
+    );
   });
 
   tearDown(() => repo.dispose());
@@ -59,5 +67,13 @@ void main() {
     await expectLater(delete(first), throwsA(isA<TaskNotCurrent>()));
     expect((await repo.currentTask())!.id, 'b');
     expect((await repo.findById('b'))!.deletedAt, isNull);
+  });
+
+  test('CA-007-16: eliminar borra los archivos de su imagen', () async {
+    final a = await store.commit(stageImage(store, 'img'), clock.value);
+    final t = sampleTask(id: 'a').withContent(null, a, clock.value);
+    await repo.insert(t);
+    await delete(t);
+    expect(await store.storedIds(), isEmpty);
   });
 }

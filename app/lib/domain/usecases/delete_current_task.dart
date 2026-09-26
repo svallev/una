@@ -1,6 +1,7 @@
 import '../entities/task.dart';
 import '../ports/clock.dart';
 import '../ports/task_repository.dart';
+import '../services/attachment_janitor.dart';
 import 'complete_current_task.dart' show TaskNotCurrent;
 
 /// Resultado de eliminar: la tarea eliminada (tal como se veía, para la
@@ -12,9 +13,14 @@ typedef DeletionResult = ({Task deleted, Task? next});
 /// **antes** de la animación: si la app muere a mitad, ya está eliminada
 /// (CA-004-03).
 class DeleteCurrentTask {
-  DeleteCurrentTask({required this.repository, required this.clock});
+  DeleteCurrentTask({
+    required this.repository,
+    required this.janitor,
+    required this.clock,
+  });
 
   final TaskRepository repository;
+  final AttachmentJanitor janitor;
   final Clock clock;
 
   /// Elimina [task] si sigue siendo la tarea actual.
@@ -26,6 +32,8 @@ class DeleteCurrentTask {
     if (!await repository.delete(task.id, clock.now())) {
       throw const TaskNotCurrent();
     }
+    // Después de guardar, los archivos (CA-007-16).
+    if (current.attachment case final a?) await janitor.discard(a.id);
     return (deleted: task, next: await repository.currentTask());
   }
 }

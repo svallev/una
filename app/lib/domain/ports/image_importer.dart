@@ -43,9 +43,10 @@ abstract interface class ImageImporter {
   bool get heicSupported;
 
   /// Abre la cámara o el selector del sistema, sin pedir permisos
-  /// (CA-007-02/03). Devuelve null si el usuario cancela. Lanza
-  /// [ImageImportFailure] (`noCamera`).
-  Future<PickedImage?> pick(AttachmentOrigin origin);
+  /// (CA-007-02/03). Lo que escriba la cámara va a la preparación [id].
+  /// Devuelve null si el usuario cancela. Lanza [ImageImportFailure]
+  /// (`noCamera`).
+  Future<PickedImage?> pick(AttachmentOrigin origin, String id);
 
   /// Copia lo elegido a la preparación `<id>`, contando los bytes y abortando
   /// al pasar de [maxBytes] (CA-007-14). Lanza [ImageImportFailure].

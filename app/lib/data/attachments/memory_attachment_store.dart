@@ -45,6 +45,13 @@ class MemoryAttachmentStore implements AttachmentStore {
   }
 
   @override
+  Future<void> restage(String id) async {
+    final files = _stored.remove(id);
+    if (files == null) throw StateError('No existe el adjunto $id');
+    _staging[id] = files;
+  }
+
+  @override
   Future<void> delete(String id) async => _stored.remove(id);
 
   @override

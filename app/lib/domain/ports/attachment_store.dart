@@ -21,6 +21,10 @@ abstract interface class AttachmentStore {
   /// devuelve el adjunto (aún sin guardar en la BD).
   Future<Attachment> commit(StagedImage staged, DateTime at);
 
+  /// Deshace [commit]: devuelve el adjunto [id] a la preparación (si falla la
+  /// escritura en la BD, para reintentar).
+  Future<void> restage(String id);
+
   /// Borra todos los archivos del adjunto guardado [id]. Si no existe, nada.
   Future<void> delete(String id);
 

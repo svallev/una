@@ -3,17 +3,20 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/attachments/memory_attachment_store.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/task.dart';
+import '../domain/ports/attachment_store.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
 import '../domain/ports/task_repository.dart';
+import '../domain/services/attachment_janitor.dart';
 import '../domain/usecases/complete_current_task.dart';
 import '../domain/usecases/create_task.dart';
 import '../domain/usecases/delete_current_task.dart';
 import '../domain/usecases/delete_pending_task.dart';
+import '../domain/usecases/edit_task.dart';
 import '../domain/usecases/reorder_task.dart';
-import '../domain/usecases/update_task_text.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
 final taskRepositoryProvider = Provider<TaskRepository>(
@@ -21,6 +24,26 @@ final taskRepositoryProvider = Provider<TaskRepository>(
 );
 final settingsRepositoryProvider = Provider<SettingsRepository>(
   (ref) => throw UnimplementedError(),
+);
+
+/// Archivos de los adjuntos. En `main` se sobrescribe con el almacén en disco
+/// (móvil) o en memoria (web); en los tests, en memoria.
+final attachmentStoreProvider = Provider<AttachmentStore>(
+  (ref) => MemoryAttachmentStore(),
+);
+
+/// Importaciones en curso, que el barrido no toca (CA-007-16).
+final importRegistryProvider = Provider<ImportRegistry>(
+  (ref) => ImportRegistry(),
+);
+
+/// Único servicio de borrado de archivos de adjuntos (CA-007-16).
+final attachmentJanitorProvider = Provider<AttachmentJanitor>(
+  (ref) => AttachmentJanitor(
+    store: ref.watch(attachmentStoreProvider),
+    repository: ref.watch(taskRepositoryProvider),
+    registry: ref.watch(importRegistryProvider),
+  ),
 );
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".
@@ -44,15 +67,19 @@ final firstTaskColorProvider = Provider<int>(
 final createTaskProvider = Provider<CreateTask>(
   (ref) => CreateTask(
     repository: ref.watch(taskRepositoryProvider),
+    store: ref.watch(attachmentStoreProvider),
+    janitor: ref.watch(attachmentJanitorProvider),
     clock: ref.watch(clockProvider),
     ids: ref.watch(idGeneratorProvider),
     colors: ref.watch(colorPickerProvider),
   ),
 );
 
-final updateTaskTextProvider = Provider<UpdateTaskText>(
-  (ref) => UpdateTaskText(
+final editTaskProvider = Provider<EditTask>(
+  (ref) => EditTask(
     repository: ref.watch(taskRepositoryProvider),
+    store: ref.watch(attachmentStoreProvider),
+    janitor: ref.watch(attachmentJanitorProvider),
     clock: ref.watch(clockProvider),
   ),
 );
@@ -67,6 +94,7 @@ final completeCurrentTaskProvider = Provider<CompleteCurrentTask>(
 final deleteCurrentTaskProvider = Provider<DeleteCurrentTask>(
   (ref) => DeleteCurrentTask(
     repository: ref.watch(taskRepositoryProvider),
+    janitor: ref.watch(attachmentJanitorProvider),
     clock: ref.watch(clockProvider),
   ),
 );
@@ -74,6 +102,7 @@ final deleteCurrentTaskProvider = Provider<DeleteCurrentTask>(
 final deletePendingTaskProvider = Provider<DeletePendingTask>(
   (ref) => DeletePendingTask(
     repository: ref.watch(taskRepositoryProvider),
+    janitor: ref.watch(attachmentJanitorProvider),
     clock: ref.watch(clockProvider),
   ),
 );

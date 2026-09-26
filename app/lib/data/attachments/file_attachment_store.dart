@@ -71,6 +71,14 @@ class FileAttachmentStore implements AttachmentStore {
   }
 
   @override
+  Future<void> restage(String id) async {
+    final to = _staging(id);
+    await stagingRoot.create(recursive: true);
+    if (to.existsSync()) await to.delete(recursive: true);
+    await _stored(id).rename(to.path);
+  }
+
+  @override
   Future<void> delete(String id) => _deleteEntry(_attachmentsDir, id);
 
   @override
