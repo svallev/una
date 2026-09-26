@@ -178,7 +178,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
 | CL-006-7 | Un toque y, a continuación, un arrastre en la misma fila | Solo arrastra; no abre el editor |
 | CL-006-8 | Renumeración de posiciones | Tras 1 000 movimientos alternos entre las mismas dos posiciones, el orden es el esperado y ninguna clave de `rank` supera 50 caracteres (se renumeran en una sola transacción, ADR-0002) |
 | CL-006-9 | Segundo plano con el listado abierto | < 10 min: al volver, el mismo listado en la misma posición de desplazamiento; ≥ 10 min: la tarea actual (CA-001-12) |
-| CL-006-10 | Texto grande (200 %) en un móvil de 360 dp | Las filas crecen en alto (siguen recortadas a 3 líneas); nada se corta ni se solapa; los botones siguen alcanzables y de ≥ 48 dp. Con la escala de texto ≥ 1,3, la cabecera y la ayuda se desplazan con la lista en lugar de quedarse fijas (DEV-34) |
+| CL-006-10 | Texto grande (200 %) en un móvil de 360 dp | Las filas crecen en alto (siguen recortadas a 3 líneas); nada se corta ni se solapa; los botones siguen alcanzables y de ≥ 48 dp. Con la escala de texto ≥ 1,3, la ayuda se desplaza con la lista en lugar de quedarse fija; la fila de la flecha y el título sigue fija, para que el orden de lectura de CA-006-18 no cambie (DEV-34; enmienda del propietario, 2026-09-26) |
 | CL-006-11 | Texto de 10 000 caracteres en una fila | 3 líneas con "…"; el lector lee el texto completo |
 
 ## 5. Estados vacíos y de error

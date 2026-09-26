@@ -609,11 +609,14 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         TaskListScreen.scrollHeaderFromTextScale;
     final drag = _drag;
 
+    // Con texto grande, la ayuda pasa a la lista y aquí queda solo la fila
+    // de la flecha y el título (DEV-34).
     final header = _Header(
       title: l10n.listTitle,
       backLabel: l10n.listBack,
       help: screenReader ? l10n.listHelpScreenReader : l10n.listHelp,
       onBack: () => Navigator.of(context).maybePop(),
+      showHelp: !scrollHeader,
     );
 
     Widget rowFor(int index) {
@@ -694,7 +697,16 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       controller: _scroll,
       semanticChildCount: tasks.length,
       slivers: [
-        if (scrollHeader) SliverToBoxAdapter(child: header),
+        if (scrollHeader)
+          SliverToBoxAdapter(
+            child: _Header(
+              title: l10n.listTitle,
+              backLabel: l10n.listBack,
+              help: screenReader ? l10n.listHelpScreenReader : l10n.listHelp,
+              onBack: () => Navigator.of(context).maybePop(),
+              showBar: false,
+            ),
+          ),
         SliverPadding(
           // Prototipo: `padding: 4px 24px 20px 20px`.
           padding: const EdgeInsets.fromLTRB(
@@ -779,7 +791,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (!scrollHeader) header,
+                header,
                 Expanded(
                   child: Semantics(
                     sortKey: const OrdinalSortKey(_Order.list),
@@ -818,6 +830,8 @@ class _Header extends StatelessWidget {
     required this.backLabel,
     required this.help,
     required this.onBack,
+    this.showBar = true,
+    this.showHelp = true,
   });
 
   final String title;
@@ -825,74 +839,86 @@ class _Header extends StatelessWidget {
   final String help;
   final VoidCallback onBack;
 
+  /// La fila de la flecha y el título (siempre fija, para que "Volver" se lea
+  /// al final también con texto grande, CA-006-18).
+  final bool showBar;
+
+  /// La ayuda (con texto grande, se desplaza con la lista: DEV-34).
+  final bool showHelp;
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Prototipo: alto 68, `padding: 12px 20px 0`, separación 14.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            UnaSpace.ml - 1,
-            UnaSpace.sm,
-            UnaSpace.ml,
-            0,
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: UnaSizes.listHeader - UnaSpace.sm,
+        if (showBar)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              UnaSpace.ml - 1,
+              UnaSpace.sm,
+              UnaSpace.ml,
+              0,
             ),
-            child: Row(
-              children: [
-                Semantics(
-                  sortKey: const OrdinalSortKey(_Order.back),
-                  child: SquareIconButton(
-                    icon: UnaIcons.arrowLeft,
-                    label: backLabel,
-                    fill: UnaColors.paper,
-                    onPressed: onBack,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: UnaSizes.listHeader - UnaSpace.sm,
+              ),
+              child: Row(
+                children: [
+                  Semantics(
+                    sortKey: const OrdinalSortKey(_Order.back),
+                    child: SquareIconButton(
+                      icon: UnaIcons.arrowLeft,
+                      label: backLabel,
+                      fill: UnaColors.paper,
+                      onPressed: onBack,
+                    ),
                   ),
-                ),
-                const SizedBox(width: UnaSpace.sm - 1),
-                Expanded(
-                  child: Semantics(
-                    container: true,
-                    header: true,
-                    sortKey: const OrdinalSortKey(_Order.title),
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontFamily: UnaFonts.display,
-                        fontSize: UnaFontSizes.title,
-                        fontWeight: UnaFontWeights.extrabold,
-                        letterSpacing:
-                            UnaLetterSpacing.tighter * UnaFontSizes.title,
-                        color: UnaColors.ink,
+                  const SizedBox(width: UnaSpace.sm - 1),
+                  Expanded(
+                    child: Semantics(
+                      container: true,
+                      header: true,
+                      sortKey: const OrdinalSortKey(_Order.title),
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontFamily: UnaFonts.display,
+                          fontSize: UnaFontSizes.title,
+                          fontWeight: UnaFontWeights.extrabold,
+                          letterSpacing:
+                              UnaLetterSpacing.tighter * UnaFontSizes.title,
+                          color: UnaColors.ink,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
         // Prototipo: `padding: 14px 24px 18px`, Space Mono 13, interlineado 1,5.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            UnaSpace.l,
-            UnaSpace.sm + 2,
-            UnaSpace.l,
-            UnaSpace.m + 2,
-          ),
-          child: Semantics(
-            container: true,
-            sortKey: const OrdinalSortKey(_Order.help),
-            child: Text(
-              help,
-              style: UnaTheme.mono.copyWith(color: UnaColors.ink, height: 1.5),
+        if (showHelp)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              UnaSpace.l,
+              UnaSpace.sm + 2,
+              UnaSpace.l,
+              UnaSpace.m + 2,
+            ),
+            child: Semantics(
+              container: true,
+              sortKey: const OrdinalSortKey(_Order.help),
+              child: Text(
+                help,
+                style: UnaTheme.mono.copyWith(
+                  color: UnaColors.ink,
+                  height: 1.5,
+                ),
+              ),
             ),
           ),
-        ),
       ],
     );
   }

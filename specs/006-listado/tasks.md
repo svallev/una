@@ -38,8 +38,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
   - se pide cuando la hoja o el editor ya se han cerrado (tests: "el aviso de foco sale del nodo de la fila" y los de foco de CA-006-17).
   - ⚠️ Queda comprobar con TalkBack real dónde queda el foco tras editar, eliminar y crear. En el emulador no se puede provocar con `adb`.
 - **M1:** el foco del teclado va al asa (o a "Editar" en la primera fila), con anillo visible e Intro; "Nueva tarea" recibe el foco en su propio botón. Ya no hay `Focus` invisibles.
-- **M2:** el orden de lectura se fija en el nodo que la lista crea para cada fila. Con texto ≥ 1,3 se lee: título, ayuda, filas, "Volver" y "Nueva tarea".
-  - ⚠️ Diferencia menor con CA-006-18, que pone "Volver" al final: con texto grande, "Volver" va dentro de la lista desplazable (DEV-34). Pendiente de que el propietario lo acepte.
+- **M2:** el orden de lectura se fija en el nodo que la lista crea para cada fila. Con texto grande, la flecha y el título se quedan fijos y solo la ayuda se desplaza (decisión del propietario: CL-006-10 y DEV-34 enmendados). El orden es el de CA-006-18 a cualquier escala (test a 2,0).
 - **B1:** la protección de 350 ms solo se aplica al tocar con el dedo el botón Eliminar de la fila; con el lector o el teclado, la hoja responde enseguida (test).
 - **B4:** `meetsGuideline` con texto al 200 % y con la hoja "Mover" abierta.
 

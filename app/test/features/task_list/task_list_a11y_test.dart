@@ -357,7 +357,7 @@ void main() {
   );
 
   testWidgets(
-    'CA-006-18 / CL-006-10: con texto al 200 %, título, ayuda y filas en orden',
+    'CA-006-18 / CL-006-10: con texto al 200 %, el mismo orden de lectura',
     (tester) async {
       tester.platformDispatcher.textScaleFactorTestValue = 2.0;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
@@ -365,16 +365,16 @@ void main() {
       await openList(tester, tasks: ['Primera', 'Segunda'], screenReader: true);
       final order = _readingOrder(tester);
       final start = order.indexOf('Todas las tareas');
-      final rest = order.sublist(start + 1);
-      expect(rest.indexOf('Todas las tareas'), 0, reason: 'título primero');
-      expect(
-        rest.indexOf('1 de 2. Tarea actual: Primera'),
-        lessThan(rest.indexOf('Volver a la tarea')),
-      );
-      expect(
-        rest.indexOf('2 de 2: Segunda'),
-        lessThan(rest.indexOf('Volver a la tarea')),
-      );
+      expect(order.sublist(start), [
+        'Todas las tareas',
+        'Todas las tareas',
+        'La primera es la que tienes ahora. Usa las acciones de cada tarea '
+            'para cambiar el orden, editarla o eliminarla.',
+        '1 de 2. Tarea actual: Primera',
+        '2 de 2: Segunda',
+        'Nueva tarea',
+        'Volver a la tarea',
+      ]);
       handle.dispose();
     },
   );

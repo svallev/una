@@ -114,13 +114,20 @@ void main() {
         ],
       );
       expect(tester.takeException(), isNull);
-      // La cabecera está dentro de la lista desplazable.
+      // La ayuda se desplaza con la lista; la flecha y el título, fijos.
+      expect(
+        find.descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.textContaining('La primera es la que tienes ahora'),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.descendant(
           of: find.byType(CustomScrollView),
           matching: find.text('Todas las tareas'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
       for (final label in ['Volver a la tarea']) {
         final size = tester.getSize(find.bySemanticsLabel(label));
