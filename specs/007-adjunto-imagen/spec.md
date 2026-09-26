@@ -304,6 +304,7 @@ Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction`
 - **[Resuelto 2026-09-26, propietario]** Girar solo en el visor (D10 enmendada).
 - **[Resuelto 2026-09-26, propietario]** Pantalla encendida hasta 10 minutos sin tocarla.
 - **[Resuelto 2026-09-26, propietario]** "Adjunto no disponible" sin "Sustituir": la interacción, lo más simple posible (una sola acción).
+- **[Resuelto 2026-09-26, propietario]** Un solo adjunto por tarea (imagen, foto, documento o URL). No hay botón "Sustituir" en ninguna parte: en el editor, (+) sigue visible con un adjunto y lo que se cargue sustituye al que había (CA-007-04).
 - **[Resuelto 2026-09-26, propietario, con la recomendación de la revisión]**:
   - cámara del sistema sin permisos;
   - imágenes fuera de la copia en la nube por ahora;
