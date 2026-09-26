@@ -103,7 +103,9 @@ class _BrutalButtonState extends State<BrutalButton> {
 
   /// Lleva el foco del lector al botón cuando su ruta (p. ej., una hoja que
   /// sube) ha terminado de entrar: antes, su nodo aún no está en el árbol
-  /// accesible.
+  /// accesible. VoiceOver lo sigue; TalkBack no (enfoca el primer elemento de
+  /// la ruta nueva), así que en Android además hay que ponerlo primero en el
+  /// orden de lectura.
   void _announceFocusWhenShown() {
     void send() => WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

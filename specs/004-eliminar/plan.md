@@ -70,6 +70,7 @@ Ninguna.
   - **[Hecho]** Las páginas liberadas antes de la 004 (ediciones de la 005) no se limpian; solo afecta al móvil del propietario antes del lanzamiento.
   - **[Hecho]** Si la app pasa a segundo plano durante el arrugado, la captura de Recientes puede mostrar la nota eliminada hasta que se vuelve a abrir (la app no usa `FLAG_SECURE`).
   - **[Pendiente, bloques 1–3]** Decidir qué campos se vacían en la marca de borrado cuando existan `dueDate`, `parentId`, `source` y `externalId` con contenido.
+- **Foco inicial con TalkBack [Hecho, 2026-09-26]:** al abrirse una ruta con nombre, TalkBack enfoca su **primer** elemento e ignora el `FocusSemanticEvent` (sí lo sigue VoiceOver). Por eso "Cancelar" va primero en el orden de lectura de la hoja (`OrdinalSortKey`); comprobado con TalkBack real en el emulador (antes el foco caía en el texto).
 - **Accesibilidad:** confirmación modal con foco en "Cancelar", acción personalizada, un único anuncio, foco al terminar, reducir movimiento, texto al 200 %.
 - **Rendimiento:** la animación usa recorte y transformaciones (sin capas fuera de pantalla salvo la sombra) y se medirá en el Xiaomi con el perfilador (objetivo: sin fotogramas perdidos a 120 Hz, como S2). `secure_delete` añade escritura solo al borrar. El arranque no cambia.
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show OrdinalSortKey;
 import 'package:flutter/services.dart';
 
 import '../../app/theme/tokens.g.dart';
@@ -61,57 +62,70 @@ class _DeleteConfirmSheetState extends State<DeleteConfirmSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  l10n.deleteTitle,
-                  style: const TextStyle(
-                    fontFamily: UnaFonts.display,
-                    fontSize: UnaFontSizes.sheetTitle,
-                    fontWeight: UnaFontWeights.extrabold,
-                    letterSpacing:
-                        UnaLetterSpacing.tighter * UnaFontSizes.sheetTitle,
-                    color: UnaColors.ink,
+              _ReadOrder(
+                1,
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.deleteTitle,
+                    style: const TextStyle(
+                      fontFamily: UnaFonts.display,
+                      fontSize: UnaFontSizes.sheetTitle,
+                      fontWeight: UnaFontWeights.extrabold,
+                      letterSpacing:
+                          UnaLetterSpacing.tighter * UnaFontSizes.sheetTitle,
+                      color: UnaColors.ink,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: _gap),
               // Recortado a 3 líneas como en "¿Dónde la pones?" (DEV-23); el
               // lector lee el texto completo.
-              Semantics(
-                label: l10n.deleteBody(widget.label),
-                excludeSemantics: true,
-                child: Text(
-                  l10n.deleteBody(widget.label),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: UnaFonts.mono,
-                    fontSize: UnaFontSizes.caption,
-                    height: 1.45,
-                    color: UnaColors.ink,
+              _ReadOrder(
+                2,
+                child: Semantics(
+                  label: l10n.deleteBody(widget.label),
+                  excludeSemantics: true,
+                  child: Text(
+                    l10n.deleteBody(widget.label),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: UnaFonts.mono,
+                      fontSize: UnaFontSizes.caption,
+                      height: 1.45,
+                      color: UnaColors.ink,
+                    ),
                   ),
                 ),
               ),
               // Prototipo: el párrafo lleva 8 px de margen inferior.
               const SizedBox(height: _gap + UnaSpace.s),
-              BrutalButton(
-                label: l10n.deleteConfirm,
-                height: UnaSizes.confirmButton,
-                fontSize: UnaFontSizes.option,
-                background: UnaColors.dangerFill,
-                onPressed: () => _close(true),
+              _ReadOrder(
+                3,
+                child: BrutalButton(
+                  label: l10n.deleteConfirm,
+                  height: UnaSizes.confirmButton,
+                  fontSize: UnaFontSizes.option,
+                  background: UnaColors.dangerFill,
+                  onPressed: () => _close(true),
+                ),
               ),
               // Prototipo: "Cancelar" lleva 4 px de margen superior.
               const SizedBox(height: _gap + UnaSpace.xs),
-              // La acción segura recibe el foco al abrirse (CA-004-10).
-              BrutalButton(
-                label: l10n.editorCancel,
-                height: UnaSizes.ghostButton,
-                fontSize: UnaFontSizes.body,
-                ghost: true,
-                autofocus: true,
-                onPressed: () => _close(null),
+              // La acción segura recibe el foco al abrirse (CA-004-10): la
+              // primera para el lector y con el foco del teclado.
+              _ReadOrder(
+                0,
+                child: BrutalButton(
+                  label: l10n.editorCancel,
+                  height: UnaSizes.ghostButton,
+                  fontSize: UnaFontSizes.body,
+                  ghost: true,
+                  autofocus: true,
+                  onPressed: () => _close(null),
+                ),
               ),
             ],
           ),
@@ -122,4 +136,18 @@ class _DeleteConfirmSheetState extends State<DeleteConfirmSheet> {
 
   /// Prototipo: `gap: 14px`.
   static const _gap = UnaSpace.sm + UnaSpace.xxs;
+}
+
+/// Orden de lectura del lector de pantalla dentro de la hoja. Al abrirse una
+/// ruta con nombre, TalkBack anuncia el nombre y pone el foco en el **primer**
+/// elemento: "Cancelar" va primero para que un doble toque por inercia no
+/// elimine (CA-004-10). Después: título, texto y "Eliminar".
+class _ReadOrder extends StatelessWidget {
+  const _ReadOrder(this.order, {required this.child});
+  final double order;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      Semantics(container: true, sortKey: OrdinalSortKey(order), child: child);
 }

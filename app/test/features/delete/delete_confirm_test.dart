@@ -276,5 +276,31 @@ void main() {
         expect(focused.findAncestorWidgetOfExactType<BrutalButton>(), isNull);
       },
     );
+
+    testWidgets(
+      'CA-004-10: con TalkBack, "Cancelar" es lo primero de la hoja (TalkBack enfoca el primer elemento de la ruta)',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpUnaApp(
+          tester,
+          repo: InMemoryTaskRepository(),
+          tasks: ['Primera'],
+          screenReader: true,
+        );
+        await _openConfirm(tester);
+        final labelled = tester.semantics
+            .simulatedAccessibilityTraversal()
+            .where((n) => n.label.isNotEmpty)
+            .map((n) => n.label)
+            .toList();
+        expect(labelled.take(4), [
+          'Cancelar',
+          '¿Eliminar esta tarea?',
+          '“Primera” desaparecerá sin marcarse como hecha.',
+          'Eliminar',
+        ]);
+        handle.dispose();
+      },
+    );
   });
 }
