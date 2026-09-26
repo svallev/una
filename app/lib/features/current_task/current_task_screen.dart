@@ -20,6 +20,7 @@ import '../delete/delete_task_action.dart';
 import '../delete/deletion_controller.dart';
 import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
+import '../task_list/task_list_screen.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
 class CurrentTaskScreen extends ConsumerWidget {
@@ -223,8 +224,9 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
           .pick(currentColorKey: task.colorKey),
     ),
     // La confirmación sustituye al menú (CA-004-01).
-    MenuAction.delete => null,
+    MenuAction.delete || MenuAction.allTasks => null,
   };
+  if (action == MenuAction.allTasks) return openTaskList(context, ref);
   if (editor == null) return confirmAndDeleteTask(context, ref, task);
   await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
 }
