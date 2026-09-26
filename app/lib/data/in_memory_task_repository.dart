@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../domain/entities/rank.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/task_repository.dart';
 
@@ -41,6 +42,45 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<int> countPending() async => _pending.length;
+
+  @override
+  Future<List<Task>> pendingTasks() async => _pending;
+
+  @override
+  Stream<List<Task>> watchPending() {
+    StreamSubscription<void>? sub;
+    late final StreamController<List<Task>> out;
+    out = StreamController<List<Task>>(
+      onListen: () {
+        out.add(_pending);
+        sub = _changes.stream.listen((_) => out.add(_pending));
+      },
+      onCancel: () async {
+        await sub?.cancel();
+        await out.close();
+      },
+    );
+    return out.stream;
+  }
+
+  @override
+  Future<bool> reorder(String id, String rank, DateTime at) async {
+    final task = _tasks[id];
+    if (task == null || !task.isPending) return false;
+    _tasks[id] = task.withRank(rank, at);
+    _changes.add(null);
+    return true;
+  }
+
+  @override
+  Future<void> renumberPending(DateTime at) async {
+    final pending = _pending;
+    final ranks = Rank.evenlySpaced(pending.length);
+    for (var i = 0; i < pending.length; i++) {
+      _tasks[pending[i].id] = pending[i].withRank(ranks[i], at);
+    }
+    _changes.add(null);
+  }
 
   @override
   Future<Task?> findById(String id) async => _tasks[id];
