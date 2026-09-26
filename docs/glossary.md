@@ -5,7 +5,7 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Español (docs/UI) | English (UI) | Código | Definición |
 |---|---|---|---|
 | Tarea | Task | `Task` | Unidad de trabajo pendiente o completada. Tiene texto, un adjunto o ambos. |
-| Tarea actual | Current task | `currentTask` | La primera tarea pendiente de la cola. Es la única que se ve en la pantalla principal. En el listado se etiqueta "Lo siguiente" / "Up next". |
+| Tarea actual | Current task | `currentTask` | La primera tarea pendiente de la cola. Es la única que se ve en la pantalla principal. En el listado es la primera fila (sin asa y sin etiqueta visible). |
 | Cola | Queue | `TaskQueue` | Secuencia ordenada de tareas pendientes. El orden lo da `rank`. |
 | Arriba del todo | On top | `QueuePosition.top` | Insertar antes de la tarea actual: la nueva pasa a ser la actual. |
 | A la cola | At the end | `QueuePosition.end` | Insertar después de la última tarea pendiente. |
@@ -27,7 +27,11 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Visor del sistema | System viewer | `SystemViewer` | QuickLook (iOS) o la app que registre el tipo (Android). |
 | Nota adhesiva | Sticky note | `StickyNote` | Representación visual de una tarea (color de la paleta). |
 | Color de la nota | Note color | `colorKey` | Índice 0–4 de la paleta. Se guarda con la tarea. |
-| Listado | Task list | `TaskListScreen` | Pantalla "Todas mis tareas". |
+| Listado | Task list | `TaskListScreen` | Pantalla "Todas las tareas" (se abre con "Todas mis tareas" del menú). |
+| Reordenar | Reorder | `ReorderTask` | Cambiar la posición de una tarea pendiente en la cola. Solo cambia su `rank`. |
+| Hacer actual | Make current | `makeCurrent` | Llevar una tarea del listado a la posición 1: pasa a ser la tarea actual. |
+| Mover arriba / abajo | Move up / down | `moveUp`, `moveDown` | Cambiar una tarea una posición en la cola. |
+| Asa (de arrastre) | Drag handle | `DragHandle` | Botón "Mover tarea" de cada fila del listado salvo la primera: se arrastra para reordenar o se toca para abrir "Mover". |
 | Menú | Menu | `TaskMenuSheet` | Hoja inferior con las acciones de la tarea y las generales. |
 | Hoja inferior | Bottom sheet | `*Sheet` | Panel que sube desde abajo. |
 | Primera vez / bienvenida | First run / welcome | `FirstRun`, `WelcomeIntro` | Animación inicial y creación obligatoria de la primera tarea. |
