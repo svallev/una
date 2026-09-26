@@ -10,6 +10,7 @@ import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/complete_current_task.dart' show TaskNotCurrent;
 import '../../l10n/generated/app_localizations.dart';
+import '../attachments/task_labels.dart';
 import 'delete_confirm_sheet.dart';
 import 'deletion_controller.dart';
 
@@ -22,7 +23,7 @@ Future<void> confirmAndDeleteTask(
 ) async {
   final confirmed = await showDeleteConfirmSheet(
     context,
-    label: task.text ?? '',
+    label: taskLabel(AppLocalizations.of(context), task),
   );
   if (!context.mounted) return;
   if (confirmed != true) {
@@ -55,7 +56,7 @@ Future<bool> deleteTask(BuildContext context, WidgetRef ref, Task task) async {
           view,
           next == null
               ? l10n.a11yDeletedAllDone
-              : l10n.a11yDeletedNext(next.text ?? ''),
+              : l10n.a11yDeletedNext(taskLabel(l10n, next)),
           direction,
         ),
       );

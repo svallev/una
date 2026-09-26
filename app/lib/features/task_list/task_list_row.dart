@@ -6,8 +6,11 @@ import 'package:flutter/rendering.dart';
 
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/task.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../ui/focus_ring.dart';
 import '../../ui/una_icons.dart';
+import '../attachments/task_labels.dart';
+import '../attachments/task_thumbnail.dart';
 
 /// Callbacks del arrastre de una fila (spec 006, CA-006-04/05/11).
 class RowDragCallbacks {
@@ -109,8 +112,11 @@ class TaskListRow extends StatelessWidget {
             onEnd: given.onEnd,
             onCancel: given.onCancel,
           );
+    final l10n = AppLocalizations.of(context);
+    final attachment = task.attachment;
     final text = Text(
-      task.text ?? '',
+      // Sin texto, "Foto"/"Imagen" (CA-007-20).
+      taskLabel(l10n, task),
       maxLines: 3,
       overflow: TextOverflow.ellipsis,
       style: first
@@ -149,6 +155,16 @@ class TaskListRow extends StatelessWidget {
               child: const _Grip(),
             ),
           if (!first) const SizedBox(width: _gap),
+          // Miniatura entre el asa y el texto (CA-007-20); en la primera,
+          // con 8 px a la izquierda, como el prototipo.
+          if (attachment != null) ...[
+            if (first) const SizedBox(width: UnaSpace.s),
+            TaskThumbnail(
+              attachment: attachment,
+              kindLabel: attachmentKindLabel(l10n, task)!,
+            ),
+            const SizedBox(width: _gap),
+          ],
           Expanded(
             child: Padding(
               padding: first

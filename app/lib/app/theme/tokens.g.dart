@@ -159,6 +159,9 @@ abstract final class UnaFontSizes {
   /// Pie de la tarea con imagen (recuadro negro, peso 800, spec 007)
   static const double imageCaption = 22.0;
 
+  /// Insignia "FOTO"/"IMAGEN" del listado cuando no hay miniatura (monoespaciada, 700, prototipo `item.isDoc`, spec 007)
+  static const double badge = 10.0;
+
   /// Texto opcional del editor con adjunto (peso 800, interlineado 1,05, spec 007)
   static const double attachmentText = 24.0;
 }

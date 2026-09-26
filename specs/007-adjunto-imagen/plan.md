@@ -166,7 +166,10 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
   - El valor y las acciones del lector se actualizan al terminar cada zoom o desplazamiento, no en cada fotograma del pellizco.
 - **Pantalla principal con imagen:** el toque en la imagen abre el visor aunque la imagen aún no se haya decodificado (`HitTestBehavior.opaque`). Logotipo con fondo blanco que sobresale 8 px a cada lado sin moverse.
 - **Textos:** `editorAttachmentPlaceholder` y `editorRemoveAttachment` estaban en la spec 005 pero no en las ARB: se añadieron.
-- **Tokens nuevos:** `fontSize.attachmentText` (24) y `size.attachTextField` (96), del prototipo (`hasDraftAtt`).
+- **Tokens nuevos:** `fontSize.attachmentText` (24) y `size.attachTextField` (96), del prototipo (`hasDraftAtt`); `fontSize.badge` (10) para la insignia "FOTO"/"IMAGEN" del listado (prototipo `item.isDoc`).
+- **"Foto"/"Imagen" en el resto de la app** (T-007-17): `task_labels.dart` reúne cómo se nombra una tarea sin texto (`taskLabel`: listado, confirmación de eliminar y anuncios) y cómo se lee (`taskReading`: "{texto}. Con foto"). La insignia usa el mismo texto en mayúsculas.
+- **Miniatura del listado** (`TaskThumbnail`): 44 px, recortada, con borde de 2 px dibujado encima; si el adjunto no está disponible o la miniatura no se puede leer, la insignia (y se intenta regenerar, como en la pantalla principal).
+- **Caras de completar y eliminar:** reutilizan la pantalla principal (I-3), así que muestran la imagen sin código nuevo. No comprueban los archivos: al eliminar ya se han borrado (CA-007-16) y la cara usa la imagen que ya estaba cargada; sin esto se vería "Adjunto no disponible" durante el arrugado.
 - **Tests:** la imagen de prueba (`tinyImage`) es un PNG de 1 × 1 px que se decodifica de verdad; con la anterior (JPEG aritmético) los tests habrían mostrado siempre "Adjunto no disponible". `FakeImageImporter` (`test/support/`) simula la cámara, el selector, la copia, la limpieza, la cancelación y la regeneración.
 
 ### Pendiente de verificar
