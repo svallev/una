@@ -249,4 +249,36 @@ void main() {
     final row = tester.getSize(rowOf('Segunda').first);
     expect(row.height, greaterThanOrEqualTo(48 + 2 * UnaSpace.xs));
   });
+
+  testWidgets(
+    'CA-006-17: la fila movida conserva su nodo de accesibilidad (TalkBack no pierde el foco)',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      final tasks = [for (var i = 1; i <= 40; i++) 'Tarea $i'];
+      await openList(tester, tasks: tasks, screenReader: true);
+      int idOf(String label) =>
+          tester.getSemantics(find.bySemanticsLabel(label)).id;
+
+      final before = idOf('3 de 40: Tarea 3');
+      await _action(tester, '3 de 40: Tarea 3', 'Mover abajo');
+      await tester.pumpAndSettle();
+      expect(idOf('4 de 40: Tarea 3'), before);
+
+      await _action(tester, '4 de 40: Tarea 3', 'Hacer actual');
+      await tester.pumpAndSettle();
+      expect(idOf('1 de 40. Tarea actual: Tarea 3'), before);
+
+      // Desde el final de una lista larga.
+      final scrollable = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      final last = idOf('40 de 40: Tarea 40');
+      await _action(tester, '40 de 40: Tarea 40', 'Hacer actual');
+      await tester.pumpAndSettle();
+      expect(idOf('1 de 40. Tarea actual: Tarea 40'), last);
+      handle.dispose();
+    },
+  );
 }

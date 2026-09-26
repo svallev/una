@@ -223,6 +223,12 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   /// acción del lector (CA-006-04/08/16).
   Future<void> _move(Task task, int to, {bool afterSheet = false}) async {
     final l10n = AppLocalizations.of(context);
+    // Arriba del todo: la lista sube en el mismo fotograma en que cambia el
+    // orden, para que la fila se reutilice (misma fila para el lector) en
+    // lugar de destruirse fuera de la pantalla: TalkBack no perderá el foco.
+    if (to == 0 && _scroll.hasClients && _scroll.offset > 0) {
+      _scroll.jumpTo(0);
+    }
     final outcome = await ref
         .read(taskListProvider.notifier)
         .move(_tasks, task.id, to);
