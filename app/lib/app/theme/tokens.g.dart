@@ -285,6 +285,9 @@ abstract final class UnaMotion {
   /// Arrugar y tirar a la papelera
   static const Duration crumple = Duration(milliseconds: 2200);
 
+  /// Con 'reducir movimiento', la nota eliminada se desvanece (prototipo: fadeOut .6s)
+  static const Duration crumpleReducedFade = Duration(milliseconds: 600);
+
   /// Máquina de escribir de la bienvenida
   static const Duration introCharStep = Duration(milliseconds: 62);
 
@@ -299,9 +302,6 @@ abstract final class UnaMotion {
 
   /// {value: 350, unit: ms}
   static const Duration doubleTapWindow = Duration(milliseconds: 350);
-
-  /// Ventana para deshacer una eliminación (ADR-0006)
-  static const Duration undoWindow = Duration(milliseconds: 6000);
 
   /// Sustituto con 'reducir movimiento'
   static const Duration reducedMotionFade = Duration(milliseconds: 400);
