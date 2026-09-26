@@ -433,6 +433,114 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No hemos podido eliminar la tarea'**
   String get deleteError;
+
+  /// Título y nombre de la pantalla del listado. CA-006-02, CA-006-17
+  ///
+  /// In es, this message translates to:
+  /// **'Todas las tareas'**
+  String get listTitle;
+
+  /// Nombre accesible del botón con flecha del listado. CA-006-03
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a la tarea'**
+  String get listBack;
+
+  /// Ayuda del listado (prototipo). CA-006-02
+  ///
+  /// In es, this message translates to:
+  /// **'La primera es la que tienes ahora. Arrastra otra por encima para que ocupe su lugar. Toca dos veces una tarea para editarla.'**
+  String get listHelp;
+
+  /// Ayuda del listado con el lector de pantalla activo (DEV-33). CA-006-18
+  ///
+  /// In es, this message translates to:
+  /// **'La primera es la que tienes ahora. Usa las acciones de cada tarea para cambiar el orden, editarla o eliminarla.'**
+  String get listHelpScreenReader;
+
+  /// Botón Editar de cada fila y acción del lector. CA-006-13, CA-006-16
+  ///
+  /// In es, this message translates to:
+  /// **'Editar tarea'**
+  String get listEdit;
+
+  /// Pista de activación de la fila; TalkBack dice 'Toca dos veces para editar'. CA-006-18
+  ///
+  /// In es, this message translates to:
+  /// **'editar'**
+  String get listEditHint;
+
+  /// Botón inferior del listado. CA-006-15
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva tarea'**
+  String get listNewTask;
+
+  /// Nombre del asa (botón) y etiqueta de la hoja Mover (DEV-28). CA-006-08
+  ///
+  /// In es, this message translates to:
+  /// **'Mover tarea'**
+  String get listMove;
+
+  /// Opción de mover a la posición 1. CA-006-09
+  ///
+  /// In es, this message translates to:
+  /// **'Hacer actual'**
+  String get listMakeCurrent;
+
+  /// Opción de mover una posición arriba. CA-006-09
+  ///
+  /// In es, this message translates to:
+  /// **'Mover arriba'**
+  String get listMoveUp;
+
+  /// Opción de mover una posición abajo. CA-006-09
+  ///
+  /// In es, this message translates to:
+  /// **'Mover abajo'**
+  String get listMoveDown;
+
+  /// Aviso con Reintentar si falla el reordenado. Spec 006 §5
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido mover la tarea'**
+  String get listMoveError;
+
+  /// Lectura de las filas 2…N del listado. CA-006-18
+  ///
+  /// In es, this message translates to:
+  /// **'{position} de {total}: {text}'**
+  String a11yRowPosition(int position, int total, String text);
+
+  /// Lectura de la primera fila del listado. CA-006-18
+  ///
+  /// In es, this message translates to:
+  /// **'1 de {total}. Tarea actual: {text}'**
+  String a11yRowCurrent(int total, String text);
+
+  /// Anuncio tras mover una tarea sin llegar a la primera. CA-006-17
+  ///
+  /// In es, this message translates to:
+  /// **'Movida a la posición {position} de {total}'**
+  String a11yMovedTo(int position, int total);
+
+  /// Anuncio cuando una tarea llega a la posición 1. CA-006-17
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora es la tarea actual'**
+  String get a11yNowCurrent;
+
+  /// Anuncio al crear desde el listado. CA-006-17
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea añadida en la posición {position} de {total}'**
+  String a11yAddedAt(int position, int total);
+
+  /// Anuncio al eliminar desde el listado una tarea que no es la primera. CA-006-17
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Tarea eliminada. Queda 1} other{Tarea eliminada. Quedan {count}}}'**
+  String a11yDeletedFromList(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -305,6 +305,15 @@ abstract final class UnaMotion {
   /// {value: 900, unit: ms}
   static const Duration listFlash = Duration(milliseconds: 900);
 
+  /// Las demás filas se apartan al arrastrar (prototipo: .li transition transform .2s ease)
+  static const Duration listShift = Duration(milliseconds: 200);
+
+  /// La sombra crece al levantar una fila (.li.dragging box-shadow .15s)
+  static const Duration listLift = Duration(milliseconds: 150);
+
+  /// Tras soltar, las filas se colocan sin transición (.li.still)
+  static const Duration listDropFreeze = Duration(milliseconds: 60);
+
   /// {value: 350, unit: ms}
   static const Duration doubleTapWindow = Duration(milliseconds: 350);
 
@@ -344,4 +353,5 @@ abstract final class UnaMotion {
   static const Cubic easeOutCurve = Cubic(0.0, 0.0, 0.58, 1.0);
   static const Cubic easeCurve = Cubic(0.25, 0.1, 0.25, 1.0);
   static const double dragThreshold = 6.0;
+  static const double dragTilt = -1.5;
 }

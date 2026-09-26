@@ -2,7 +2,7 @@
 
 - **Spec:** `specs/006-listado/spec.md` (estado: Aprobada, 2026-09-26)
 - **ADR aplicables:** ADR-0002 (repositorio, `rank` fraccional y renumeración), ADR-0011 (eliminar sin deshacer)
-- **Estado del plan:** Borrador (pendiente de aprobación del propietario)
+- **Estado del plan:** Aprobado (propietario, 2026-09-26)
 - **Rama:** `feat/006-listado`, sobre `feat/004-eliminar` (PR #9), que a su vez va sobre la PR #8. Cuando se fusionen, se rebasa sobre `main`.
 
 ## 1. Resumen del enfoque
@@ -58,7 +58,7 @@
 | Presentación | `features/task_list/` (`task_list_screen.dart`, `task_list_row.dart`, `reorderable_rows.dart`, `move_sheet.dart`, `row_gestures.dart`); `menu_sheet.dart`, `current_task_screen.dart`, `task_editor_screen.dart`, `delete_task_action.dart`, `delete_confirm_sheet.dart`; `ui/sheet_row.dart` | Pantalla, filas, reordenado, hoja "Mover", enganches con el menú, el editor y la eliminación |
 | Nativo | — | Nada |
 | l10n | `app_es.arb`, `app_en.arb` | Claves de la §7 de la spec |
-| Tokens | `design/tokens.json` → `tokens.g.dart` | `motion.duration.listShift` (200 ms), `motion.duration.listLift` (150 ms), `motion.duration.listDropFreeze` (60 ms), `motion.dragTilt` (−1,5°), `motion.dragAutoScrollEdge` (zona de desplazamiento automático) |
+| Tokens | `design/tokens.json` → `tokens.g.dart` | `motion.duration.listShift` (200 ms), `motion.duration.listLift` (150 ms), `motion.duration.listDropFreeze` (60 ms) y `motion.dragTilt` (−1,5°) |
 
 ## 3. Modelo de datos y migraciones
 

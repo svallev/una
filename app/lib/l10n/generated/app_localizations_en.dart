@@ -207,4 +207,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteError => 'We couldn\'t delete the task';
+
+  @override
+  String get listTitle => 'All tasks';
+
+  @override
+  String get listBack => 'Back to the task';
+
+  @override
+  String get listHelp =>
+      'The first one is the one you have now. Drag another above it to take its place. Double-tap a task to edit it.';
+
+  @override
+  String get listHelpScreenReader =>
+      'The first one is the one you have now. Use each task\'s actions to change the order, edit it or delete it.';
+
+  @override
+  String get listEdit => 'Edit task';
+
+  @override
+  String get listEditHint => 'edit';
+
+  @override
+  String get listNewTask => 'New task';
+
+  @override
+  String get listMove => 'Move task';
+
+  @override
+  String get listMakeCurrent => 'Make current';
+
+  @override
+  String get listMoveUp => 'Move up';
+
+  @override
+  String get listMoveDown => 'Move down';
+
+  @override
+  String get listMoveError => 'We couldn\'t move the task';
+
+  @override
+  String a11yRowPosition(int position, int total, String text) {
+    return '$position of $total: $text';
+  }
+
+  @override
+  String a11yRowCurrent(int total, String text) {
+    return '1 of $total. Current task: $text';
+  }
+
+  @override
+  String a11yMovedTo(int position, int total) {
+    return 'Moved to position $position of $total';
+  }
+
+  @override
+  String get a11yNowCurrent => 'It\'s now the current task';
+
+  @override
+  String a11yAddedAt(int position, int total) {
+    return 'Task added at position $position of $total';
+  }
+
+  @override
+  String a11yDeletedFromList(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Task deleted. $count left',
+      one: 'Task deleted. 1 left',
+    );
+    return '$_temp0';
+  }
 }

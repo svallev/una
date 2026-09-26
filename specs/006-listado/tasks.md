@@ -4,7 +4,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 | ID | Tarea | Depende de | Verificación | CA |
 |---|---|---|---|---|
-| T-006-01 | Tokens: `listShift`, `listLift`, `listDropFreeze`, `dragTilt`, `dragAutoScrollEdge`; regenerar `tokens.g.dart` | — | `node tools/validate-tokens.mjs`, analyze | CA-006-04/12 |
+| T-006-01 | Tokens: `listShift`, `listLift`, `listDropFreeze`, `dragTilt` (el generador emite los valores sueltos de `motion`); regenerar `tokens.g.dart` | — | `node tools/validate-tokens.mjs`, analyze | CA-006-04/12 |
 | T-006-02 [P] | Textos ES/EN de la §7 (`/strings-add`) | — | `gen-l10n`, `/i18n-check` | §7 |
 | T-006-03 | `Rank.evenlySpaced` y puertos `watchPending`, `pendingTasks`, `reorder`, `renumberPending` (memoria y drift) | — | Tests de contrato | CA-006-10, CL-006-8 |
 | T-006-04 | Casos de uso `ReorderTask` (con renumeración) y `DeletePendingTask`; renumeración en `CreateTask` | 03 | Unitarios | CA-006-06/10/14, CL-006-4/8, CL-002-1 |
@@ -24,7 +24,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 ## Estado
 
-Sin empezar: el plan está pendiente de aprobación.
+En curso (plan aprobado el 2026-09-26).
 
 ## Cierre
 
