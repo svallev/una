@@ -1,6 +1,6 @@
 # ADR-0012: Sin histórico: completar y eliminar borran la tarea del todo
 
-- **Estado:** Propuesto (pendiente de la aceptación del propietario)
+- **Estado:** Aceptado (propietario, 2026-09-26)
 - **Fecha:** 2026-09-26
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
 - **Relacionado:** sustituye a ADR-0011 (la marca de borrado) y a las decisiones D7 (en parte) y D8, y a la regla R14; specs 001, 003, 004 y 007; ADR-0002; ADR-0004
@@ -54,9 +54,9 @@ La opción 1 no deja nada de lo hecho ni de lo eliminado, trata igual los dos ca
   - Una tarea completada por error no se puede recuperar. Ya era así (sin deshacer, P-4 de la spec 003): la mitigación sigue siendo mantener pulsado 1,2 s.
   - Una sincronización futura no sabría qué se borró. Mitigación: no hay sincronización prevista; se revisaría este ADR.
   - La migración borra datos. Mitigación: test de migración con una BD v1 que tenga completadas, marcas y pendientes (solo quedan las pendientes).
-- **Cambios en otros documentos** (enmiendas, pendientes de aprobar con este ADR):
+- **Cambios en otros documentos** (enmiendas aceptadas con este ADR, 2026-09-26):
   - `docs/PLAN.md`: D7 y D8, R14 en la trazabilidad y la hoja de ruta (sin "histórico visible y borrable").
   - Specs: CA-001-05, CA-003-06 y CA-003-11 (003), CA-004-03 y CA-004-08 (004), CA-007-16 y CA-007-17 (007).
   - `docs/architecture.md` (`CompleteTask`, `DeleteTask`, índices), `docs/glossary.md` ("Histórico", "Completar").
-  - ADR-0011 pasa a "Sustituido por ADR-0012" cuando se acepte este.
+  - ADR-0011 pasa a "Sustituido por ADR-0012".
 - **Implementación** (rama propia tras la 007): `schemaVersion` 2 con la migración y su captura; `CompleteCurrentTask` y los dos casos de uso de eliminar borran físicamente; `hasHistory` pasa a leerse del ajuste; el barrido ya no respeta completadas.

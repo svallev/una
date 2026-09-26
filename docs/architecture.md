@@ -148,8 +148,8 @@ erDiagram
 |---|---|---|
 | `CreateTask(text, position)` | inserta con `rank` antes de la primera (`top`) o después de la última (`end`); `colorKey` ≠ el de la actual | R3, R4 |
 | `CreateTask(attachment)` | importa el archivo → inserta **top** siempre | R5 |
-| `CompleteTask(current)` | `status = completed`, `completedAt = now`; conserva el adjunto. *ADR-0012 (propuesto): borra la tarea del todo, con sus adjuntos y archivos* | R9, R14, D8 |
-| `DeleteTask(id)` | en una transacción: `deletedAt = updatedAt = now`, `text = null` y se borran sus adjuntos; después, sus archivos. Sin deshacer. *ADR-0012 (propuesto): se borra la fila, sin marca* | R10, ADR-0011 |
+| `CompleteTask(current)` | `status = completed`, `completedAt = now`; conserva el adjunto. **ADR-0012: borra la tarea del todo, con sus adjuntos y archivos** | R9, R14, D8 |
+| `DeleteTask(id)` | en una transacción: `deletedAt = updatedAt = now`, `text = null` y se borran sus adjuntos; después, sus archivos. Sin deshacer. **ADR-0012: se borra la fila, sin marca** | R10, ADR-0011 |
 | `ReorderTask(id, newIndex)` | nuevo `rank` entre los vecinos; el índice 0 ⇒ pasa a ser la actual | R13 |
 | `EditTask(id, text, attachment?)` | actualiza y conserva `rank` y `colorKey` | R11, R13 |
 

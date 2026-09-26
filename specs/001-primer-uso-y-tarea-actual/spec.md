@@ -42,7 +42,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
   - **Entonces** se abre directamente el editor de la primera tarea, sin animación.
   - *Enmienda (spec 003, CA-003-11):* si hay tareas completadas y ninguna pendiente, se ve "Todo hecho." en lugar del editor.
   - *Enmienda (spec 004, CA-004-08):* también si hay tareas eliminadas; el editor solo se abre si nunca se ha guardado ninguna tarea.
-  - *Enmienda propuesta (ADR-0012, pendiente de aceptar):* como no se guardan completadas ni eliminadas, "ya se guardó alguna tarea" es un ajuste (sí/no) que se activa al guardar la primera.
+  - *Enmienda (ADR-0012, aceptado 2026-09-26):* como no se guardan completadas ni eliminadas, "ya se guardó alguna tarea" es un ajuste (sí/no) que se activa al guardar la primera.
 
 **Pantalla principal (R6)**
 

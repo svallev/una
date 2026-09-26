@@ -149,7 +149,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Cuando** se consulta el almacenamiento
   - **Entonces** sus versiones se conservan y el barrido no las borra.
   - **[Pendiente, spec 010]** "Borrar archivos de tareas completadas", con el espacio que ocupan, antes de la v1.0.
-  - *Enmienda propuesta (ADR-0012, pendiente de aceptar):* **se sustituye:** al completar una tarea con imagen, sus archivos se borran (con el mismo borrado de CA-007-16) y el barrido ya no respeta completadas. Desaparece el pendiente de la 010. Se implementa en la rama del ADR-0012, después de cerrar esta spec.
+  - *Enmienda (ADR-0012, aceptado 2026-09-26):* **se sustituye:** al completar una tarea con imagen, sus archivos se borran (con el mismo borrado de CA-007-16) y el barrido ya no respeta completadas. Desaparece el pendiente de la 010. Se implementa en la rama del ADR-0012, después de cerrar esta spec.
 - **CA-007-18 Copia de seguridad (ADR-0004, R-10)**
   - **Dado** tareas con imágenes que ocupan más de 25 MB en total
   - **Cuando** Android hace la copia de seguridad en la nube
