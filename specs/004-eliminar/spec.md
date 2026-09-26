@@ -26,7 +26,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
     - se cierra el menú y se abre la hoja "¿Eliminar esta tarea?" con el texto “{etiqueta}” desaparecerá sin marcarse como hecha. y los botones "Eliminar" (`dangerFill`, texto `ink`) y "Cancelar" (estilo `ghost`), como en el prototipo;
     - la etiqueta es el texto de la tarea, recortado a 3 líneas con "…" (mismo criterio que "¿Dónde la pones?", DEV-23); el lector de pantalla lee el texto completo;
     - desde el listado (botón eliminar de cada fila) se abre la misma hoja (CA-006-14);
-    - si la tarea no tiene texto, la etiqueta es el nombre del archivo o el dominio *[Diferido a 007–009]*.
+    - si la tarea no tiene texto, la etiqueta es "Foto" o "Imagen" (CA-007-20); el nombre del archivo o el dominio *[Diferido a 008–009]*.
 - **CA-004-02 Cancelar**
   - **Dado** la hoja de confirmación
   - **Cuando** pulsa "Cancelar", toca fuera, usa el gesto atrás o la desliza hacia abajo (DEV-21)
@@ -105,7 +105,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
 |---|---|---|
 | CL-004-1 | Doble pulsación rápida en "Eliminar" | Se elimina una sola vez; la hoja no responde a la segunda pulsación |
 | CL-004-2 | Pasar a segundo plano con la hoja de confirmación abierta | Al volver (< 10 min), la hoja sigue abierta; tras 10 min, la tarea actual sin hoja (CA-001-12) |
-| CL-004-3 | Falla el borrado de los archivos de un adjunto | No se avisa: los archivos huérfanos se borran en el siguiente arranque, después del primer fotograma (no retrasa CA-001-09) *[Adjuntos: 007–009]* |
+| CL-004-3 | Falla el borrado de los archivos de un adjunto | No se avisa: los archivos huérfanos se borran en el siguiente arranque, después del primer fotograma (no retrasa CA-001-09). Imagen: CA-007-16; documento y URL, 008–009 |
 | CL-004-4 | Texto grande (200 %) | La hoja hace scroll si no cabe; "Eliminar" y "Cancelar" siempre alcanzables y de al menos 44 pt |
 
 ## 5. Estados vacíos y de error

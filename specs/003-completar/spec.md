@@ -101,7 +101,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
 | CL-003-5 | Reducir movimiento activado | El relleno se mantiene; sin rotura ni confeti: fundido `reducedMotionFade` (0,4 s) a una enhorabuena estática que dura lo mismo (CA-003-04) |
 | CL-003-6 | Toque breve (menos de 1,2 s) | Como soltar antes de tiempo (CA-003-02). **Sin pista visual ni texto adicional** (decisión del propietario, 2026-09-24) |
 | CL-003-7 | La app pasa a segundo plano durante la rotura o la enhorabuena | Al volver se ve la siguiente tarea o "Todo hecho.", sin repetir la animación |
-| CL-003-8 | Tarea solo con adjunto (sin texto), en el anuncio de CA-003-07 | `{texto}` = nombre del adjunto (llega con 007–009) |
+| CL-003-8 | Tarea solo con adjunto (sin texto), en el anuncio de CA-003-07 | `{texto}` = "Foto" o "Imagen" (CA-007-21); documento y URL, 008–009 |
 
 Solo vertical en la v1 (CL-001-7): no hay rotación durante la animación.
 
@@ -143,6 +143,6 @@ Ver el histórico o borrarlo (Bloque 4). **Deshacer una tarea completada** (P-4:
 
 ## 9. Preguntas abiertas
 
-- **[Resuelto 2026-09-24, revisable] P-5:** toque breve sin pista visual (CL-003-6). La pista del lector de pantalla (§6) se mantiene porque no es visible.
+- **[Resuelto 2026-09-24, revisable] Toque breve** (antes "P-5", que en `docs/PLAN.md` es otra pregunta): sin pista visual (CL-003-6). La pista del lector de pantalla (§6) se mantiene porque no es visible.
 - **[Resuelto 2026-09-25] P-4:** **no** hay "Deshacer" tras completar: mantener pulsado 1,2 s ya evita los accidentes (decisión del propietario).
 - **[Resuelto 2026-09-25]** Gesto atrás desde el editor abierto en "Todo hecho.": vuelve a "Todo hecho." (CA-003-10). Reabrir sin pendientes: "Todo hecho." (CA-003-11). La enhorabuena no se salta con un toque (CA-003-04). Vibración ligera al completar (CA-003-03a, DEV-19).

@@ -109,6 +109,6 @@ Ninguna. Se descartan `reorderables` y `scrollable_positioned_list`: no hacen fa
     - `ReorderTask` renumera si las vecinas no dejan hueco;
     - las lecturas de la cola al abrir el listado y tras crear capturan el error sin registrarlo;
     - el test de integración recuerda `--keep-app-running`.
-  - **[Pendiente, spec 007]** Hay dos caminos de borrado (`DeleteCurrentTask` y `DeletePendingTask`). Cuando `AttachmentStore` borre archivos, debe hacerse en un único servicio que usen los dos; si no, eliminar desde el listado dejaría archivos en el sandbox.
+  - **[Recogido en la spec 007, CA-007-16]** Hay dos caminos de borrado (`DeleteCurrentTask` y `DeletePendingTask`). Cuando `AttachmentStore` borre archivos, debe hacerse en un único servicio que usen los dos; si no, eliminar desde el listado dejaría archivos en el sandbox.
   - **[Riesgo aceptado]** Si falla una lectura justo **después** de eliminar desde el listado, se ve el aviso de error aunque la tarea ya está eliminada; "Reintentar" no hace nada. No se pierden ni se filtran datos.
 - **La rama depende de las PR #8 y #9:** si cambian en la revisión, hay que rebasar.

@@ -20,7 +20,7 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D7 | Eliminar es **definitivo**: sin deshacer y sin "Nada pendiente."; queda una marca de borrado sin contenido (propietario, 2026-09-26; ADR-0011 sustituye a ADR-0006) |
 | D8 | Las completadas **conservan el adjunto** |
 | D9 | URL: **captura de página completa** para verla sin conexión |
-| D10 | Visor: **zoom + pantalla encendida**; sin brillo máximo ni horizontal |
+| D10 | Visor: **zoom + pantalla encendida** (hasta 10 min sin tocar); sin brillo máximo; **gira solo el visor** (enmienda del propietario, 2026-09-26, spec 007) |
 | D11 | Sin biometría en la v1 |
 | D12 | Mínimos: **iOS 16 / Android 8 (API 26)** |
 | D13 | Menú: **"Configuración"** mínima, sin perfil |
@@ -55,8 +55,8 @@ flowchart LR
 | **F0 Preparación** | Liberar espacio ✅; Android Studio + SDK + Command-line Tools + emulador Pixel 6a (API 37) ✅; Flutter fijado en `.fvmrc` e instalado con `tools/install-flutter.sh` (FVM opcional); `gh` (opcional); repo en GitHub ✅ y seguridad activada; conectar Vercel; comprar el dominio neutro; cuenta de Google Play. **Xcode aplazado (D17)** | S | — | `flutter doctor` sin errores para Android y web; repo con CI verde ✅; reglas de rama en `main`; dominio → bundle ID definitivo en ADR |
 | **F1 Spikes (Android + web)** | S1 arranque (Android) · S2 animaciones · S3 PDF y visor del sistema (Android: intent) · S4 captura web (Android) · S5 importación y backup (Android) · S6 web + Vercel. Las partes iOS de S1, S3, S4 y S5 pasan a F-iOS (D17). Código **desechable** en `spikes/` (rama propia, no se fusiona). **Requiere aprobación.** | M | F0 | Criterios de ADR-0001 cumplidos en Android → ADR-0001 **Aceptado para Android**, provisional para iOS; si no → ADR de cambio a Expo |
 | **F2 Esqueleto + 001** *(✅ completada el 2026-09-25, PR #3)* | `app/` + identidad + l10n + tokens + BD v1 + repositorio + CI + web + la spec 001 completa | L | F1 | CA-001 en verde; arranque p50 < 1 s medido; preview en Vercel por PR |
-| **F3 Núcleo** *(en curso: 002, 003 y 005 ✅ 2026-09-25; 004 ✅ 2026-09-26)* | 002 crear y posición → 003 completar → 004 eliminar → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
-| **F4 Adjuntos** | 007 imagen (canal de importación + visor) → 008 documento → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
+| **F3 Núcleo** ✅ *(002, 003 y 005 el 2026-09-25; 004 y 006 el 2026-09-26)* | 002 crear y posición → 003 completar → 004 eliminar → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
+| **F4 Adjuntos** *(en curso: 007 en revisión)* | 007 imagen (canal de importación + visor) → 008 documento → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
 | **010** | Idioma y Configuración (tras diseñar la pantalla) | S | F3 (se puede hacer en paralelo con F4) | CA-010 en verde |
 | **F5 Endurecimiento** | Auditoría de accesibilidad (VoiceOver, TalkBack, Switch, texto grande), pruebas MASTG, presupuesto de rendimiento y tamaño, política de privacidad, fichas de tienda, capturas, manifiesto de privacidad y Data Safety, iconos | M | F4, 010 | Checklist de publicación completa; 0 hallazgos altos |
 | **F6 Beta Android y v1.0** | Play: Internal testing y prueba cerrada con **12 testers durante 14 días** (cuenta personal nueva), corrección de errores, v1.0 en Google Play | M + 14 días | F5 + cuenta de Play | Aprobación en Google Play; feedback de los testers (sin telemetría: formulario o correo) |

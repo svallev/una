@@ -23,7 +23,10 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Tarea web / URL | Web task / URL | `AttachmentKind.web` | Tarea que muestra una página web. |
 | Instantánea / captura | Snapshot | `snapshot` | Imagen de página completa de una URL, guardada al crearla, para verla sin conexión. |
 | Miniatura | Thumbnail | `thumbnail` | Versión pequeña de un adjunto para el listado. |
-| Visor | Viewer | `AttachmentViewer` | Vista a pantalla completa con zoom y desplazamiento. |
+| Visor | Viewer | `AttachmentViewer` | Pantalla completa que se abre al tocar la imagen: al ancho, con desplazamiento vertical y zoom opcional (spec 007). |
+| Versión completa | Full version | `relPath` | Copia de la imagen que guarda la app: recodificada, sin metadatos y como mucho de 24 MP. |
+| Versión de pantalla | Display version | `displayRelPath` | Copia reducida para pintar la tarea actual rápido al abrir (CA-001-09). |
+| Pie | Caption | `caption` | Texto de la tarea sobre su imagen (recuadro negro, texto blanco). |
 | Visor del sistema | System viewer | `SystemViewer` | QuickLook (iOS) o la app que registre el tipo (Android). |
 | Nota adhesiva | Sticky note | `StickyNote` | Representación visual de una tarea (color de la paleta). |
 | Color de la nota | Note color | `colorKey` | Índice 0–4 de la paleta. Se guarda con la tarea. |

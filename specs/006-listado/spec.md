@@ -36,7 +36,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
     - abajo, fijo: el botón "Nueva tarea".
   - La **primera fila** es la tarea actual: texto más grande (20 px, peso 800), **sin asa** y **sin etiqueta visible** (la etiqueta "Lo siguiente" del prototipo está oculta y no se muestra). Las demás: texto de 16 px (peso 600) y el asa a la izquierda.
   - El texto de cada fila se recorta a **3 líneas** con "…" (DEV-29); el lector de pantalla lee el texto completo.
-  - *[Diferido a 007–009]* Miniatura de 44 px (imagen) o insignia con la extensión en mayúsculas (PDF, DOCX…; "WEB" para las URL) entre el asa y el texto; sin texto, se muestra el nombre del archivo o el dominio.
+  - Imagen: CA-007-20. *[Diferido a 008–009]* Miniatura de 44 px (imagen) o insignia con la extensión en mayúsculas (PDF, DOCX…; "WEB" para las URL) entre el asa y el texto; sin texto, se muestra el nombre del archivo o el dominio.
 - **CA-006-03 Volver**
   - **Dado** el listado
   - **Cuando** pulsa "Volver a la tarea" o usa el gesto atrás
@@ -148,7 +148,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
     - cada fila es **un único elemento**: "{posición} de {total}: {texto}" (la primera, "1 de {total}. Tarea actual: {texto}"), con la pista "Toca dos veces para editar". Los botones de la fila (asa, Editar, Eliminar) no se leen por separado: sus funciones están en las acciones de la fila (CA-006-16);
     - el lector informa de cuántas filas hay y de cuáles están a la vista;
     - con el lector activo, la ayuda dice "La primera es la que tienes ahora. Usa las acciones de cada tarea para cambiar el orden, editarla o eliminarla." (DEV-33).
-  - *[Diferido a 007–009]* Tras el texto, el tipo de adjunto si hay.
+  - Tras el texto, el tipo de adjunto si hay: imagen, CA-007-21; *[documento y URL: 008–009]*.
 - **CA-006-19 Reducir movimiento**
   - **Dado** "reducir movimiento" activado
   - **Cuando** se reordena, se crea o se desplaza la lista por programa
