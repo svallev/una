@@ -17,6 +17,7 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   final Clock clock;
 
   static const _firstRunKey = 'firstRunDone';
+  static const _keepScreenOnKey = 'keepScreenOn';
 
   SimpleSelectStatement<$TasksTable, TaskRow> _pendingQuery() =>
       db.select(db.tasks)
@@ -271,6 +272,25 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
         SettingEntriesCompanion.insert(
           key: _firstRunKey,
           value: jsonEncode(true),
+          updatedAt: clock.now().millisecondsSinceEpoch,
+        ),
+      );
+
+  @override
+  Future<bool> keepScreenOn() async {
+    final row = await (db.select(
+      db.settingEntries,
+    )..where((s) => s.key.equals(_keepScreenOnKey))).getSingleOrNull();
+    return row == null || jsonDecode(row.value) != false;
+  }
+
+  @override
+  Future<void> setKeepScreenOn(bool value) => db
+      .into(db.settingEntries)
+      .insertOnConflictUpdate(
+        SettingEntriesCompanion.insert(
+          key: _keepScreenOnKey,
+          value: jsonEncode(value),
           updatedAt: clock.now().millisecondsSinceEpoch,
         ),
       );

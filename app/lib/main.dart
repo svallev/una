@@ -30,6 +30,7 @@ Future<void> bootstrap({
       firstRunDone: await repos.settings.firstRunDone(),
       // Solo importa si no hay pendientes ("Todo hecho.", CA-003-11, CA-004-08).
       hasHistory: current == null && await repos.tasks.hasHistory(),
+      keepScreenOn: await repos.settings.keepScreenOn(),
     );
     runApp(
       ProviderScope(

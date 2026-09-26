@@ -55,7 +55,11 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
         taskRepositoryProvider.overrideWithValue(repo),
         settingsRepositoryProvider.overrideWithValue(repo),
         bootStateProvider.overrideWithValue(
-          BootState(currentTask: await repo.currentTask(), firstRunDone: true),
+          BootState(
+            currentTask: await repo.currentTask(),
+            firstRunDone: true,
+            keepScreenOn: await repo.keepScreenOn(),
+          ),
         ),
         colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
         if (clock != null) clockProvider.overrideWithValue(clock),

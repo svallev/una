@@ -10,6 +10,7 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   final Map<String, Task> _tasks = {};
   final StreamController<void> _changes = StreamController<void>.broadcast();
   bool _firstRunDone = false;
+  bool _keepScreenOn = true;
 
   List<Task> get _pending => _tasks.values.where((t) => t.isPending).toList()
     // Con claves iguales (no debería haberlas), el id desempata: el orden
@@ -142,6 +143,12 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<void> setFirstRunDone() async => _firstRunDone = true;
+
+  @override
+  Future<bool> keepScreenOn() async => _keepScreenOn;
+
+  @override
+  Future<void> setKeepScreenOn(bool value) async => _keepScreenOn = value;
 
   Future<void> dispose() => _changes.close();
 }

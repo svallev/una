@@ -14,6 +14,7 @@ import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../attachments/image_viewer_screen.dart';
+import '../attachments/keep_screen_on_controller.dart';
 import '../attachments/task_image.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/completion_controller.dart';
@@ -264,7 +265,9 @@ class CurrentTaskScreen extends ConsumerWidget {
               ),
       ),
     );
-    return faceOnly || chromeOnly ? ExcludeSemantics(child: screen) : screen;
+    if (faceOnly || chromeOnly) return ExcludeSemantics(child: screen);
+    // Con imagen, la pantalla no se apaga mientras se usa (CA-007-12).
+    return KeepScreenOnWhileVisible(enabled: attachment != null, child: screen);
   }
 }
 

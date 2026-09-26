@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/all_done/all_done_screen.dart';
 import '../features/app_error/storage_error_screen.dart';
+import '../features/attachments/keep_screen_on_controller.dart';
 import '../features/complete/celebration_overlay.dart';
 import '../features/complete/completion_controller.dart';
 import '../features/current_task/current_task_screen.dart';
@@ -76,7 +77,12 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
-      builder: appFrame,
+      // Cada toque cuenta como uso para la pantalla encendida (CA-007-12).
+      builder: (context, child) => Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => ref.read(keepScreenOnProvider.notifier).touched(),
+        child: appFrame(context, child),
+      ),
       home: HomeRouter(key: ValueKey(_resetGeneration)),
     );
   }

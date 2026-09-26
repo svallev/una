@@ -219,10 +219,14 @@ class BootState {
     required this.currentTask,
     required this.firstRunDone,
     this.hasHistory = false,
+    this.keepScreenOn = true,
   });
   final Task? currentTask;
   final bool firstRunDone;
   final bool hasHistory;
+
+  /// Ajuste "Mantener la pantalla encendida con adjuntos" (CA-007-12).
+  final bool keepScreenOn;
 }
 
 class UuidV7Ids implements IdGenerator {

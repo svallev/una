@@ -12,6 +12,7 @@ import '../../domain/entities/attachment.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/full_width.dart';
 import '../../ui/una_icons.dart';
+import 'keep_screen_on_controller.dart';
 
 /// Visor a pantalla completa (CA-007-09/10/11, DEV-37): la imagen al ancho de
 /// la pantalla sobre papel, desplazamiento vertical, zoom opcional hasta ×8 y
@@ -270,119 +271,122 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
     final attachment = widget.attachment;
     final images = ref.watch(attachmentImagesProvider);
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    return Scaffold(
-      backgroundColor: UnaColors.paper,
-      body: Semantics(
-        scopesRoute: true,
-        namesRoute: true,
-        explicitChildNodes: true,
-        label: l10n.viewerTitle,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final size = constraints.biggest;
-                if (size != _viewport) {
-                  // Al girar, vuelve el ancho completo (CA-007-11).
-                  final rotated =
-                      _viewport != Size.zero && size.width != _viewport.width;
-                  _viewport = size;
-                  if (rotated) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      _animation.stop();
-                      _transform.value = Matrix4.identity();
-                      setState(() {});
-                    });
+    return KeepScreenOnWhileVisible(
+      enabled: true,
+      child: Scaffold(
+        backgroundColor: UnaColors.paper,
+        body: Semantics(
+          scopesRoute: true,
+          namesRoute: true,
+          explicitChildNodes: true,
+          label: l10n.viewerTitle,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final size = constraints.biggest;
+                  if (size != _viewport) {
+                    // Al girar, vuelve el ancho completo (CA-007-11).
+                    final rotated =
+                        _viewport != Size.zero && size.width != _viewport.width;
+                    _viewport = size;
+                    if (rotated) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        _animation.stop();
+                        _transform.value = Matrix4.identity();
+                        setState(() {});
+                      });
+                    }
                   }
-                }
-                final width = size.width;
-                final contentH = _contentHeight(width);
-                final level = _scale;
-                return Focus(
-                  autofocus: true,
-                  onKeyEvent: _onKey,
-                  child: GestureDetector(
-                    onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
-                    onDoubleTap: () =>
-                        _zoomTo(_nextLevel(), focus: _doubleTapAt),
-                    child: InteractiveViewer(
-                      transformationController: _transform,
-                      constrained: false,
-                      minScale: 1,
-                      maxScale: UnaMotion.viewerZoomMax,
-                      // A ×1, solo en vertical (CA-007-09); ampliada, libre.
-                      panAxis: _zoomed ? PanAxis.free : PanAxis.vertical,
-                      onInteractionStart: (_) => _animation.stop(),
-                      onInteractionEnd: _onInteractionEnd,
-                      child: SizedBox(
-                        width: width,
-                        height: math.max(contentH, size.height),
-                        child: Center(
-                          child: Semantics(
-                            key: _imageSemantics,
-                            label: attachment.isPhoto
-                                ? l10n.attachmentPhoto
-                                : l10n.attachmentImage,
-                            value: l10n.a11yZoomLevel(
-                              double.parse(level.toStringAsFixed(1)),
-                            ),
-                            image: attachment.isPhoto,
-                            excludeSemantics: true,
-                            customSemanticsActions: {
-                              if (level < UnaMotion.viewerZoomMax - 0.01)
-                                CustomSemanticsAction(label: l10n.zoomIn):
-                                    _zoomIn,
-                              if (_zoomed)
-                                CustomSemanticsAction(label: l10n.zoomOut):
-                                    _zoomOut,
-                              if (_zoomed)
-                                CustomSemanticsAction(label: l10n.zoomFit):
-                                    _fit,
-                            },
-                            onScrollUp: _canScrollDown
-                                ? () => _panBy(0, -size.height * 0.8)
-                                : null,
-                            onScrollDown: _canScrollUp
-                                ? () => _panBy(0, size.height * 0.8)
-                                : null,
-                            onScrollLeft: _canScrollRight
-                                ? () => _panBy(-size.width * 0.8, 0)
-                                : null,
-                            onScrollRight: _canScrollLeft
-                                ? () => _panBy(size.width * 0.8, 0)
-                                : null,
-                            child: _Tiles(
-                              attachment: attachment,
-                              width: width,
-                              height: contentH,
-                              // Decodifica al tamaño con que se ve, por pasos:
-                              // a ×1, al ancho de la pantalla.
-                              decodeScale: dpr * _bucket(level),
-                              image: images.stored,
+                  final width = size.width;
+                  final contentH = _contentHeight(width);
+                  final level = _scale;
+                  return Focus(
+                    autofocus: true,
+                    onKeyEvent: _onKey,
+                    child: GestureDetector(
+                      onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
+                      onDoubleTap: () =>
+                          _zoomTo(_nextLevel(), focus: _doubleTapAt),
+                      child: InteractiveViewer(
+                        transformationController: _transform,
+                        constrained: false,
+                        minScale: 1,
+                        maxScale: UnaMotion.viewerZoomMax,
+                        // A ×1, solo en vertical (CA-007-09); ampliada, libre.
+                        panAxis: _zoomed ? PanAxis.free : PanAxis.vertical,
+                        onInteractionStart: (_) => _animation.stop(),
+                        onInteractionEnd: _onInteractionEnd,
+                        child: SizedBox(
+                          width: width,
+                          height: math.max(contentH, size.height),
+                          child: Center(
+                            child: Semantics(
+                              key: _imageSemantics,
+                              label: attachment.isPhoto
+                                  ? l10n.attachmentPhoto
+                                  : l10n.attachmentImage,
+                              value: l10n.a11yZoomLevel(
+                                double.parse(level.toStringAsFixed(1)),
+                              ),
+                              image: attachment.isPhoto,
+                              excludeSemantics: true,
+                              customSemanticsActions: {
+                                if (level < UnaMotion.viewerZoomMax - 0.01)
+                                  CustomSemanticsAction(label: l10n.zoomIn):
+                                      _zoomIn,
+                                if (_zoomed)
+                                  CustomSemanticsAction(label: l10n.zoomOut):
+                                      _zoomOut,
+                                if (_zoomed)
+                                  CustomSemanticsAction(label: l10n.zoomFit):
+                                      _fit,
+                              },
+                              onScrollUp: _canScrollDown
+                                  ? () => _panBy(0, -size.height * 0.8)
+                                  : null,
+                              onScrollDown: _canScrollUp
+                                  ? () => _panBy(0, size.height * 0.8)
+                                  : null,
+                              onScrollLeft: _canScrollRight
+                                  ? () => _panBy(-size.width * 0.8, 0)
+                                  : null,
+                              onScrollRight: _canScrollLeft
+                                  ? () => _panBy(size.width * 0.8, 0)
+                                  : null,
+                              child: _Tiles(
+                                attachment: attachment,
+                                width: width,
+                                height: contentH,
+                                // Decodifica al tamaño con que se ve, por pasos:
+                                // a ×1, al ancho de la pantalla.
+                                decodeScale: dpr * _bucket(level),
+                                image: images.stored,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Padding(
-                  padding: const EdgeInsets.all(UnaSpace.s),
-                  child: _CloseButton(
-                    label: l10n.viewerClose,
-                    onPressed: _close,
+                  );
+                },
+              ),
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(UnaSpace.s),
+                    child: _CloseButton(
+                      label: l10n.viewerClose,
+                      onPressed: _close,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

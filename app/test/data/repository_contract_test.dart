@@ -364,6 +364,15 @@ void _contract(
       await settings.setFirstRunDone();
       expect(await settings.firstRunDone(), isTrue);
     });
+
+    test('CA-007-12: "Mantener la pantalla encendida" está activo por '
+        'defecto y se guarda', () async {
+      expect(await settings.keepScreenOn(), isTrue);
+      await settings.setKeepScreenOn(false);
+      expect(await settings.keepScreenOn(), isFalse);
+      await settings.setKeepScreenOn(true);
+      expect(await settings.keepScreenOn(), isTrue);
+    });
   });
 }
 
