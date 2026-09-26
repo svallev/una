@@ -36,7 +36,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 - **H1 (código):**
   - el aviso de foco sale del nodo de la fila (`GlobalKey` en su `Semantics`) y del de "Nueva tarea" (`BrutalButton.semanticsKey`);
   - se pide cuando la hoja o el editor ya se han cerrado (tests: "el aviso de foco sale del nodo de la fila" y los de foco de CA-006-17).
-  - ⚠️ Queda comprobar con TalkBack real dónde queda el foco tras editar, eliminar y crear. En el emulador no se puede provocar con `adb`.
+  - ✅ Comprobado por el propietario con TalkBack real en el Xiaomi (en el emulador no se puede provocar con `adb`).
 - **M1:** el foco del teclado va al asa (o a "Editar" en la primera fila), con anillo visible e Intro; "Nueva tarea" recibe el foco en su propio botón. Ya no hay `Focus` invisibles.
 - **M2:** el orden de lectura se fija en el nodo que la lista crea para cada fila. Con texto grande, la flecha y el título se quedan fijos y solo la ayuda se desplaza (decisión del propietario: CL-006-10 y DEV-34 enmendados). El orden es el de CA-006-18 a cualquier escala (test a 2,0).
 - **B1:** la protección de 350 ms solo se aplica al tocar con el dedo el botón Eliminar de la fila; con el lector o el teclado, la hoja responde enseguida (test).
@@ -44,10 +44,10 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 **CA → test:** CA-006-01/02/03, CL-006-9/10/11 → `test/features/task_list/task_list_screen_test.dart` · CA-006-04/05/06/07/11/12/19, CL-006-4/7 → `reorder_gestures_test.dart` · CA-006-08/09/16 → `move_actions_test.dart` · CA-006-10, CL-006-8 → `test/domain/reorder_task_test.dart`, `rank_test.dart`, `test/data/repository_contract_test.dart` · CA-006-13/14/15/19, CL-006-2/3/5/6, §5 → `task_list_flow_test.dart` · CA-006-17/18 → `task_list_a11y_test.dart` · CA-006-14 (datos) → `test/domain/delete_pending_task_test.dart` · controlador → `task_list_controller_test.dart` · CL-002-1 → `test/domain/create_task_test.dart` · CA-006-20, CL-006-1 → `integration_test/task_list_perf_test.dart` · integración → `integration_test/task_list_flow_test.dart` · aspecto → `test/goldens/task_list_golden_test.dart`.
 
-**Pruebas a mano pendientes (propietario, en el Xiaomi):** arrastrar (asa y mantener pulsado 150 ms en cualquier punto de la tarjeta; comprobar que deslizar deprisa sigue desplazando la lista) y el aspecto frente al prototipo; hoja "Mover"; doble toque; eliminar y crear desde el listado; "Quitar animaciones"; TalkBack (foco tras mover, editar, eliminar y crear; acciones de la fila; arrastrar con doble toque mantenido); texto grande.
+**Pruebas a mano (propietario, en el Xiaomi): ✅ hechas el 2026-09-26, TalkBack incluido.** Se probó: arrastrar (asa y mantener pulsado 150 ms en cualquier punto de la tarjeta; comprobar que deslizar deprisa sigue desplazando la lista) y el aspecto frente al prototipo; hoja "Mover"; doble toque; eliminar y crear desde el listado; "Quitar animaciones"; TalkBack (foco tras mover, editar, eliminar y crear; acciones de la fila; arrastrar con doble toque mantenido); texto grande.
 
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde.
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada**.
+- [x] Todos los CA de la spec tienen test en verde.
+- [x] Definition of Done (`specs/constitution.md`) completa.
+- [x] Spec marcada como **Implementada** (2026-09-26).
