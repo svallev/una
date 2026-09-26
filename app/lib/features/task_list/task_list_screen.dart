@@ -504,6 +504,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   Future<void> _create() async {
     if (_drag != null) return;
     final l10n = AppLocalizations.of(context);
+    // El aviso de un error anterior taparía "Nueva tarea".
+    ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
     final current = _tasks.firstOrNull;
     final saved = await Navigator.of(context).push(
       TaskEditorScreen.route(

@@ -16,8 +16,11 @@ class SheetHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
+          // El lector lee la etiqueta tal cual (en mayúsculas se deletrearía).
           child: Semantics(
             header: true,
+            label: label,
+            excludeSemantics: true,
             child: Text(
               label.toUpperCase(),
               style: const TextStyle(
