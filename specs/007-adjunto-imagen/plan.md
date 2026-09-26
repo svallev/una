@@ -2,7 +2,7 @@
 
 - **Spec:** `specs/007-adjunto-imagen/spec.md` (estado: Aprobada, 2026-09-26)
 - **ADR aplicables:** ADR-0002 (repositorio y esquema v1), ADR-0004 (copias, R-10), ADR-0011 (eliminar sin deshacer), ADR-0010 (web de pruebas); decisiones de los spikes I-1, I-2, I-3, I-4 y H-6/H-7
-- **Estado del plan:** Aprobado (propietario, 2026-09-26)
+- **Estado del plan:** Aprobado (propietario, 2026-09-26). En implementación: lo que cambió al implementar está en el §8
 - **Rama:** `feat/007-adjunto-imagen`, desde `main` (la 006 ya está fusionada)
 
 ## 1. Resumen del enfoque
@@ -61,7 +61,7 @@
 | Presentación | `features/attachments/` (`attach_sheet.dart`, `attachment_preview.dart`, `image_viewer_screen.dart`, `missing_attachment_card.dart`, `task_image.dart`); `editor/task_editor_screen.dart`, `current_task/current_task_screen.dart`, `task_list/task_list_row.dart`, `delete/…`, `complete/…`, `app/una_app.dart` (barrido y `Listener`) | Hoja, editor, pantalla principal, visor, listado, animaciones |
 | Nativo | `MainActivity.kt`, `ImageImport.kt`, `ImageSanitizer.kt`, `AndroidManifest.xml` (`<provider>` no exportado), `res/xml/import_paths.xml` | Cámara, selector, copia acotada, limpieza, pantalla encendida |
 | l10n | `app_es.arb`, `app_en.arb` | Claves de la §7 de la spec |
-| Tokens | `design/tokens.json` → `tokens.g.dart` | Pie (22 px, 800, 146 px, ×1,6), miniatura 44, `viewerFade` 400 ms, `importIndicatorDelay` 400 ms, zoom (2,5 y 8) |
+| Tokens | `design/tokens.json` → `tokens.g.dart` | Pie (22 px, 800, 146 px, ×1,6), miniatura 44, `importIndicatorDelay` 400 ms, `viewerZoom` 250 ms, zoom (2,5 y 8), texto y campo del editor con adjunto (24 px, 96 px); el fundido de 400 ms reutiliza `reducedMotionFade` (§8) |
 | Documentos | `docs/architecture.md` §2/§4, `docs/PLAN.md` D18, ADR-0004 | 64 MP y 24 MP sin límite de lado (la spec manda); rutas de los adjuntos y copia |
 
 ## 3. Modelo de datos y migraciones
@@ -101,7 +101,7 @@ Descartados: `image_picker` (copia el archivo entero sin límite antes de devolv
 | CA-007-18 | Test que lee las reglas XML de copia: `files/` fuera de la nube en 9–11 y 12+, dentro de `device-transfer` | `test/app/backup_rules_test.dart` |
 | CA-007-01/04/15/22 | Widget con `ImageImporter` falso: hoja y sus filas, vista previa, texto opcional, sustituir, quitar, "Preparando imagen…" a los 400 ms, cancelar, errores, foco y anuncios | `test/features/attachments/attach_sheet_test.dart`, `editor_image_test.dart` |
 | CA-007-05/06, CL-007-8 | Widget de flujo: crear con imagen desde la principal y desde el listado (fila 1, resaltada, foco); editar sin mover; doble toque en "Continuar" | `test/features/attachments/image_flow_test.dart` |
-| CA-007-08/21 | Widget: imagen a sangre, logotipo y menú con fondo, pie de 3 líneas, lectura y acciones | `test/features/current_task/current_task_image_test.dart` |
+| CA-007-08/21 | Widget: imagen a sangre, logotipo y menú con fondo, pie de 3 líneas, lectura y acciones | `test/features/attachments/current_task_image_test.dart` |
 | CA-007-09/10/11/23 | Widget del visor: ancho completo, desplazamiento vertical, doble toque por pasos y centrado, pellizco, acciones del lector y teclas, orientaciones pedidas al abrir y cerrar, reducir movimiento | `test/features/attachments/image_viewer_test.dart` |
 | CA-007-12 | Unitario de `KeepScreenOnController` con reloj falso (10 min, toques, cambio de pantalla, segundo plano) | `test/features/attachments/keep_screen_on_test.dart` |
 | CA-007-19 | Widget: falta la completa, está corrupta, faltan las derivadas (regenera sin avisar); acciones de la tarjeta | `test/features/attachments/missing_attachment_test.dart` |
@@ -129,3 +129,48 @@ Descartados: `image_picker` (copia el archivo entero sin límite antes de devolv
 - **Foco de TalkBack al volver de la cámara.** La actividad de la cámara es otra app: al volver, el foco se pide cuando la ruta vuelve a estar en primer plano (lección de la 004). Se comprueba en el emulador.
 - **Web de pruebas.** El `input` del navegador puede no disparar `change` si se cancela; se trata como cancelación al recuperar el foco de la ventana. Es solo para la vista previa (ADR-0010).
 - **Documentos que cambian:** D18 y `architecture.md` dicen 50 MP y "original ≤ 4096 px"; la spec aprobada dice 64 MP y 24 MP sin límite de lado. Se actualizan los documentos (la spec manda).
+
+## 8. Decisiones y cambios durante la implementación
+
+Registro de lo que se decidió o cambió al implementar, respecto a lo escrito arriba. **[Hecho]** salvo que se indique.
+
+### Decisiones del propietario (2026-09-26)
+
+| Tema | Decisión | Dónde queda |
+|---|---|---|
+| Separadores de la hoja "Añadir a la tarea" | Un solo gris, el del menú (`disabled`, `#C7C4BF`), sin token nuevo | DEV-38 |
+| "Preparando imagen…" | Dentro del recuadro de la vista previa: texto en monoespaciada, barra de progreso fina (sin ella con reducir movimiento) y "Cancelar" de 48 dp; "Quitar adjunto" no se ve mientras | DEV-39, CA-007-15 |
+| Lectura sin texto | "Tarea actual: Foto" / "Imagen", con mayúscula (se reutilizan `attachmentPhoto`/`attachmentImage`) | CA-007-21 |
+| "Imagen" dos veces | Una imagen de la galería no lleva papel de imagen (TalkBack añadiría "imagen" a "… Con imagen"); una foto, sí | CA-007-21 |
+| Pantalla encendida | Solo los toques cuentan como uso; el teclado físico no reinicia los 10 minutos | CA-007-12 |
+| "Adjunto no disponible" | **Sin "Sustituir":** una sola acción, "Quitar adjunto" (con texto) o "Eliminar tarea" (sin texto). Para otra imagen, se edita la tarea | CA-007-16/19, DEV-40 |
+| Un adjunto por tarea | Un solo adjunto (imagen, foto, documento o URL). En el editor, (+) sigue visible con un adjunto y lo que se cargue sustituye al anterior; no hay botón "Sustituir" en ninguna parte | CA-007-04, spec §9 |
+| Texto nuevo | `a11yAttachmentMissing` ("{text}. Adjunto no disponible"), añadido a la §7 | CA-007-19/21 |
+
+### Decisiones técnicas (propias, dentro de lo aprobado)
+
+- **Proveedores y puertos nuevos:**
+  - `imageImporterProvider` e `importImageProvider` (caso de uso `ImportImage`: `pick` y `ImportJob.prepare`/`cancel`, con el tiempo máximo de 20 s; al agotarse, error `unreadable`, el mismo texto que "ilegible").
+  - `ImageImportController.pick` devuelve `ImportOutcome` (`added`, `unchanged`, `failed`): el editor decide así el foco y el anuncio (CA-007-22).
+  - `AttachmentImages` (`data/attachments/attachment_images.dart`): cómo se dibujan los archivos, de disco en móvil (`FileImage`) y de memoria en la web y en los tests (`MemoryImage`). El dominio sigue sin Flutter.
+  - `ImageServices` (`data/image_services*.dart`): almacén, imágenes e importador de la plataforma, abiertos en `bootstrap` junto a los repositorios. En la web de pruebas, `UnavailableImageImporter` (elegir no hace nada) hasta T-007-19.
+  - `NativeImageImporter` sin canal (iOS aún no lo tiene, D17): HEIC desactivado y cada llamada falla como `unreadable`; el arranque no depende de él.
+  - `ImageImporter.regenerateDerived(attachment)` y el método nativo `regenerate`: rehace `screen.jpg` y `thumb.jpg` desde las teselas con `BitmapRegionDecoder`, decodificando solo la zona recortada y reducida (una captura larga no ocupa memoria de más). Se escribe aparte y se renombra.
+- **Estado de los archivos al mostrar la tarea** (`attachmentHealthProvider`): comprueba los archivos sin bloquear el primer fotograma (mientras, se dibuja la imagen); si faltan las derivadas, las regenera; si la versión de pantalla existe pero no se puede decodificar, la regenera **una vez**; si vuelve a fallar o falta la completa, "Adjunto no disponible".
+- **Barrido:** 2 s después del primer fotograma (`UnaApp.sweepDelay`), para no competir con la decodificación de la imagen del arranque (CA-001-09).
+- **Pantalla encendida:** el ajuste `keepScreenOn` se guarda en la tabla `settings` (clave `keepScreenOn`, JSON; sin cambio de esquema), por defecto `true`, y se lee en el arranque (`BootState`). `KeepScreenOnWhileVisible` pide la pantalla encendida mientras su ruta es la de delante (`ModalRoute.isCurrent`): menú, editor y listado la apagan solos. `FLAG_KEEP_SCREEN_ON` no necesita permisos.
+- **Visor:**
+  - Sin token `viewerFade`: el fundido de 400 ms con reducir movimiento reutiliza `reducedMotionFade`; sin reducir movimiento, el de las hojas (`sheetIn` 200 ms / `sheetOut` 160 ms).
+  - En tablets y plegables el marco de la app limita el ancho a 600 px (CL-001-7); el visor lo levanta mientras está abierto (`fullWidthRequests`) para ir al 100 % del ancho, también en horizontal.
+  - "Cerrar" es un cuadrado blanco de 48 dp con borde negro, como "Quitar adjunto".
+  - El valor y las acciones del lector se actualizan al terminar cada zoom o desplazamiento, no en cada fotograma del pellizco.
+- **Pantalla principal con imagen:** el toque en la imagen abre el visor aunque la imagen aún no se haya decodificado (`HitTestBehavior.opaque`). Logotipo con fondo blanco que sobresale 8 px a cada lado sin moverse.
+- **Textos:** `editorAttachmentPlaceholder` y `editorRemoveAttachment` estaban en la spec 005 pero no en las ARB: se añadieron.
+- **Tokens nuevos:** `fontSize.attachmentText` (24) y `size.attachTextField` (96), del prototipo (`hasDraftAtt`).
+- **Tests:** la imagen de prueba (`tinyImage`) es un PNG de 1 × 1 px que se decodifica de verdad; con la anterior (JPEG aritmético) los tests habrían mostrado siempre "Adjunto no disponible". `FakeImageImporter` (`test/support/`) simula la cámara, el selector, la copia, la limpieza, la cancelación y la regeneración.
+
+### Pendiente de verificar
+
+- **[Pendiente]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`): el entorno en la nube no puede descargar el SDK de Android. Se compila en el Mac con `fvm flutter build apk --debug`.
+- **[Pendiente]** Todo lo que depende del dispositivo (T-007-23/24): cámara y selector reales, giro, pellizco, TalkBack, pantalla encendida y rendimiento en el Xiaomi.
+

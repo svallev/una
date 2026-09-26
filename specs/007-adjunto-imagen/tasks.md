@@ -30,6 +30,28 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-24 | TalkBack y teclado en el emulador (hoja, vuelta de la cámara, visor, cierre) | 20 | Lista de la revisión de accesibilidad | CA-007-21/22 |
 | T-007-25 | Revisiones: `a11y-reviewer`, `security-reviewer`, `/security-check`, `/i18n-check`, `/tokens-validate` | 22–24 | Hallazgos resueltos o registrados | DoD |
 
+## Estado (2026-09-26)
+
+| Tareas | Estado | Commit |
+|---|---|---|
+| T-007-01, 02 | **Hecha** | `3745568` |
+| T-007-03 | **Hecha** | `dd0f022` |
+| T-007-04 | **Hecha** | `a97de7e` |
+| T-007-05 | **Hecha** | `de9aa69` |
+| T-007-06 | **Hecha** | `c979bcd` |
+| T-007-07 | **Hecha** | `52a6493` |
+| T-007-08, 09 | **Hecha** (compilada en el Mac; integración en el emulador pendiente, T-007-23) | `b6f8750` |
+| T-007-10 | **Hecha** | `60df477` |
+| T-007-11 | **Hecha** (DEV-38) | `cc161d9` |
+| T-007-12 | **Hecha** (DEV-39) | `6afa8bc` |
+| T-007-13 | **Hecha** | `285677b` |
+| T-007-14 | **Hecha** | `0d51598` |
+| T-007-15 | **Hecha** | `ea613b3` |
+| T-007-16 | **Hecha** (DEV-40, sin "Sustituir"); **Kotlin sin compilar** (el entorno en la nube no descarga el SDK de Android) | `1e00ed9`, `90c2a8e` |
+| T-007-17 a 25 | Pendientes | — |
+
+Las decisiones y cambios respecto al plan están en `plan.md` §8.
+
 ## Cierre
 
 - [ ] Todos los CA de la spec tienen test en verde.

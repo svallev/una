@@ -3,7 +3,7 @@
 - **Estado:** Aprobada (propietario, 2026-09-26). Reescrita ese día con sus decisiones tras la revisión (spec-reviewer, a11y-reviewer y security-reviewer)
 - **Reglas de producto:** R3 (foto con la cámara, imagen de la galería), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido), **propuesta de valor 2**
 - **Pantallas del prototipo:** 9 "Añadir (+)", 3 "Nueva tarea" (con adjunto), 1 "Tarea actual" (con imagen), 5 "Todas las tareas" (miniatura). El visor a pantalla completa y los errores no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
-- **Decisiones y ADR:** D5, D8, D10 (enmendada: giro solo en el visor), D17, D18, ADR-0002, ADR-0004 (y R-10), ADR-0011, DEV-01, DEV-02, DEV-18, DEV-35 a DEV-37; modelo de amenazas T-2, T-3, T-7, T-8, T-13, T-15
+- **Decisiones y ADR:** D5, D8, D10 (enmendada: giro solo en el visor), D17, D18, ADR-0002, ADR-0004 (y R-10), ADR-0011, DEV-01, DEV-02, DEV-18, DEV-35 a DEV-40; modelo de amenazas T-2, T-3, T-7, T-8, T-13, T-15
 - **Dependencias:** 001, 002, 003, 004, 005, 006
 - **Cierra lo diferido a la 007 (parte de imagen):** CA-001-02 ("+"), CA-002-09, CL-003-4, CL-003-8, CA-004-01 (etiqueta sin texto), CL-004-3, CA-005-07, CL-005-3, CA-006-02 (miniatura), CA-006-18 (tipo de adjunto) y el pendiente de `specs/006-listado/plan.md` §7 (un único servicio de purga). Documentos y URL siguen en 008 y 009
 
@@ -87,7 +87,9 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - la imagen **al 100 % del ancho** de la pantalla, sobre el color papel;
     - si es más alta que la pantalla, se desplaza **solo en vertical**;
     - arriba a la izquierda, el botón "Cerrar" (48 dp); el gesto atrás también cierra;
-    - al cerrar, se vuelve a la tarea actual con el foco en ella.
+    - al cerrar, se vuelve a la tarea actual con el foco en ella;
+    - en tablets y plegables, el visor usa todo el ancho de la pantalla aunque el resto de la app esté limitado a 600 px (CL-001-7);
+    - aparece con un fundido corto (el de las hojas); con reducir movimiento, el de 400 ms (CA-007-23).
 - **CA-007-10 Zoom opcional en el visor (D10)**
   - **Dado** el visor
   - **Cuando** pellizca, o toca dos veces
@@ -104,6 +106,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Dado** que el ajuste "Mantener la pantalla encendida con adjuntos" está activo (por defecto sí; su pantalla llega con la spec 010)
   - **Cuando** se ve la tarea actual con imagen o su visor
   - **Entonces** la pantalla no se apaga por inactividad **mientras se use**: tras **10 minutos sin tocarla** vuelven el apagado y el bloqueo normales del teléfono.
+  - Solo cuentan como uso los **toques** en la pantalla; las teclas de un teclado físico no reinician los 10 minutos (propietario, 2026-09-26).
   - También vuelven al pasar a otra pantalla de la app (menú, editor, listado), a segundo plano o a una tarea sin imagen.
 
 **Validar, guardar y borrar**
@@ -126,7 +129,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 - **CA-007-15 Preparando la imagen**
   - **Dado** una importación que tarda más de 400 ms
   - **Cuando** está en curso
-  - **Entonces** el editor muestra "Preparando imagen…" con el botón "Cancelar" (≥ 48 dp).
+  - **Entonces** el editor muestra "Preparando imagen…" con el botón "Cancelar" (≥ 48 dp), dentro del recuadro de la vista previa y con una barra de progreso fina (DEV-39).
   - Mientras tanto, "+" y "Continuar" no hacen nada (sin verse desactivados, DEV-17).
   - "Cancelar" deja el editor como estaba.
 - **CA-007-16 Ningún archivo huérfano (ADR-0011, cierra CL-004-3)**
@@ -158,7 +161,8 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - "Quitar adjunto", si la tarea tiene texto;
     - o "Eliminar tarea" (con la confirmación de CA-004-01), si no lo tiene.
   - Para poner otra imagen se edita la tarea (menú → Editar → (+)), como en CA-007-06.
-  - Si solo faltan la miniatura o la versión de pantalla, se regeneran en segundo plano sin avisar.
+  - La tarjeta, sobre el color de la nota: recuadro blanco con borde y sombra, el texto de la tarea (si lo hay), el aviso en rojo con el icono de imagen y la acción (DEV-40).
+  - Si solo faltan la miniatura o la versión de pantalla, o no se pueden leer, se regeneran en segundo plano sin avisar; si tampoco se puede, se ve la tarjeta.
   - En el listado, la fila muestra la insignia "FOTO" o "IMAGEN" en lugar de la miniatura.
 
 **Donde aparece la imagen**
@@ -176,8 +180,10 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 - **CA-007-21 Lectura**
   - **Dado** un lector de pantalla
   - **Cuando** lee una tarea con imagen
-  - **Entonces** la imagen y el pie son **un único elemento**, con papel de imagen:
-    - pantalla principal: "Tarea actual: {texto}. Con foto" (o "Con imagen"), o "Tarea actual: foto" (o "imagen") si no hay texto; nunca se dice "imagen" dos veces;
+  - **Entonces** la imagen y el pie son **un único elemento**, con papel de imagen si es una foto:
+    - pantalla principal: "Tarea actual: {texto}. Con foto" (o "Con imagen"), o "Tarea actual: Foto" (o "Imagen") si no hay texto (se reutilizan `attachmentPhoto`/`attachmentImage`, §7);
+    - nunca se dice "imagen" dos veces: una imagen de la galería **no** lleva papel de imagen, porque su lectura ya dice "imagen" y TalkBack añadiría otra vez "imagen" (propietario, 2026-09-26);
+    - con "Adjunto no disponible" (CA-007-19): "Tarea actual: {texto}. Adjunto no disponible", o "Tarea actual: Foto. Adjunto no disponible" sin texto;
     - activarla abre el visor, con la pista "ver la imagen entera";
     - acciones, en este orden: Completar tarea, Eliminar tarea;
     - fila del listado (cierra CA-006-18): "{n} de {total}: {texto}. Con foto", o "{n} de {total}: Foto" sin texto;
@@ -289,6 +295,7 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 | `errImageUnreadable` | No hemos podido leer esta imagen. Prueba con otra. | We couldn't read this image. Try another one. | |
 | `errNoCamera` | No hay ninguna app de cámara disponible. | There's no camera app available. | |
 | `attachmentMissing` | Adjunto no disponible | Attachment unavailable | |
+| `a11yAttachmentMissing` | {text}. Adjunto no disponible | {text}. Attachment unavailable | Lectura de la tarea con el adjunto perdido; `text` = texto de la tarea o "Foto"/"Imagen" (CA-007-19/21). Añadida en la implementación (propietario, 2026-09-26) |
 
 Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction` ("Eliminar tarea"), `attachButton` y las lecturas de las specs 001, 003, 004 y 006 con `{text}` = "Foto"/"Imagen" cuando no hay texto. **No** se añaden `cameraPermissionRationale` ni `openSettings` (en Android no hay permiso; quedan para F-iOS).
 
