@@ -28,7 +28,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 |---|---|
 | T-006-01 … T-006-13 | ✅ (281 tests en verde; `analyze --fatal-infos` limpio) |
 | T-006-14 *Goldens* | Test escrito y revisado a ojo con una generación local en macOS; las imágenes de referencia se generan en Linux (CI) con la etiqueta `actualizar-goldens` al abrir la PR |
-| T-006-15 Integración y rendimiento | ✅ Integración en el emulador (arrastrar, volver, rearrancar). Rendimiento: la prueba funciona en el emulador (abrir con 500 tareas: 239 ms en depuración); **falta medir en el Xiaomi en *profile*** (con permiso del propietario) |
+| T-006-15 Integración y rendimiento | ✅ Integración en el emulador (arrastrar, volver, rearrancar). Rendimiento en el Xiaomi (*profile*, 500 tareas): abrir en 40 ms, 0 fotogramas fuera de presupuesto al desplazar y al arrastrar (`docs/perf/baseline.md`). Versión *release* instalada en el móvil del propietario (`install -r`, conserva sus datos) para las pruebas a mano |
 | T-006-16 TalkBack real (emulador) | ✅ Foco inicial en el título y ayuda para el lector. ⚠️ No se puede mover el foco de TalkBack con `adb` (TalkBack ignora los toques inyectados): se prueba en su lugar que la fila movida conserva su nodo semántico (test). Switch Access y el foco tras editar, eliminar o crear quedan para la prueba a mano |
 | T-006-17 Revisiones | `/i18n-check` ✅, `/tokens-validate` ✅ (3 tokens nuevos), `/security-check` ✅. `security-reviewer` ✅: corregidos los movimientos en serie, el desempate por id y las lecturas capturadas (resto en `plan.md` §7). `a11y-reviewer`: corregidos todos los hallazgos (abajo), con dos comprobaciones pendientes |
 
