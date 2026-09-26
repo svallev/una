@@ -22,9 +22,19 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-006-16 | TalkBack, Switch Access y teclado en el emulador (foco inicial, foco tras mover, eliminar y crear) | 12 | Lista de §5 de la revisión de accesibilidad | CA-006-16/17/18 |
 | T-006-17 | Revisiones: `a11y-reviewer`, `security-reviewer`, `/security-check`, `/i18n-check`, `/tokens-validate`; desviaciones nuevas si aparecen | 14–16 | Hallazgos resueltos o registrados | DoD |
 
-## Estado
+## Estado (2026-09-26)
 
-En curso (plan aprobado el 2026-09-26).
+| Tarea | Estado |
+|---|---|
+| T-006-01 … T-006-13 | ✅ (274 tests en verde; `analyze --fatal-infos` limpio) |
+| T-006-14 *Goldens* | Test escrito y revisado a ojo con una generación local en macOS; las imágenes de referencia se generan en Linux (CI) con la etiqueta `actualizar-goldens` al abrir la PR |
+| T-006-15 Integración y rendimiento | ✅ Integración en el emulador (arrastrar, volver, rearrancar). Rendimiento: la prueba funciona en el emulador (abrir con 500 tareas: 239 ms en depuración); **falta medir en el Xiaomi en *profile*** (con permiso del propietario) |
+| T-006-16 TalkBack real (emulador) | ✅ Foco inicial en el título y ayuda para el lector. ⚠️ No se puede mover el foco de TalkBack con `adb` (TalkBack ignora los toques inyectados): se prueba en su lugar que la fila movida conserva su nodo semántico (test). Switch Access y el foco tras editar, eliminar o crear quedan para la prueba a mano |
+| T-006-17 Revisiones | `/i18n-check` ✅, `/tokens-validate` ✅ (3 tokens nuevos), `/security-check` ✅ automático; `a11y-reviewer` y `security-reviewer` en curso |
+
+**CA → test:** CA-006-01/02/03, CL-006-9/10/11 → `test/features/task_list/task_list_screen_test.dart` · CA-006-04/05/06/07/11/12/19, CL-006-4/7 → `reorder_gestures_test.dart` · CA-006-08/09/16 → `move_actions_test.dart` · CA-006-10, CL-006-8 → `test/domain/reorder_task_test.dart`, `rank_test.dart`, `test/data/repository_contract_test.dart` · CA-006-13/14/15/19, CL-006-2/3/5/6, §5 → `task_list_flow_test.dart` · CA-006-17/18 → `task_list_a11y_test.dart` · CA-006-14 (datos) → `test/domain/delete_pending_task_test.dart` · controlador → `task_list_controller_test.dart` · CL-002-1 → `test/domain/create_task_test.dart` · CA-006-20, CL-006-1 → `integration_test/task_list_perf_test.dart` · integración → `integration_test/task_list_flow_test.dart` · aspecto → `test/goldens/task_list_golden_test.dart`.
+
+**Pruebas a mano pendientes (propietario, en el Xiaomi):** arrastrar (asa y pulsación larga) y el aspecto frente al prototipo; hoja "Mover"; doble toque; eliminar y crear desde el listado; "Quitar animaciones"; TalkBack (foco tras mover, editar, eliminar y crear; acciones de la fila; arrastrar con doble toque mantenido); texto grande.
 
 ## Cierre
 
