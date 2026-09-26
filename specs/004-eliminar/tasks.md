@@ -17,8 +17,21 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-004-11 | Integración en el emulador y prueba en el Xiaomi (con tu permiso; perfilador a 120 Hz) | 09 | `integration_test`; DevTools | CA-004-04, P2 |
 | T-004-12 | Revisiones: `a11y-reviewer`, `security-reviewer`, `/security-check`, `/i18n-check`, `/tokens-validate`; desviaciones DEV-25/26 si aplican | 10 | Hallazgos resueltos o registrados | DoD |
 
+## Estado (2026-09-26)
+
+| Tarea | Estado |
+|---|---|
+| T-004-01 … T-004-09 | ✅ (195 tests en verde; `analyze --fatal-infos` limpio) |
+| T-004-10 *Goldens* | Test escrito y revisado en macOS; falta generarlos en Linux (etiqueta `actualizar-goldens` en la PR) |
+| T-004-11 Integración | ✅ en el emulador (eliminar + rearrancar, y la 003 sigue verde). Pendiente: rendimiento en el Xiaomi (con permiso del propietario) |
+| T-004-12 Revisiones | ✅ `a11y-reviewer` (4 altos y 3 medios corregidos, con tests), `security-reviewer` (sin altos; `secure_delete` por conexión, test sobre archivo, riesgos residuales en `plan.md` §6), `/i18n-check`, `/tokens-validate` |
+
+**CA → test:** CA-004-01/02/10, CL-004-1/4 → `test/features/delete/delete_confirm_test.dart` · CA-004-03/04/05/06/07/11/12/13, CL-004-2 → `deletion_flow_test.dart` · CA-004-08 → `test/app/home_router_test.dart` e `integration_test/delete_flow_test.dart` · CA-004-09 → `test/data/repository_contract_test.dart` · CA-004-03 → `test/domain/delete_current_task_test.dart` · arrugado → `crumple_keyframes_test.dart` y `test/goldens/delete_golden_test.dart` · CL-004-3 → spec 007 (CA-007-12).
+
+**Pruebas a mano pendientes (propietario, en el móvil):** TalkBack (foco en "Cancelar", un único anuncio, foco final), teclado físico, "Quitar animaciones" y aspecto del arrugado frente al prototipo (DEV-25).
+
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde.
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada**.
+- [x] Todos los CA de la spec tienen test en verde.
+- [ ] Definition of Done (`specs/constitution.md`) completa: faltan los *goldens* de Linux y la prueba en el móvil.
+- [ ] Spec marcada como **Implementada** (tras la prueba del propietario en el móvil).
