@@ -11,11 +11,17 @@ class NativeImageImporter implements ImageImporter {
 
   static const _channel = MethodChannel('una/images');
 
+  /// Sin canal (iOS aún no lo tiene, D17), HEIC no se admite y cada llamada
+  /// falla como `unreadable`: el arranque no depende de ello.
   static Future<NativeImageImporter> open() async {
-    final caps = await _channel.invokeMapMethod<String, Object?>(
-      'capabilities',
-    );
-    return NativeImageImporter(heicSupported: caps?['heic'] == true);
+    try {
+      final caps = await _channel.invokeMapMethod<String, Object?>(
+        'capabilities',
+      );
+      return NativeImageImporter(heicSupported: caps?['heic'] == true);
+    } on MissingPluginException {
+      return NativeImageImporter(heicSupported: false);
+    }
   }
 
   @override
@@ -96,6 +102,8 @@ class NativeImageImporter implements ImageImporter {
   static Future<T> _guard<T>(Future<T> Function() call) async {
     try {
       return await call();
+    } on MissingPluginException {
+      throw const ImageImportFailure(ImageImportError.unreadable);
     } on PlatformException catch (e) {
       throw switch (e.code) {
         'tooLarge' => const ImageImportFailure(ImageImportError.tooLarge),

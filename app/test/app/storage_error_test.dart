@@ -1,4 +1,7 @@
 import 'package:app/app/storage_errors.dart';
+import 'package:app/data/attachments/memory_attachment_store.dart';
+import 'package:app/data/image_services.dart';
+import 'package:app/data/import/unavailable_image_importer.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/data/repository_factory.dart';
 import 'package:app/features/app_error/storage_error_screen.dart';
@@ -9,6 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/pump_app.dart';
+
+Future<ImageServices> _images() async => (
+  store: MemoryAttachmentStore(),
+  importer: const UnavailableImageImporter(),
+);
 
 void main() {
   testWidgets(
@@ -22,7 +30,7 @@ void main() {
         return (tasks: r, settings: r);
       }
 
-      await bootstrap(open: open);
+      await bootstrap(open: open, openImages: _images);
       await tester.pump();
       expect(find.byType(StorageErrorScreen), findsOneWidget);
       expect(
@@ -46,6 +54,7 @@ void main() {
     tester,
   ) async {
     await bootstrap(
+      openImages: _images,
       open: () async =>
           throw StateError('SqliteException(13): database or disk is full'),
     );

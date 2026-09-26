@@ -5,6 +5,7 @@ import 'app/font_licenses.dart';
 import 'app/providers.dart';
 import 'app/storage_errors.dart';
 import 'app/una_app.dart';
+import 'data/image_services.dart';
 import 'data/repository_factory.dart';
 
 Future<void> main() async {
@@ -18,9 +19,11 @@ Future<void> main() async {
 /// [open] se sustituye en los tests para simular fallos de disco (CL-001-6).
 Future<void> bootstrap({
   Future<Repositories> Function() open = openRepositories,
+  Future<ImageServices> Function() openImages = openImageServices,
 }) async {
   try {
     final repos = await open();
+    final images = await openImages();
     final current = await repos.tasks.currentTask();
     final boot = BootState(
       currentTask: current,
@@ -33,6 +36,8 @@ Future<void> bootstrap({
         overrides: [
           taskRepositoryProvider.overrideWithValue(repos.tasks),
           settingsRepositoryProvider.overrideWithValue(repos.settings),
+          attachmentStoreProvider.overrideWithValue(images.store),
+          imageImporterProvider.overrideWithValue(images.importer),
           bootStateProvider.overrideWithValue(boot),
         ],
         child: const UnaApp(),
@@ -42,7 +47,7 @@ Future<void> bootstrap({
     runApp(
       StorageErrorApp(
         noSpace: isNoSpaceError(e),
-        onRetry: () => bootstrap(open: open),
+        onRetry: () => bootstrap(open: open, openImages: openImages),
       ),
     );
   }

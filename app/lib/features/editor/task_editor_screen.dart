@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
+import '../../domain/entities/attachment.dart';
 import '../../domain/entities/queue_position.dart';
 import '../../domain/entities/task.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -16,6 +17,8 @@ import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
 import '../../ui/wordmark.dart';
+import '../attachments/attach_sheet.dart';
+import '../attachments/image_import_controller.dart';
 import '../current_task/current_task_screen.dart';
 import 'placement_sheet.dart';
 
@@ -138,8 +141,22 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     super.dispose();
   }
 
+  /// (+): hoja "Añadir a la tarea" (CA-007-01). Mientras se prepara una
+  /// imagen no hace nada, sin verse desactivado (CA-007-15, DEV-17).
+  Future<void> _attach() async {
+    if (_saving || ref.read(imageImportProvider).preparing) return;
+    final choice = await showAttachSheet(context);
+    if (choice == null || !mounted) return;
+    unawaited(
+      ref.read(imageImportProvider.notifier).pick(switch (choice) {
+        AttachChoice.camera => AttachmentOrigin.camera,
+        AttachChoice.gallery => AttachmentOrigin.gallery,
+      }),
+    );
+  }
+
   Future<void> _save() async {
-    if (_saving) return;
+    if (_saving || ref.read(imageImportProvider).preparing) return;
     if (!_canSave) {
       // Ningún botón se ve desactivado (DEV-17): sin texto no guarda y
       // devuelve el foco al campo (CL-001-1, CA-002-10, CA-005-06).
@@ -220,6 +237,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Mantiene viva la importación mientras el editor está abierto; al
+    // cerrarlo se cancela y se borra lo no guardado.
+    ref.watch(imageImportProvider);
     final length = _controller.text.characters.length;
     final mq = MediaQuery.of(context);
     const textStyle = TextStyle(
@@ -355,11 +375,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Adjuntar llega con las specs 007–009.
                           BrutalButton.icon(
                             label: l10n.attachButton,
                             icon: UnaIcons.plus,
-                            onPressed: () {},
+                            onPressed: _attach,
                           ),
                           const SizedBox(width: UnaSpace.m),
                           Flexible(

@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:typed_data';
-
 import 'package:app/app/providers.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
@@ -13,7 +10,7 @@ import 'package:app/features/attachments/image_import_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../support/attachments.dart';
+import '../../support/fake_image_importer.dart';
 
 class _SeqIds implements IdGenerator {
   var _n = 0;
@@ -21,7 +18,6 @@ class _SeqIds implements IdGenerator {
   String newId() => 'img-${_n++}';
 }
 
-const _jpegHead = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
 const _pngHead = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0];
 final _svgHead = '<?xml version="1.0"?><svg'.codeUnits;
 // ftyp heic
@@ -31,103 +27,15 @@ const _heicHead = [
   0x6D, 0x69, 0x66, 0x31, 0x68, 0x65, 0x69, 0x63,
 ];
 
-/// Importador falso: escribe en la preparación como el nativo y se puede
-/// retrasar, hacer fallar o cancelar paso a paso.
-class _FakeImporter implements ImageImporter {
-  _FakeImporter(this.store);
-
-  final MemoryAttachmentStore store;
-
-  @override
-  bool heicSupported = true;
-
-  bool userCancelsPicker = false;
-  Object? pickError;
-  List<int> head = _jpegHead;
-  Object? copyError;
-  Object? sanitizeError;
-  Duration copyDelay = Duration.zero;
-  Duration sanitizeDelay = Duration.zero;
-
-  final picks = <String>[];
-  final limits = <int>[];
-  final cancelled = <String>[];
-  final sniffedTypes = <ImageType>[];
-  final _waits = <String, Completer<void>>{};
-
-  Future<void> _wait(String id, Duration d) async {
-    if (d == Duration.zero) return;
-    final c = Completer<void>();
-    _waits[id] = c;
-    final t = Timer(d, () {
-      if (!c.isCompleted) c.complete();
-    });
-    try {
-      await c.future;
-    } finally {
-      t.cancel();
-      _waits.remove(id);
-    }
-  }
-
-  @override
-  Future<PickedImage?> pick(AttachmentOrigin origin, String id) async {
-    picks.add(id);
-    if (pickError case final e?) throw e;
-    if (userCancelsPicker) return null;
-    return (token: 'content://$id', origin: origin);
-  }
-
-  @override
-  Future<CopiedImage> copy(
-    PickedImage picked,
-    String id, {
-    required int maxBytes,
-  }) async {
-    limits.add(maxBytes);
-    store.putStaging(id, 'original', Uint8List.fromList(head));
-    await _wait(id, copyDelay);
-    if (copyError case final e?) throw e;
-    return (byteSize: head.length, head: head);
-  }
-
-  @override
-  Future<StagedImage> sanitize(
-    String id,
-    ImageType type,
-    AttachmentOrigin origin, {
-    required int maxPixels,
-    required int storedMaxPixels,
-  }) async {
-    limits
-      ..add(maxPixels)
-      ..add(storedMaxPixels);
-    sniffedTypes.add(type);
-    await _wait(id, sanitizeDelay);
-    if (sanitizeError case final e?) throw e;
-    return stageImage(store, id, origin: origin);
-  }
-
-  @override
-  Future<void> cancel(String id) async {
-    cancelled.add(id);
-    final c = _waits[id];
-    if (c != null && !c.isCompleted) {
-      c.completeError(const ImageImportCancelled());
-    }
-    await store.deleteStaging(id);
-  }
-}
-
 void main() {
   late MemoryAttachmentStore store;
-  late _FakeImporter importer;
+  late FakeImageImporter importer;
   late ImportRegistry registry;
   late ProviderContainer container;
 
   setUp(() {
     store = MemoryAttachmentStore();
-    importer = _FakeImporter(store);
+    importer = FakeImageImporter(store);
     registry = ImportRegistry();
     final repo = InMemoryTaskRepository();
     container = ProviderContainer(
