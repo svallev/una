@@ -1,6 +1,6 @@
 # Spec 004: Eliminar una tarea
 
-- **Estado:** En revisión. Reescrita el 2026-09-26 con las decisiones del propietario: sin deshacer y sin "Nada pendiente.". Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009)
+- **Estado:** Aprobada (2026-09-26, propietario). Reescrita ese día con sus decisiones: sin deshacer y sin "Nada pendiente.". Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009)
 - **Reglas de producto:** R10, R12 (estado vacío "Todo hecho."), R13 (eliminar desde el listado)
 - **Pantallas del prototipo:** 6 "Eliminar", 8 "Eliminar (se arruga)"
 - **Decisiones y ADR:** D7, ADR-0011 (sustituye a ADR-0006), DEV-18, DEV-21, DEV-23, DEV-24
@@ -147,4 +147,4 @@ Se reutilizan `editorCancel` ("Cancelar", se amplía su descripción), `retry`, 
 
 - **[Resuelto 2026-09-26]** Sin deshacer y sin "Nada pendiente.": tras eliminar la última se ve "Todo hecho." (propietario).
 - **[Pendiente, plan]** `PRAGMA secure_delete` para que no queden restos del texto en páginas libres de SQLite (ADR-0011).
-- **[Pendiente, propietario]** Aceptar ADR-0011.
+- **[Resuelto 2026-09-26]** ADR-0011 aceptado por el propietario.

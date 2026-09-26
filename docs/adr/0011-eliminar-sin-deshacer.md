@@ -1,6 +1,6 @@
 # ADR-0011: Eliminar es definitivo (sin deshacer), con marca de borrado sin contenido
 
-- **Estado:** Propuesto (la parte de producto, sin deshacer y sin "Nada pendiente.", la decidió el propietario el 2026-09-26)
+- **Estado:** Aceptado (propietario, 2026-09-26)
 - **Fecha:** 2026-09-26
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
 - **Relacionado:** sustituye a ADR-0006; spec 004; ADR-0002; D7 en `docs/PLAN.md`; DEV-09, DEV-10
