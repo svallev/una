@@ -14,6 +14,9 @@ class MemoryAttachmentStore implements AttachmentStore {
   void putStaging(String id, String name, Uint8List bytes) =>
       (_staging[id] ??= {})[name] = bytes;
 
+  /// Borra un archivo de la preparación [id] (el original, tras limpiarlo).
+  void removeStaging(String id, String name) => _staging[id]?.remove(name);
+
   /// Contenido de un archivo guardado ([relPath] de [Attachment]).
   Uint8List? bytes(String relPath) {
     final parts = relPath.split('/');
