@@ -13,6 +13,7 @@ import '../../ui/square_icon_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
+import '../attachments/task_image.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/completion_controller.dart';
 import '../complete/hold_to_complete_button.dart';
@@ -97,41 +98,72 @@ class CurrentTaskScreen extends ConsumerWidget {
       );
     }
 
+    final attachment = task.attachment;
+    final isPhoto = attachment?.isPhoto ?? false;
+
+    /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
+    /// y sin decir "imagen" dos veces (CA-007-21).
+    Widget taskNode(Widget child) => FocusOnSignal(
+      signal: focusSignal,
+      child: Semantics(
+        label: l10n.currentTaskSemantics(switch (attachment) {
+          null => text,
+          _ when text.isEmpty =>
+            isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage,
+          _ => isPhoto ? l10n.a11yWithPhoto(text) : l10n.a11yWithImage(text),
+        }),
+        // Papel de imagen, salvo si la lectura ya acaba en "imagen".
+        image: isPhoto,
+        // También se completa (CA-003-07) y se elimina (CA-004-10) desde la
+        // tarea.
+        customSemanticsActions: faceOnly
+            ? null
+            : {
+                CustomSemanticsAction(label: l10n.completeA11yAction): complete,
+                CustomSemanticsAction(label: l10n.deleteA11yAction): delete,
+              },
+        excludeSemantics: true,
+        child: child,
+      ),
+    );
+
     final noteText = MediaQuery(
       data: mq.copyWith(
         textScaler: mq.textScaler.clamp(maxScaleFactor: maxNoteTextScale),
       ),
-      child: FocusOnSignal(
-        signal: focusSignal,
-        child: Semantics(
-          label: l10n.currentTaskSemantics(text),
-          // También se completa (CA-003-07) y se elimina (CA-004-10) desde la
-          // tarea.
-          customSemanticsActions: faceOnly
-              ? null
-              : {
-                  CustomSemanticsAction(label: l10n.completeA11yAction):
-                      complete,
-                  CustomSemanticsAction(label: l10n.deleteA11yAction): delete,
-                },
-          excludeSemantics: true,
-          child: LayoutBuilder(
-            builder: (context, constraints) => SizedBox(
-              width: double.infinity,
-              child: Text(
+      child: taskNode(
+        LayoutBuilder(
+          builder: (context, constraints) => SizedBox(
+            width: double.infinity,
+            child: Text(
+              text,
+              style: UnaTheme.fitNoteText(
                 text,
-                style: UnaTheme.fitNoteText(
-                  text,
-                  maxWidth: constraints.maxWidth,
-                  textScaler: MediaQuery.textScalerOf(context),
-                  textDirection: Directionality.of(context),
-                ),
+                maxWidth: constraints.maxWidth,
+                textScaler: MediaQuery.textScalerOf(context),
+                textDirection: Directionality.of(context),
               ),
             ),
           ),
         ),
       ),
     );
+
+    // Con imagen, logotipo y menú llevan fondo blanco (CA-007-08, prototipo
+    // `chromeBg`); el logotipo, con 8 px a cada lado sin moverse.
+    const logoPad = UnaSpace.s;
+    final Widget wordmark = attachment == null
+        ? const Wordmark()
+        : Transform.translate(
+            offset: const Offset(-logoPad, 0),
+            child: const ColoredBox(
+              color: UnaColors.surface,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: logoPad),
+                child: Wordmark(),
+              ),
+            ),
+          );
 
     final content = SafeArea(
       child: Padding(
@@ -148,15 +180,17 @@ class CurrentTaskScreen extends ConsumerWidget {
             header(
               Row(
                 children: [
-                  const Wordmark(),
+                  wordmark,
                   const Spacer(),
                   _Order(
                     1,
                     child: SquareIconButton(
                       icon: UnaIcons.menu,
                       label: l10n.menuButton,
-                      fill: UnaPalettes
-                          .classic[task.colorKey % UnaPalettes.classic.length],
+                      fill: attachment != null
+                          ? UnaColors.surface
+                          : UnaPalettes.classic[task.colorKey %
+                                UnaPalettes.classic.length],
                       onPressed: openMenu,
                     ),
                   ),
@@ -164,15 +198,18 @@ class CurrentTaskScreen extends ConsumerWidget {
               ),
             ),
             Expanded(
-              // La zona desplazable es su propio nodo: el orden va aquí.
-              child: _Order(
-                0,
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: chromeOnly ? hidden(noteText) : noteText,
-                  ),
-                ),
-              ),
+              // Con imagen, la tarea está detrás, a sangre.
+              child: attachment != null
+                  ? const SizedBox.shrink()
+                  // La zona desplazable es su propio nodo: el orden va aquí.
+                  : _Order(
+                      0,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: chromeOnly ? hidden(noteText) : noteText,
+                        ),
+                      ),
+                    ),
             ),
             cta(
               _Order(
@@ -195,7 +232,23 @@ class CurrentTaskScreen extends ConsumerWidget {
         policy: OrderedTraversalPolicy(),
         child: chromeOnly
             ? content
-            : StickyNote(colorKey: task.colorKey, child: content),
+            : StickyNote(
+                colorKey: task.colorKey,
+                child: attachment == null
+                    ? content
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _Order(
+                            0,
+                            child: taskNode(
+                              TaskImage(attachment: attachment, caption: text),
+                            ),
+                          ),
+                          content,
+                        ],
+                      ),
+              ),
       ),
     );
     return faceOnly || chromeOnly ? ExcludeSemantics(child: screen) : screen;
