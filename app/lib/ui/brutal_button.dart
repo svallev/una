@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show FocusSemanticEvent;
 
 import '../app/theme/tokens.g.dart';
 import 'focus_ring.dart';
@@ -20,6 +21,8 @@ class BrutalButton extends StatefulWidget {
     this.background = UnaColors.surface,
     this.expand = true,
     this.singleLine = false,
+    this.ghost = false,
+    this.autofocus = false,
   }) : iconOnly = false;
 
   /// Botón cuadrado solo con icono (p. ej. "+"). [label] es su nombre accesible.
@@ -36,6 +39,8 @@ class BrutalButton extends StatefulWidget {
        fontSize = UnaFontSizes.bodyL,
        expand = false,
        singleLine = true,
+       ghost = false,
+       autofocus = false,
        iconOnly = true;
 
   final String label;
@@ -64,6 +69,14 @@ class BrutalButton extends StatefulWidget {
   final bool singleLine;
   final bool iconOnly;
 
+  /// `.bb.ghost` del prototipo: sin relleno ni sombra; al pulsar baja 1 px
+  /// ("Cancelar" de la confirmación de eliminar, spec 004).
+  final bool ghost;
+
+  /// Recibe el foco del teclado y del lector de pantalla al aparecer (la
+  /// acción segura de una confirmación, CA-004-10).
+  final bool autofocus;
+
   @override
   State<BrutalButton> createState() => _BrutalButtonState();
 }
@@ -72,7 +85,44 @@ class _BrutalButtonState extends State<BrutalButton> {
   bool _down = false;
   bool _focused = false;
 
+  /// Nodo accesible del botón: el aviso de foco del lector sale de él.
+  final _semanticsKey = GlobalKey();
+
   void _activate() => widget.onPressed?.call();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.autofocus && !_focusAnnounced) {
+      _focusAnnounced = true;
+      _announceFocusWhenShown();
+    }
+  }
+
+  bool _focusAnnounced = false;
+
+  /// Lleva el foco del lector al botón cuando su ruta (p. ej., una hoja que
+  /// sube) ha terminado de entrar: antes, su nodo aún no está en el árbol
+  /// accesible. VoiceOver lo sigue; TalkBack no (enfoca el primer elemento de
+  /// la ruta nueva), así que en Android además hay que ponerlo primero en el
+  /// orden de lectura.
+  void _announceFocusWhenShown() {
+    void send() => WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _semanticsKey.currentContext?.findRenderObject()?.sendSemanticsEvent(
+        const FocusSemanticEvent(),
+      );
+    });
+    final entrance = ModalRoute.of(context)?.animation;
+    if (entrance == null || entrance.isCompleted) return send();
+    void onStatus(AnimationStatus status) {
+      if (status != AnimationStatus.completed) return;
+      entrance.removeStatusListener(onStatus);
+      send();
+    }
+
+    entrance.addStatusListener(onStatus);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +130,7 @@ class _BrutalButtonState extends State<BrutalButton> {
     // Teclado e interruptores: Tab llega al botón e Intro/Espacio lo activan.
     return FocusableActionDetector(
       enabled: enabled,
+      autofocus: widget.autofocus,
       mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       actions: {
@@ -135,8 +186,11 @@ class _BrutalButtonState extends State<BrutalButton> {
 
   Widget _button(bool enabled) {
     final pressed = _down || !enabled;
-    final offset = pressed ? const Offset(4, 4) : Offset.zero;
+    final sink = widget.ghost ? 1.0 : 4.0;
+    final offset = pressed ? Offset(sink, sink) : Offset.zero;
     return Semantics(
+      key: _semanticsKey,
+      container: true,
       button: true,
       enabled: enabled,
       label: widget.label,
@@ -165,17 +219,19 @@ class _BrutalButtonState extends State<BrutalButton> {
                     UnaSpace.sm,
                   ),
             decoration: BoxDecoration(
-              color: widget.background,
+              color: widget.ghost ? null : widget.background,
               border: Border.all(
                 color: UnaColors.ink,
                 width: UnaBorders.strongWidth,
               ),
-              boxShadow: [
-                if (!pressed)
-                  UnaShadows.button
-                else if (enabled)
-                  UnaShadows.buttonPressed,
-              ],
+              boxShadow: widget.ghost
+                  ? const []
+                  : [
+                      if (!pressed)
+                        UnaShadows.button
+                      else if (enabled)
+                        UnaShadows.buttonPressed,
+                    ],
             ),
             child: _content(),
           ),

@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/complete_current_task.dart';
+import '../delete/deletion_controller.dart';
 
 /// Fases de completar (spec 003):
 /// - `completing`: se guarda y la tarea sigue en pantalla con el relleno lleno;
@@ -55,7 +56,7 @@ class CompletionController extends Notifier<CompletionState> {
   /// una en curso. Si falla al guardar, vuelve a `idle` y relanza el error
   /// (CA-003-12).
   Future<CompletionResult?> complete(Task task) async {
-    if (state.busy) return null;
+    if (state.busy || ref.read(deletionProvider).busy) return null;
     state = CompletionState(CompletionPhase.completing, task: task);
     final CompletionResult result;
     try {
@@ -64,7 +65,7 @@ class CompletionController extends Notifier<CompletionState> {
       state = const CompletionState.idle();
       rethrow;
     }
-    ref.read(hasCompletedProvider.notifier).markCompleted();
+    ref.read(hasHistoryProvider.notifier).mark();
     // Respeta el ajuste del sistema y no necesita el permiso VIBRATE (DEV-19).
     unawaited(HapticFeedback.lightImpact());
     state = CompletionState(

@@ -20,7 +20,8 @@ class Tasks extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get completedAt => integer().nullable()();
-  IntColumn get deletedAt => integer().nullable()(); // tombstone (ADR-0006)
+  IntColumn get deletedAt =>
+      integer().nullable()(); // marca de borrado (ADR-0011)
   IntColumn get dueDate => integer().nullable()(); // Bloque 1
   TextColumn get parentId =>
       text().nullable().references(Tasks, #id)(); // Bloque 2

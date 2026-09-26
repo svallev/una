@@ -10,6 +10,7 @@ import '../domain/ports/id_generator.dart';
 import '../domain/ports/task_repository.dart';
 import '../domain/usecases/complete_current_task.dart';
 import '../domain/usecases/create_task.dart';
+import '../domain/usecases/delete_current_task.dart';
 import '../domain/usecases/update_task_text.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
@@ -61,17 +62,25 @@ final completeCurrentTaskProvider = Provider<CompleteCurrentTask>(
   ),
 );
 
-/// ¿Hay tareas completadas? Sin pendientes, decide entre "Todo hecho." y el
-/// editor (spec 003, CA-003-11).
-final hasCompletedProvider = NotifierProvider<HasCompletedController, bool>(
-  HasCompletedController.new,
+final deleteCurrentTaskProvider = Provider<DeleteCurrentTask>(
+  (ref) => DeleteCurrentTask(
+    repository: ref.watch(taskRepositoryProvider),
+    clock: ref.watch(clockProvider),
+  ),
 );
 
-class HasCompletedController extends Notifier<bool> {
-  @override
-  bool build() => ref.read(bootStateProvider).hasCompleted;
+/// ¿Hay tareas completadas o eliminadas? Sin pendientes, decide entre
+/// "Todo hecho." y el editor de la primera tarea (CA-003-11, CA-004-08).
+final hasHistoryProvider = NotifierProvider<HasHistoryController, bool>(
+  HasHistoryController.new,
+);
 
-  void markCompleted() => state = true;
+class HasHistoryController extends Notifier<bool> {
+  @override
+  bool build() => ref.read(bootStateProvider).hasHistory;
+
+  /// Tras completar o eliminar una tarea.
+  void mark() => state = true;
 }
 
 /// Aumenta cada vez que la pantalla principal debe recuperar el foco (tras
@@ -139,11 +148,11 @@ class BootState {
   const BootState({
     required this.currentTask,
     required this.firstRunDone,
-    this.hasCompleted = false,
+    this.hasHistory = false,
   });
   final Task? currentTask;
   final bool firstRunDone;
-  final bool hasCompleted;
+  final bool hasHistory;
 }
 
 class UuidV7Ids implements IdGenerator {

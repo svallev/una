@@ -12,8 +12,7 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Posición (rango) | Rank | `rank` | Clave de orden fraccional (*fractional indexing*) en texto. Permite insertar entre dos tareas sin renumerar. |
 | Completar | Complete | `complete()` | Marcar la tarea actual como hecha manteniendo pulsado. Pasa al histórico. |
 | Mantener pulsado | Press and hold | `HoldToComplete` | Gesto de 1,2 s que completa la tarea. |
-| Eliminar | Delete | `delete()` | Quitar una tarea **sin** completarla. Es reversible durante la ventana de deshacer. |
-| Deshacer | Undo | `undo()` | Revertir una eliminación durante ~6 s. |
+| Eliminar | Delete | `delete()` | Quitar una tarea **sin** completarla. Es definitivo: no hay deshacer (ADR-0011). |
 | Marca de borrado | Tombstone | `deletedAt` | Registro mínimo de que una tarea se eliminó. Sirve para una futura sincronización. |
 | Histórico | History | `history` | Tareas completadas con su fecha. En la v1 se guarda pero no se muestra. |
 | Adjunto | Attachment | `Attachment` | Archivo copiado dentro de la app y asociado a una tarea: imagen, PDF, documento o captura de URL. |
@@ -32,7 +31,7 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Menú | Menu | `TaskMenuSheet` | Hoja inferior con las acciones de la tarea y las generales. |
 | Hoja inferior | Bottom sheet | `*Sheet` | Panel que sube desde abajo. |
 | Primera vez / bienvenida | First run / welcome | `FirstRun`, `WelcomeIntro` | Animación inicial y creación obligatoria de la primera tarea. |
-| Estado vacío | Empty state | `EmptyState` | "Todo hecho." (tras completar la última) o "Nada pendiente." (tras eliminar la última). |
+| Estado vacío | Empty state | `EmptyState` | "Todo hecho.": no queda ninguna tarea pendiente (tras completar o eliminar la última). No existe "Nada pendiente." |
 | Configuración | Settings | `Settings` | Idioma, pantalla encendida, Acerca de, licencias. |
 | Pantalla encendida | Keep screen on | `keepScreenOn` | Impide el bloqueo mientras se ve una tarea con adjunto. |
 | Indicador de función | Feature flag | `FeatureFlag` | Interruptor local para funcionalidades a medio hacer. |

@@ -32,6 +32,20 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 - **[Hecho]** Fluida: el 90 % de los fotogramas cuesta ~6 ms en total, muy por debajo del presupuesto de 120 Hz. El recorte con `ClipPath` (sin capturar la nota como imagen) evita el tirón del spike S2.
 - **[Hecho]** El único fotograma lento (12–23 ms) es el primero de la enhorabuena, al montar la capa. **[Pendiente]** Si se nota en gama media, precargar la capa (I-3).
 
+## Eliminar: arrugado y papelera (spec 004, T-004-11)
+
+- **Fecha:** 2026-09-26 · **Dispositivo:** Xiaomi 15T Pro (120 Hz, presupuesto de 8,3 ms por fotograma)
+- **Método:** `flutter drive --profile --no-dds --keep-app-running --driver=test_driver/perf_driver.dart --target=integration_test/delete_perf_test.dart -d <serial>`; se elimina con el controlador (como tras confirmar) y se mide todo el arrugado (2,2 s). Después, `adb uninstall invalid.pending.app.profile`.
+
+| Ejecución | Fotogramas | Build medio / p90 / peor | Raster medio / p90 / p99 / peor | Fuera de presupuesto (raster) |
+|---|---|---|---|---|
+| 1 | 259 | 0,6 / 0,8 / 7,9 ms | 4,0 / 5,6 / 15,3 / 23,5 ms | 2 |
+| 2 | 258 | 0,7 / 1,0 / 8,3 ms | 4,5 / 5,7 / 14,2 / 22,9 ms | 2 |
+| 3 | 264 | 0,8 / 1,0 / 6,5 ms | 4,4 / 5,5 / 16,4 / 27,5 ms | 4 |
+
+- **[Hecho]** Fluido: el 90 % de los fotogramas cuesta ~6,5 ms en total. Hay de 2 a 4 fotogramas lentos (15–28 ms de raster) por cada ~260.
+- **[Suposición]** Esos fotogramas lentos son los primeros de la capa (sombra, facetas y degradados que se crean por primera vez), como pasaba en la 003. **[Pendiente]** Si se nota en el móvil o en gama media, precargar los *shaders* o la capa (I-3).
+
 ## Cómo repetir la medición
 
 ```bash

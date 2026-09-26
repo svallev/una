@@ -7,6 +7,8 @@ import '../features/app_error/storage_error_screen.dart';
 import '../features/complete/celebration_overlay.dart';
 import '../features/complete/completion_controller.dart';
 import '../features/current_task/current_task_screen.dart';
+import '../features/delete/crumple_overlay.dart';
+import '../features/delete/deletion_controller.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -78,34 +80,49 @@ class _UnaAppState extends ConsumerState<UnaApp> {
   }
 }
 
-/// Decide qué se ve (CA-001-03/05/09, CA-003-05/11): tarea actual; si no hay,
-/// "Todo hecho." (si ya se completó alguna), la bienvenida (solo la primera
+/// Decide qué se ve (CA-001-03/05/09, CA-003-05/11, CA-004-07/08): tarea
+/// actual; si no hay, "Todo hecho." (si ya se completó o eliminó alguna), la bienvenida (solo la primera
 /// vez) o el editor de la primera tarea. Encima, la rotura y la enhorabuena al
-/// completar (spec 003).
+/// completar (spec 003) o el arrugado al eliminar (spec 004).
 class HomeRouter extends ConsumerWidget {
   const HomeRouter({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final completion = ref.watch(completionProvider);
+    final deletion = ref.watch(deletionProvider);
+    final crumpling = deletion.phase == DeletionPhase.crumpling;
+    final busy = completion.busy || deletion.busy;
     final focusSignal = ref.watch(screenFocusProvider);
     final task = ref.watch(currentTaskProvider);
     final firstRunDone = ref.watch(firstRunDoneProvider);
-    final hasCompleted = ref.watch(hasCompletedProvider);
+    final hasHistory = ref.watch(hasHistoryProvider);
     final reduced = MediaQuery.disableAnimationsOf(context);
     final completing = completion.phase == CompletionPhase.completing;
-    final shown = completing ? completion.task : task;
+    // Mientras se guarda, la tarea sigue en pantalla; mientras se arruga,
+    // detrás ya está la siguiente, sin sus controles (CA-004-04).
+    final shown = completing
+        ? completion.task
+        : deletion.phase == DeletionPhase.deleting
+        ? deletion.task
+        : crumpling
+        ? deletion.next
+        : task;
     final Widget child;
     if (shown != null) {
       // Mientras se guarda, la tarea sigue en pantalla con el relleno lleno.
       child = CurrentTaskScreen(
         key: ValueKey('task-${shown.id}'),
         task: shown,
+        faceOnly: crumpling,
         focusSignal: focusSignal,
       );
-    } else if (hasCompleted) {
+    } else if (hasHistory || crumpling) {
       child = AllDoneScreen(
         key: const ValueKey('all-done'),
+        // Tras eliminar la última: sin el botón hasta que cae en la papelera
+        // (ocuparía el sitio de la papelera).
+        showActions: !crumpling,
         focusSignal: focusSignal,
         onCreate: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -125,7 +142,17 @@ class HomeRouter extends ConsumerWidget {
     } else {
       child = const TaskEditorScreen(key: ValueKey('first-editor'));
     }
+    final screen = Semantics(
+      key: child.key,
+      scopesRoute: true,
+      explicitChildNodes: true,
+      child: child,
+    );
     final screens = AnimatedSwitcher(
+      // Al eliminar, la de detrás sustituye a la eliminada sin fundido (se
+      // vería detrás de la bola): se monta de nuevo solo en ese momento
+      // (CA-004-04).
+      key: ValueKey('screens-${deletion.generation}'),
       duration: reduced ? UnaMotion.reducedMotionFade : UnaMotion.introFade,
       // Cada pantalla es una "ruta" para el lector (se anuncia el cambio) y la
       // que sale no se lee durante el fundido.
@@ -136,32 +163,41 @@ class HomeRouter extends ConsumerWidget {
           ?current,
         ],
       ),
-      child: Semantics(
-        key: child.key,
-        scopesRoute: true,
-        explicitChildNodes: true,
-        child: child,
-      ),
+      child: screen,
     );
     final celebrating =
         completion.phase == CompletionPhase.celebrating ||
         completion.phase == CompletionPhase.fading;
     final completed = completion.task;
+    final deleted = deletion.task;
     // Durante toda la secuencia se ignoran toques, acciones y el gesto atrás,
-    // sin cambiar el aspecto de nada (CA-003-09, DEV-17).
+    // sin cambiar el aspecto de nada (CA-003-09, CA-004-05, DEV-17).
     return PopScope(
-      canPop: !completion.busy,
+      canPop: !busy,
       child: Stack(
         fit: StackFit.expand,
         children: [
           AbsorbPointer(
-            absorbing: completion.busy,
+            absorbing: busy,
             // Ni lector ni teclado desde que empieza a guardar.
             child: ExcludeSemantics(
-              excluding: completion.busy,
-              child: ExcludeFocus(excluding: completion.busy, child: screens),
+              excluding: busy,
+              child: ExcludeFocus(excluding: busy, child: screens),
             ),
           ),
+          if (crumpling && deleted != null)
+            CrumpleOverlay(
+              key: ValueKey('crumple-${deleted.id}'),
+              face: CurrentTaskScreen(task: deleted, faceOnly: true),
+              chrome: (ctaHide) => CurrentTaskScreen(
+                // El menú toma el color de la que queda detrás.
+                task: deletion.next ?? deleted,
+                chromeOnly: true,
+                showLogoAndMenu: deletion.next != null,
+                ctaHide: ctaHide,
+              ),
+              onFinished: () => ref.read(deletionProvider.notifier).finish(),
+            ),
           if (celebrating && completed != null)
             CelebrationOverlay(
               key: ValueKey('celebration-${completed.id}'),

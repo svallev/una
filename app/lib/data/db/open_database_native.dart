@@ -13,6 +13,14 @@ Future<AppDatabase> openAppDatabase() async {
   return openAppDatabaseFile(File('${dir.path}/una.sqlite'));
 }
 
-AppDatabase openAppDatabaseFile(File file) => AppDatabase(NativeDatabase(file));
+AppDatabase openAppDatabaseFile(File file) =>
+    AppDatabase(NativeDatabase(file, setup: (db) => db.execute(_secureDelete)));
 
-AppDatabase openInMemoryDatabase() => AppDatabase(NativeDatabase.memory());
+AppDatabase openInMemoryDatabase() => AppDatabase(
+  NativeDatabase.memory(setup: (db) => db.execute(_secureDelete)),
+);
+
+/// Al abrir cada conexión, antes de crear o migrar el esquema: lo eliminado
+/// no se queda en páginas libres del archivo (ADR-0011, P4), tampoco lo que
+/// borren las migraciones futuras.
+const _secureDelete = 'PRAGMA secure_delete = ON';

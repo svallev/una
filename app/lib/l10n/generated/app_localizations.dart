@@ -272,7 +272,7 @@ abstract class AppLocalizations {
   /// **'Editar tarea'**
   String get editorTagEdit;
 
-  /// Enlace para descartar. CA-002-07
+  /// Enlace para descartar (CA-002-07) y botón de la confirmación de eliminar (CA-004-01)
   ///
   /// In es, this message translates to:
   /// **'Cancelar'**
@@ -391,6 +391,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{1 tarea} other{{count} tareas}}'**
   String menuAllTasksCount(int count);
+
+  /// Título de la confirmación de eliminar. CA-004-01
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar esta tarea?'**
+  String get deleteTitle;
+
+  /// Cuerpo de la confirmación de eliminar, con comillas tipográficas del prototipo. CA-004-01
+  ///
+  /// In es, this message translates to:
+  /// **'“{label}” desaparecerá sin marcarse como hecha.'**
+  String deleteBody(String label);
+
+  /// Botón rojo que elimina de forma definitiva. CA-004-01
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get deleteConfirm;
+
+  /// Acción del lector de pantalla que abre la confirmación de eliminar. CA-004-10
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar tarea'**
+  String get deleteA11yAction;
+
+  /// Anuncio único al eliminar. CA-004-11
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea eliminada. Siguiente: {text}'**
+  String a11yDeletedNext(String text);
+
+  /// Anuncio al eliminar la última pendiente. CA-004-11
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea eliminada. Todo hecho.'**
+  String get a11yDeletedAllDone;
+
+  /// Aviso con Reintentar si falla la eliminación. CA-004-13
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido eliminar la tarea'**
+  String get deleteError;
 }
 
 class _AppLocalizationsDelegate
