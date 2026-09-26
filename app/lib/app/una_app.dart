@@ -12,6 +12,7 @@ import '../features/delete/deletion_controller.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../ui/full_width.dart';
 import '../ui/semantics_action_order.dart';
 import 'app_identity.g.dart';
 import 'locale_resolution.dart';
@@ -249,11 +250,20 @@ Widget appFrame(BuildContext context, Widget? child) {
   if (l10n != null) registerSemanticsActionOrder(l10n);
   final centered = ColoredBox(
     color: UnaColors.paper,
-    child: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: UnaSizes.contentMaxWidth),
-        child: child,
+    child: ValueListenableBuilder<int>(
+      valueListenable: fullWidthRequests,
+      // El visor va al ancho completo de la pantalla (CA-007-09).
+      builder: (context, fullWidth, child) => Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: fullWidth > 0
+                ? double.infinity
+                : UnaSizes.contentMaxWidth,
+          ),
+          child: child,
+        ),
       ),
+      child: child,
     ),
   );
   return kIsWeb ? WebPreviewBanner(child: centered) : centered;

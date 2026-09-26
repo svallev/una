@@ -13,6 +13,7 @@ import '../../ui/square_icon_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
+import '../attachments/image_viewer_screen.dart';
 import '../attachments/task_image.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/completion_controller.dart';
@@ -66,6 +67,7 @@ class CurrentTaskScreen extends ConsumerWidget {
     Future<bool> complete() => completeTask(context, ref, task);
     Future<void> openMenu() => _openMenu(context, ref);
     Future<void> delete() => confirmAndDeleteTask(context, ref, task);
+    Future<void> openViewer() => _openViewer(context, ref, task);
     Widget hidden(Widget child) => Visibility(
       visible: false,
       maintainSize: true,
@@ -114,6 +116,9 @@ class CurrentTaskScreen extends ConsumerWidget {
         }),
         // Papel de imagen, salvo si la lectura ya acaba en "imagen".
         image: isPhoto,
+        // Activarla abre el visor (CA-007-09/21).
+        hint: attachment != null && !faceOnly ? l10n.imageOpenHint : null,
+        onTap: attachment != null && !faceOnly ? openViewer : null,
         // También se completa (CA-003-07) y se elimina (CA-004-10) desde la
         // tarea.
         customSemanticsActions: faceOnly
@@ -242,7 +247,15 @@ class CurrentTaskScreen extends ConsumerWidget {
                           _Order(
                             0,
                             child: taskNode(
-                              TaskImage(attachment: attachment, caption: text),
+                              GestureDetector(
+                                // Toda la imagen, cargada o no.
+                                behavior: HitTestBehavior.opaque,
+                                onTap: faceOnly ? null : openViewer,
+                                child: TaskImage(
+                                  attachment: attachment,
+                                  caption: text,
+                                ),
+                              ),
                             ),
                           ),
                           content,
@@ -282,6 +295,21 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
   if (action == MenuAction.allTasks) return openTaskList(context, ref);
   if (editor == null) return confirmAndDeleteTask(context, ref, task);
   await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
+}
+
+/// Visor de la imagen (CA-007-09); al cerrarlo, el foco vuelve a la tarea.
+Future<void> _openViewer(BuildContext context, WidgetRef ref, Task task) async {
+  final attachment = task.attachment;
+  // Nunca durante completar o eliminar (CA-003-09, CA-004-05).
+  if (attachment == null ||
+      ref.read(completionProvider).busy ||
+      ref.read(deletionProvider).busy) {
+    return;
+  }
+  await Navigator.of(context)
+      .push(ImageViewerScreen.route(context, attachment));
+  if (!context.mounted) return;
+  ref.read(screenFocusProvider.notifier).signal();
 }
 
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
