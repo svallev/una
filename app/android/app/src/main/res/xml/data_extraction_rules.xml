@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12+ (ADR-0004). BD (app_flutter/) y preferencias. Los adjuntos llegarán en F4
-     con un BackupAgent con presupuesto (la cuota de 25 MB descarta toda la copia, spike S5).
-     La copia en la nube solo se hace si va cifrada de extremo a extremo (bloqueo de pantalla). -->
+<!-- Android 12+ (ADR-0004, CA-007-18). Nube: BD (app_flutter/) y preferencias; las imágenes
+     (files/attachments/) no, hasta el BackupAgent con presupuesto (la cuota de 25 MB descarta
+     toda la copia, spike S5). Solo si va cifrada de extremo a extremo (bloqueo de pantalla).
+     Transferencia entre dispositivos: todo, imágenes incluidas. La caché no se copia nunca. -->
 <data-extraction-rules>
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="root" path="app_flutter/"/>
