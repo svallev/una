@@ -895,9 +895,12 @@ class _RowSlotState extends State<_RowSlot>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   // Fuera del recorrido con Tab: solo recibe el foco cuando se pide.
   final _focus = FocusNode(skipTraversal: true);
+  // `preserve`: con "quitar animaciones" Flutter acorta las animaciones 20
+  // veces, y el resaltado fijo debe durar 0,9 s (CA-006-19).
   late final _flash = AnimationController(
     vsync: this,
     duration: UnaMotion.listFlash,
+    animationBehavior: AnimationBehavior.preserve,
   );
   int? _flashedSerial;
 
