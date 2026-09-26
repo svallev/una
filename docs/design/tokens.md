@@ -30,7 +30,7 @@ flowchart LR
 | `size` | objetivo táctil de 44, icono de 22, trazo de 2,4, ancho máximo del contenido de 600 (tablets, CL-001-7) | En Android se usan 48 dp por las pautas de Material |
 | `border` | ancho de 3, radio de 0; anillo de foco de 3 desplazado 3 (teclado e interruptores) | |
 | `shadow` | sombras duras sin desenfoque: 5/1 (botón), 3 (icono), 4/10/9 (listado) | |
-| `motion` | duraciones y curvas del prototipo; ventana de deshacer de 6 s | Con "reducir movimiento": fundido de 400 ms |
+| `motion` | duraciones y curvas del prototipo | Con "reducir movimiento": fundido de 400 ms |
 
 ## Tamaño del texto de la tarea
 

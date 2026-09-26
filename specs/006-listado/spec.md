@@ -65,7 +65,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
 |---|---|---|
 | CL-006-1 | Listado largo (500 tareas) | Desplazamiento fluido (lista perezosa); desplazamiento automático al arrastrar cerca de los bordes |
 | CL-006-2 | Se elimina la penúltima y queda una | El listado muestra esa única tarea y sus acciones; "Nueva tarea" sigue disponible |
-| CL-006-3 | Se eliminan todas desde el listado | Se vuelve al estado "Nada pendiente." |
+| CL-006-3 | Se eliminan todas desde el listado | Se vuelve a "Todo hecho." (CA-004-07; no existe "Nada pendiente.") |
 | CL-006-4 | Soltar en la misma posición | No se escribe nada |
 | CL-006-5 | Doble toque sobre los botones Editar/Eliminar | Cuenta solo como el botón (no dispara el doble toque de la fila) |
 | CL-006-6 | Tarea sin texto (solo adjunto) | Se muestra el nombre del archivo o el dominio |

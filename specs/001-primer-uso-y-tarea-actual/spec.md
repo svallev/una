@@ -41,6 +41,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
   - **Cuando** se reabre la app sin tareas
   - **Entonces** se abre directamente el editor de la primera tarea, sin animación.
   - *Enmienda (spec 003, CA-003-11):* si hay tareas completadas y ninguna pendiente, se ve "Todo hecho." en lugar del editor.
+  - *Enmienda (spec 004, CA-004-08):* también si hay tareas eliminadas; el editor solo se abre si nunca se ha guardado ninguna tarea.
 
 **Pantalla principal (R6)**
 
@@ -94,7 +95,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 | Error de almacenamiento | La BD no abre | Pantalla "No hemos podido abrir tus tareas" + "Reintentar"; si es por falta de espacio: "Tu teléfono no tiene espacio libre" |
 | Error al guardar | No se puede escribir la tarea | Aviso "No hemos podido guardar la tarea" (o el de falta de espacio) con "Reintentar"; el texto escrito se conserva |
 
-(Los estados "Todo hecho." y "Nada pendiente." se definen en las specs 003 y 004.)
+(El estado "Todo hecho." se define en las specs 003 y 004; no existe "Nada pendiente.", DEV-24.)
 
 ## 6. Accesibilidad
 

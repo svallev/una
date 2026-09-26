@@ -62,6 +62,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
   - **Dado** que no quedan tareas pendientes y hay al menos una completada
   - **Cuando** se abre la app en frío (o vuelve de segundo plano tras 10 min, CA-001-12)
   - **Entonces** se ve "Todo hecho." (no el editor). Enmienda CA-001-05, que queda para cuando no hay ninguna tarea, ni pendiente ni completada.
+  - *Enmienda (spec 004, CA-004-08):* también con tareas eliminadas y ninguna completada.
 
 **Errores**
 
