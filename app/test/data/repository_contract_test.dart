@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:app/data/db/app_database.dart';
 import 'package:app/data/db/open_database_native.dart';
 import 'package:app/data/drift_task_repository.dart';
 import 'package:app/data/in_memory_task_repository.dart';
@@ -93,14 +94,14 @@ void _contract(
     test('CA-003-03a / CA-003-06: completar saca la tarea de la cola y la conserva en el histórico', () async {
       await repo.insert(_task('a', 'C', color: 2));
       await repo.insert(_task('b', 'M'));
-      expect(await repo.hasCompleted(), isFalse);
+      expect(await repo.hasHistory(), isFalse);
       final at = DateTime.utc(2026, 9, 25, 9, 30);
 
       expect(await repo.complete('a', at), isTrue);
 
       expect((await repo.currentTask())!.id, 'b');
       expect(await repo.countPending(), 1);
-      expect(await repo.hasCompleted(), isTrue);
+      expect(await repo.hasHistory(), isTrue);
       final done = (await repo.findById('a'))!;
       expect(done.status, TaskStatus.completed);
       expect(done.completedAt, at);
@@ -122,16 +123,55 @@ void _contract(
       expect(await repo.findById('missing'), isNull);
     });
 
-    test('las completadas eliminadas no cuentan para "Todo hecho."', () async {
-      await repo.insert(
-        _task(
-          'x',
-          'A',
-          status: TaskStatus.completed,
-          deletedAt: DateTime.utc(2026),
-        ),
-      );
-      expect(await repo.hasCompleted(), isFalse);
+    test(
+      'CA-004-08: una eliminada también cuenta como historia ("Todo hecho.")',
+      () async {
+        expect(await repo.hasHistory(), isFalse);
+        await repo.insert(_task('live', 'C'));
+        expect(await repo.hasHistory(), isFalse);
+        await repo.insert(_task('gone', 'B', deletedAt: DateTime.utc(2026)));
+        expect(await repo.hasHistory(), isTrue);
+      },
+    );
+
+    test('CA-004-03 / CA-004-09: eliminar saca la tarea de la cola y no deja contenido', () async {
+      await repo.insert(_task('a', 'C', color: 2));
+      await repo.insert(_task('b', 'M'));
+      final at = DateTime.utc(2026, 9, 26, 11);
+
+      expect(await repo.delete('a', at), isTrue);
+
+      expect((await repo.currentTask())!.id, 'b');
+      expect(await repo.countPending(), 1);
+      final gone = (await repo.findById('a'))!;
+      expect(gone.deletedAt, at);
+      expect(gone.updatedAt, at);
+      expect(gone.text, isNull);
+      expect(gone.status, TaskStatus.pending); // no cuenta como hecha
+      expect(gone.completedAt, isNull);
+      expect(gone.isPending, isFalse);
+    });
+
+    test('eliminar dos veces o una que no existe no hace nada', () async {
+      await repo.insert(_task('a', 'C'));
+      final first = DateTime.utc(2026, 9, 26, 11);
+      expect(await repo.delete('a', first), isTrue);
+      expect(await repo.delete('a', DateTime.utc(2027)), isFalse);
+      expect((await repo.findById('a'))!.deletedAt, first);
+      expect(await repo.delete('missing', first), isFalse);
+    });
+
+    test('eliminar la última deja la cola vacía y con historia', () async {
+      await repo.insert(_task('a', 'C'));
+      final seen = <String?>[];
+      final sub = repo.watchCurrentTask().listen((t) => seen.add(t?.id));
+      await pumpEventQueue();
+      await repo.delete('a', DateTime.utc(2026, 9, 26));
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(seen, ['a', null]);
+      expect(await repo.currentTask(), isNull);
+      expect(await repo.hasHistory(), isTrue);
     });
 
     test('watchCurrentTask emite la siguiente al completar', () async {
@@ -184,6 +224,48 @@ void main() {
     final r = DriftTaskRepository(db);
     return (r as _Repo, r as SettingsRepository, db.close);
   });
+
+  test(
+    'CA-004-09: al eliminar se borran las filas de sus adjuntos (drift)',
+    () async {
+      final db = openInMemoryDatabase();
+      final repo = DriftTaskRepository(db);
+      await repo.insert(_task('a', 'C'));
+      await repo.insert(_task('b', 'M'));
+      Future<void> attach(String id, String taskId) => db
+          .into(db.attachments)
+          .insert(
+            AttachmentsCompanion.insert(
+              id: id,
+              taskId: taskId,
+              kind: 'image',
+              origin: 'gallery',
+              mime: 'image/jpeg',
+              byteSize: 10,
+              relPath: 'attachments/$id.jpg',
+              createdAt: 0,
+            ),
+          );
+      await attach('x1', 'a');
+      await attach('x2', 'b');
+
+      await repo.delete('a', DateTime.utc(2026, 9, 26));
+
+      final left = await db.select(db.attachments).get();
+      expect(left.map((r) => r.id), ['x2']);
+      await db.close();
+    },
+  );
+
+  test(
+    'ADR-0011: secure_delete activo para no dejar texto en páginas libres',
+    () async {
+      final db = openInMemoryDatabase();
+      final row = await db.customSelect('PRAGMA secure_delete').getSingle();
+      expect(row.data.values.single, 1);
+      await db.close();
+    },
+  );
 
   test(
     'CA-001-10: los datos persisten al cerrar y reabrir la BD en disco',

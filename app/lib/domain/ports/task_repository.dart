@@ -18,8 +18,9 @@ abstract interface class TaskRepository {
   /// Cualquier tarea (pendiente, completada o eliminada) por su id.
   Future<Task?> findById(String id);
 
-  /// ¿Hay alguna tarea completada? (spec 003, CA-003-11: "Todo hecho.")
-  Future<bool> hasCompleted();
+  /// ¿Hay alguna tarea completada o eliminada? Sin pendientes, decide entre
+  /// "Todo hecho." y el editor de la primera tarea (CA-003-11, CA-004-08).
+  Future<bool> hasHistory();
 
   Future<void> insert(Task task);
 
@@ -30,6 +31,11 @@ abstract interface class TaskRepository {
   /// Marca como completada la tarea pendiente [id] (spec 003). Devuelve false
   /// (y no cambia nada) si ya no está pendiente.
   Future<bool> complete(String id, DateTime at);
+
+  /// Elimina la tarea [id] de forma definitiva (spec 004, ADR-0011): en una
+  /// sola escritura, `deletedAt = updatedAt = at`, sin texto y sin adjuntos.
+  /// Devuelve false (y no cambia nada) si no existe o ya estaba eliminada.
+  Future<bool> delete(String id, DateTime at);
 }
 
 /// Ajustes simples (docs/architecture.md §3).

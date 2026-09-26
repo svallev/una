@@ -78,8 +78,8 @@ class _UnaAppState extends ConsumerState<UnaApp> {
   }
 }
 
-/// Decide qué se ve (CA-001-03/05/09, CA-003-05/11): tarea actual; si no hay,
-/// "Todo hecho." (si ya se completó alguna), la bienvenida (solo la primera
+/// Decide qué se ve (CA-001-03/05/09, CA-003-05/11, CA-004-07/08): tarea
+/// actual; si no hay, "Todo hecho." (si ya se completó o eliminó alguna), la bienvenida (solo la primera
 /// vez) o el editor de la primera tarea. Encima, la rotura y la enhorabuena al
 /// completar (spec 003).
 class HomeRouter extends ConsumerWidget {
@@ -91,7 +91,7 @@ class HomeRouter extends ConsumerWidget {
     final focusSignal = ref.watch(screenFocusProvider);
     final task = ref.watch(currentTaskProvider);
     final firstRunDone = ref.watch(firstRunDoneProvider);
-    final hasCompleted = ref.watch(hasCompletedProvider);
+    final hasHistory = ref.watch(hasHistoryProvider);
     final reduced = MediaQuery.disableAnimationsOf(context);
     final completing = completion.phase == CompletionPhase.completing;
     final shown = completing ? completion.task : task;
@@ -103,7 +103,7 @@ class HomeRouter extends ConsumerWidget {
         task: shown,
         focusSignal: focusSignal,
       );
-    } else if (hasCompleted) {
+    } else if (hasHistory) {
       child = AllDoneScreen(
         key: const ValueKey('all-done'),
         focusSignal: focusSignal,

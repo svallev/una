@@ -61,17 +61,18 @@ final completeCurrentTaskProvider = Provider<CompleteCurrentTask>(
   ),
 );
 
-/// ¿Hay tareas completadas? Sin pendientes, decide entre "Todo hecho." y el
-/// editor (spec 003, CA-003-11).
-final hasCompletedProvider = NotifierProvider<HasCompletedController, bool>(
-  HasCompletedController.new,
+/// ¿Hay tareas completadas o eliminadas? Sin pendientes, decide entre
+/// "Todo hecho." y el editor de la primera tarea (CA-003-11, CA-004-08).
+final hasHistoryProvider = NotifierProvider<HasHistoryController, bool>(
+  HasHistoryController.new,
 );
 
-class HasCompletedController extends Notifier<bool> {
+class HasHistoryController extends Notifier<bool> {
   @override
-  bool build() => ref.read(bootStateProvider).hasCompleted;
+  bool build() => ref.read(bootStateProvider).hasHistory;
 
-  void markCompleted() => state = true;
+  /// Tras completar o eliminar una tarea.
+  void mark() => state = true;
 }
 
 /// Aumenta cada vez que la pantalla principal debe recuperar el foco (tras
@@ -139,11 +140,11 @@ class BootState {
   const BootState({
     required this.currentTask,
     required this.firstRunDone,
-    this.hasCompleted = false,
+    this.hasHistory = false,
   });
   final Task? currentTask;
   final bool firstRunDone;
-  final bool hasCompleted;
+  final bool hasHistory;
 }
 
 class UuidV7Ids implements IdGenerator {

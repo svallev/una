@@ -46,7 +46,7 @@ void main() {
     await repo.insert(only);
     final result = await complete(only);
     expect(result.next, isNull);
-    expect(await repo.hasCompleted(), isTrue);
+    expect(await repo.hasHistory(), isTrue);
   });
 
   test(
