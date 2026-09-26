@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/color_picker.dart';
 import 'package:app/domain/entities/queue_position.dart';
+import 'package:app/domain/entities/rank.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/domain/ports/id_generator.dart';
@@ -86,4 +87,19 @@ void main() {
     await sub.cancel();
     expect(emitted, [null, 'A', 'B']);
   });
+
+  test(
+    'CL-002-1 / ADR-0002: 1000 inserciones arriba del todo dejan claves ≤ 50',
+    () async {
+      final ids = <String>[];
+      for (var i = 0; i < 1000; i++) {
+        ids.insert(0, (await create('Tarea $i')).id);
+      }
+      final pending = await repo.pendingTasks();
+      expect([for (final t in pending) t.id], ids);
+      for (final t in pending) {
+        expect(t.rank.length, lessThanOrEqualTo(Rank.maxLength));
+      }
+    },
+  );
 }

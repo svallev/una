@@ -46,6 +46,19 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 - **[Hecho]** Fluido: el 90 % de los fotogramas cuesta ~6,5 ms en total. Hay de 2 a 4 fotogramas lentos (15–28 ms de raster) por cada ~260.
 - **[Suposición]** Esos fotogramas lentos son los primeros de la capa (sombra, facetas y degradados que se crean por primera vez), como pasaba en la 003. **[Pendiente]** Si se nota en el móvil o en gama media, precargar los *shaders* o la capa (I-3).
 
+## Listado con 500 tareas (spec 006, T-006-15, CA-006-20)
+
+- **Fecha:** 2026-09-26 · **Dispositivo:** Xiaomi 15T Pro (120 Hz, presupuesto de 8,3 ms por fotograma)
+- **Método:** `flutter drive --profile --no-dds --keep-app-running --driver=test_driver/perf_driver.dart --target=integration_test/task_list_perf_test.dart -d <serial>`, con 500 tareas (una de cada 7 con texto largo). Abrir: desde que se toca "Todas mis tareas" hasta ver las filas. Desplazar: 6 lanzamientos abajo y 6 arriba. Arrastrar: una fila 480 px abajo y vuelta. Después, `adb uninstall invalid.pending.app.profile`.
+
+| Medida | Resultado | Objetivo (CA-006-20) |
+|---|---|---|
+| Abrir el listado | 40 ms | < 300 ms |
+| Desplazar (2 167 fotogramas) | Build medio / p90 / peor: 0,6 / 1,5 / 3,6 ms · Raster medio / p90 / p99: 1,9 / 2,5 / 3,1 ms · 0 fuera de presupuesto | p90 ≤ 16,7 ms |
+| Arrastrar (172 fotogramas) | Build medio / p90 / peor: 1,3 / 3,5 / 5,5 ms · Raster medio / p90 / p99: 2,3 / 2,9 / 4,0 ms · 0 fuera de presupuesto | p90 ≤ 16,7 ms |
+
+- **[Hecho]** Muy por debajo del objetivo, incluso para 120 Hz. Mover solo la fila levantada (sin reconstruir la lista en cada movimiento) redujo a la mitad el coste del arrastre en el emulador.
+
 ## Cómo repetir la medición
 
 ```bash

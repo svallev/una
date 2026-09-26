@@ -12,6 +12,7 @@ import '../features/delete/deletion_controller.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../ui/semantics_action_order.dart';
 import 'app_identity.g.dart';
 import 'locale_resolution.dart';
 import 'providers.dart';
@@ -244,6 +245,8 @@ class StorageErrorApp extends StatelessWidget {
 /// con un ancho máximo (CL-001-7) y en la web de pruebas se añade su aviso
 /// (ADR-0010).
 Widget appFrame(BuildContext context, Widget? child) {
+  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
+  if (l10n != null) registerSemanticsActionOrder(l10n);
   final centered = ColoredBox(
     color: UnaColors.paper,
     child: Center(

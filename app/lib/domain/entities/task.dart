@@ -63,6 +63,23 @@ class Task {
     externalId: externalId,
   );
 
+  /// La misma tarea en otra posición de la cola (spec 006).
+  Task withRank(String newRank, DateTime at) => Task(
+    id: id,
+    text: text,
+    status: status,
+    rank: newRank,
+    colorKey: colorKey,
+    createdAt: createdAt,
+    updatedAt: at,
+    completedAt: completedAt,
+    deletedAt: deletedAt,
+    dueDate: dueDate,
+    parentId: parentId,
+    source: source,
+    externalId: externalId,
+  );
+
   /// La marca de borrado de esta tarea (spec 004, ADR-0011): sin texto, con
   /// `deletedAt` y sin volver a contar como pendiente ni como hecha.
   Task tombstone(DateTime at) => Task(

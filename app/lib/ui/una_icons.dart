@@ -23,6 +23,10 @@ abstract final class UnaIcons {
   static const arrowLeft = UnaIconData(['M20 12H5M11 6l-6 6 6 6']);
   static const arrowUp = UnaIconData(['M12 20V5M6 11l6-6 6 6']);
   static const arrowDown = UnaIconData(['M12 4v15M6 13l6 6 6-6']);
+
+  /// Flecha hacia una línea arriba: "Hacer actual" (hoja "Mover", DEV-28;
+  /// no está en el prototipo).
+  static const arrowToTop = UnaIconData(['M5 4h14M12 21V9M6 14l6-6 6 6']);
   static const menu = UnaIconData(['M4 7h16M4 12h16M4 17h16']);
   static const check = UnaIconData(['M4 12.5l5 5L20 6.5']);
   static const close = UnaIconData(['M5 5l14 14M19 5L5 19']);

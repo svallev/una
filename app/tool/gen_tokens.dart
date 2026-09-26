@@ -130,9 +130,14 @@ void main(List<String> args) {
         .join(', ');
     b.writeln('  static const Cubic ${k}Curve = Cubic($c);');
   });
-  b.writeln(
-    '  static const double dragThreshold = ${_num((motion['dragThreshold'] as Map<String, dynamic>)[r'$value'])};',
-  );
+  // Resto de valores sueltos (umbral de arrastre en px, inclinación en grados).
+  for (final e in motion.entries) {
+    if (e.key.startsWith(r'$') || e.key == 'duration' || e.key == 'easing') {
+      continue;
+    }
+    final v = e.value as Map<String, dynamic>;
+    b.writeln('  static const double ${e.key} = ${_num(v[r'$value'])};');
+  }
   b.writeln('}');
 
   final next = _formatDart(b.toString());

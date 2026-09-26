@@ -10,7 +10,7 @@ Todos los artboards son `Main.dc.html` arrancado en un estado (`start=…`). For
 | 2 | Menú · `Menu.dc.html` | `menu` | Hoja: "Esta tarea" (Editar, Eliminar) · Todas mis tareas · Nueva tarea · Configuración | 005, 006, 010 | R7, R11 |
 | 3 | Nueva tarea · `Nueva.dc.html` | `nueva` | Editor de texto con placeholder, botón de adjuntar (+) y "Continuar" | 002, 001 | R3 |
 | 4 | ¿Dónde va? · `Posicion.dc.html` | `posicion` | Hoja "¿Dónde la pones?": Arriba del todo / A la cola / Seguir editando | 002 | R4 |
-| 5 | Todas las tareas · `Lista.dc.html` | `lista` | Listado; la primera con la etiqueta "Lo siguiente"; arrastrar, doble toque, editar y eliminar | 006 | R7, R13 |
+| 5 | Todas las tareas · `Lista.dc.html` | `lista` | Listado; la primera es la tarea actual (sin asa; la etiqueta "Lo siguiente" está oculta); arrastrar, "Mover", doble toque, editar y eliminar | 006 | R7, R13 |
 | 6 | Eliminar · `Eliminar.dc.html` | `eliminar` | Hoja "¿Eliminar esta tarea?" «…» desaparecerá sin marcarse como hecha | 004 | R10 |
 | 7 | Completar · `Hecho.dc.html` | `hecho` | Mantener pulsado (el relleno avanza 1,2 s) → la nota se rompe en dos → "¡Enhorabuena! Tarea completada." → siguiente | 003 | R9 |
 | 8 | Eliminar (se arruga) · `Borrado.dc.html` | `borrado` | Arrugado con facetas → bola → papelera animada | 004 | R10 |

@@ -15,6 +15,20 @@ abstract interface class TaskRepository {
 
   Future<int> countPending();
 
+  /// Las tareas pendientes en orden (listado, spec 006).
+  Future<List<Task>> pendingTasks();
+
+  /// Emite las tareas pendientes en orden cada vez que cambia la cola.
+  Stream<List<Task>> watchPending();
+
+  /// Cambia la posición de la tarea pendiente [id] (spec 006, CA-006-10): solo
+  /// su `rank` y su `updatedAt`. Devuelve false si ya no está pendiente.
+  Future<bool> reorder(String id, String rank, DateTime at);
+
+  /// Da claves nuevas y cortas a toda la cola, en el mismo orden, en una sola
+  /// transacción (ADR-0002, CL-006-8). `updatedAt = at` en las renumeradas.
+  Future<void> renumberPending(DateTime at);
+
   /// Cualquier tarea (pendiente, completada o eliminada) por su id.
   Future<Task?> findById(String id);
 

@@ -28,11 +28,17 @@ class CreateTask {
   }) async {
     final text = validateTaskText(rawText);
     final current = await repository.currentTask();
-    final rank = switch (position) {
+    Future<String> rankFor() async => switch (position) {
       QueuePosition.top => Rank.before(await repository.firstPendingRank()),
       QueuePosition.end => Rank.after(await repository.lastPendingRank()),
     };
     final now = clock.now();
+    var rank = await rankFor();
+    // Muchas inserciones en el mismo extremo alargan las claves (ADR-0002).
+    if (rank.length > Rank.maxLength) {
+      await repository.renumberPending(now);
+      rank = await rankFor();
+    }
     final task = Task(
       id: ids.newId(),
       text: text,

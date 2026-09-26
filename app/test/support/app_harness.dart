@@ -4,6 +4,7 @@ import 'package:app/app/providers.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/color_picker.dart';
+import 'package:app/domain/ports/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +19,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   List<String> tasks = const [],
   bool screenReader = false,
   bool reduced = false,
+  Clock? clock,
 }) async {
   tester.platformDispatcher.localesTestValue = const [Locale('es')];
   addTearDown(tester.platformDispatcher.clearLocalesTestValue);
@@ -54,6 +56,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
           BootState(currentTask: await repo.currentTask(), firstRunDone: true),
         ),
         colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
+        if (clock != null) clockProvider.overrideWithValue(clock),
       ],
       child: const UnaApp(),
     ),

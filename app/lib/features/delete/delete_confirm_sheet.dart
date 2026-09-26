@@ -5,18 +5,28 @@ import 'package:flutter/services.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
+import '../../ui/early_tap_guard.dart';
 import '../../ui/una_sheet.dart';
 
 /// Abre "¿Eliminar esta tarea?" (spec 004, CA-004-01; prototipo "HOJA:
 /// confirmar eliminar"). Devuelve true solo si se pulsa "Eliminar"; cancelar,
 /// tocar fuera, el gesto atrás, deslizar hacia abajo o Esc devuelven null
 /// (CA-004-02).
+///
+/// Con [ignoreEarlyTaps] (desde el listado), durante la ventana del doble
+/// toque no responde a toques ni se cierra (CL-006-5).
 Future<bool?> showDeleteConfirmSheet(
   BuildContext context, {
   required String label,
+  bool ignoreEarlyTaps = false,
 }) => showUnaSheet<bool>(
   context,
-  builder: (_) => DeleteConfirmSheet(label: label),
+  builder: (_) {
+    final sheet = DeleteConfirmSheet(label: label);
+    return ignoreEarlyTaps
+        ? EarlyTapGuard(duration: UnaMotion.doubleTapWindow, child: sheet)
+        : sheet;
+  },
 );
 
 class DeleteConfirmSheet extends StatefulWidget {

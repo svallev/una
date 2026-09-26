@@ -8,6 +8,40 @@ abstract final class Rank {
   static const String digits =
       '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
+  /// Longitud a partir de la cual se renumera la cola (ADR-0002).
+  static const int maxLength = 50;
+
+  /// [n] claves ordenadas, de la misma longitud y repartidas de forma
+  /// uniforme, con hueco delante, entre ellas y detrás (renumeración,
+  /// CL-006-8). Se usa un dígito más del mínimo para que las inserciones
+  /// siguientes no alarguen las claves enseguida.
+  static List<String> evenlySpaced(int n) {
+    if (n <= 0) return const [];
+    final base = digits.length;
+    var length = 1;
+    var space = base;
+    while (space < 2 * (n + 1)) {
+      length++;
+      space *= base;
+    }
+    length++;
+    space *= base;
+    final step = space ~/ (n + 1);
+    return [for (var i = 1; i <= n; i++) _encode(i * step, length)];
+  }
+
+  /// [value] en base 62 con [length] dígitos. Si acabara en cero se usa el
+  /// siguiente valor (el paso entre claves es ≥ 2, así que no se cruzan).
+  static String _encode(int value, int length) {
+    var v = value % digits.length == 0 ? value + 1 : value;
+    final out = List.filled(length, digits[0]);
+    for (var i = length - 1; i >= 0; i--) {
+      out[i] = digits[v % digits.length];
+      v ~/= digits.length;
+    }
+    return out.join();
+  }
+
   /// Primera clave para una cola vacía.
   static String initial() => between(null, null);
 

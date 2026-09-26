@@ -25,12 +25,12 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
   - **Entonces**:
     - se cierra el menú y se abre la hoja "¿Eliminar esta tarea?" con el texto “{etiqueta}” desaparecerá sin marcarse como hecha. y los botones "Eliminar" (`dangerFill`, texto `ink`) y "Cancelar" (estilo `ghost`), como en el prototipo;
     - la etiqueta es el texto de la tarea, recortado a 3 líneas con "…" (mismo criterio que "¿Dónde la pones?", DEV-23); el lector de pantalla lee el texto completo;
-    - desde el listado (botón eliminar de cada fila) se abre la misma hoja *[Diferido a 006]*;
+    - desde el listado (botón eliminar de cada fila) se abre la misma hoja (CA-006-14);
     - si la tarea no tiene texto, la etiqueta es el nombre del archivo o el dominio *[Diferido a 007–009]*.
 - **CA-004-02 Cancelar**
   - **Dado** la hoja de confirmación
   - **Cuando** pulsa "Cancelar", toca fuera, usa el gesto atrás o la desliza hacia abajo (DEV-21)
-  - **Entonces** no cambia nada, se vuelve a la tarea actual (no al menú) y el foco queda en la tarea.
+  - **Entonces** no cambia nada, se vuelve a la tarea actual (no al menú) y el foco queda en la tarea. Desde el listado, se vuelve al listado con el foco en la fila (CA-006-14).
 
 **Eliminar la tarea actual**
 
@@ -119,7 +119,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
 
 - Confirmación modal con el foco inicial en "Cancelar", la acción segura (CA-004-10).
 - "Eliminar" en rojo **y** con texto; el color no es la única señal. Contraste `ink` sobre `dangerFill`: 6,1:1.
-- Acción personalizada "Eliminar tarea" en la tarea actual (CA-004-10) y en cada fila del listado *[006]*.
+- Acción personalizada "Eliminar tarea" en la tarea actual (CA-004-10) y en cada fila del listado (CA-006-16).
 - Un único anuncio y el foco en la nueva tarea actual o en "Todo hecho." (CA-004-11).
 - Reducir movimiento: fundido de 0,6 s (CA-004-12). Texto grande: CL-004-4.
 
@@ -130,7 +130,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
 | `deleteTitle` | ¿Eliminar esta tarea? | Delete this task? | |
 | `deleteBody` | “{label}” desaparecerá sin marcarse como hecha. | “{label}” will disappear without being marked as done. | Comillas “” del prototipo |
 | `deleteConfirm` | Eliminar | Delete | Clave propia (contexto distinto de `menuDelete`) |
-| `deleteA11yAction` | Eliminar tarea | Delete task | La reutiliza el listado (006) |
+| `deleteA11yAction` | Eliminar tarea | Delete task | La reutiliza el listado (006): botón de la fila y acción del lector |
 | `a11yDeletedNext` | Tarea eliminada. Siguiente: {text} | Task deleted. Next: {text} | |
 | `a11yDeletedAllDone` | Tarea eliminada. Todo hecho. | Task deleted. All done. | |
 | `deleteError` | No hemos podido eliminar la tarea | We couldn't delete the task | Con `retry` |

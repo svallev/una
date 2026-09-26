@@ -19,7 +19,7 @@ Apuntar algo nuevo sin perder el foco: el usuario decide si pasa a ser lo que ha
 
 - **CA-002-01 Abrir el editor**
   - **Dado** que hay al menos una tarea pendiente
-  - **Cuando** el usuario elige "Nueva tarea" en el menú (spec 005) *[desde el listado: diferido a 006]*
+  - **Cuando** el usuario elige "Nueva tarea" en el menú (spec 005) o "Nueva tarea" en el listado (CA-006-15)
   - **Entonces** el editor aparece con un fundido de 0,8 s, como en el prototipo: el logotipo y "Cancelar" (enlace subrayado) arriba, el campo centrado con el foco y el teclado abiertos, y abajo "+" y "Continuar →", **ambos activos** (DEV-17). La etiqueta "Nueva tarea" **no se ve**: es el nombre accesible del campo. El color de la nota se elige al abrir el editor, al azar y distinto del de la tarea actual (CA-001-08), y se conserva si se vuelve a editar.
 - **CA-002-02 Preguntar la posición (R4)**
   - **Dado** el editor con un texto no vacío **y sin adjunto**
@@ -42,8 +42,8 @@ Apuntar algo nuevo sin perder el foco: el usuario decide si pasa a ser lo que ha
 - **CA-002-07 Cancelar**
   - **Dado** el editor de una tarea nueva, con o sin texto
   - **Cuando** pulsa "Cancelar" o usa el gesto atrás
-  - **Entonces** se descarta sin preguntar (como el prototipo; P-3 resuelto) y se vuelve a la pantalla principal.
-- **CA-002-08 Volver al listado** — *[Diferido a 006]*.
+  - **Entonces** se descarta sin preguntar (como el prototipo; P-3 resuelto) y se vuelve a la pantalla principal (o al listado si se abrió desde él, CA-006-15).
+- **CA-002-08 Volver al listado** — Sustituido por CA-006-15.
 - **CA-002-09 Adjuntos no preguntan (R5)** — *[Diferido a 007–009]*.
 - **CA-002-10 Continuar sin texto**
   - **Dado** el editor sin texto (o solo espacios) y sin adjunto
