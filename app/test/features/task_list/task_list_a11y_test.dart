@@ -3,6 +3,7 @@ import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'list_harness.dart';
@@ -26,22 +27,17 @@ List<String> _readingOrder(WidgetTester tester) {
   return out;
 }
 
-/// Texto de la fila que tiene el foco (teclado y lector).
+/// Texto de la fila que tiene el foco de teclado (su asa o su "Editar").
 String? _focusedRow() {
-  TaskListRow? found;
-  void visit(Element e) {
-    if (found != null) return;
-    if (e.widget is TaskListRow) {
-      found = e.widget as TaskListRow;
-      return;
-    }
-    e.visitChildren(visit);
-  }
+  final ctx = FocusManager.instance.primaryFocus?.context;
+  return ctx?.findAncestorWidgetOfExactType<TaskListRow>()?.task.text;
+}
 
-  final ctx = FocusManager.instance.primaryFocus?.context as Element?;
-  if (ctx == null) return null;
-  visit(ctx);
-  return found?.task.text;
+/// El foco se pide cuando la hoja o el editor ya se han cerrado.
+Future<void> _settleFocus(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  await tester.pump(UnaMotion.sheetOut);
+  await tester.pumpAndSettle();
 }
 
 Future<void> _action(WidgetTester tester, String row, String action) async {
@@ -161,21 +157,21 @@ void main() {
       await tester.pumpAndSettle();
       await tester.pump(UnaMotion.doubleTapWindow);
       await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
+      await _settleFocus(tester);
       expect(_focusedRow(), 'Segunda');
 
       await _action(tester, '2 de 3: Segunda', 'Eliminar tarea');
       await tester.pumpAndSettle();
       await tester.pump(UnaMotion.doubleTapWindow);
       await tester.tap(find.text('Eliminar').last);
-      await tester.pumpAndSettle();
+      await _settleFocus(tester);
       expect(_focusedRow(), 'Tercera');
 
       await _action(tester, '2 de 2: Tercera', 'Eliminar tarea');
       await tester.pumpAndSettle();
       await tester.pump(UnaMotion.doubleTapWindow);
       await tester.tap(find.text('Eliminar').last);
-      await tester.pumpAndSettle();
+      await _settleFocus(tester);
       expect(_focusedRow(), 'Primera', reason: 'era la última: la anterior');
       handle.dispose();
     },
@@ -189,7 +185,7 @@ void main() {
     await _action(tester, '2 de 2: Segunda', 'Editar tarea');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancelar'));
-    await tester.pumpAndSettle();
+    await _settleFocus(tester);
     expect(_focusedRow(), 'Segunda');
     handle.dispose();
   });
@@ -205,7 +201,7 @@ void main() {
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('A la cola'));
-    await tester.pumpAndSettle();
+    await _settleFocus(tester);
     expect(_focusedRow(), 'Nueva');
     handle.dispose();
   });
@@ -278,6 +274,128 @@ void main() {
       await _action(tester, '40 de 40: Tarea 40', 'Hacer actual');
       await tester.pumpAndSettle();
       expect(idOf('1 de 40. Tarea actual: Tarea 40'), last);
+      handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'CA-006-17 (teclado): tras mover con "Mover", el foco queda en el asa de la fila, visible',
+    (tester) async {
+      await openList(tester, tasks: ['Primera', 'Segunda', 'Tercera']);
+      // Con teclado: el anillo se ve en modo tradicional.
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      addTearDown(
+        () => FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic,
+      );
+      await tester.tap(handleOf('Segunda'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mover abajo'));
+      await _settleFocus(tester);
+      expect(_focusedRow(), 'Segunda');
+      final focused = FocusManager.instance.primaryFocus!.context!;
+      // Es un control de la fila (el asa), no un nodo invisible.
+      expect(
+        focused.findAncestorWidgetOfExactType<FocusableActionDetector>(),
+        isNotNull,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.text('MOVER TAREA'), findsOneWidget);
+    },
+  );
+
+  testWidgets('CA-006-17: el aviso de foco sale del nodo de la fila', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final focusEvents = <int>[];
+    tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+      SystemChannels.accessibility,
+      (message) async {
+        final map = message! as Map<Object?, Object?>;
+        if (map['type'] == 'focus') focusEvents.add(map['nodeId']! as int);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(
+            SystemChannels.accessibility,
+            null,
+          ),
+    );
+    await openList(
+      tester,
+      tasks: ['Primera', 'Segunda', 'Tercera'],
+      screenReader: true,
+    );
+    await _action(tester, '2 de 3: Segunda', 'Mover abajo');
+    await _settleFocus(tester);
+    final row = tester.getSemantics(find.bySemanticsLabel('3 de 3: Segunda'));
+    expect(focusEvents, contains(row.id));
+    handle.dispose();
+  });
+
+  testWidgets(
+    'CL-006-5: con el lector, la confirmación responde desde el principio',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      final repo = await openList(
+        tester,
+        tasks: ['Primera', 'Segunda'],
+        screenReader: true,
+      );
+      await _action(tester, '2 de 2: Segunda', 'Eliminar tarea');
+      await tester.pumpAndSettle(); // sin esperar la ventana del doble toque
+      await tester.tap(find.text('Eliminar').last);
+      await tester.pumpAndSettle();
+      expect(await order(repo), ['Primera']);
+      handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'CA-006-18 / CL-006-10: con texto al 200 %, título, ayuda y filas en orden',
+    (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final handle = tester.ensureSemantics();
+      await openList(tester, tasks: ['Primera', 'Segunda'], screenReader: true);
+      final order = _readingOrder(tester);
+      final start = order.indexOf('Todas las tareas');
+      final rest = order.sublist(start + 1);
+      expect(rest.indexOf('Todas las tareas'), 0, reason: 'título primero');
+      expect(
+        rest.indexOf('1 de 2. Tarea actual: Primera'),
+        lessThan(rest.indexOf('Volver a la tarea')),
+      );
+      expect(
+        rest.indexOf('2 de 2: Segunda'),
+        lessThan(rest.indexOf('Volver a la tarea')),
+      );
+      handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'Guías de accesibilidad con texto al 200 % y con las hojas abiertas',
+    (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final handle = tester.ensureSemantics();
+      await openList(tester, tasks: ['Amarilla', 'Rosa', 'Azul']);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      tester.platformDispatcher.clearTextScaleFactorTestValue();
+      await tester.pumpAndSettle();
+      await tester.tap(handleOf('Rosa'));
+      await tester.pumpAndSettle();
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
       handle.dispose();
     },
   );

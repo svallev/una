@@ -23,6 +23,8 @@ class BrutalButton extends StatefulWidget {
     this.singleLine = false,
     this.ghost = false,
     this.autofocus = false,
+    this.focusNode,
+    this.semanticsKey,
   }) : iconOnly = false;
 
   /// Botón cuadrado solo con icono (p. ej. "+"). [label] es su nombre accesible.
@@ -35,6 +37,8 @@ class BrutalButton extends StatefulWidget {
     this.iconStroke = UnaSizes.iconStrokeBold,
     this.height = UnaSizes.button,
     this.background = UnaColors.surface,
+    this.focusNode,
+    this.semanticsKey,
   }) : trailingIcon = null,
        fontSize = UnaFontSizes.bodyL,
        expand = false,
@@ -45,6 +49,14 @@ class BrutalButton extends StatefulWidget {
 
   final String label;
   final VoidCallback? onPressed;
+
+  /// Foco de teclado del botón, para dárselo desde fuera (p. ej., al volver
+  /// al listado sin crear, CA-006-17).
+  final FocusNode? focusNode;
+
+  /// Clave del nodo accesible del botón, para enviar desde él el aviso de
+  /// foco del lector.
+  final GlobalKey? semanticsKey;
 
   /// Icono delante del texto (completar: ✓).
   final UnaIconData? icon;
@@ -86,7 +98,7 @@ class _BrutalButtonState extends State<BrutalButton> {
   bool _focused = false;
 
   /// Nodo accesible del botón: el aviso de foco del lector sale de él.
-  final _semanticsKey = GlobalKey();
+  late final _semanticsKey = widget.semanticsKey ?? GlobalKey();
 
   void _activate() => widget.onPressed?.call();
 
@@ -130,6 +142,7 @@ class _BrutalButtonState extends State<BrutalButton> {
     // Teclado e interruptores: Tab llega al botón e Intro/Espacio lo activan.
     return FocusableActionDetector(
       enabled: enabled,
+      focusNode: widget.focusNode,
       autofocus: widget.autofocus,
       mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onShowFocusHighlight: (v) => setState(() => _focused = v),

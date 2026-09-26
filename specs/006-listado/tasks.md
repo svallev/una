@@ -26,18 +26,22 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 | Tarea | Estado |
 |---|---|
-| T-006-01 … T-006-13 | ✅ (274 tests en verde; `analyze --fatal-infos` limpio) |
+| T-006-01 … T-006-13 | ✅ (281 tests en verde; `analyze --fatal-infos` limpio) |
 | T-006-14 *Goldens* | Test escrito y revisado a ojo con una generación local en macOS; las imágenes de referencia se generan en Linux (CI) con la etiqueta `actualizar-goldens` al abrir la PR |
 | T-006-15 Integración y rendimiento | ✅ Integración en el emulador (arrastrar, volver, rearrancar). Rendimiento: la prueba funciona en el emulador (abrir con 500 tareas: 239 ms en depuración); **falta medir en el Xiaomi en *profile*** (con permiso del propietario) |
 | T-006-16 TalkBack real (emulador) | ✅ Foco inicial en el título y ayuda para el lector. ⚠️ No se puede mover el foco de TalkBack con `adb` (TalkBack ignora los toques inyectados): se prueba en su lugar que la fila movida conserva su nodo semántico (test). Switch Access y el foco tras editar, eliminar o crear quedan para la prueba a mano |
-| T-006-17 Revisiones | `/i18n-check` ✅, `/tokens-validate` ✅ (3 tokens nuevos), `/security-check` ✅. `security-reviewer` ✅: corregidos los movimientos en serie, el desempate por id y las lecturas capturadas (resto en `plan.md` §7). `a11y-reviewer`: corregidos B2 (etiqueta de hoja sin mayúsculas) y B3 (aviso que tapaba "Nueva tarea"). **Pendientes:** H1, M1, M2, B1 y B4 (abajo) |
+| T-006-17 Revisiones | `/i18n-check` ✅, `/tokens-validate` ✅ (3 tokens nuevos), `/security-check` ✅. `security-reviewer` ✅: corregidos los movimientos en serie, el desempate por id y las lecturas capturadas (resto en `plan.md` §7). `a11y-reviewer`: corregidos todos los hallazgos (abajo), con dos comprobaciones pendientes |
 
-**Pendientes de la revisión de accesibilidad (siguiente sesión):**
-- **H1:** el `FocusSemanticEvent` debe salir del nodo de la fila (usar una `GlobalKey` en el `Semantics` de `TaskListRow`, como `BrutalButton._semanticsKey`) y pedirse cuando la hoja o el editor hayan terminado de cerrarse. Después, comprobar con TalkBack real dónde queda el foco en cada fila de la tabla de CA-006-17. Si TalkBack va siempre al título, hay que consultar al propietario.
-- **M1:** el foco del teclado cae en un `Focus` invisible (`_RowSlot`, `_newTaskFocus`). Debe ir al asa (o a "Editar" en la primera fila) y a `BrutalButton` (añadirle `focusNode`), y hay que quitar `includeSemantics` de esos `Focus`.
-- **M2:** con texto ≥ 1,3, "Volver" se lee antes que las filas. Hay que dar `sortKey` a las filas y añadir un test de orden a escala 2,0.
-- **B1:** `EarlyTapGuard` solo debe actuar cuando la hoja se abre con un toque, no con el lector ni con el teclado.
-- **B4:** `meetsGuideline` con escala 2,0 y con las hojas abiertas.
+**Revisión de accesibilidad: corregido (2026-09-26)**
+- **H1 (código):**
+  - el aviso de foco sale del nodo de la fila (`GlobalKey` en su `Semantics`) y del de "Nueva tarea" (`BrutalButton.semanticsKey`);
+  - se pide cuando la hoja o el editor ya se han cerrado (tests: "el aviso de foco sale del nodo de la fila" y los de foco de CA-006-17).
+  - ⚠️ Queda comprobar con TalkBack real dónde queda el foco tras editar, eliminar y crear. En el emulador no se puede provocar con `adb`.
+- **M1:** el foco del teclado va al asa (o a "Editar" en la primera fila), con anillo visible e Intro; "Nueva tarea" recibe el foco en su propio botón. Ya no hay `Focus` invisibles.
+- **M2:** el orden de lectura se fija en el nodo que la lista crea para cada fila. Con texto ≥ 1,3 se lee: título, ayuda, filas, "Volver" y "Nueva tarea".
+  - ⚠️ Diferencia menor con CA-006-18, que pone "Volver" al final: con texto grande, "Volver" va dentro de la lista desplazable (DEV-34). Pendiente de que el propietario lo acepte.
+- **B1:** la protección de 350 ms solo se aplica al tocar con el dedo el botón Eliminar de la fila; con el lector o el teclado, la hoja responde enseguida (test).
+- **B4:** `meetsGuideline` con texto al 200 % y con la hoja "Mover" abierta.
 
 **CA → test:** CA-006-01/02/03, CL-006-9/10/11 → `test/features/task_list/task_list_screen_test.dart` · CA-006-04/05/06/07/11/12/19, CL-006-4/7 → `reorder_gestures_test.dart` · CA-006-08/09/16 → `move_actions_test.dart` · CA-006-10, CL-006-8 → `test/domain/reorder_task_test.dart`, `rank_test.dart`, `test/data/repository_contract_test.dart` · CA-006-13/14/15/19, CL-006-2/3/5/6, §5 → `task_list_flow_test.dart` · CA-006-17/18 → `task_list_a11y_test.dart` · CA-006-14 (datos) → `test/domain/delete_pending_task_test.dart` · controlador → `task_list_controller_test.dart` · CL-002-1 → `test/domain/create_task_test.dart` · CA-006-20, CL-006-1 → `integration_test/task_list_perf_test.dart` · integración → `integration_test/task_list_flow_test.dart` · aspecto → `test/goldens/task_list_golden_test.dart`.
 

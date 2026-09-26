@@ -112,7 +112,11 @@ class _Drag {
 class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   final _scroll = ScrollController();
   final _areaKey = GlobalKey();
-  final _newTaskFocus = FocusNode(skipTraversal: true);
+
+  /// "Nueva tarea": su foco y su nodo accesible (al cancelar la creación el
+  /// foco vuelve aquí, CA-006-17).
+  final _newTaskFocus = FocusNode();
+  final _newTaskSemantics = GlobalKey();
   final _heights = <String, double>{};
   final _slotKeys = <String, GlobalKey>{};
   late final AppLifecycleListener _lifecycle;
@@ -192,6 +196,27 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     );
   }
 
+  /// Foco en la fila [id] (CA-006-17). Tras una hoja o el editor, cuando ya
+  /// se han cerrado: antes, su fondo aún tapa el listado para el lector.
+  void _focusRow(String id, {Duration after = Duration.zero}) {
+    void go() {
+      if (mounted) ref.read(taskListProvider.notifier).focus(id);
+    }
+
+    if (after == Duration.zero) {
+      go();
+    } else {
+      Timer(after, go);
+    }
+  }
+
+  /// Lo que tarda en cerrarse una hoja.
+  static const _sheetClosed = UnaMotion.sheetOut;
+
+  /// Lo que tarda en cerrarse el editor (`TaskEditorScreen.route`).
+  Duration get _editorClosed =>
+      _reduced ? UnaMotion.reducedMotionFade : UnaMotion.sheetOut;
+
   // ------------------------------------------------------------ desplazar
 
   /// Lleva la fila [id] a la vista. En la cola solo hace falta ir arriba del
@@ -257,7 +282,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     switch (outcome) {
       case Moved(:final position, :final total):
         ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
-        ref.read(taskListProvider.notifier).focus(task.id);
+        _focusRow(task.id, after: afterSheet ? _sheetClosed : Duration.zero);
         _announce(
           position == 1
               ? l10n.a11yNowCurrent
@@ -287,7 +312,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     );
     if (!mounted) return;
     if (choice == null) {
-      ref.read(taskListProvider.notifier).focus(task.id);
+      _focusRow(task.id, after: _sheetClosed);
       return;
     }
     await _move(task, moveTargetIndex(choice, position), afterSheet: true);
@@ -440,19 +465,22 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         TaskEditorScreen(mode: EditorMode.edit, task: task, fromList: true),
       ),
     );
-    if (mounted) ref.read(taskListProvider.notifier).focus(task.id);
+    if (mounted) _focusRow(task.id, after: _editorClosed);
   }
 
-  Future<void> _delete(Task task) async {
+  /// [byTouch]: desde el botón de la fila con el dedo. Solo entonces la hoja
+  /// ignora el segundo toque de un doble toque (CL-006-5); con el lector o el
+  /// teclado responde desde el principio.
+  Future<void> _delete(Task task, {bool byTouch = false}) async {
     if (_drag != null) return;
     final confirmed = await showDeleteConfirmSheet(
       context,
       label: task.text ?? '',
-      ignoreEarlyTaps: true,
+      ignoreEarlyTaps: byTouch,
     );
     if (!mounted) return;
     if (confirmed != true) {
-      ref.read(taskListProvider.notifier).focus(task.id);
+      _focusRow(task.id, after: _sheetClosed);
       return;
     }
     await _deleteConfirmed(task);
@@ -480,7 +508,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           if (t.id != task.id) t,
       ];
       final target = rest[math.min(math.max(index, 0), rest.length - 1)];
-      ref.read(taskListProvider.notifier).focus(target.id);
+      _focusRow(target.id, after: _sheetClosed);
       final next = result.next;
       _announce(
         result.wasCurrent && next != null
@@ -522,7 +550,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     );
     if (!mounted) return;
     if (saved == null) {
-      _requestFocus(_newTaskFocus);
+      _requestFocus(_newTaskFocus, _newTaskSemantics, after: _editorClosed);
       return;
     }
     final List<Task> tasks;
@@ -535,7 +563,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     if (!mounted) return;
     final index = tasks.indexWhere((t) => t.id == saved.id);
     if (index < 0) return;
-    ref.read(taskListProvider.notifier).flashAndFocus(saved.id);
+    ref.read(taskListProvider.notifier).flash(saved.id);
+    _focusRow(saved.id, after: _editorClosed);
     _announce(
       index == 0
           ? l10n.a11yNowCurrent
@@ -546,13 +575,23 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     if (mounted) await _reveal(saved.id);
   }
 
-  void _requestFocus(FocusNode node) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  /// Foco de teclado en [node] y aviso de foco desde el nodo accesible de
+  /// [semantics] (el del propio botón, no el de un antecesor).
+  void _requestFocus(
+    FocusNode node,
+    GlobalKey semantics, {
+    Duration after = Duration.zero,
+  }) {
+    Timer(after, () {
       if (!mounted) return;
-      node.requestFocus();
-      node.context?.findRenderObject()?.sendSemanticsEvent(
-        const FocusSemanticEvent(),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        node.requestFocus();
+        semantics.currentContext?.findRenderObject()?.sendSemanticsEvent(
+          const FocusSemanticEvent(),
+        );
+      });
+      WidgetsBinding.instance.scheduleFrame();
     });
   }
 
@@ -600,7 +639,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         onFocusHandled: (s) => _handledFocus = s,
         flashSerial: state.flash.id == task.id ? state.flash.serial : null,
         onSize: (h) => _heights[task.id] = h,
-        builder: (shadow) => TaskListRow(
+        builder: (shadow, focusNode, semanticsKey) => TaskListRow(
           task: task,
           first: first,
           palette: UnaPalettes.classic,
@@ -611,7 +650,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           actions: actions,
           onEdit: () => _edit(task),
           onDelete: () => _delete(task),
+          onDeleteTap: () => _delete(task, byTouch: true),
           onMove: first ? null : () => _openMove(task),
+          focusNode: focusNode,
+          semanticsKey: semanticsKey,
           onRowTap: () => _rowTap(task),
           drag: first
               ? null
@@ -627,14 +669,22 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       );
       return KeyedSubtree(
         key: ValueKey(task.id),
-        child: Padding(
-          padding: EdgeInsets.only(bottom: index == total - 1 ? 0 : _gap),
-          child: _Shift(
-            offset: _shiftOf(index),
-            // Al soltar, sin transición (`.still`); al cancelar, las demás
-            // vuelven a su sitio con la misma transición.
-            duration: _freeze || reduced ? Duration.zero : UnaMotion.listShift,
-            child: slot,
+        // La lista envuelve cada fila en un nodo con su índice: el orden de
+        // lectura se fija en ese nodo (con texto grande, la cabecera va en la
+        // misma lista y "Volver" debe ir después de las filas, CA-006-18).
+        child: Semantics(
+          sortKey: const OrdinalSortKey(_Order.list),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: index == total - 1 ? 0 : _gap),
+            child: _Shift(
+              offset: _shiftOf(index),
+              // Al soltar, sin transición (`.still`); al cancelar, las demás
+              // vuelven a su sitio con la misma transición.
+              duration: _freeze || reduced
+                  ? Duration.zero
+                  : UnaMotion.listShift,
+              child: slot,
+            ),
           ),
         ),
       );
@@ -739,6 +789,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                 _Bottom(
                   label: l10n.listNewTask,
                   focusNode: _newTaskFocus,
+                  semanticsKey: _newTaskSemantics,
                   onPressed: _create,
                 ),
               ],
@@ -853,11 +904,13 @@ class _Bottom extends StatelessWidget {
   const _Bottom({
     required this.label,
     required this.focusNode,
+    required this.semanticsKey,
     required this.onPressed,
   });
 
   final String label;
   final FocusNode focusNode;
+  final GlobalKey semanticsKey;
   final VoidCallback onPressed;
 
   @override
@@ -881,15 +934,14 @@ class _Bottom extends StatelessWidget {
           UnaSpace.l,
           math.max(UnaSpace.xxl - 2, bottomInset + UnaSpace.m),
         ),
-        child: Focus(
+        child: BrutalButton(
+          label: label,
+          icon: UnaIcons.plus,
+          iconSize: UnaSizes.icon,
+          iconStroke: UnaSizes.iconStroke,
           focusNode: focusNode,
-          child: BrutalButton(
-            label: label,
-            icon: UnaIcons.plus,
-            iconSize: UnaSizes.icon,
-            iconStroke: UnaSizes.iconStroke,
-            onPressed: onPressed,
-          ),
+          semanticsKey: semanticsKey,
+          onPressed: onPressed,
         ),
       ),
     );
@@ -942,7 +994,15 @@ class _RowSlot extends StatefulWidget {
   final ValueChanged<int> onFocusHandled;
   final int? flashSerial;
   final ValueChanged<double> onSize;
-  final Widget Function(BoxShadow shadow) builder;
+
+  /// La fila, con su sombra, el foco de teclado de su control principal y la
+  /// clave de su nodo accesible.
+  final Widget Function(
+    BoxShadow shadow,
+    FocusNode focusNode,
+    GlobalKey semanticsKey,
+  )
+  builder;
 
   @override
   State<_RowSlot> createState() => _RowSlotState();
@@ -950,8 +1010,12 @@ class _RowSlot extends StatefulWidget {
 
 class _RowSlotState extends State<_RowSlot>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
-  // Fuera del recorrido con Tab: solo recibe el foco cuando se pide.
-  final _focus = FocusNode(skipTraversal: true);
+  /// Foco de teclado del control principal de la fila (el asa, o "Editar" en
+  /// la primera): con anillo visible y activable con Intro.
+  final _focus = FocusNode();
+
+  /// Nodo accesible de la fila: de él sale el aviso de foco.
+  final _semanticsKey = GlobalKey();
   // `preserve`: con "quitar animaciones" Flutter acorta las animaciones 20
   // veces, y el resaltado fijo debe durar 0,9 s (CA-006-19).
   late final _flash = AnimationController(
@@ -986,7 +1050,7 @@ class _RowSlotState extends State<_RowSlot>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _focus.requestFocus();
-      context.findRenderObject()?.sendSemanticsEvent(
+      _semanticsKey.currentContext?.findRenderObject()?.sendSemanticsEvent(
         const FocusSemanticEvent(),
       );
     });
@@ -1020,7 +1084,8 @@ class _RowSlotState extends State<_RowSlot>
     super.build(context);
     Widget row = AnimatedBuilder(
       animation: _flash,
-      builder: (context, _) => widget.builder(_shadowAt(_flash.value)),
+      builder: (context, _) =>
+          widget.builder(_shadowAt(_flash.value), _focus, _semanticsKey),
     );
     row = _MeasureHeight(onHeight: widget.onSize, child: row);
     // Invisible en su sitio mientras se arrastra; el lector la sigue teniendo
@@ -1031,7 +1096,7 @@ class _RowSlotState extends State<_RowSlot>
       alwaysIncludeSemantics: true,
       child: row,
     );
-    return Focus(focusNode: _focus, child: row);
+    return row;
   }
 }
 

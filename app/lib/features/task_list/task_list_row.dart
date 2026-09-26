@@ -44,7 +44,10 @@ class TaskListRow extends StatelessWidget {
     this.actions = const {},
     this.onEdit,
     this.onDelete,
+    this.onDeleteTap,
     this.onMove,
+    this.focusNode,
+    this.semanticsKey,
     this.onRowTap,
     this.drag,
     this.lifted = false,
@@ -63,7 +66,20 @@ class TaskListRow extends StatelessWidget {
   final Map<CustomSemanticsAction, VoidCallback> actions;
 
   final VoidCallback? onEdit;
+
+  /// Eliminar con el teclado o el lector.
   final VoidCallback? onDelete;
+
+  /// Eliminar tocando el botón con el dedo (la hoja ignora el segundo toque
+  /// de un doble toque, CL-006-5). Sin indicar, [onDelete].
+  final VoidCallback? onDeleteTap;
+
+  /// Foco de teclado del control principal: el asa o, en la primera fila,
+  /// "Editar" (CA-006-17).
+  final FocusNode? focusNode;
+
+  /// Clave del nodo accesible de la fila (el aviso de foco sale de él).
+  final GlobalKey? semanticsKey;
 
   /// Tocar el asa (sin arrastrar) o activarla con el teclado (DEV-28).
   final VoidCallback? onMove;
@@ -126,7 +142,12 @@ class TaskListRow extends StatelessWidget {
       child: Row(
         children: [
           if (!first)
-            _RowButton(onPressed: onMove, drag: drag, child: const _Grip()),
+            _RowButton(
+              onPressed: onMove,
+              focusNode: focusNode,
+              drag: drag,
+              child: const _Grip(),
+            ),
           if (!first) const SizedBox(width: _gap),
           Expanded(
             child: Padding(
@@ -147,11 +168,13 @@ class TaskListRow extends StatelessWidget {
           const SizedBox(width: _gap),
           _RowButton(
             onPressed: onEdit,
+            focusNode: first ? focusNode : null,
             child: const UnaIcon(UnaIcons.edit, size: UnaSizes.listIcon),
           ),
           const SizedBox(width: _gap),
           _RowButton(
             onPressed: onDelete,
+            onTap: onDeleteTap,
             child: const UnaIcon(UnaIcons.trash, size: UnaSizes.listIcon),
           ),
         ],
@@ -191,6 +214,7 @@ class TaskListRow extends StatelessWidget {
     final label = semanticsLabel;
     if (label == null) return ExcludeSemantics(child: body);
     return Semantics(
+      key: semanticsKey,
       container: true,
       label: label,
       onTap: onEdit,
@@ -207,9 +231,20 @@ class TaskListRow extends StatelessWidget {
 /// son acciones de la fila (CA-006-18). El asa además se arrastra (6 px, al
 /// instante, CA-006-04) y compite con su propio toque (abre "Mover").
 class _RowButton extends StatefulWidget {
-  const _RowButton({required this.onPressed, required this.child, this.drag});
+  const _RowButton({
+    required this.onPressed,
+    required this.child,
+    this.onTap,
+    this.focusNode,
+    this.drag,
+  });
 
+  /// Teclado (Intro/Espacio).
   final VoidCallback? onPressed;
+
+  /// Toque con el dedo; sin indicar, [onPressed].
+  final VoidCallback? onTap;
+  final FocusNode? focusNode;
   final Widget child;
   final RowDragCallbacks? drag;
 
@@ -227,7 +262,7 @@ class _RowButtonState extends State<_RowButton> {
     Widget button = GestureDetector(
       excludeFromSemantics: true,
       behavior: HitTestBehavior.opaque,
-      onTap: onPressed,
+      onTap: widget.onTap ?? onPressed,
       dragStartBehavior: DragStartBehavior.down,
       onVerticalDragStart: drag == null
           ? null
@@ -258,6 +293,7 @@ class _RowButtonState extends State<_RowButton> {
     }
     return FocusableActionDetector(
       enabled: onPressed != null,
+      focusNode: widget.focusNode,
       mouseCursor: SystemMouseCursors.click,
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       actions: {

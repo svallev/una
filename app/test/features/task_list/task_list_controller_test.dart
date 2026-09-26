@@ -88,7 +88,9 @@ void main() {
     final ctrl = container.read(taskListProvider.notifier);
     ctrl.focus('b');
     expect(container.read(taskListProvider).focus, (id: 'b', serial: 1));
-    ctrl.flashAndFocus('c');
+    ctrl
+      ..flash('c')
+      ..focus('c');
     final s = container.read(taskListProvider);
     expect(s.focus, (id: 'c', serial: 2));
     expect(s.flash, (id: 'c', serial: 1));

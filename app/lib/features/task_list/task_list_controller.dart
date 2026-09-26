@@ -143,9 +143,7 @@ class TaskListController extends Notifier<TaskListState> {
   void focus(String id) =>
       state = state.copyWith(focus: (id: id, serial: state.focus.serial + 1));
 
-  /// Resalta la fila [id] y le da el foco (CA-006-15).
-  void flashAndFocus(String id) => state = state.copyWith(
-    focus: (id: id, serial: state.focus.serial + 1),
-    flash: (id: id, serial: state.flash.serial + 1),
-  );
+  /// Resalta la fila [id] (CA-006-15).
+  void flash(String id) =>
+      state = state.copyWith(flash: (id: id, serial: state.flash.serial + 1));
 }
