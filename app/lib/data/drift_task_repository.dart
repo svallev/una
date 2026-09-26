@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../domain/entities/attachment.dart';
 import '../domain/entities/rank.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/clock.dart';
@@ -29,16 +30,53 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
           (t) => OrderingTerm.asc(t.id),
         ]);
 
+  /// Tareas con su adjunto (v1: 0..1), en una sola consulta (I-1).
+  JoinedSelectStatement<HasResultSet, dynamic> _withAttachment(
+    Expression<bool> where, {
+    bool ordered = false,
+    int? limit,
+  }) {
+    final q = db.select(db.tasks).join([
+      leftOuterJoin(
+        db.attachments,
+        db.attachments.taskId.equalsExp(db.tasks.id),
+      ),
+    ])..where(where);
+    if (ordered) {
+      q.orderBy([
+        OrderingTerm.asc(db.tasks.rank),
+        OrderingTerm.asc(db.tasks.id),
+      ]);
+    }
+    if (limit != null) q.limit(limit);
+    return q;
+  }
+
+  Expression<bool> get _isPending =>
+      db.tasks.status.equals(TaskStatus.pending.name) &
+      db.tasks.deletedAt.isNull();
+
+  Task _fromJoin(TypedResult r) => _toTask(
+    r.readTable(db.tasks),
+    attachment: r.readTableOrNull(db.attachments),
+  );
+
   @override
   Future<Task?> currentTask() async {
-    final row = await (_pendingQuery()..limit(1)).getSingleOrNull();
-    return row == null ? null : _toTask(row);
+    final row = await _withAttachment(
+      _isPending,
+      ordered: true,
+      limit: 1,
+    ).getSingleOrNull();
+    return row == null ? null : _fromJoin(row);
   }
 
   @override
-  Stream<Task?> watchCurrentTask() => (_pendingQuery()..limit(1))
-      .watchSingleOrNull()
-      .map((r) => r == null ? null : _toTask(r));
+  Stream<Task?> watchCurrentTask() => _withAttachment(
+    _isPending,
+    ordered: true,
+    limit: 1,
+  ).watchSingleOrNull().map((r) => r == null ? null : _fromJoin(r));
 
   @override
   Future<String?> firstPendingRank() async =>
@@ -71,12 +109,16 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
-  Future<List<Task>> pendingTasks() async =>
-      (await _pendingQuery().get()).map(_toTask).toList();
+  Future<List<Task>> pendingTasks() async => (await _withAttachment(
+    _isPending,
+    ordered: true,
+  ).get()).map(_fromJoin).toList();
 
   @override
-  Stream<List<Task>> watchPending() =>
-      _pendingQuery().watch().map((rows) => rows.map(_toTask).toList());
+  Stream<List<Task>> watchPending() => _withAttachment(
+    _isPending,
+    ordered: true,
+  ).watch().map((rows) => rows.map(_fromJoin).toList());
 
   @override
   Future<bool> reorder(String id, String rank, DateTime at) async {
@@ -114,10 +156,8 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<Task?> findById(String id) async {
-    final row = await (db.select(
-      db.tasks,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
-    return row == null ? null : _toTask(row);
+    final row = await _withAttachment(db.tasks.id.equals(id)).getSingleOrNull();
+    return row == null ? null : _fromJoin(row);
   }
 
   @override
@@ -133,10 +173,21 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
-  Future<void> insert(Task task) => db.into(db.tasks).insert(_toRow(task));
+  Future<void> insert(Task task) => db.transaction(() async {
+    await db.into(db.tasks).insert(_toRow(task));
+    final a = task.attachment;
+    if (a != null) {
+      await db.into(db.attachments).insert(_toAttachmentRow(task.id, a));
+    }
+  });
 
   @override
-  Future<bool> updateText(String id, String text, DateTime at) async {
+  Future<bool> updateContent(
+    String id,
+    String? text,
+    Attachment? attachment,
+    DateTime at,
+  ) => db.transaction(() async {
     final rows =
         await (db.update(
           db.tasks,
@@ -146,7 +197,22 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
             updatedAt: Value(at.millisecondsSinceEpoch),
           ),
         );
-    return rows > 0;
+    if (rows == 0) return false;
+    final old = await (db.select(
+      db.attachments,
+    )..where((a) => a.taskId.equals(id))).get();
+    if (old.length == 1 && old.single.id == attachment?.id) return true;
+    await (db.delete(db.attachments)..where((a) => a.taskId.equals(id))).go();
+    if (attachment != null) {
+      await db.into(db.attachments).insert(_toAttachmentRow(id, attachment));
+    }
+    return true;
+  });
+
+  @override
+  Future<Set<String>> attachmentIds() async {
+    final rows = await db.select(db.attachments).get();
+    return {for (final r in rows) r.id};
   }
 
   @override
@@ -184,7 +250,7 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
             ),
           );
       if (rows == 0) return false;
-      // Los archivos se borran con AttachmentStore (specs 007–009, CL-004-3).
+      // Los archivos los borra AttachmentJanitor después (CA-007-16).
       await (db.delete(db.attachments)..where((a) => a.taskId.equals(id))).go();
       return true;
     });
@@ -213,7 +279,7 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
       DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
   static DateTime? _dateOrNull(int? ms) => ms == null ? null : _date(ms);
 
-  static Task _toTask(TaskRow r) => Task(
+  static Task _toTask(TaskRow r, {AttachmentRow? attachment}) => Task(
     id: r.id,
     text: r.body,
     status: TaskStatus.values.byName(r.status),
@@ -227,7 +293,35 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
     parentId: r.parentId,
     source: r.source,
     externalId: r.externalId,
+    attachment: attachment == null ? null : _toAttachment(attachment),
   );
+
+  static Attachment _toAttachment(AttachmentRow r) => Attachment(
+    id: r.id,
+    kind: AttachmentKind.values.byName(r.kind),
+    origin: AttachmentOrigin.values.byName(r.origin),
+    mime: r.mime,
+    byteSize: r.byteSize,
+    width: r.width ?? 0,
+    height: r.height ?? 0,
+    createdAt: _date(r.createdAt),
+  );
+
+  static AttachmentsCompanion _toAttachmentRow(String taskId, Attachment a) =>
+      AttachmentsCompanion.insert(
+        id: a.id,
+        taskId: taskId,
+        kind: a.kind.name,
+        origin: a.origin.name,
+        mime: a.mime,
+        byteSize: a.byteSize,
+        relPath: a.fullPrefix,
+        displayRelPath: Value(a.screenPath),
+        thumbRelPath: Value(a.thumbPath),
+        width: Value(a.width),
+        height: Value(a.height),
+        createdAt: a.createdAt.millisecondsSinceEpoch,
+      );
 
   static TasksCompanion _toRow(Task t) => TasksCompanion.insert(
     id: t.id,

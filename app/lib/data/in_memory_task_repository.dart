@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../domain/entities/attachment.dart';
 import '../domain/entities/rank.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/task_repository.dart';
@@ -99,13 +100,24 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
-  Future<bool> updateText(String id, String text, DateTime at) async {
+  Future<bool> updateContent(
+    String id,
+    String? text,
+    Attachment? attachment,
+    DateTime at,
+  ) async {
     final task = _tasks[id];
     if (task == null || task.deletedAt != null) return false;
-    _tasks[id] = task.withText(text, at);
+    _tasks[id] = task.withContent(text, attachment, at);
     _changes.add(null);
     return true;
   }
+
+  @override
+  Future<Set<String>> attachmentIds() async => {
+    for (final t in _tasks.values)
+      if (t.attachment case final a?) a.id,
+  };
 
   @override
   Future<bool> complete(String id, DateTime at) async {

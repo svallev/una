@@ -5,6 +5,7 @@ import 'package:app/data/db/app_database.dart';
 import 'package:app/data/db/open_database_native.dart';
 import 'package:app/data/drift_task_repository.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/rank.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/task_repository.dart';
@@ -18,11 +19,14 @@ Task _task(
   TaskStatus status = TaskStatus.pending,
   DateTime? deletedAt,
   int color = 0,
+  Attachment? attachment,
+  String? text,
 }) {
   final t = DateTime.utc(2026, 9, 24, 10);
   return Task(
     id: id,
-    text: 'Tarea $id',
+    text: attachment != null ? text : (text ?? 'Tarea $id'),
+    attachment: attachment,
     status: status,
     rank: rank,
     colorKey: color,
@@ -32,6 +36,20 @@ Task _task(
     deletedAt: deletedAt,
   );
 }
+
+Attachment _image(
+  String id, {
+  AttachmentOrigin origin = AttachmentOrigin.camera,
+}) => Attachment(
+  id: id,
+  kind: AttachmentKind.image,
+  origin: origin,
+  mime: 'image/jpeg',
+  byteSize: 1234,
+  width: 4000,
+  height: 3000,
+  createdAt: DateTime.utc(2026, 9, 26),
+);
 
 /// Misma batería para todas las implementaciones del puerto (docs/testing.md).
 void _contract(
@@ -195,14 +213,14 @@ void _contract(
         await repo.insert(_task('a', 'C', color: 3));
         await repo.insert(_task('b', 'M'));
         final at = DateTime.utc(2026, 9, 25, 12);
-        expect(await repo.updateText('a', 'Nuevo texto', at), isTrue);
+        expect(await repo.updateContent('a', 'Nuevo texto', null, at), isTrue);
         final t = (await repo.findById('a'))!;
         expect(t.text, 'Nuevo texto');
         expect(t.rank, 'C');
         expect(t.colorKey, 3);
         expect(t.updatedAt, at);
         expect((await repo.currentTask())!.id, 'a');
-        expect(await repo.updateText('missing', 'x', at), isFalse);
+        expect(await repo.updateContent('missing', 'x', null, at), isFalse);
       },
     );
 
@@ -279,6 +297,67 @@ void _contract(
       // Las que no están pendientes no se tocan.
       expect((await repo.findById('x'))!.rank, 'A');
     });
+
+    test('CA-007-08: la tarea actual y la cola llegan con su imagen', () async {
+      await repo.insert(_task('a', 'C', attachment: _image('img-a')));
+      await repo.insert(_task('b', 'M'));
+      await repo.insert(
+        _task(
+          'c',
+          'X',
+          text: 'Horario',
+          attachment: _image('img-c', origin: AttachmentOrigin.gallery),
+        ),
+      );
+      final current = (await repo.currentTask())!;
+      expect(current.text, isNull);
+      expect(current.attachment, _image('img-a'));
+      final pending = await repo.pendingTasks();
+      expect(pending.map((t) => t.attachment?.id), ['img-a', null, 'img-c']);
+      expect(pending.last.attachment!.origin, AttachmentOrigin.gallery);
+      expect(pending.last.text, 'Horario');
+      expect((await repo.findById('c'))!.attachment!.id, 'img-c');
+      expect((await repo.watchCurrentTask().first)!.attachment!.id, 'img-a');
+      expect(await repo.attachmentIds(), {'img-a', 'img-c'});
+    });
+
+    test('CA-007-06: añadir, sustituir y quitar la imagen conserva posición y color', () async {
+      await repo.insert(_task('a', 'C', color: 3));
+      await repo.insert(_task('b', 'M'));
+      final at = DateTime.utc(2026, 9, 26, 12);
+      expect(
+        await repo.updateContent('a', 'Con foto', _image('i1'), at),
+        isTrue,
+      );
+      var t = (await repo.findById('a'))!;
+      expect(
+        (t.text, t.attachment?.id, t.rank, t.colorKey),
+        ('Con foto', 'i1', 'C', 3),
+      );
+      expect(await repo.updateContent('a', null, _image('i2'), at), isTrue);
+      t = (await repo.findById('a'))!;
+      expect((t.text, t.attachment?.id), (null, 'i2'));
+      expect(await repo.attachmentIds(), {'i2'});
+      expect(await repo.updateContent('a', 'Sin foto', null, at), isTrue);
+      t = (await repo.findById('a'))!;
+      expect((t.text, t.attachment), ('Sin foto', null));
+      expect(await repo.attachmentIds(), isEmpty);
+      expect((await repo.currentTask())!.id, 'a');
+    });
+
+    test(
+      'CA-007-16/17: eliminar quita la fila del adjunto; completar la conserva',
+      () async {
+        await repo.insert(_task('a', 'C', attachment: _image('ia')));
+        await repo.insert(_task('b', 'M', attachment: _image('ib')));
+        final at = DateTime.utc(2026, 9, 26);
+        await repo.complete('a', at);
+        expect((await repo.findById('a'))!.attachment!.id, 'ia');
+        await repo.delete('b', at);
+        expect((await repo.findById('b'))!.attachment, isNull);
+        expect(await repo.attachmentIds(), {'ia'});
+      },
+    );
 
     test('ajuste de primer uso', () async {
       expect(await settings.firstRunDone(), isFalse);

@@ -16,7 +16,7 @@ class UpdateTaskText {
     final text = validateTaskText(rawText);
     if (text == task.text) return task;
     final at = clock.now();
-    await repository.updateText(task.id, text, at);
+    await repository.updateContent(task.id, text, task.attachment, at);
     return task.withText(text, at);
   }
 }
