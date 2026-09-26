@@ -52,12 +52,6 @@ final imageImportProvider =
       ImageImportController.new,
     );
 
-/// Sustituir desde "Adjunto no disponible" (CA-007-19), aparte del editor.
-final missingReplaceImportProvider =
-    NotifierProvider.autoDispose<ImageImportController, ImageImportState>(
-      ImageImportController.new,
-    );
-
 class ImageImportController extends Notifier<ImageImportState> {
   /// Aumenta con cada importación: el resultado de una cancelada o sustituida
   /// se ignora.

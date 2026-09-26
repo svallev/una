@@ -746,12 +746,6 @@ abstract class AppLocalizations {
   /// **'Adjunto no disponible'**
   String get attachmentMissing;
 
-  /// Acción de la tarjeta de adjunto perdido. CA-007-19
-  ///
-  /// In es, this message translates to:
-  /// **'Sustituir'**
-  String get attachmentReplace;
-
   /// Lectura de la tarea actual cuyo adjunto falta: {text} es el texto de la tarea o «Foto»/«Imagen». CA-007-19/21
   ///
   /// In es, this message translates to:

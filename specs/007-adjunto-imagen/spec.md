@@ -133,7 +133,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Dado** cualquier camino que deje una imagen sin uso:
     - eliminar la tarea desde la pantalla principal o desde el listado;
     - quitar o sustituir la imagen al editar;
-    - "Quitar adjunto" o "Sustituir" en "Adjunto no disponible";
+    - "Quitar adjunto" en "Adjunto no disponible";
     - cancelar el editor o la importación;
     - error, tiempo agotado o falta de espacio al importar;
     - fallo al guardar;
@@ -154,10 +154,10 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 - **CA-007-19 Adjunto no disponible nunca cierra la app**
   - **Dado** que falta, está vacío o está corrupto un archivo de la imagen (p. ej., tras restaurar una copia sin imágenes)
   - **Cuando** se abre la app o se muestra la tarea
-  - **Entonces** no se cierra ni se bloquea, y se ve la tarjeta "Adjunto no disponible" con:
-    - "Sustituir", que abre la hoja "Añadir";
+  - **Entonces** no se cierra ni se bloquea, y se ve la tarjeta "Adjunto no disponible" con **una sola acción**:
     - "Quitar adjunto", si la tarea tiene texto;
     - o "Eliminar tarea" (con la confirmación de CA-004-01), si no lo tiene.
+  - Para poner otra imagen se edita la tarea (menú → Editar → (+)), como en CA-007-06.
   - Si solo faltan la miniatura o la versión de pantalla, se regeneran en segundo plano sin avisar.
   - En el listado, la fila muestra la insignia "FOTO" o "IMAGEN" en lugar de la miniatura.
 
@@ -253,7 +253,7 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
   - logotipo y menú con fondo blanco sobre la imagen (como el prototipo);
   - pie blanco sobre negro (18,9:1);
   - el anillo de foco del teclado lleva borde blanco y negro para verse sobre cualquier foto.
-- Objetivos táctiles ≥ 48 dp: "Quitar adjunto" (40 en el prototipo, DEV-36), X de la hoja, "Cerrar" del visor, "Cancelar", "Sustituir", "Quitar adjunto" y "Eliminar tarea".
+- Objetivos táctiles ≥ 48 dp: "Quitar adjunto" (40 en el prototipo, DEV-36), X de la hoja, "Cerrar" del visor, "Cancelar", "Quitar adjunto" y "Eliminar tarea".
 - Orientación (WCAG 1.3.4): el visor gira (CA-007-11); el resto de la app queda en vertical, como excepción registrada (D10).
 - **[Pendiente P-5, v1.1]** Descripción de la imagen escrita por el usuario.
 
@@ -289,7 +289,6 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 | `errImageUnreadable` | No hemos podido leer esta imagen. Prueba con otra. | We couldn't read this image. Try another one. | |
 | `errNoCamera` | No hay ninguna app de cámara disponible. | There's no camera app available. | |
 | `attachmentMissing` | Adjunto no disponible | Attachment unavailable | |
-| `attachmentReplace` | Sustituir | Replace | |
 
 Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction` ("Eliminar tarea"), `attachButton` y las lecturas de las specs 001, 003, 004 y 006 con `{text}` = "Foto"/"Imagen" cuando no hay texto. **No** se añaden `cameraPermissionRationale` ni `openSettings` (en Android no hay permiso; quedan para F-iOS).
 
@@ -304,6 +303,7 @@ Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction`
 - **[Resuelto 2026-09-26, propietario]** En la pantalla principal, la imagen recortada como el prototipo; al tocarla, visor a pantalla completa al ancho, con desplazamiento vertical y zoom opcional (DEV-35, DEV-37).
 - **[Resuelto 2026-09-26, propietario]** Girar solo en el visor (D10 enmendada).
 - **[Resuelto 2026-09-26, propietario]** Pantalla encendida hasta 10 minutos sin tocarla.
+- **[Resuelto 2026-09-26, propietario]** "Adjunto no disponible" sin "Sustituir": la interacción, lo más simple posible (una sola acción).
 - **[Resuelto 2026-09-26, propietario, con la recomendación de la revisión]**:
   - cámara del sistema sin permisos;
   - imágenes fuera de la copia en la nube por ahora;

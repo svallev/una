@@ -5,21 +5,17 @@ import '../../app/theme/una_theme.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
 import '../../ui/una_icons.dart';
-import '../../ui/una_sheet.dart';
 
 /// "Adjunto no disponible" (CA-007-19, DEV-40): recuadro blanco con el texto
-/// de la tarea (si lo tiene), el aviso y sus acciones: "Sustituir" y "Quitar
-/// adjunto" (con texto) o "Eliminar tarea" (sin texto). Nunca cierra la app.
+/// de la tarea (si lo tiene), el aviso y una sola acción: "Quitar adjunto"
+/// (con texto) o "Eliminar tarea" (sin texto). Nunca cierra la app.
 class MissingAttachmentCard extends StatelessWidget {
   const MissingAttachmentCard({
     super.key,
     required this.text,
     required this.header,
-    required this.onReplace,
     required this.onRemove,
     required this.onDelete,
-    this.preparing = false,
-    this.onCancelPreparing,
   });
 
   /// Texto de la tarea, o vacío.
@@ -28,13 +24,8 @@ class MissingAttachmentCard extends StatelessWidget {
   /// Envuelve el texto y el aviso en el nodo de la tarea (lectura, foco y
   /// acciones de la pantalla principal).
   final Widget Function(Widget child) header;
-  final VoidCallback onReplace;
   final VoidCallback onRemove;
   final VoidCallback onDelete;
-
-  /// "Preparando imagen…" al sustituir (CA-007-15).
-  final bool preparing;
-  final VoidCallback? onCancelPreparing;
 
   @override
   Widget build(BuildContext context) {
@@ -92,38 +83,14 @@ class MissingAttachmentCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: UnaSpace.ml),
-            if (preparing) ...[
-              Text(
-                l10n.imagePreparing,
-                textAlign: TextAlign.center,
-                style: UnaTheme.mono.copyWith(color: UnaColors.ink),
-              ),
-              Center(
-                child: UnaLinkButton(
-                  label: l10n.imagePreparingCancel,
-                  height: kMinInteractiveDimension,
-                  onPressed: onCancelPreparing ?? () {},
-                ),
-              ),
-            ] else ...[
-              BrutalButton(
-                label: l10n.attachmentReplace,
-                icon: UnaIcons.image,
-                iconSize: UnaSizes.icon,
-                iconStroke: UnaSizes.iconStroke,
-                onPressed: onReplace,
-              ),
-              const SizedBox(height: UnaSpace.sm),
-              Center(
-                child: UnaLinkButton(
-                  label: text.isNotEmpty
-                      ? l10n.editorRemoveAttachment
-                      : l10n.deleteA11yAction,
-                  height: kMinInteractiveDimension,
-                  onPressed: text.isNotEmpty ? onRemove : onDelete,
-                ),
-              ),
-            ],
+            BrutalButton(
+              label: text.isNotEmpty
+                  ? l10n.editorRemoveAttachment
+                  : l10n.deleteA11yAction,
+              iconSize: UnaSizes.icon,
+              iconStroke: UnaSizes.iconStroke,
+              onPressed: text.isNotEmpty ? onRemove : onDelete,
+            ),
           ],
         ),
       ),

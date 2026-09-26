@@ -399,9 +399,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get attachmentMissing => 'Adjunto no disponible';
 
   @override
-  String get attachmentReplace => 'Sustituir';
-
-  @override
   String a11yAttachmentMissing(String text) {
     return '$text. Adjunto no disponible';
   }

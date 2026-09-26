@@ -8,7 +8,6 @@ import '../../app/providers.dart';
 import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
-import '../../domain/entities/attachment.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -17,11 +16,8 @@ import '../../ui/square_icon_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
-import '../attachments/attach_sheet.dart';
 import '../attachments/attachment_health.dart';
-import '../attachments/image_import_controller.dart';
 import '../attachments/image_viewer_screen.dart';
-import '../attachments/import_error_text.dart';
 import '../attachments/keep_screen_on_controller.dart';
 import '../attachments/missing_attachment_card.dart';
 import '../attachments/task_image.dart';
@@ -335,8 +331,8 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
   await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
 }
 
-/// "Adjunto no disponible" en la pantalla principal, con sus acciones
-/// (CA-007-19). "Sustituir" usa su propia importación, aparte del editor.
+/// "Adjunto no disponible" en la pantalla principal, con su única acción
+/// (CA-007-19).
 class _MissingAttachment extends ConsumerWidget {
   const _MissingAttachment({
     required this.task,
@@ -350,24 +346,9 @@ class _MissingAttachment extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final import = ref.watch(missingReplaceImportProvider);
-    ref.listen(missingReplaceImportProvider, (before, now) {
-      final error = now.error;
-      if (error == null || before?.error != null) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(importErrorText(AppLocalizations.of(context), error)),
-        ),
-      );
-      ref.read(missingReplaceImportProvider.notifier).clearError();
-    });
     return MissingAttachmentCard(
       text: task.text ?? '',
       header: header,
-      preparing: import.showPreparing,
-      onCancelPreparing: () =>
-          ref.read(missingReplaceImportProvider.notifier).cancel(),
-      onReplace: interactive ? () => _replace(context, ref) : () {},
       onRemove: interactive ? () => _remove(context, ref) : () {},
       onDelete: interactive
           ? () => confirmAndDeleteTask(context, ref, task)
@@ -376,32 +357,7 @@ class _MissingAttachment extends ConsumerWidget {
   }
 
   bool _busy(WidgetRef ref) =>
-      ref.read(completionProvider).busy ||
-      ref.read(deletionProvider).busy ||
-      ref.read(missingReplaceImportProvider).preparing;
-
-  /// "Sustituir": la hoja "Añadir" y, con la imagen lista, se guarda en la
-  /// tarea sin moverla (CA-007-06).
-  Future<void> _replace(BuildContext context, WidgetRef ref) async {
-    if (_busy(ref)) return;
-    final choice = await showAttachSheet(context);
-    if (choice == null || !context.mounted) return;
-    final controller = ref.read(missingReplaceImportProvider.notifier);
-    final outcome = await controller.pick(switch (choice) {
-      AttachChoice.camera => AttachmentOrigin.camera,
-      AttachChoice.gallery => AttachmentOrigin.gallery,
-    });
-    if (outcome != ImportOutcome.added || !context.mounted) return;
-    final image = ref.read(missingReplaceImportProvider).image!;
-    final saved = await _save(
-      context,
-      ref,
-      () => ref
-          .read(editTaskProvider)
-          .call(task, task.text ?? '', attachment: ReplaceAttachment(image)),
-    );
-    if (saved && context.mounted) controller.saved();
-  }
+      ref.read(completionProvider).busy || ref.read(deletionProvider).busy;
 
   /// "Quitar adjunto" (con texto).
   Future<void> _remove(BuildContext context, WidgetRef ref) async {
@@ -433,7 +389,7 @@ class _MissingAttachment extends ConsumerWidget {
   ) async {
     try {
       await write();
-      // El foco vuelve a la tarea (ya sin la tarjeta o con la imagen nueva).
+      // El foco vuelve a la tarea, ya sin la tarjeta.
       ref.read(screenFocusProvider.notifier).signal();
       return true;
     } on Object catch (e) {

@@ -4,7 +4,6 @@ import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/services/attachment_janitor.dart';
-import 'package:app/features/attachments/attach_sheet.dart';
 import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/delete/delete_confirm_sheet.dart';
@@ -83,8 +82,8 @@ void main() {
   }
 
   group('CA-007-19: falta la versión completa', () {
-    testWidgets('se ve "Adjunto no disponible" con "Sustituir" y "Quitar '
-        'adjunto" y la app no se cierra', (tester) async {
+    testWidgets('se ve "Adjunto no disponible" con una sola acción, "Quitar '
+        'adjunto", y la app no se cierra', (tester) async {
       await repo.insert(await imageTask());
       store.removeFile('a1', 'full-0-0.jpg');
       await pump(tester);
@@ -94,7 +93,7 @@ void main() {
       expect(find.byType(TaskImage), findsNothing);
       expect(find.text('Horario'), findsOneWidget);
       expect(find.text('Adjunto no disponible'), findsOneWidget);
-      expect(find.text('Sustituir'), findsOneWidget);
+      expect(find.text('Sustituir'), findsNothing);
       expect(find.text('Quitar adjunto'), findsOneWidget);
       expect(find.text('Eliminar tarea'), findsNothing);
     });
@@ -163,50 +162,6 @@ void main() {
       expect(await store.storedIds(), isEmpty);
       expect(find.byType(MissingAttachmentCard), findsNothing);
       expect(announcements, ['Adjunto quitado']);
-    });
-
-    testWidgets('CA-007-16: "Sustituir" abre la hoja "Añadir" y guarda la '
-        'imagen nueva sin mover la tarea', (tester) async {
-      final task = await imageTask(rank: 'A');
-      await repo.insert(task);
-      store.removeFile('a1', 'full-0-0.jpg');
-      await pump(tester, tasks: ['Otra']);
-      await tester.tap(find.text('Sustituir'));
-      await tester.pumpAndSettle();
-      expect(find.byType(AttachSheet), findsOneWidget);
-      await tester.tap(find.text('Subir imagen'));
-      await tester.pumpAndSettle();
-
-      final saved = (await repo.currentTask())!;
-      expect(saved.id, task.id);
-      expect(saved.attachment!.id, importer.picks.single);
-      expect(saved.rank, task.rank);
-      expect(await store.storedIds(), {importer.picks.single});
-      expect(await store.stagingIds(), isEmpty);
-      expect(find.byType(MissingAttachmentCard), findsNothing);
-      expect(find.byType(TaskImage), findsOneWidget);
-    });
-
-    testWidgets('un error al sustituir se avisa y la tarjeta sigue', (
-      tester,
-    ) async {
-      await repo.insert(await imageTask());
-      store.removeFile('a1', 'full-0-0.jpg');
-      await pump(tester);
-      importer.head = '<svg'.codeUnits;
-      await tester.tap(find.text('Sustituir'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Subir imagen'));
-      await tester.pumpAndSettle();
-      expect(
-        find.text(
-          'Este tipo de imagen no se admite. Prueba con una foto JPEG, PNG o '
-          'HEIC.',
-        ),
-        findsOneWidget,
-      );
-      expect(find.byType(MissingAttachmentCard), findsOneWidget);
-      expect((await repo.currentTask())!.attachment!.id, 'a1');
     });
   });
 
