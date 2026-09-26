@@ -28,10 +28,10 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 **CA → test:** CA-004-01/02/10, CL-004-1/4 → `test/features/delete/delete_confirm_test.dart` · CA-004-03/04/05/06/07/11/12/13, CL-004-2 → `deletion_flow_test.dart` · CA-004-08 → `test/app/home_router_test.dart` e `integration_test/delete_flow_test.dart` · CA-004-09 → `test/data/repository_contract_test.dart` · CA-004-03 → `test/domain/delete_current_task_test.dart` · arrugado → `crumple_keyframes_test.dart` y `test/goldens/delete_golden_test.dart` · CL-004-3 → spec 007 (CA-007-12).
 
-**Pruebas a mano pendientes (propietario, en el móvil):** TalkBack (foco en "Cancelar", un único anuncio, foco final), teclado físico, "Quitar animaciones" y aspecto del arrugado frente al prototipo (DEV-25).
+**Pruebas a mano (propietario, en el Xiaomi, 2026-09-26):** ✅ eliminar y aspecto del arrugado (aceptado; puede cambiar más adelante, DEV-25), ✅ la última → "Todo hecho." también al reabrir, ✅ "Quitar animaciones", ✅ TalkBack: un único anuncio y foco final; el foco inicial en "Cancelar" falló en la primera prueba y se corrigió (orden de lectura, verificado con TalkBack en el emulador y después en el móvil).
 
 ## Cierre
 
 - [x] Todos los CA de la spec tienen test en verde.
-- [ ] Definition of Done (`specs/constitution.md`) completa: falta la prueba del propietario en el móvil.
-- [ ] Spec marcada como **Implementada** (tras la prueba del propietario en el móvil).
+- [x] Definition of Done (`specs/constitution.md`) completa.
+- [x] Spec marcada como **Implementada** (2026-09-26).
