@@ -342,6 +342,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get a11yAttachmentRemoved => 'Adjunto quitado';
 
   @override
+  String get editorAttachmentPlaceholder => 'Añade un texto (opcional)';
+
+  @override
+  String get editorRemoveAttachment => 'Quitar adjunto';
+
+  @override
   String get imageOpenHint => 'ver la imagen entera';
 
   @override

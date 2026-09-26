@@ -93,6 +93,8 @@
   "a11yPhotoAdded": "Photo added",
   "a11yImageAdded": "Image added",
   "a11yAttachmentRemoved": "Attachment removed",
+  "editorAttachmentPlaceholder": "Add some text (optional)",
+  "editorRemoveAttachment": "Remove attachment",
   "imageOpenHint": "see the whole image",
   "viewerTitle": "Task image",
   "viewerClose": "Close",

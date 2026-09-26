@@ -7,6 +7,7 @@ import 'package:app/domain/entities/color_picker.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'pump_app.dart';
@@ -20,6 +21,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   bool screenReader = false,
   bool reduced = false,
   Clock? clock,
+  List<Override> overrides = const [],
 }) async {
   tester.platformDispatcher.localesTestValue = const [Locale('es')];
   addTearDown(tester.platformDispatcher.clearLocalesTestValue);
@@ -57,6 +59,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
         ),
         colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
         if (clock != null) clockProvider.overrideWithValue(clock),
+        ...overrides,
       ],
       child: const UnaApp(),
     ),

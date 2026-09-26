@@ -26,6 +26,9 @@ class FakeImageImporter implements ImageImporter {
   List<int> head = jpegHead;
   Object? copyError;
   Object? sanitizeError;
+
+  /// Lo que tarda el usuario en la cámara o el selector del sistema.
+  Duration pickDelay = Duration.zero;
   Duration copyDelay = Duration.zero;
   Duration sanitizeDelay = Duration.zero;
 
@@ -55,6 +58,7 @@ class FakeImageImporter implements ImageImporter {
   Future<PickedImage?> pick(AttachmentOrigin origin, String id) async {
     picks.add(id);
     origins.add(origin);
+    if (pickDelay > Duration.zero) await Future<void>.delayed(pickDelay);
     if (pickError case final e?) throw e;
     if (userCancelsPicker) return null;
     return (token: 'content://$id', origin: origin);

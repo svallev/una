@@ -1,4 +1,5 @@
 import 'package:app/app/storage_errors.dart';
+import 'package:app/data/attachments/attachment_images.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/image_services.dart';
 import 'package:app/data/import/unavailable_image_importer.dart';
@@ -13,10 +14,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/pump_app.dart';
 
-Future<ImageServices> _images() async => (
-  store: MemoryAttachmentStore(),
-  importer: const UnavailableImageImporter(),
-);
+Future<ImageServices> _images() async {
+  final store = MemoryAttachmentStore();
+  return (
+    store: store,
+    images: MemoryAttachmentImages(store),
+    importer: const UnavailableImageImporter(),
+  );
+}
 
 void main() {
   testWidgets(

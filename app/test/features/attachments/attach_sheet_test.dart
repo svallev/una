@@ -215,20 +215,23 @@ void main() {
       importer.sanitizeDelay = const Duration(seconds: 5);
       await openSheet(tester);
       await tester.tap(find.text('Subir imagen'));
-      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 300));
       expect(containerOf(tester).read(imageImportProvider).preparing, isTrue);
 
       await tester.tap(_plus);
-      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(AttachSheet), findsNothing);
 
       await tester.tap(find.text('Continuar'));
-      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 300));
       // No sube la hoja "¿Dónde la pones?".
       expect(find.byType(BottomSheet), findsNothing);
 
       await tester.pump(const Duration(seconds: 5));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       expect(containerOf(tester).read(imageImportProvider).image, isNotNull);
     },
   );

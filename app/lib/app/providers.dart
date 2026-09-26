@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/task.dart';
@@ -33,6 +34,14 @@ final settingsRepositoryProvider = Provider<SettingsRepository>(
 final attachmentStoreProvider = Provider<AttachmentStore>(
   (ref) => MemoryAttachmentStore(),
 );
+
+/// Cómo se dibujan los archivos del almacén. En `main` se sobrescribe junto con
+/// [attachmentStoreProvider]; por defecto, los del almacén en memoria.
+final attachmentImagesProvider = Provider<AttachmentImages>((ref) {
+  final store = ref.watch(attachmentStoreProvider);
+  if (store is MemoryAttachmentStore) return MemoryAttachmentImages(store);
+  throw UnimplementedError();
+});
 
 /// Importaciones en curso, que el barrido no toca (CA-007-16).
 final importRegistryProvider = Provider<ImportRegistry>(

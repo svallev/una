@@ -61,7 +61,7 @@ void main() {
     tester,
   ) async {
     importer.head = _pngHead;
-    await ctrl().pick(AttachmentOrigin.gallery);
+    expect(await ctrl().pick(AttachmentOrigin.gallery), ImportOutcome.added);
 
     expect(importer.sniffedTypes, [ImageType.png]);
     expect(importer.limits, [
@@ -86,7 +86,7 @@ void main() {
       final before = state().image;
 
       importer.head = _svgHead;
-      await ctrl().pick(AttachmentOrigin.gallery);
+      expect(await ctrl().pick(AttachmentOrigin.gallery), ImportOutcome.failed);
 
       expect(state().error, ImageImportError.unsupportedType);
       expect(state().image, before);
@@ -167,7 +167,10 @@ void main() {
     importer
       ..pickError = null
       ..userCancelsPicker = true;
-    await ctrl().pick(AttachmentOrigin.gallery);
+    expect(
+      await ctrl().pick(AttachmentOrigin.gallery),
+      ImportOutcome.unchanged,
+    );
     expect(state().error, isNull);
     expect(state().image, isNull);
     expect(state().preparing, isFalse);

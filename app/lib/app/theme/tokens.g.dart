@@ -158,6 +158,9 @@ abstract final class UnaFontSizes {
 
   /// Pie de la tarea con imagen (recuadro negro, peso 800, spec 007)
   static const double imageCaption = 22.0;
+
+  /// Texto opcional del editor con adjunto (peso 800, interlineado 1,05, spec 007)
+  static const double attachmentText = 24.0;
 }
 
 /// Interletrado en em (multiplicar por el tamaño de fuente).
@@ -222,6 +225,7 @@ abstract final class UnaSizes {
   static const double imageCaptionMaxTextScale = 1.6;
   static const double listThumb = 44.0;
   static const double listThumbBorder = 2.0;
+  static const double attachTextField = 96.0;
   static const double attachPreviewTop = 14.0;
   static const double removeAttachment = 48.0;
   static const double removeAttachmentIcon = 14.0;

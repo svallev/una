@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/attachment.dart';
 import '../../domain/ports/image_importer.dart';
+import '../../domain/services/attachment_janitor.dart';
 import '../../domain/usecases/import_image.dart';
 
 /// Imagen del editor (spec 007):
@@ -31,6 +32,19 @@ class ImageImportState {
   final ImageImportError? error;
 }
 
+/// Cómo terminó [ImageImportController.pick] (el editor decide el foco y el
+/// anuncio, CA-007-22).
+enum ImportOutcome {
+  /// Hay imagen nueva.
+  added,
+
+  /// Canceló el sistema, "Cancelar", o ya había una en curso: nada cambia.
+  unchanged,
+
+  /// Error: está en `state.error`.
+  failed,
+}
+
 /// Una por editor: al cerrarlo se cancela lo que esté en curso y se borra la
 /// imagen preparada que no se haya guardado.
 final imageImportProvider =
@@ -45,6 +59,7 @@ class ImageImportController extends Notifier<ImageImportState> {
   var _busy = false;
   ImportJob? _job;
   Timer? _indicator;
+  late AttachmentJanitor _janitor;
 
   /// Copia de `state.image`: al cerrar el editor ya no se puede leer `state`.
   StagedImage? _image;
@@ -57,7 +72,7 @@ class ImageImportController extends Notifier<ImageImportState> {
 
   @override
   ImageImportState build() {
-    final janitor = ref.read(attachmentJanitorProvider);
+    final janitor = _janitor = ref.read(attachmentJanitorProvider);
     ref.onDispose(() {
       _generation++;
       _indicator?.cancel();
@@ -75,8 +90,8 @@ class ImageImportController extends Notifier<ImageImportState> {
   /// Abre la cámara o el selector e importa lo elegido. Solo hay una
   /// importación a la vez: mientras tanto no hace nada. Si el usuario cancela
   /// en el sistema, todo sigue como estaba.
-  Future<void> pick(AttachmentOrigin origin) async {
-    if (_busy) return;
+  Future<ImportOutcome> pick(AttachmentOrigin origin) async {
+    if (_busy) return ImportOutcome.unchanged;
     _busy = true;
     final generation = ++_generation;
     state = ImageImportState(image: state.image);
@@ -84,20 +99,25 @@ class ImageImportController extends Notifier<ImageImportState> {
       final job = await _importImage.pick(origin);
       if (!ref.mounted || generation != _generation) {
         if (job != null) await job.cancel();
-        return;
+        return ImportOutcome.unchanged;
       }
-      if (job == null) return;
-      await _prepare(job, generation);
+      if (job == null) return ImportOutcome.unchanged;
+      return await _prepare(job, generation);
     } on ImageImportFailure catch (e) {
-      if (ref.mounted && generation == _generation) _fail(e.error);
+      if (!ref.mounted || generation != _generation) {
+        return ImportOutcome.unchanged;
+      }
+      _fail(e.error);
+      return ImportOutcome.failed;
     } on ImageImportCancelled {
       // El sistema lo canceló: como si no se hubiera elegido nada.
+      return ImportOutcome.unchanged;
     } finally {
       _busy = false;
     }
   }
 
-  Future<void> _prepare(ImportJob job, int generation) async {
+  Future<ImportOutcome> _prepare(ImportJob job, int generation) async {
     _job = job;
     state = ImageImportState(image: state.image, preparing: true);
     _indicator = Timer(UnaMotion.importIndicatorDelay, () {
@@ -112,21 +132,25 @@ class ImageImportController extends Notifier<ImageImportState> {
     try {
       final staged = await job.prepare();
       if (!ref.mounted || generation != _generation) {
-        await ref.read(attachmentJanitorProvider).discardStaging(staged.id);
-        return;
+        await _janitor.discardStaging(staged.id);
+        return ImportOutcome.unchanged;
       }
       final previous = state.image;
       state = ImageImportState(image: staged);
       // La sustituida no se borra hasta que la nueva está lista.
-      if (previous != null) {
-        await ref.read(attachmentJanitorProvider).discardStaging(previous.id);
-      }
+      if (previous != null) await _janitor.discardStaging(previous.id);
+      return ImportOutcome.added;
     } on ImageImportFailure catch (e) {
-      if (ref.mounted && generation == _generation) _fail(e.error);
+      if (!ref.mounted || generation != _generation) {
+        return ImportOutcome.unchanged;
+      }
+      _fail(e.error);
+      return ImportOutcome.failed;
     } on ImageImportCancelled {
       if (ref.mounted && generation == _generation) {
         state = ImageImportState(image: state.image);
       }
+      return ImportOutcome.unchanged;
     } finally {
       _indicator?.cancel();
       if (identical(_job, job)) _job = null;
@@ -156,7 +180,7 @@ class ImageImportController extends Notifier<ImageImportState> {
       preparing: state.preparing,
       showPreparing: state.showPreparing,
     );
-    await ref.read(attachmentJanitorProvider).discardStaging(image.id);
+    await _janitor.discardStaging(image.id);
   }
 
   /// La tarea se ha guardado con la imagen: ya no es de este editor.

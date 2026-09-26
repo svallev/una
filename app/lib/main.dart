@@ -37,6 +37,7 @@ Future<void> bootstrap({
           taskRepositoryProvider.overrideWithValue(repos.tasks),
           settingsRepositoryProvider.overrideWithValue(repos.settings),
           attachmentStoreProvider.overrideWithValue(images.store),
+          attachmentImagesProvider.overrideWithValue(images.images),
           imageImporterProvider.overrideWithValue(images.importer),
           bootStateProvider.overrideWithValue(boot),
         ],

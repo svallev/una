@@ -656,6 +656,18 @@ abstract class AppLocalizations {
   /// **'Adjunto quitado'**
   String get a11yAttachmentRemoved;
 
+  /// Campo de texto del editor con imagen: el texto es opcional. CA-007-04 (spec 005)
+  ///
+  /// In es, this message translates to:
+  /// **'Añade un texto (opcional)'**
+  String get editorAttachmentPlaceholder;
+
+  /// Botón X sobre la vista previa del editor. CA-007-04 (spec 005)
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar adjunto'**
+  String get editorRemoveAttachment;
+
   /// Pista de activación de la imagen; se lee tras «Toca dos veces para». CA-007-21
   ///
   /// In es, this message translates to:
