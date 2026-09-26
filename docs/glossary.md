@@ -22,10 +22,14 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Documento | Document | `AttachmentKind.document` | Archivo no PDF (Word, Excel, TXT…) que se abre con el visor del sistema. |
 | Tarea web / URL | Web task / URL | `AttachmentKind.web` | Tarea que muestra una página web. |
 | Instantánea / captura | Snapshot | `snapshot` | Imagen de página completa de una URL, guardada al crearla, para verla sin conexión. |
-| Miniatura | Thumbnail | `thumbnail` | Versión pequeña de un adjunto para el listado. |
-| Visor | Viewer | `AttachmentViewer` | Pantalla completa que se abre al tocar la imagen: al ancho, con desplazamiento vertical y zoom opcional (spec 007). |
-| Versión completa | Full version | `relPath` | Copia de la imagen que guarda la app: recodificada, sin metadatos y como mucho de 24 MP. |
-| Versión de pantalla | Display version | `displayRelPath` | Copia reducida para pintar la tarea actual rápido al abrir (CA-001-09). |
+| Miniatura | Thumbnail | `thumbnail`, `thumb.jpg` | Versión pequeña de un adjunto para el listado: cuadrada y recortada, de 176 px (se ve a 44). |
+| Visor | Viewer | `ImageViewerScreen` | Pantalla completa que se abre al tocar la imagen: al ancho, con desplazamiento vertical y zoom opcional (spec 007). |
+| Versión completa | Full version | `relPath` (prefijo de las teselas) | Copia de la imagen que guarda la app: recodificada, sin metadatos y como mucho de 24 MP, sin límite de lado. |
+| Tesela | Tile | `ImageTiles`, `full-<fila>-<columna>.jpg` | Trozo de 4096 px como máximo de la versión completa. |
+| Versión de pantalla | Display version | `displayRelPath`, `screen.jpg` | Recorte al tamaño de la pantalla para pintar la tarea actual rápido al abrir (CA-001-09). |
+| Preparación | Staging | `cache/import/<id>`, `StagedImage` | Zona temporal donde se copia y limpia una imagen antes de guardarla con la tarea. |
+| Adjunto no disponible | Missing attachment | `AttachmentFiles.missing`, `MissingAttachmentCard` | La versión completa falta o no se puede leer: se muestra la tarjeta con una sola acción. |
+| Barrido | Sweep | `AttachmentJanitor` | Limpieza, tras el primer fotograma, de adjuntos sin tarea y preparaciones abandonadas. |
 | Pie | Caption | `caption` | Texto de la tarea sobre su imagen (recuadro negro, texto blanco). |
 | Visor del sistema | System viewer | `SystemViewer` | QuickLook (iOS) o la app que registre el tipo (Android). |
 | Nota adhesiva | Sticky note | `StickyNote` | Representación visual de una tarea (color de la paleta). |

@@ -116,9 +116,9 @@ erDiagram
     text origin "camera | gallery | file | url"
     text mime "detectado por contenido"
     int byteSize
-    text relPath "relativa al contenedor de adjuntos"
-    text displayRelPath "imagen optimizada para pantalla (nullable)"
-    text thumbRelPath "nullable"
+    text relPath "relativa al contenedor de adjuntos; imagen: prefijo de las teselas"
+    text displayRelPath "versión de pantalla, screen.jpg (nullable)"
+    text thumbRelPath "miniatura, thumb.jpg (nullable)"
     text originalName "nullable, saneado"
     text sourceUrl "solo web; normalizada"
     text sourceHost "solo web; punycode si hace falta"
@@ -127,7 +127,7 @@ erDiagram
     int width "nullable"
     int height "nullable"
     int pageCount "nullable (PDF)"
-    text sha256 "integridad y duplicados"
+    text sha256 "integridad y duplicados; nullable (no se calcula para imágenes)"
     int createdAt
   }
   SETTINGS {
@@ -163,15 +163,30 @@ flowchart LR
   C -- no --> Y[Error: demasiado grande]
   C -- sí --> D[Copiar a tmp del sandbox]
   D --> E{kind}
-  E -- image --> F[ImageSanitizer nativo: decodificar con orientación → recodificar JPEG sin EXIF/GPS/XMP → original ≤ 4096 px + pantalla + miniatura]
+  E -- image --> F[ImageSanitizer nativo: dimensiones por la cabecera ≤ 64 MP → decodificar con orientación → JPEG sin metadatos ≤ 24 MP en teselas de 4096 px + pantalla + miniatura]
   E -- pdf --> G[Abrir con pdfrx en modo solo lectura → miniatura p.1 → pageCount]
   E -- document --> H[Guardar tal cual → icono por tipo]
   E -- web --> I[WebSnapshotter nativo → recorrer la página → captura completa ≤ 16 000 px → miniatura; SSL/HTTP ≥ 400 = fallo]
-  F & G & H & I --> J[Mover de forma atómica a attachments/uuid/ + sha256]
+  F & G & H & I --> J[Mover de forma atómica a attachments/uuid/ + sha256 salvo imágenes]
   J --> K[Insertar Task + Attachment en una transacción]
 ```
 
-Límites: imagen 30 MB (y 50 MP), **PDF 10 MB** (D18), documento 25 MB, captura web 20 000 px de alto. La importación va en un *isolate* (no bloquea la UI) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
+Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D18), documento 25 MB, captura web 20 000 px de alto. La importación no bloquea la UI (las imágenes, en un hilo nativo; el resto, en un *isolate*) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
+
+### Imágenes (spec 007)
+
+- **Rutas** (Android; almacenamiento privado de la app):
+  - guardadas: `files/attachments/<id>/` (`getApplicationSupportDirectory`), con `full-<fila>-<columna>.jpg` (versión completa en teselas), `screen.jpg` (versión de pantalla) y `thumb.jpg` (miniatura);
+  - preparación: `cache/import/<id>/` (`getTemporaryDirectory`); la copia del original (`source`) se borra en cuanto se limpia;
+  - la BD, en `app_flutter/una.sqlite`. Las copias de seguridad llevan la BD y no las imágenes (ADR-0004, revisión de la spec 007).
+- **Versión completa:** JPEG recodificado desde los píxeles (sin EXIF, GPS, XMP ni ningún otro metadato), orientado y en sRGB; se reduce solo si pasa de **24 MP**, sin límite de lado (una captura de 1080 × 20 000 se guarda entera). Se trocea en **teselas de 4096 px** como máximo (`ImageTiles`), porque la GPU no dibuja texturas mucho mayores; una foto de 12 MP es una sola tesela.
+- **Versión de pantalla:** recorte centrado que llena la pantalla en vertical, en píxeles físicos, sin ampliar; la dibuja la tarea actual en el arranque (CA-001-09).
+- **Miniatura:** cuadrada, recortada, de 176 px (44 dp × 4).
+- **Rechazo antes de decodificar:** el tipo, por los primeros bytes (`sniffImageType`); las dimensiones, por la cabecera (más de 64 MP → error, sin reservar memoria para los píxeles). 20 s como máximo.
+- **Visor:** coloca las teselas y decodifica cada una a la resolución que pide el zoom (escalones), así que la memoria no depende del tamaño original.
+- **Archivos que faltan** (CA-007-19): si faltan la versión de pantalla o la miniatura, se regeneran desde las teselas (`regenerateDerived`); si falta la completa, "Adjunto no disponible".
+- **Borrado:** un solo servicio, `AttachmentJanitor`. El barrido (2 s después del primer fotograma) borra los adjuntos sin tarea y las preparaciones abandonadas; `ImportRegistry` protege las importaciones en curso.
+- **Web de pruebas:** `WebImageImporter` hace lo mismo con el selector del navegador y un `canvas`, todo en memoria (`MemoryAttachmentStore`); HEIC no se admite.
 
 ### Decisiones de implementación de los spikes (F1)
 
@@ -212,7 +227,7 @@ Regla: nada detrás de un flag llega a producción sin su spec aprobada.
 | Animaciones | 60 fps, 0 fotogramas > 32 ms en el primer uso | DevTools / `FrameTiming` en un test de rendimiento |
 | Abrir PDF (primera página) | < 500 ms | spike S3 |
 | Tamaño de descarga | Android < 25 MB (por ABI, AAB); iOS < 40 MB | `flutter build --analyze-size` en CI (aviso si crece > 5 %) |
-| Memoria | < 250 MB con una imagen de 50 MP visible | DevTools |
+| Memoria | < 250 MB con el visor abierto en la imagen más grande que se guarda (24 MP) | DevTools |
 
 ## 8. Internacionalización
 
