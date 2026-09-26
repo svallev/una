@@ -20,7 +20,9 @@ void main() {
         tester,
         tasks: ['Primera', 'Segunda', 'Tercera'],
       );
-      final g = await tester.startGesture(tester.getCenter(handleOf('Tercera')));
+      final g = await tester.startGesture(
+        tester.getCenter(handleOf('Tercera')),
+      );
       await g.moveBy(const Offset(0, -4));
       await tester.pump();
       expect(_lifted(tester), isNull, reason: 'por debajo del umbral');
@@ -69,7 +71,9 @@ void main() {
         tester,
         tasks: ['Primera', 'Segunda', 'Tercera'],
       );
-      final g = await tester.startGesture(tester.getCenter(find.text('Tercera')));
+      final g = await tester.startGesture(
+        tester.getCenter(find.text('Tercera')),
+      );
       await tester.pump(kLongPressTimeout + frame);
       expect(_lifted(tester), isNotNull);
       final secondTop = tester.getTopLeft(rowOf('Segunda').first).dy;
@@ -116,7 +120,9 @@ void main() {
         tester,
         tasks: ['Primera', 'Segunda', 'Tercera'],
       );
-      final g = await tester.startGesture(tester.getCenter(handleOf('Tercera')));
+      final g = await tester.startGesture(
+        tester.getCenter(handleOf('Tercera')),
+      );
       await g.moveBy(const Offset(0, -150));
       await tester.pump();
       expect(_lifted(tester), isNotNull);
@@ -131,7 +137,10 @@ void main() {
   testWidgets('CA-006-11: pasar a segundo plano cancela el arrastre', (
     tester,
   ) async {
-    final repo = await openList(tester, tasks: ['Primera', 'Segunda', 'Tercera']);
+    final repo = await openList(
+      tester,
+      tasks: ['Primera', 'Segunda', 'Tercera'],
+    );
     final g = await tester.startGesture(tester.getCenter(handleOf('Tercera')));
     await g.moveBy(const Offset(0, -150));
     await tester.pump();
@@ -161,7 +170,9 @@ void main() {
       await tester.pump();
       // Al borde inferior de la zona de la lista.
       final listBottom = tester.getBottomLeft(find.byType(CustomScrollView)).dy;
-      await g.moveTo(Offset(tester.getCenter(handleOf('Tarea 2')).dx, listBottom - 5));
+      await g.moveTo(
+        Offset(tester.getCenter(handleOf('Tarea 2')).dx, listBottom - 5),
+      );
       for (var i = 0; i < 60; i++) {
         await tester.pump(frame);
       }
@@ -177,7 +188,10 @@ void main() {
   testWidgets('CL-006-4: soltar en la misma posición no escribe nada', (
     tester,
   ) async {
-    final repo = await openList(tester, tasks: ['Primera', 'Segunda', 'Tercera']);
+    final repo = await openList(
+      tester,
+      tasks: ['Primera', 'Segunda', 'Tercera'],
+    );
     final before = await repo.pendingTasks();
     final g = await tester.startGesture(tester.getCenter(handleOf('Segunda')));
     await g.moveBy(const Offset(0, 12));
@@ -197,7 +211,9 @@ void main() {
         tasks: ['Primera', 'Segunda', 'Tercera'],
         reduced: true,
       );
-      final g = await tester.startGesture(tester.getCenter(handleOf('Tercera')));
+      final g = await tester.startGesture(
+        tester.getCenter(handleOf('Tercera')),
+      );
       await g.moveBy(const Offset(0, -40));
       await tester.pump();
       final lifted = _lifted(tester)!;

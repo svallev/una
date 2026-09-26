@@ -37,12 +37,16 @@ Future<void> _doubleTap(WidgetTester tester, Finder f) async {
 
 Future<void> _confirmDelete(WidgetTester tester, String text) async {
   await tester.tap(
-    find.descendant(
-      of: rowOf(text).first,
-      matching: find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_UnaIconPainter',
-      ),
-    ).last,
+    find
+        .descendant(
+          of: rowOf(text).first,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is CustomPaint &&
+                w.painter.runtimeType.toString() == '_UnaIconPainter',
+          ),
+        )
+        .last,
   );
   await tester.pumpAndSettle();
   expect(find.byType(DeleteConfirmSheet), findsOneWidget);
@@ -98,9 +102,7 @@ void main() {
       expect(find.byType(TaskEditorScreen), findsNothing);
     });
 
-    testWidgets('dos toques separados más de 350 ms no editan', (
-      tester,
-    ) async {
+    testWidgets('dos toques separados más de 350 ms no editan', (tester) async {
       await openList(tester, tasks: ['Primera', 'Segunda']);
       await tester.tap(find.text('Segunda'));
       await tester.pump(UnaMotion.doubleTapWindow + frame);
@@ -236,22 +238,27 @@ void main() {
     });
   });
 
-  testWidgets('spec 006 §5: si falla al mover, la fila vuelve y se puede reintentar', (
-    tester,
-  ) async {
-    final repo = _Repo()..failReorder = true;
-    await openList(tester, repo: repo, tasks: ['Primera', 'Segunda', 'Tercera']);
-    await tester.tap(handleOf('Tercera'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Hacer actual'));
-    await tester.pumpAndSettle();
-    expect(find.text('No hemos podido mover la tarea'), findsOneWidget);
-    expect(shownOrder(tester), ['Primera', 'Segunda', 'Tercera']);
-    repo.failReorder = false;
-    await tester.tap(find.text('Reintentar'));
-    await tester.pumpAndSettle();
-    expect(await order(repo), ['Tercera', 'Primera', 'Segunda']);
-  });
+  testWidgets(
+    'spec 006 §5: si falla al mover, la fila vuelve y se puede reintentar',
+    (tester) async {
+      final repo = _Repo()..failReorder = true;
+      await openList(
+        tester,
+        repo: repo,
+        tasks: ['Primera', 'Segunda', 'Tercera'],
+      );
+      await tester.tap(handleOf('Tercera'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hacer actual'));
+      await tester.pumpAndSettle();
+      expect(find.text('No hemos podido mover la tarea'), findsOneWidget);
+      expect(shownOrder(tester), ['Primera', 'Segunda', 'Tercera']);
+      repo.failReorder = false;
+      await tester.tap(find.text('Reintentar'));
+      await tester.pumpAndSettle();
+      expect(await order(repo), ['Tercera', 'Primera', 'Segunda']);
+    },
+  );
 
   group('Crear (CA-006-15)', () {
     Future<void> create(WidgetTester tester, String text, String where) async {
@@ -283,18 +290,19 @@ void main() {
       expect(announcements, ['Tarea añadida en la posición 26 de 26']);
     });
 
-    testWidgets('"Arriba del todo" la deja primera y anuncia que es la actual', (
-      tester,
-    ) async {
-      final announcements = listenAnnouncements(tester);
-      final repo = await openList(tester, tasks: ['Primera', 'Segunda']);
-      await create(tester, 'Urgente', 'Arriba del todo');
-      await tester.pumpAndSettle();
-      expect(find.byType(TaskListScreen), findsOneWidget);
-      expect(shownOrder(tester).first, 'Urgente');
-      expect((await order(repo)).first, 'Urgente');
-      expect(announcements, ['Ahora es la tarea actual']);
-    });
+    testWidgets(
+      '"Arriba del todo" la deja primera y anuncia que es la actual',
+      (tester) async {
+        final announcements = listenAnnouncements(tester);
+        final repo = await openList(tester, tasks: ['Primera', 'Segunda']);
+        await create(tester, 'Urgente', 'Arriba del todo');
+        await tester.pumpAndSettle();
+        expect(find.byType(TaskListScreen), findsOneWidget);
+        expect(shownOrder(tester).first, 'Urgente');
+        expect((await order(repo)).first, 'Urgente');
+        expect(announcements, ['Ahora es la tarea actual']);
+      },
+    );
 
     testWidgets('el resaltado dura 0,9 s', (tester) async {
       await openList(tester, tasks: ['Primera', 'Segunda']);

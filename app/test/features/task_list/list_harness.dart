@@ -36,16 +36,15 @@ Future<InMemoryTaskRepository> openList(
 }
 
 /// La fila (visible) cuyo texto es [text].
-Finder rowOf(String text) => find.ancestor(
-  of: find.text(text),
-  matching: find.byType(TaskListRow),
-);
+Finder rowOf(String text) =>
+    find.ancestor(of: find.text(text), matching: find.byType(TaskListRow));
 
 /// Asa de la fila [text].
 Finder handleOf(String text) => find.descendant(
   of: rowOf(text).first,
   matching: find.byWidgetPredicate(
-    (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_GripPainter',
+    (w) =>
+        w is CustomPaint && w.painter.runtimeType.toString() == '_GripPainter',
   ),
 );
 
@@ -60,10 +59,11 @@ List<String> shownOrder(WidgetTester tester) {
     of: find.byType(TaskListRow),
     matching: find.byWidgetPredicate((w) => w is Opacity && w.opacity == 0),
   );
-  final hiddenRows = find.descendant(
-    of: hidden,
-    matching: find.byType(TaskListRow),
-  ).evaluate().map((e) => e.widget).toSet();
+  final hiddenRows = find
+      .descendant(of: hidden, matching: find.byType(TaskListRow))
+      .evaluate()
+      .map((e) => e.widget)
+      .toSet();
   final withPos = [
     for (final e in find.byType(TaskListRow).evaluate())
       if (!(e.widget as TaskListRow).lifted && !hiddenRows.contains(e.widget))

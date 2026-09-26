@@ -107,7 +107,11 @@ void main() {
         ..devicePixelRatio = 1.0;
       await openList(
         tester,
-        tasks: ['Primera', 'Segunda tarea con un texto algo más largo', 'Tercera'],
+        tasks: [
+          'Primera',
+          'Segunda tarea con un texto algo más largo',
+          'Tercera',
+        ],
       );
       expect(tester.takeException(), isNull);
       // La cabecera está dentro de la lista desplazable.
