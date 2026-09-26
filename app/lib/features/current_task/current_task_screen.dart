@@ -15,6 +15,7 @@ import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/hold_to_complete_button.dart';
+import '../delete/delete_task_action.dart';
 import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
 
@@ -24,14 +25,28 @@ class CurrentTaskScreen extends ConsumerWidget {
     super.key,
     required this.task,
     this.faceOnly = false,
+    this.chromeOnly = false,
+    this.showLogoAndMenu = true,
+    this.ctaHide,
     this.focusSignal = 0,
-  });
+  }) : assert(!(faceOnly && chromeOnly));
 
   final Task task;
 
   /// Solo la nota (color y texto), sin logotipo, menú ni botón, que ocupan su
   /// sitio pero no se ven: es lo que se rompe en dos al completar (spec 003).
   final bool faceOnly;
+
+  /// Solo el logotipo, el menú y el botón, sin la nota ni su texto (fondo
+  /// transparente): lo que queda encima mientras se arruga (spec 004).
+  final bool chromeOnly;
+
+  /// Con [chromeOnly]: false si detrás está "Todo hecho.", que ya lleva su
+  /// logotipo y no tiene menú.
+  final bool showLogoAndMenu;
+
+  /// Oculta el botón de completar (`.cta.hide`: baja 16 px y se desvanece).
+  final Animation<double>? ctaHide;
 
   /// Al cambiar, el foco va a la tarea (tras completar la anterior, CA-003-07).
   final int focusSignal;
@@ -46,125 +61,139 @@ class CurrentTaskScreen extends ConsumerWidget {
     final mq = MediaQuery.of(context);
     Future<bool> complete() => completeTask(context, ref, task);
     Future<void> openMenu() => _openMenu(context, ref);
-    Widget chrome(Widget child) => faceOnly
-        ? Visibility(
-            visible: false,
-            maintainSize: true,
-            maintainAnimation: true,
-            maintainState: true,
+    Future<void> delete() => confirmAndDeleteTask(context, ref, task);
+    Widget hidden(Widget child) => Visibility(
+      visible: false,
+      maintainSize: true,
+      maintainAnimation: true,
+      maintainState: true,
+      child: child,
+    );
+    Widget chrome(Widget child) => faceOnly ? hidden(child) : child;
+    final header = chromeOnly && !showLogoAndMenu ? hidden : chrome;
+    Widget cta(Widget child) {
+      final hide = ctaHide;
+      if (hide == null) return chrome(child);
+      // Prototipo: `.cta.hide{opacity:0;transform:translateY(16px)}`.
+      return AnimatedBuilder(
+        animation: hide,
+        builder: (context, child) => Opacity(
+          opacity: 1 - hide.value,
+          child: Transform.translate(
+            offset: Offset(0, UnaSpace.m * hide.value),
             child: child,
-          )
-        : child;
-    final screen = Scaffold(
-      body: FocusTraversalGroup(
-        policy: OrderedTraversalPolicy(),
-        child: StickyNote(
-          colorKey: task.colorKey,
-          child: SafeArea(
-            child: Padding(
-              // Abajo, el margen del prototipo (~38).
-              padding: const EdgeInsets.fromLTRB(
-                UnaSpace.l,
-                UnaSpace.l,
-                UnaSpace.l,
-                UnaSpace.xxl,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  chrome(
-                    Row(
-                      children: [
-                        const Wordmark(),
-                        const Spacer(),
-                        // Abre el menú a partir de la spec 005.
-                        _Order(
-                          1,
-                          child: _SquareIconButton(
-                            icon: UnaIcons.menu,
-                            label: l10n.menuButton,
-                            fill:
-                                UnaPalettes.classic[task.colorKey %
-                                    UnaPalettes.classic.length],
-                            onPressed: openMenu,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    // La zona desplazable es su propio nodo: el orden va aquí.
-                    child: _Order(
-                      0,
-                      child: Center(
-                        child: SingleChildScrollView(
-                          child: MediaQuery(
-                            data: mq.copyWith(
-                              textScaler: mq.textScaler.clamp(
-                                maxScaleFactor: maxNoteTextScale,
-                              ),
-                            ),
-                            child: FocusOnSignal(
-                              signal: focusSignal,
-                              child: Semantics(
-                                label: l10n.currentTaskSemantics(text),
-                                // También se completa desde la tarea (CA-003-07).
-                                customSemanticsActions: faceOnly
-                                    ? null
-                                    : {
-                                        CustomSemanticsAction(
-                                          label: l10n.completeA11yAction,
-                                        ): complete,
-                                      },
-                                excludeSemantics: true,
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) => SizedBox(
-                                    width: double.infinity,
-                                    child: Text(
-                                      text,
-                                      style: UnaTheme.fitNoteText(
-                                        text,
-                                        maxWidth: constraints.maxWidth,
-                                        textScaler: MediaQuery.textScalerOf(
-                                          context,
-                                        ),
-                                        textDirection: Directionality.of(
-                                          context,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  chrome(
-                    _Order(
-                      2,
-                      child: HoldToCompleteButton(
-                        label: l10n.completeButton,
-                        a11yAction: l10n.completeA11yAction,
-                        a11yHint: l10n.completeA11yHint,
-                        onComplete: complete,
-                      ),
-                    ),
-                  ),
-                ],
+          ),
+        ),
+        child: chrome(child),
+      );
+    }
+
+    final noteText = MediaQuery(
+      data: mq.copyWith(
+        textScaler: mq.textScaler.clamp(maxScaleFactor: maxNoteTextScale),
+      ),
+      child: FocusOnSignal(
+        signal: focusSignal,
+        child: Semantics(
+          label: l10n.currentTaskSemantics(text),
+          // También se completa (CA-003-07) y se elimina (CA-004-10) desde la
+          // tarea.
+          customSemanticsActions: faceOnly
+              ? null
+              : {
+                  CustomSemanticsAction(label: l10n.completeA11yAction):
+                      complete,
+                  CustomSemanticsAction(label: l10n.deleteA11yAction): delete,
+                },
+          excludeSemantics: true,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SizedBox(
+              width: double.infinity,
+              child: Text(
+                text,
+                style: UnaTheme.fitNoteText(
+                  text,
+                  maxWidth: constraints.maxWidth,
+                  textScaler: MediaQuery.textScalerOf(context),
+                  textDirection: Directionality.of(context),
+                ),
               ),
             ),
           ),
         ),
       ),
     );
-    return faceOnly ? ExcludeSemantics(child: screen) : screen;
+
+    final content = SafeArea(
+      child: Padding(
+        // Abajo, el margen del prototipo (~38).
+        padding: const EdgeInsets.fromLTRB(
+          UnaSpace.l,
+          UnaSpace.l,
+          UnaSpace.l,
+          UnaSpace.xxl,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header(
+              Row(
+                children: [
+                  const Wordmark(),
+                  const Spacer(),
+                  _Order(
+                    1,
+                    child: _SquareIconButton(
+                      icon: UnaIcons.menu,
+                      label: l10n.menuButton,
+                      fill: UnaPalettes
+                          .classic[task.colorKey % UnaPalettes.classic.length],
+                      onPressed: openMenu,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              // La zona desplazable es su propio nodo: el orden va aquí.
+              child: _Order(
+                0,
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: chromeOnly ? hidden(noteText) : noteText,
+                  ),
+                ),
+              ),
+            ),
+            cta(
+              _Order(
+                2,
+                child: HoldToCompleteButton(
+                  label: l10n.completeButton,
+                  a11yAction: l10n.completeA11yAction,
+                  a11yHint: l10n.completeA11yHint,
+                  onComplete: complete,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    final screen = Scaffold(
+      backgroundColor: chromeOnly ? Colors.transparent : null,
+      body: FocusTraversalGroup(
+        policy: OrderedTraversalPolicy(),
+        child: chromeOnly
+            ? content
+            : StickyNote(colorKey: task.colorKey, child: content),
+      ),
+    );
+    return faceOnly || chromeOnly ? ExcludeSemantics(child: screen) : screen;
   }
 }
 
-/// Abre el menú (spec 005) y lo que se elija: editar o crear.
+/// Abre el menú (spec 005) y lo que se elija: editar, eliminar o crear.
 Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
   final task = ref.read(currentTaskProvider);
   if (task == null) return;
@@ -181,7 +210,10 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
           .read(colorPickerProvider)
           .pick(currentColorKey: task.colorKey),
     ),
+    // La confirmación sustituye al menú (CA-004-01).
+    MenuAction.delete => null,
   };
+  if (editor == null) return confirmAndDeleteTask(context, ref, task);
   await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
 }
 

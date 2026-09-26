@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show FocusSemanticEvent;
 
 import '../app/theme/tokens.g.dart';
 import 'focus_ring.dart';
@@ -20,6 +21,8 @@ class BrutalButton extends StatefulWidget {
     this.background = UnaColors.surface,
     this.expand = true,
     this.singleLine = false,
+    this.ghost = false,
+    this.autofocus = false,
   }) : iconOnly = false;
 
   /// Botón cuadrado solo con icono (p. ej. "+"). [label] es su nombre accesible.
@@ -36,6 +39,8 @@ class BrutalButton extends StatefulWidget {
        fontSize = UnaFontSizes.bodyL,
        expand = false,
        singleLine = true,
+       ghost = false,
+       autofocus = false,
        iconOnly = true;
 
   final String label;
@@ -64,6 +69,14 @@ class BrutalButton extends StatefulWidget {
   final bool singleLine;
   final bool iconOnly;
 
+  /// `.bb.ghost` del prototipo: sin relleno ni sombra; al pulsar baja 1 px
+  /// ("Cancelar" de la confirmación de eliminar, spec 004).
+  final bool ghost;
+
+  /// Recibe el foco del teclado y del lector de pantalla al aparecer (la
+  /// acción segura de una confirmación, CA-004-10).
+  final bool autofocus;
+
   @override
   State<BrutalButton> createState() => _BrutalButtonState();
 }
@@ -75,11 +88,25 @@ class _BrutalButtonState extends State<BrutalButton> {
   void _activate() => widget.onPressed?.call();
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.findRenderObject()?.sendSemanticsEvent(
+          const FocusSemanticEvent(),
+        );
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final enabled = widget.onPressed != null;
     // Teclado e interruptores: Tab llega al botón e Intro/Espacio lo activan.
     return FocusableActionDetector(
       enabled: enabled,
+      autofocus: widget.autofocus,
       mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       actions: {
@@ -135,7 +162,8 @@ class _BrutalButtonState extends State<BrutalButton> {
 
   Widget _button(bool enabled) {
     final pressed = _down || !enabled;
-    final offset = pressed ? const Offset(4, 4) : Offset.zero;
+    final sink = widget.ghost ? 1.0 : 4.0;
+    final offset = pressed ? Offset(sink, sink) : Offset.zero;
     return Semantics(
       button: true,
       enabled: enabled,
@@ -165,17 +193,19 @@ class _BrutalButtonState extends State<BrutalButton> {
                     UnaSpace.sm,
                   ),
             decoration: BoxDecoration(
-              color: widget.background,
+              color: widget.ghost ? null : widget.background,
               border: Border.all(
                 color: UnaColors.ink,
                 width: UnaBorders.strongWidth,
               ),
-              boxShadow: [
-                if (!pressed)
-                  UnaShadows.button
-                else if (enabled)
-                  UnaShadows.buttonPressed,
-              ],
+              boxShadow: widget.ghost
+                  ? const []
+                  : [
+                      if (!pressed)
+                        UnaShadows.button
+                      else if (enabled)
+                        UnaShadows.buttonPressed,
+                    ],
             ),
             child: _content(),
           ),

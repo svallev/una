@@ -14,7 +14,12 @@ class AllDoneScreen extends StatefulWidget {
     super.key,
     required this.onCreate,
     this.focusSignal = 0,
+    this.showActions = true,
   });
+
+  /// False mientras la última tarea eliminada cae en la papelera (spec 004):
+  /// "Crear una tarea" ocupa su sitio pero aún no se ve.
+  final bool showActions;
 
   /// Al cambiar, el foco va al título (tras completar la última, CA-003-07).
   final int focusSignal;
@@ -155,13 +160,19 @@ class _AllDoneScreenState extends State<AllDoneScreen>
                           ),
                         ),
                       ),
-                      BrutalButton(
-                        label: l10n.emptyCreate,
-                        icon: UnaIcons.plus,
-                        iconSize: UnaSizes.icon,
-                        iconStroke: UnaSizes.iconStroke,
-                        height: UnaSizes.emptyButton,
-                        onPressed: widget.onCreate,
+                      Visibility(
+                        visible: widget.showActions,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: BrutalButton(
+                          label: l10n.emptyCreate,
+                          icon: UnaIcons.plus,
+                          iconSize: UnaSizes.icon,
+                          iconStroke: UnaSizes.iconStroke,
+                          height: UnaSizes.emptyButton,
+                          onPressed: widget.onCreate,
+                        ),
                       ),
                     ],
                   ),

@@ -195,6 +195,11 @@ abstract final class UnaSizes {
   static const double stampIconStroke = 3.2;
   static const double emptyButton = 68.0;
   static const double menuRow = 58.0;
+  static const double confirmButton = 62.0;
+  static const double ghostButton = 56.0;
+  static const double trashWidth = 64.0;
+  static const double trashHeight = 76.0;
+  static const double trashStroke = 3.2;
   static const double iconS = 16.0;
   static const double linkButton = 44.0;
   static const double bodyMaxWidth = 300.0;

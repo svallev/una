@@ -8,7 +8,7 @@ import '../../ui/una_sheet.dart';
 
 /// Lo que se eligió en el menú (las demás opciones no cierran nada o solo
 /// cierran el menú).
-enum MenuAction { edit, newTask }
+enum MenuAction { edit, delete, newTask }
 
 /// Abre el menú de la tarea actual (spec 005). Devuelve la acción elegida, o null.
 Future<MenuAction?> showMenuSheet(
@@ -19,8 +19,8 @@ Future<MenuAction?> showMenuSheet(
   builder: (sheet) => MenuSheet(
     pendingCount: pendingCount,
     onEdit: () => Navigator.of(sheet).pop(MenuAction.edit),
-    // Llegan con las specs 004 y 006: se ven activos y no hacen nada (DEV-18).
-    onDelete: () {},
+    onDelete: () => Navigator.of(sheet).pop(MenuAction.delete),
+    // Llega con la spec 006: se ve activo y no hace nada (DEV-18).
     onAllTasks: () {},
     onNewTask: () => Navigator.of(sheet).pop(MenuAction.newTask),
     // Como el prototipo: cierra el menú (hasta la spec 010).
