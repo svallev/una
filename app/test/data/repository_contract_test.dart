@@ -148,6 +148,23 @@ void _contract(
       expect(seen, ['a', 'b', null]);
     });
 
+    test(
+      'CA-005-05: editar el texto conserva posición y color y cambia updatedAt',
+      () async {
+        await repo.insert(_task('a', 'C', color: 3));
+        await repo.insert(_task('b', 'M'));
+        final at = DateTime.utc(2026, 9, 25, 12);
+        expect(await repo.updateText('a', 'Nuevo texto', at), isTrue);
+        final t = (await repo.findById('a'))!;
+        expect(t.text, 'Nuevo texto');
+        expect(t.rank, 'C');
+        expect(t.colorKey, 3);
+        expect(t.updatedAt, at);
+        expect((await repo.currentTask())!.id, 'a');
+        expect(await repo.updateText('missing', 'x', at), isFalse);
+      },
+    );
+
     test('ajuste de primer uso', () async {
       expect(await settings.firstRunDone(), isFalse);
       await settings.setFirstRunDone();

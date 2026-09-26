@@ -89,9 +89,9 @@ void main() {
   }, skip: _skip);
 
   testWidgets('CA-001-02: editor de la primera tarea (vacío)', (tester) async {
-    await pumpWithApp(tester, const FirstTaskEditorScreen());
+    await pumpWithApp(tester, const TaskEditorScreen());
     await expectLater(
-      find.byType(FirstTaskEditorScreen),
+      find.byType(TaskEditorScreen),
       matchesGoldenFile('goldens/editor_empty_es.png'),
     );
   }, skip: _skip);

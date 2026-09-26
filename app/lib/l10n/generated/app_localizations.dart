@@ -259,6 +259,138 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No hemos podido completar la tarea'**
   String get completeError;
+
+  /// Nombre accesible del campo al crear (no se ve). CA-002-01
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva tarea'**
+  String get editorTagNew;
+
+  /// Nombre accesible del campo al editar (no se ve). CA-005-04
+  ///
+  /// In es, this message translates to:
+  /// **'Editar tarea'**
+  String get editorTagEdit;
+
+  /// Enlace para descartar. CA-002-07
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get editorCancel;
+
+  /// Botón del editor al crear, con flecha. CA-002-02
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get editorContinue;
+
+  /// Botón del editor al editar. CA-005-05
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar cambios'**
+  String get editorSaveChanges;
+
+  /// Título de la hoja de posición. CA-002-02
+  ///
+  /// In es, this message translates to:
+  /// **'¿Dónde la pones?'**
+  String get placementTitle;
+
+  /// Texto de la tarea bajo el título. CA-002-02
+  ///
+  /// In es, this message translates to:
+  /// **'“{text}”'**
+  String placementQuoted(String text);
+
+  /// Opción de posición. CA-002-03
+  ///
+  /// In es, this message translates to:
+  /// **'Arriba del todo'**
+  String get placementTop;
+
+  /// Descripción de Arriba del todo
+  ///
+  /// In es, this message translates to:
+  /// **'Pasa a ser la única visible. La actual espera.'**
+  String get placementTopHint;
+
+  /// Opción de posición. CA-002-04
+  ///
+  /// In es, this message translates to:
+  /// **'A la cola'**
+  String get placementEnd;
+
+  /// Descripción de A la cola
+  ///
+  /// In es, this message translates to:
+  /// **'No la verás hasta completar las anteriores.'**
+  String get placementEndHint;
+
+  /// Cierra la hoja. CA-002-05
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir editando'**
+  String get placementKeepEditing;
+
+  /// Solo lector de pantalla. CA-002-04
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea añadida a la cola'**
+  String get a11yQueued;
+
+  /// Encabezado del bloque del menú. CA-005-01
+  ///
+  /// In es, this message translates to:
+  /// **'Esta tarea'**
+  String get menuSectionThisTask;
+
+  /// Menú. CA-005-04
+  ///
+  /// In es, this message translates to:
+  /// **'Editar'**
+  String get menuEdit;
+
+  /// Menú (spec 004). CA-005-11
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get menuDelete;
+
+  /// Menú (spec 006). CA-005-03
+  ///
+  /// In es, this message translates to:
+  /// **'Todas mis tareas'**
+  String get menuAllTasks;
+
+  /// Descripción accesible con una sola tarea. CA-005-03
+  ///
+  /// In es, this message translates to:
+  /// **'Solo tienes esta tarea'**
+  String get menuAllTasksOnlyOne;
+
+  /// Botón principal del menú. CA-005-09
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva tarea'**
+  String get menuNewTask;
+
+  /// Enlace del menú (spec 010). CA-005-09
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración y perfil'**
+  String get menuSettings;
+
+  /// Botón X y fondo del menú. CA-005-02
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar menú'**
+  String get menuClose;
+
+  /// Lectura del total junto a Todas mis tareas. CA-005-12
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 tarea} other{{count} tareas}}'**
+  String menuAllTasksCount(int count);
 }
 
 class _AppLocalizationsDelegate

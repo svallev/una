@@ -17,7 +17,7 @@ void main() {
   testWidgets(
     'CA-001-02: como el prototipo: sin etiqueta visible, placeholder, «+» y Guardar activos, sin Cancelar',
     (tester) async {
-      await pumpWithApp(tester, const FirstTaskEditorScreen());
+      await pumpWithApp(tester, const TaskEditorScreen());
       // La etiqueta del prototipo está oculta: solo nombra el campo (§6).
       expect(find.text('TU PRIMERA TAREA'), findsNothing);
       expect(
@@ -40,7 +40,7 @@ void main() {
   testWidgets(
     'CL-001-1: con solo espacios, Guardar no guarda y devuelve el foco al campo',
     (tester) async {
-      final repo = await pumpWithApp(tester, const FirstTaskEditorScreen());
+      final repo = await pumpWithApp(tester, const TaskEditorScreen());
       await tester.enterText(find.byType(TextField), '   \n  ');
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pump();
@@ -55,7 +55,7 @@ void main() {
   testWidgets(
     'CA-001-04: guardar crea la tarea pendiente (recortada) como actual',
     (tester) async {
-      final repo = await pumpWithApp(tester, const FirstTaskEditorScreen());
+      final repo = await pumpWithApp(tester, const TaskEditorScreen());
       await tester.enterText(find.byType(TextField), '  Llamar a Marta  ');
       await tester.pump();
       expect(_save(tester).onPressed, isNotNull);
@@ -69,7 +69,7 @@ void main() {
   testWidgets('CL-001-2: el contador aparece a partir de 9000 caracteres', (
     tester,
   ) async {
-    await pumpWithApp(tester, const FirstTaskEditorScreen());
+    await pumpWithApp(tester, const TaskEditorScreen());
     await tester.enterText(find.byType(TextField), 'a' * 8999);
     await tester.pump();
     expect(find.textContaining('caracteres'), findsNothing);
@@ -82,7 +82,7 @@ void main() {
     'CA-001-02 + §6: el campo se anuncia como «Tu primera tarea» y no hay menú',
     (tester) async {
       final handle = tester.ensureSemantics();
-      await pumpWithApp(tester, const FirstTaskEditorScreen());
+      await pumpWithApp(tester, const TaskEditorScreen());
       expect(
         tester.getSemantics(find.byType(TextField)),
         isSemantics(
@@ -115,7 +115,7 @@ void main() {
       'spec 001 §5: si falla al guardar se explica, se conserva el texto y se puede reintentar ($message)',
       (tester) async {
         final repo = _FailingRepository(error);
-        await pumpWithApp(tester, const FirstTaskEditorScreen(), repo: repo);
+        await pumpWithApp(tester, const TaskEditorScreen(), repo: repo);
         await tester.enterText(find.byType(TextField), 'Llamar a Marta');
         await tester.pump();
         await tester.tap(find.text('Guardar'));
@@ -137,7 +137,7 @@ void main() {
       final handle = tester.ensureSemantics();
       await pumpWithApp(
         tester,
-        const FirstTaskEditorScreen(),
+        const TaskEditorScreen(),
         textScale: 2.0,
         size: const Size(360, 640),
         viewInsets: const EdgeInsets.only(bottom: 300),
@@ -156,7 +156,7 @@ void main() {
   testWidgets('CA-001-02: el botón Guardar se ve entero, con su margen', (
     tester,
   ) async {
-    await pumpWithApp(tester, const FirstTaskEditorScreen());
+    await pumpWithApp(tester, const TaskEditorScreen());
     final button = tester.getRect(_saveFinder);
     expect(button.bottom, lessThanOrEqualTo(844 - 24 + 0.01));
   });

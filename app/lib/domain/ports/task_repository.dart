@@ -23,6 +23,10 @@ abstract interface class TaskRepository {
 
   Future<void> insert(Task task);
 
+  /// Cambia el texto de la tarea [id] sin tocar su posición ni su color
+  /// (spec 005). Devuelve false si no existe o está eliminada.
+  Future<bool> updateText(String id, String text, DateTime at);
+
   /// Marca como completada la tarea pendiente [id] (spec 003). Devuelve false
   /// (y no cambia nada) si ya no está pendiente.
   Future<bool> complete(String id, DateTime at);

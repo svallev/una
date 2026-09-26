@@ -105,4 +105,81 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get completeError => 'No hemos podido completar la tarea';
+
+  @override
+  String get editorTagNew => 'Nueva tarea';
+
+  @override
+  String get editorTagEdit => 'Editar tarea';
+
+  @override
+  String get editorCancel => 'Cancelar';
+
+  @override
+  String get editorContinue => 'Continuar';
+
+  @override
+  String get editorSaveChanges => 'Guardar cambios';
+
+  @override
+  String get placementTitle => '¿Dónde la pones?';
+
+  @override
+  String placementQuoted(String text) {
+    return '“$text”';
+  }
+
+  @override
+  String get placementTop => 'Arriba del todo';
+
+  @override
+  String get placementTopHint =>
+      'Pasa a ser la única visible. La actual espera.';
+
+  @override
+  String get placementEnd => 'A la cola';
+
+  @override
+  String get placementEndHint => 'No la verás hasta completar las anteriores.';
+
+  @override
+  String get placementKeepEditing => 'Seguir editando';
+
+  @override
+  String get a11yQueued => 'Tarea añadida a la cola';
+
+  @override
+  String get menuSectionThisTask => 'Esta tarea';
+
+  @override
+  String get menuEdit => 'Editar';
+
+  @override
+  String get menuDelete => 'Eliminar';
+
+  @override
+  String get menuAllTasks => 'Todas mis tareas';
+
+  @override
+  String get menuAllTasksOnlyOne => 'Solo tienes esta tarea';
+
+  @override
+  String get menuNewTask => 'Nueva tarea';
+
+  @override
+  String get menuSettings => 'Configuración y perfil';
+
+  @override
+  String get menuClose => 'Cerrar menú';
+
+  @override
+  String menuAllTasksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tareas',
+      one: '1 tarea',
+    );
+    return '$_temp0';
+  }
 }

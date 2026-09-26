@@ -10,6 +10,7 @@ import '../domain/ports/id_generator.dart';
 import '../domain/ports/task_repository.dart';
 import '../domain/usecases/complete_current_task.dart';
 import '../domain/usecases/create_task.dart';
+import '../domain/usecases/update_task_text.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
 final taskRepositoryProvider = Provider<TaskRepository>(
@@ -46,6 +47,13 @@ final createTaskProvider = Provider<CreateTask>(
   ),
 );
 
+final updateTaskTextProvider = Provider<UpdateTaskText>(
+  (ref) => UpdateTaskText(
+    repository: ref.watch(taskRepositoryProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
 final completeCurrentTaskProvider = Provider<CompleteCurrentTask>(
   (ref) => CompleteCurrentTask(
     repository: ref.watch(taskRepositoryProvider),
@@ -64,6 +72,18 @@ class HasCompletedController extends Notifier<bool> {
   bool build() => ref.read(bootStateProvider).hasCompleted;
 
   void markCompleted() => state = true;
+}
+
+/// Aumenta cada vez que la pantalla principal debe recuperar el foco (tras
+/// completar, crear o editar): la tarea actual o "Todo hecho." lo toman
+/// (CA-003-07, spec 002 §6).
+final screenFocusProvider = NotifierProvider<ScreenFocus, int>(ScreenFocus.new);
+
+class ScreenFocus extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void signal() => state++;
 }
 
 /// Tarea actual: arranca con la leída en el arranque y sigue los cambios de la BD.
