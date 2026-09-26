@@ -1,3 +1,7 @@
+// Flujo del listado en el dispositivo (spec 006, T-006-15). En el emulador:
+//   flutter test integration_test/task_list_flow_test.dart -d emulator-5554
+// En el móvil del propietario, nunca sin --keep-app-running (flutter drive
+// desinstala la app al terminar) y solo contra la app de pruebas (.debug).
 import 'dart:io';
 
 import 'package:app/app/providers.dart';

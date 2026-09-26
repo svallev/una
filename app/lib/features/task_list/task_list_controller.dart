@@ -76,6 +76,10 @@ class TaskListController extends Notifier<TaskListState> {
   int _saving = 0;
   List<Task>? _fromDb;
 
+  /// Los movimientos se guardan de uno en uno: cada uno calcula su posición
+  /// con la cola que dejó el anterior (dos a la vez podrían chocar).
+  Future<void> _writes = Future.value();
+
   @override
   TaskListState build() {
     _sub = ref.watch(taskRepositoryProvider).watchPending().listen(
@@ -101,8 +105,11 @@ class TaskListController extends Notifier<TaskListState> {
     moved.insert(to, current[from]);
     state = state.copyWith(tasks: moved);
     _saving++;
+    final reorder = ref.read(reorderTaskProvider);
+    final write = _writes.then((_) => reorder.call(id, to));
+    _writes = write.then<void>((_) {}, onError: (Object _) {});
     try {
-      final result = await ref.read(reorderTaskProvider).call(id, to);
+      final result = await write;
       if (result == null) return const NotMoved();
       return Moved(result.position, result.total);
     } on TaskNotPending {

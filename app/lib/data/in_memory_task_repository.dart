@@ -10,9 +10,13 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   final StreamController<void> _changes = StreamController<void>.broadcast();
   bool _firstRunDone = false;
 
-  List<Task> get _pending =>
-      _tasks.values.where((t) => t.isPending).toList()
-        ..sort((a, b) => a.rank.compareTo(b.rank));
+  List<Task> get _pending => _tasks.values.where((t) => t.isPending).toList()
+    // Con claves iguales (no debería haberlas), el id desempata: el orden
+    // es el mismo en todas partes.
+    ..sort((a, b) {
+      final byRank = a.rank.compareTo(b.rank);
+      return byRank != 0 ? byRank : a.id.compareTo(b.id);
+    });
 
   @override
   Future<Task?> currentTask() async => _pending.firstOrNull;

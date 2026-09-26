@@ -102,4 +102,13 @@ Ninguna. Se descartan `reorderables` y `scrollable_positioned_list`: no hacen fa
   - Nunca hace falta saltar a una posición intermedia: tras "Hacer actual" o "Arriba del todo" la tarea está arriba; tras "A la cola", abajo; "Mover arriba/abajo" y soltar la dejan a la vista.
 - **Foco de TalkBack dentro de la misma ruta.** Tras mover una fila, el foco se lleva con `FocusOnSignal` (el mismo mecanismo que funcionó en la 004 para el foco final). Si TalkBack no lo siguiera al reordenar, el anuncio de la posición sigue informando. Lo comprobamos en el emulador antes de dar la tarea por hecha.
 - **Renumerar cambia muchas filas.** Es raro (hacen falta muchos movimientos en el mismo hueco) y va en una transacción. La excepción a "una sola fila" está en ADR-0002 y en CL-006-8.
+- **Revisión de seguridad (2026-09-26):** sin hallazgos altos.
+  - **Corregido:**
+    - los movimientos se guardan en serie;
+    - el id desempata si dos claves coincidieran;
+    - `ReorderTask` renumera si las vecinas no dejan hueco;
+    - las lecturas de la cola al abrir el listado y tras crear capturan el error sin registrarlo;
+    - el test de integración recuerda `--keep-app-running`.
+  - **[Pendiente, spec 007]** Hay dos caminos de borrado (`DeleteCurrentTask` y `DeletePendingTask`). Cuando `AttachmentStore` borre archivos, debe hacerse en un único servicio que usen los dos; si no, eliminar desde el listado dejaría archivos en el sandbox.
+  - **[Riesgo aceptado]** Si falla una lectura justo **después** de eliminar desde el listado, se ve el aviso de error aunque la tarea ya está eliminada; "Reintentar" no hace nada. No se pierden ni se filtran datos.
 - **La rama depende de las PR #8 y #9:** si cambian en la revisión, hay que rebasar.

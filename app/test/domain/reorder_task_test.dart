@@ -102,4 +102,16 @@ void main() {
       }
     },
   );
+
+  test(
+    'con dos claves iguales (sin hueco) renumera y mueve igualmente',
+    () async {
+      await repo.reorder('b', 'C', clock.now()); // a y b con la misma clave
+      final result = await reorder('d', 1);
+      expect(result, isNotNull);
+      final pending = await repo.pendingTasks();
+      expect(pending[1].id, 'd');
+      expect(pending.map((t) => t.rank).toSet(), hasLength(4));
+    },
+  );
 }

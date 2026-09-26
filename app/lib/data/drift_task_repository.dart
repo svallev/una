@@ -23,7 +23,11 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
           (t) =>
               t.status.equals(TaskStatus.pending.name) & t.deletedAt.isNull(),
         )
-        ..orderBy([(t) => OrderingTerm.asc(t.rank)]);
+        // El id desempata si dos claves coincidieran.
+        ..orderBy([
+          (t) => OrderingTerm.asc(t.rank),
+          (t) => OrderingTerm.asc(t.id),
+        ]);
 
   @override
   Future<Task?> currentTask() async {
@@ -46,7 +50,10 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
       ..where(
         (t) => t.status.equals(TaskStatus.pending.name) & t.deletedAt.isNull(),
       )
-      ..orderBy([(t) => OrderingTerm.desc(t.rank)])
+      ..orderBy([
+        (t) => OrderingTerm.desc(t.rank),
+        (t) => OrderingTerm.desc(t.id),
+      ])
       ..limit(1);
     return (await q.getSingleOrNull())?.rank;
   }

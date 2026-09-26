@@ -37,8 +37,15 @@ class ReorderTask {
       );
     }
 
-    var rank = rankIn(queue);
-    if (rank.length > Rank.maxLength) {
+    String? candidate;
+    try {
+      candidate = rankIn(queue);
+    } on ArgumentError {
+      // Vecinas con la misma clave: sin hueco entre ellas. Se renumera.
+      candidate = null;
+    }
+    var rank = candidate ?? '';
+    if (candidate == null || rank.length > Rank.maxLength) {
       await repository.renumberPending(now);
       queue = await repository.pendingTasks();
       rank = rankIn(queue);

@@ -24,7 +24,28 @@ import 'task_list_row.dart';
 /// Abre "Todas las tareas" (spec 006, CA-006-01) con la cola ya leída, para
 /// no pintar una pantalla vacía (CA-006-20).
 Future<void> openTaskList(BuildContext context, WidgetRef ref) async {
-  final tasks = await ref.read(taskRepositoryProvider).pendingTasks();
+  final List<Task> tasks;
+  try {
+    tasks = await ref.read(taskRepositoryProvider).pendingTasks();
+  } on Object catch (e) {
+    // Sin registrar nada: el error de SQLite puede incluir datos del usuario.
+    if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(
+          isNoSpaceError(e) ? l10n.storageErrorNoSpace : l10n.storageErrorTitle,
+        ),
+        action: SnackBarAction(
+          label: l10n.retry,
+          onPressed: () {
+            if (context.mounted) unawaited(openTaskList(context, ref));
+          },
+        ),
+      ),
+    );
+    return;
+  }
   if (!context.mounted) return;
   await Navigator.of(context).push(TaskListScreen.route(tasks));
 }
@@ -365,7 +386,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     final d = _drag;
     if (d == null) return;
     d.autoScroller.stopAutoScroll();
-    final task = _tasks.firstWhere((t) => t.id == d.id);
+    final task = _tasks.where((t) => t.id == d.id).firstOrNull;
     setState(() {
       _drag = null;
       _freeze = true;
@@ -374,7 +395,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     _freezeTimer = Timer(UnaMotion.listDropFreeze, () {
       if (mounted) setState(() => _freeze = false);
     });
-    if (d.to != d.from) unawaited(_move(task, d.to));
+    // Si se eliminó mientras se arrastraba (otra ventana), no hay nada que mover.
+    if (task != null && d.to != d.from) unawaited(_move(task, d.to));
   }
 
   void _cancelDrag() {
@@ -501,7 +523,13 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       _requestFocus(_newTaskFocus);
       return;
     }
-    final tasks = await ref.read(taskRepositoryProvider).pendingTasks();
+    final List<Task> tasks;
+    try {
+      tasks = await ref.read(taskRepositoryProvider).pendingTasks();
+    } on Object {
+      // Ya está guardada; solo falta resaltarla. Sin registrar nada.
+      return;
+    }
     if (!mounted) return;
     final index = tasks.indexWhere((t) => t.id == saved.id);
     if (index < 0) return;

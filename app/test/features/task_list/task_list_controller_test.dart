@@ -93,4 +93,23 @@ void main() {
     expect(s.focus, (id: 'c', serial: 2));
     expect(s.flash, (id: 'c', serial: 1));
   });
+
+  test(
+    'dos movimientos seguidos de tareas distintas se guardan en orden',
+    () async {
+      final ctrl = container.read(taskListProvider.notifier);
+      final first = ctrl.move(container.read(taskListProvider).tasks!, 'c', 0);
+      // Sin esperar: la segunda parte de la cola que ya se ve (c, a, b).
+      final second = ctrl.move(container.read(taskListProvider).tasks!, 'b', 1);
+      await Future.wait([first, second]);
+      await pumpEventQueue();
+      expect(
+        [for (final t in await repo.pendingTasks()) t.id],
+        ['c', 'b', 'a'],
+      );
+      expect(ids(), ['c', 'b', 'a']);
+      final ranks = [for (final t in await repo.pendingTasks()) t.rank];
+      expect(ranks.toSet(), hasLength(3));
+    },
+  );
 }
