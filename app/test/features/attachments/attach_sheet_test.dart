@@ -11,11 +11,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_image_importer.dart';
+import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
 final _plus = find.bySemanticsLabel('Añadir foto, imagen o archivo');
 
 void main() {
+  setUpAll(loadAppFonts);
+
   late MemoryAttachmentStore store;
   late FakeImageImporter importer;
 

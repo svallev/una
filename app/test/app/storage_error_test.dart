@@ -12,6 +12,7 @@ import 'package:app/ui/brutal_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fonts.dart';
 import '../support/pump_app.dart';
 
 Future<ImageServices> _images() async {
@@ -24,6 +25,8 @@ Future<ImageServices> _images() async {
 }
 
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets(
     'CL-001-6: si la BD no abre se ve el error recuperable y Reintentar vuelve a abrirla',
     (tester) async {

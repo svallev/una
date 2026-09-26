@@ -5,6 +5,7 @@ import 'package:app/ui/brutal_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
 /// "Guardar" (el otro botón grande es el "+" de adjuntar).
@@ -14,6 +15,8 @@ final _saveFinder = find.byWidgetPredicate(
 BrutalButton _save(WidgetTester t) => t.widget<BrutalButton>(_saveFinder);
 
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets(
     'CA-001-02: como el prototipo: sin etiqueta visible, placeholder, «+» y Guardar activos, sin Cancelar',
     (tester) async {

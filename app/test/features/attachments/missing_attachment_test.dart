@@ -15,9 +15,12 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/app_harness.dart';
 import '../../support/attachments.dart';
 import '../../support/fake_image_importer.dart';
+import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
 void main() {
+  setUpAll(loadAppFonts);
+
   late MemoryAttachmentStore store;
   late FakeImageImporter importer;
   late InMemoryTaskRepository repo;
