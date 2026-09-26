@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider de la cámara (spec 007): solo la zona de importación de la caché. La
+     cámara recibe permiso de escritura sobre un único archivo y se revoca al volver. -->
+<paths>
+    <cache-path name="import" path="import/" />
+</paths>

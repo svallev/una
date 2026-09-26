@@ -36,6 +36,11 @@ class ImageImportFailure implements Exception {
   String toString() => 'ImageImportFailure(${error.name})';
 }
 
+/// La importación se canceló (el usuario o el tiempo máximo).
+class ImageImportCancelled implements Exception {
+  const ImageImportCancelled();
+}
+
 /// Cámara, selector y limpieza de imágenes (canal nativo o navegador). Todo
 /// lo que escribe va a la zona de preparación `<id>`; nunca fuera.
 abstract interface class ImageImporter {
