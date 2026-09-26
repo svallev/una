@@ -33,7 +33,7 @@
     - Un arrastre cancelado (`pointercancel` o la app que se oculta) no guarda nada.
   - **Gestos de la fila:**
     - asa: un reconocedor de arrastre que se activa a los 6 px y compite con su toque (el toque abre "Mover");
-    - resto de la fila: arrastre tras pulsación larga;
+    - toda la fila (también sobre Editar y Eliminar): arrastre tras mantener pulsado 150 ms (`LongPressGestureRecognizer` con `listHoldDrag`); si el dedo se desliza antes, gana el desplazamiento de la lista;
     - doble toque: se cuentan los toques de la misma fila, como el prototipo (350 ms, la misma fila, ignorando los botones);
     - todos los reconocedores quedan fuera de la semántica (`excludeFromSemantics`).
   - **Semántica de la fila:** un solo nodo, que no incluye los botones. Tiene:
@@ -77,7 +77,7 @@ Ninguna. Se descartan `reorderables` y `scrollable_positioned_list`: no hacen fa
 | CA-006-14 (datos) | Unitario de `DeletePendingTask` (primera, intermedia, última, no pendiente) | `test/domain/delete_pending_task_test.dart` |
 | Datos | Contrato del repositorio (memoria y drift): `watchPending` en orden, `reorder` solo cambia una fila, `renumberPending` en una transacción | `test/data/repository_contract_test.dart` |
 | CA-006-01/02/03, CL-006-2/9/10/11 | Widget: menú → listado, contenido y aspecto de la primera fila, recorte a 3 líneas, volver con botón y atrás, segundo plano, texto al 200 % | `test/features/task_list/task_list_screen_test.dart` |
-| CA-006-04/05/06/07/11/12, CL-006-4/7 | Widget con gestos simulados: arrastre desde el asa a los 6 px, pulsación larga, deslizar desplaza la lista, soltar arriba del todo, la primera no se mueve, cancelación, desplazamiento automático, soltar en el mismo sitio | `test/features/task_list/reorder_gestures_test.dart` |
+| CA-006-04/05/06/07/11/12, CL-006-4/7 | Widget con gestos simulados: arrastre desde el asa a los 6 px, pulsación de 150 ms (también sobre Editar), deslizar desplaza la lista, soltar arriba del todo, la primera no se mueve, cancelación, desplazamiento automático, soltar en el mismo sitio | `test/features/task_list/reorder_gestures_test.dart` |
 | CA-006-08/09, CA-006-16 | Widget: tocar el asa abre "Mover" con las opciones según la posición; acciones del lector por fila (primera, segunda, última) y ninguna acción duplicada | `test/features/task_list/move_actions_test.dart` |
 | CA-006-13/14/15, CL-006-3/5/6 | Widget de flujo con repositorio en memoria: doble toque (misma fila, filas distintas, sobre botones), editar y volver, eliminar (intermedia, primera, última → "Todo hecho." sin volver atrás), error y reintentar, crear arriba y a la cola con desplazamiento y resaltado | `test/features/task_list/task_list_flow_test.dart` |
 | CA-006-17/18 | Widget de semántica: etiquetas, pista, orden de lectura, anuncios y foco de cada fila de la tabla; `meetsGuideline` (tamaño y etiqueta de los objetivos, contraste) con todos los colores | `test/features/task_list/task_list_a11y_test.dart` |

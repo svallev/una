@@ -186,16 +186,35 @@ class TaskListRow extends StatelessWidget {
         child: body,
       );
     }
-    // Toques y pulsación larga en el resto de la fila (CA-006-05, CA-006-13).
+    // Toques y pulsación corta ([UnaMotion.listHoldDrag]) en toda la fila
+    // (CA-006-05, CA-006-13). Deslizar antes de ese tiempo desplaza la lista.
     // Fuera de la semántica: el lector usa las acciones de la fila.
     if (drag != null && !first) {
-      body = GestureDetector(
+      body = RawGestureDetector(
         excludeFromSemantics: true,
         behavior: HitTestBehavior.opaque,
-        onTapUp: onRowTap == null ? null : (_) => onRowTap!(),
-        onLongPressStart: (d) => drag.onStart(context, d.globalPosition),
-        onLongPressMoveUpdate: (d) => drag.onUpdate(d.globalPosition),
-        onLongPressEnd: (_) => drag.onEnd(),
+        gestures: {
+          if (onRowTap != null)
+            TapGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+                  () => TapGestureRecognizer(debugOwner: this),
+                  (r) => r.onTapUp = (_) => onRowTap!(),
+                ),
+          LongPressGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+                () => LongPressGestureRecognizer(
+                  duration: UnaMotion.listHoldDrag,
+                  debugOwner: this,
+                ),
+                (r) {
+                  r.onLongPressStart = (d) =>
+                      drag.onStart(context, d.globalPosition);
+                  r.onLongPressMoveUpdate = (d) =>
+                      drag.onUpdate(d.globalPosition);
+                  r.onLongPressEnd = (_) => drag.onEnd();
+                },
+              ),
+        },
         child: body,
       );
     } else if (onRowTap != null) {

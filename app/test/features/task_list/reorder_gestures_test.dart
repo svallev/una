@@ -1,6 +1,8 @@
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
+import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/task_list/task_list_row.dart';
+import 'package:app/ui/una_icons.dart';
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,7 +67,7 @@ void main() {
   );
 
   testWidgets(
-    'CA-006-05: con pulsación larga se arrastra desde el resto de la fila',
+    'CA-006-05: con una pulsación corta se arrastra desde cualquier punto de la fila',
     (tester) async {
       final repo = await openList(
         tester,
@@ -74,7 +76,10 @@ void main() {
       final g = await tester.startGesture(
         tester.getCenter(find.text('Tercera')),
       );
-      await tester.pump(kLongPressTimeout + frame);
+      await tester.pump(UnaMotion.listHoldDrag - frame);
+      expect(_lifted(tester), isNull);
+      await tester.pump(frame * 2);
+      expect(UnaMotion.listHoldDrag, lessThan(kLongPressTimeout));
       expect(_lifted(tester), isNotNull);
       final secondTop = tester.getTopLeft(rowOf('Segunda').first).dy;
       final thirdTop = tester.getTopLeft(rowOf('Tercera').first).dy;
@@ -83,6 +88,33 @@ void main() {
       await g.up();
       await tester.pumpAndSettle();
       expect(await order(repo), ['Primera', 'Tercera', 'Segunda']);
+    },
+  );
+
+  testWidgets(
+    'CA-006-05: también se levanta manteniendo pulsado sobre Editar, sin abrir el editor',
+    (tester) async {
+      final repo = await openList(
+        tester,
+        tasks: ['Primera', 'Segunda', 'Tercera'],
+      );
+      final edit = find.descendant(
+        of: rowOf('Tercera').first,
+        matching: find.byWidgetPredicate(
+          (w) => w is UnaIcon && w.icon == UnaIcons.edit,
+        ),
+      );
+      final g = await tester.startGesture(tester.getCenter(edit));
+      await tester.pump(UnaMotion.listHoldDrag + frame);
+      expect(_lifted(tester), isNotNull);
+      final secondTop = tester.getTopLeft(rowOf('Segunda').first).dy;
+      final thirdTop = tester.getTopLeft(rowOf('Tercera').first).dy;
+      await g.moveBy(Offset(0, secondTop - thirdTop - 10));
+      await tester.pump();
+      await g.up();
+      await tester.pumpAndSettle();
+      expect(await order(repo), ['Primera', 'Tercera', 'Segunda']);
+      expect(find.byType(TaskEditorScreen), findsNothing);
     },
   );
 

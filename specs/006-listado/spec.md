@@ -48,10 +48,10 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
   - **Dado** una fila que no es la primera
   - **Cuando** pone el dedo en el asa y lo mueve más de 6 px en vertical
   - **Entonces** la fila se levanta al instante: sigue al dedo, se inclina −1,5° y su sombra crece a `listItemDragging`; las demás se desplazan (0,2 s) para hacerle hueco. Al soltar, queda en la nueva posición y se guarda en ese momento.
-- **CA-006-05 Arrastrar desde el resto de la fila (DEV-27)**
+- **CA-006-05 Arrastrar desde toda la fila (DEV-27)**
   - **Dado** una fila que no es la primera
-  - **Cuando** mantiene pulsado en cualquier punto de la fila que no sea un botón y después mueve el dedo
-  - **Entonces** la fila se levanta y se arrastra igual que desde el asa. Deslizar sin mantener pulsado **desplaza la lista**, no arrastra.
+  - **Cuando** mantiene pulsado un momento (150 ms, `listHoldDrag`) en cualquier punto de la fila, también sobre Editar o Eliminar, y después mueve el dedo
+  - **Entonces** la fila se levanta y se arrastra igual que desde el asa, sin activar el botón. Deslizar sin detenerse **desplaza la lista**, no arrastra.
 - **CA-006-06 Sustituir la actual**
   - **Dado** una fila arrastrada por encima de la primera
   - **Cuando** la suelta en la posición 1
@@ -233,7 +233,7 @@ Se reutilizan `deleteA11yAction` ("Eliminar tarea": botón de la fila y acción 
 ## 9. Preguntas abiertas
 
 - **[Resuelto 2026-09-26, propietario]** "Lo siguiente" oculto, como el prototipo.
-- **[Resuelto 2026-09-26, propietario]** Arrastre: al instante desde el asa y con pulsación larga desde el resto de la fila (DEV-27).
+- **[Resuelto 2026-09-26, propietario]** Arrastre: al instante desde el asa y, desde cualquier punto de la fila, tras mantener pulsado 150 ms (DEV-27; enmendado ese día: antes, pulsación larga del sistema de 500 ms fuera de los botones).
 - **[Resuelto 2026-09-26, propietario]** Alternativa visible a arrastrar: tocar el asa abre "Mover" (DEV-28).
 - **[Resuelto 2026-09-26, propietario]** Textos largos: 3 líneas con "…" (DEV-29).
 - **[Resuelto 2026-09-26, propietario, con la recomendación de la revisión]** Una parada por fila para el lector, activarla edita, foco inicial en el título, el foco sigue a la tarea movida, anuncios de CA-006-17, desplazarse y resaltar tras crear (DEV-30), desplazamiento automático (DEV-31), arrastre interrumpido sin guardar (DEV-32), error al mover con "Reintentar", ayuda distinta con lector (DEV-33) y cabecera desplazable con texto grande (DEV-34).

@@ -320,6 +320,9 @@ abstract final class UnaMotion {
   /// La sombra crece al levantar una fila (.li.dragging box-shadow .15s)
   static const Duration listLift = Duration(milliseconds: 150);
 
+  /// Mantener pulsada una fila para levantarla desde cualquier punto (DEV-27); más rápido que la pulsación larga del sistema (500 ms), y deslizar deprisa sigue desplazando la lista
+  static const Duration listHoldDrag = Duration(milliseconds: 150);
+
   /// Tras soltar, las filas se colocan sin transición (.li.still)
   static const Duration listDropFreeze = Duration(milliseconds: 60);
 
