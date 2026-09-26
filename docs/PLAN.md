@@ -115,7 +115,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R10 eliminar con confirmación y arrugado | 004 | CA-004-01 a 06 |
 | R11 editar, crear y menú | 005 | CA-005-01 a 09 |
 | R12 estado vacío ("Todo hecho.") | 003, 004 | CA-003-05, CA-004-07/08 |
-| R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-03 a 07, 10 |
+| R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-04 a 16 |
 | R14 histórico | 003 | CA-003-06 |
 | R15 idioma | 010 (y P7 en todas) | CA-010-01 a 05 |
 

@@ -40,7 +40,13 @@ class TaskEditorScreen extends ConsumerStatefulWidget {
     this.mode = EditorMode.first,
     this.colorKey,
     this.task,
+    this.fromList = false,
   }) : assert(mode != EditorMode.edit || task != null);
+
+  /// Abierto desde el listado (spec 006): al guardar, la ruta devuelve la
+  /// tarea guardada y el listado se encarga del foco y del anuncio
+  /// (CA-006-13/15/17).
+  final bool fromList;
 
   final EditorMode mode;
 
@@ -53,12 +59,12 @@ class TaskEditorScreen extends ConsumerStatefulWidget {
   final Task? task;
 
   /// Abre el editor como ruta con el fundido del prototipo (`.fadein`, 0,8 s).
-  static Route<void> route(BuildContext context, TaskEditorScreen editor) {
+  static Route<Task?> route(BuildContext context, TaskEditorScreen editor) {
     final reduced = MediaQuery.disableAnimationsOf(context);
     final duration = reduced
         ? UnaMotion.reducedMotionFade
         : UnaMotion.introFade;
-    return PageRouteBuilder<void>(
+    return PageRouteBuilder<Task?>(
       transitionDuration: duration,
       reverseTransitionDuration: reduced
           ? UnaMotion.reducedMotionFade
@@ -160,7 +166,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
               .read(createTaskProvider)
               .call(_controller.text, position: position, colorKey: _colorKey),
         );
-        if (saved && position == QueuePosition.end && mounted) {
+        if (saved &&
+            position == QueuePosition.end &&
+            !widget.fromList &&
+            mounted) {
           // A la cola: sin aviso visible; solo el lector (CA-002-04).
           unawaited(
             SemanticsService.sendAnnouncement(
@@ -185,10 +194,13 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   Future<bool> _write(Future<Object?> Function() write) async {
     setState(() => _saving = true);
     try {
-      await write();
+      final saved = await write();
       if (!mounted) return true;
-      if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-      ref.read(screenFocusProvider.notifier).signal();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(saved is Task ? saved : widget.task);
+      }
+      // Desde el listado, el foco lo decide el listado (CA-006-17).
+      if (!widget.fromList) ref.read(screenFocusProvider.notifier).signal();
       return true;
     } on Object catch (e) {
       if (!mounted) return false;

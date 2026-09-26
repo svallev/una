@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../domain/entities/rank.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/task_repository.dart';
@@ -22,7 +23,11 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
           (t) =>
               t.status.equals(TaskStatus.pending.name) & t.deletedAt.isNull(),
         )
-        ..orderBy([(t) => OrderingTerm.asc(t.rank)]);
+        // El id desempata si dos claves coincidieran.
+        ..orderBy([
+          (t) => OrderingTerm.asc(t.rank),
+          (t) => OrderingTerm.asc(t.id),
+        ]);
 
   @override
   Future<Task?> currentTask() async {
@@ -45,7 +50,10 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
       ..where(
         (t) => t.status.equals(TaskStatus.pending.name) & t.deletedAt.isNull(),
       )
-      ..orderBy([(t) => OrderingTerm.desc(t.rank)])
+      ..orderBy([
+        (t) => OrderingTerm.desc(t.rank),
+        (t) => OrderingTerm.desc(t.id),
+      ])
       ..limit(1);
     return (await q.getSingleOrNull())?.rank;
   }
@@ -61,6 +69,48 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
       );
     return (await q.getSingle()).read(count) ?? 0;
   }
+
+  @override
+  Future<List<Task>> pendingTasks() async =>
+      (await _pendingQuery().get()).map(_toTask).toList();
+
+  @override
+  Stream<List<Task>> watchPending() =>
+      _pendingQuery().watch().map((rows) => rows.map(_toTask).toList());
+
+  @override
+  Future<bool> reorder(String id, String rank, DateTime at) async {
+    final rows =
+        await (db.update(db.tasks)..where(
+              (t) =>
+                  t.id.equals(id) &
+                  t.status.equals(TaskStatus.pending.name) &
+                  t.deletedAt.isNull(),
+            ))
+            .write(
+              TasksCompanion(
+                rank: Value(rank),
+                updatedAt: Value(at.millisecondsSinceEpoch),
+              ),
+            );
+    return rows > 0;
+  }
+
+  @override
+  Future<void> renumberPending(DateTime at) => db.transaction(() async {
+    final ids = [for (final r in await _pendingQuery().get()) r.id];
+    final ranks = Rank.evenlySpaced(ids.length);
+    final ms = at.millisecondsSinceEpoch;
+    await db.batch((b) {
+      for (var i = 0; i < ids.length; i++) {
+        b.update(
+          db.tasks,
+          TasksCompanion(rank: Value(ranks[i]), updatedAt: Value(ms)),
+          where: (t) => t.id.equals(ids[i]),
+        );
+      }
+    });
+  });
 
   @override
   Future<Task?> findById(String id) async {

@@ -206,6 +206,80 @@ void _contract(
       },
     );
 
+    test('CA-006-02: pendingTasks devuelve las pendientes en orden', () async {
+      await repo.insert(_task('b', 'M'));
+      await repo.insert(_task('a', 'C'));
+      await repo.insert(_task('x', 'D', status: TaskStatus.completed));
+      await repo.insert(_task('y', 'E', deletedAt: DateTime.utc(2026)));
+      await repo.insert(_task('c', 'X'));
+      expect((await repo.pendingTasks()).map((t) => t.id), ['a', 'b', 'c']);
+    });
+
+    test('watchPending emite la cola ordenada con cada cambio', () async {
+      await repo.insert(_task('a', 'C'));
+      await repo.insert(_task('b', 'M'));
+      final seen = <List<String>>[];
+      final sub = repo.watchPending().listen(
+        (l) => seen.add([for (final t in l) t.id]),
+      );
+      await pumpEventQueue();
+      await repo.reorder('b', 'A', DateTime.utc(2026, 9, 26));
+      await pumpEventQueue();
+      await repo.delete('a', DateTime.utc(2026, 9, 26));
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(seen.first, ['a', 'b']);
+      expect(seen[seen.length - 2], ['b', 'a']);
+      expect(seen.last, ['b']);
+    });
+
+    test(
+      'CA-006-10: reordenar solo cambia el rank y updatedAt de esa tarea',
+      () async {
+        await repo.insert(_task('a', 'C', color: 1));
+        await repo.insert(_task('b', 'M', color: 2));
+        await repo.insert(_task('c', 'X', color: 3));
+        final before = {for (final t in await repo.pendingTasks()) t.id: t};
+        final at = DateTime.utc(2026, 9, 26, 12);
+        expect(await repo.reorder('c', 'A', at), isTrue);
+        final after = await repo.pendingTasks();
+        expect(after.map((t) => t.id), ['c', 'a', 'b']);
+        final moved = after.first;
+        expect(moved.rank, 'A');
+        expect(moved.updatedAt, at);
+        expect(moved.colorKey, 3);
+        expect(moved.text, before['c']!.text);
+        expect(after[1], before['a']);
+        expect(after[2], before['b']);
+      },
+    );
+
+    test('reordenar una tarea que no está pendiente no hace nada', () async {
+      await repo.insert(_task('x', 'D', status: TaskStatus.completed));
+      await repo.insert(_task('y', 'E', deletedAt: DateTime.utc(2026)));
+      final at = DateTime.utc(2026, 9, 26);
+      expect(await repo.reorder('x', 'A', at), isFalse);
+      expect(await repo.reorder('y', 'A', at), isFalse);
+      expect(await repo.reorder('missing', 'A', at), isFalse);
+      expect((await repo.findById('x'))!.rank, 'D');
+    });
+
+    test('CL-006-8: renumerar conserva el orden con claves cortas y de igual longitud', () async {
+      await repo.insert(_task('a', 'V'));
+      await repo.insert(_task('b', 'V${'1' * 60}'));
+      await repo.insert(_task('c', 'W'));
+      await repo.insert(_task('x', 'A', status: TaskStatus.completed));
+      final at = DateTime.utc(2026, 9, 26, 13);
+      await repo.renumberPending(at);
+      final after = await repo.pendingTasks();
+      expect(after.map((t) => t.id), ['a', 'b', 'c']);
+      expect(after.map((t) => t.rank.length).toSet().length, 1);
+      expect(after.every((t) => t.rank.length <= Rank.maxLength), isTrue);
+      expect(after.every((t) => t.updatedAt == at), isTrue);
+      // Las que no están pendientes no se tocan.
+      expect((await repo.findById('x'))!.rank, 'A');
+    });
+
     test('ajuste de primer uso', () async {
       expect(await settings.firstRunDone(), isFalse);
       await settings.setFirstRunDone();

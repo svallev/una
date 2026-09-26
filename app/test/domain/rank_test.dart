@@ -28,6 +28,31 @@ void main() {
       expect(() => Rank.between('A0', null), throwsArgumentError);
     });
 
+    test('CL-006-8: evenlySpaced da claves ordenadas, válidas y de igual longitud', () {
+      for (final n in [0, 1, 2, 61, 62, 500, 5000]) {
+        final keys = Rank.evenlySpaced(n);
+        expect(keys, hasLength(n));
+        expect([...keys]..sort(), keys);
+        expect(keys.toSet(), hasLength(n));
+        expect(keys.map((k) => k.length).toSet().length, lessThanOrEqualTo(1));
+        for (final k in keys) {
+          expect(k.endsWith('0'), isFalse, reason: k);
+          expect(k.length, lessThan(Rank.maxLength));
+        }
+        // Queda hueco para insertar delante, entre y detrás sin alargar mucho.
+        if (n >= 2) {
+          expect(
+            Rank.between(keys[0], keys[1]).length,
+            lessThanOrEqualTo(keys[0].length),
+          );
+          expect(
+            Rank.before(keys.first).length,
+            lessThanOrEqualTo(keys.first.length),
+          );
+        }
+      }
+    });
+
     test('1000 inserciones "arriba del todo" seguidas mantienen el orden (CL-002-1)', () {
       final keys = <String>[Rank.initial()];
       for (var i = 0; i < 1000; i++) {

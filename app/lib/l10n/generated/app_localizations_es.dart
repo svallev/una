@@ -207,4 +207,76 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get deleteError => 'No hemos podido eliminar la tarea';
+
+  @override
+  String get listTitle => 'Todas las tareas';
+
+  @override
+  String get listBack => 'Volver a la tarea';
+
+  @override
+  String get listHelp =>
+      'La primera es la que tienes ahora. Arrastra otra por encima para que ocupe su lugar. Toca dos veces una tarea para editarla.';
+
+  @override
+  String get listHelpScreenReader =>
+      'La primera es la que tienes ahora. Usa las acciones de cada tarea para cambiar el orden, editarla o eliminarla.';
+
+  @override
+  String get listEdit => 'Editar tarea';
+
+  @override
+  String get listEditHint => 'editar';
+
+  @override
+  String get listNewTask => 'Nueva tarea';
+
+  @override
+  String get listMove => 'Mover tarea';
+
+  @override
+  String get listMakeCurrent => 'Hacer actual';
+
+  @override
+  String get listMoveUp => 'Mover arriba';
+
+  @override
+  String get listMoveDown => 'Mover abajo';
+
+  @override
+  String get listMoveError => 'No hemos podido mover la tarea';
+
+  @override
+  String a11yRowPosition(int position, int total, String text) {
+    return '$position de $total: $text';
+  }
+
+  @override
+  String a11yRowCurrent(int total, String text) {
+    return '1 de $total. Tarea actual: $text';
+  }
+
+  @override
+  String a11yMovedTo(int position, int total) {
+    return 'Movida a la posición $position de $total';
+  }
+
+  @override
+  String get a11yNowCurrent => 'Ahora es la tarea actual';
+
+  @override
+  String a11yAddedAt(int position, int total) {
+    return 'Tarea añadida en la posición $position de $total';
+  }
+
+  @override
+  String a11yDeletedFromList(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tarea eliminada. Quedan $count',
+      one: 'Tarea eliminada. Queda 1',
+    );
+    return '$_temp0';
+  }
 }

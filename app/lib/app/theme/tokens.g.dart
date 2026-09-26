@@ -144,6 +144,12 @@ abstract final class UnaFontSizes {
   /// {value: 13, unit: px}
   static const double caption = 13.0;
 
+  /// Texto de la primera fila del listado (tarea actual)
+  static const double listFirst = 20.0;
+
+  /// Texto de las demás filas del listado
+  static const double listItem = 16.0;
+
   /// {value: 12, unit: px}
   static const double tag = 12.0;
 
@@ -201,6 +207,9 @@ abstract final class UnaSizes {
   static const double trashHeight = 76.0;
   static const double trashStroke = 3.2;
   static const double iconS = 16.0;
+  static const double listIcon = 20.0;
+  static const double listGrip = 18.0;
+  static const double listHeader = 68.0;
   static const double linkButton = 44.0;
   static const double bodyMaxWidth = 300.0;
   static const double confettiBorder = 2.0;
@@ -305,6 +314,18 @@ abstract final class UnaMotion {
   /// {value: 900, unit: ms}
   static const Duration listFlash = Duration(milliseconds: 900);
 
+  /// Las demás filas se apartan al arrastrar (prototipo: .li transition transform .2s ease)
+  static const Duration listShift = Duration(milliseconds: 200);
+
+  /// La sombra crece al levantar una fila (.li.dragging box-shadow .15s)
+  static const Duration listLift = Duration(milliseconds: 150);
+
+  /// Mantener pulsada una fila para levantarla desde cualquier punto (DEV-27); más rápido que la pulsación larga del sistema (500 ms), y deslizar deprisa sigue desplazando la lista
+  static const Duration listHoldDrag = Duration(milliseconds: 150);
+
+  /// Tras soltar, las filas se colocan sin transición (.li.still)
+  static const Duration listDropFreeze = Duration(milliseconds: 60);
+
   /// {value: 350, unit: ms}
   static const Duration doubleTapWindow = Duration(milliseconds: 350);
 
@@ -344,4 +365,5 @@ abstract final class UnaMotion {
   static const Cubic easeOutCurve = Cubic(0.0, 0.0, 0.58, 1.0);
   static const Cubic easeCurve = Cubic(0.25, 0.1, 0.25, 1.0);
   static const double dragThreshold = 6.0;
+  static const double dragTilt = -1.5;
 }

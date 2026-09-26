@@ -28,7 +28,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 - **CA-005-03 "Todas mis tareas" con una sola tarea**
   - **Dado** que solo hay una tarea pendiente
   - **Cuando** se abre el menú
-  - **Entonces** "Todas mis tareas" aparece deshabilitado, con la descripción accesible "Solo tienes esta tarea" (DEV-11; excepción a DEV-17 decidida por el propietario). *[Abrir el listado con varias tareas: diferido a 006]*
+  - **Entonces** "Todas mis tareas" aparece deshabilitado, con la descripción accesible "Solo tienes esta tarea" (DEV-11; excepción a DEV-17 decidida por el propietario). Con varias tareas, abre el listado (CA-006-01).
 - **CA-005-04 Editar una tarea de texto**
   - **Dado** el menú de una tarea de texto
   - **Cuando** elige "Editar"
@@ -62,6 +62,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
   - **Cuando** elige "Eliminar" o "Todas mis tareas" (con varias tareas)
   - **Entonces** no pasa nada y se ven activos (DEV-18, decisión del propietario); llegan con las specs 004 y 006.
   - *Enmienda (spec 004, CA-004-01):* "Eliminar" abre la confirmación.
+  - *Enmienda (spec 006, CA-006-01):* "Todas mis tareas" abre el listado.
 - **CA-005-10 Menú bloqueado durante las animaciones**
   - **Dado** que se está completando o eliminando la tarea
   - **Cuando** toca el botón de menú
@@ -86,7 +87,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 - El menú es un diálogo modal con el título "Menú de la tarea"; foco inicial en "Editar"; el bloque "Esta tarea" es un grupo con encabezado.
 - Todas las filas miden ≥ 44 pt de alto; los iconos son decorativos y los textos, visibles.
 - Reducir movimiento: la hoja aparece sin desplazarse; solo el fondo se funde.
-- Tras guardar la edición, el foco vuelve a la tarea actual.
+- Tras guardar la edición, el foco vuelve a la tarea actual (desde el listado, a la fila editada, CA-006-13).
 
 ## 6. Textos (ES / EN)
 

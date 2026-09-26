@@ -8,6 +8,7 @@ void main() {
     'arrowLeft': UnaIcons.arrowLeft,
     'arrowUp': UnaIcons.arrowUp,
     'arrowDown': UnaIcons.arrowDown,
+    'arrowToTop': UnaIcons.arrowToTop,
     'menu': UnaIcons.menu,
     'check': UnaIcons.check,
     'close': UnaIcons.close,
