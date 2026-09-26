@@ -1,0 +1,131 @@
+# Plan técnico — Spec 007: Tareas con foto o imagen (visor a pantalla completa)
+
+- **Spec:** `specs/007-adjunto-imagen/spec.md` (estado: Aprobada, 2026-09-26)
+- **ADR aplicables:** ADR-0002 (repositorio y esquema v1), ADR-0004 (copias, R-10), ADR-0011 (eliminar sin deshacer), ADR-0010 (web de pruebas); decisiones de los spikes I-1, I-2, I-3, I-4 y H-6/H-7
+- **Estado del plan:** Borrador (pendiente de aprobación del propietario)
+- **Rama:** `feat/007-adjunto-imagen`, desde `main` (la 006 ya está fusionada)
+
+## 1. Resumen del enfoque
+
+- **Sin dependencias nuevas de Dart ni de Android.** La cámara, el selector de fotos, la limpieza de la imagen y la pantalla encendida se hacen con un **canal nativo propio en Kotlin** (`MainActivity`), con las API del sistema. Se descarta `image_picker` (ver §7).
+- **Dominio (Dart puro):**
+  - entidad `Attachment` (id, `kind = image`, `origin = camera | gallery`, `mime`, `byteSize`, `width`, `height`, rutas relativas) y `Task.attachment` (0..1);
+  - `validateTaskContent(text, hasAttachment)`: con imagen, el texto es opcional (CA-007-04);
+  - `ImageTypeSniffer`: decide el tipo **por los primeros bytes** (JPEG, PNG, WebP, GIF, HEIC/HEIF por la marca `ftyp`); rechaza SVG, AVIF, HTML, ZIP, ejecutables… (CA-007-13);
+  - puertos `AttachmentStore` (archivos de la app) e `ImageImporter` (cámara, selector y limpieza, nativo);
+  - casos de uso: `CreateTask` con adjunto (siempre arriba, R5), `EditTask` (texto y adjunto, conserva `rank` y `colorKey`; sustituye a `UpdateTaskText`), y **un único servicio de borrado** `AttachmentJanitor` (`discard(id)` y `sweep()`) que usan `DeleteCurrentTask`, `DeletePendingTask`, el editor y la importación (CA-007-16, cierra el pendiente de la 006).
+- **Datos:**
+  - **Sin cambios de esquema:** la tabla `attachments` ya existe en la v1 con todas las columnas necesarias (`originalName` y `sha256` quedan nulos).
+  - `DriftTaskRepository`: la tarea actual y la cola se leen con su adjunto (una consulta con `LEFT JOIN`, en el isolate principal, I-1); `insert` y `updateTask` guardan tarea y adjunto en **una transacción**; `delete` borra la fila del adjunto en la misma transacción que la marca de borrado; `attachmentIds()` para el barrido.
+  - `FileAttachmentStore`: los archivos van en `files/attachments/<id>/` (`getApplicationSupportDirectory`), **fuera de `app_flutter/`**, que es lo que entra en la copia en la nube (CA-007-18). Los temporales, en `cache/import/`.
+- **Nativo (Kotlin, `MainActivity` + `ImageImport.kt`):**
+  1. **Hacer foto:** `ACTION_IMAGE_CAPTURE` con `EXTRA_OUTPUT` = URI de un `FileProvider` **no exportado** sobre un único archivo de `cache/import/`, con permiso de escritura puntual. Sin permiso `CAMERA` (CA-007-02). Si no hay app: `ActivityNotFoundException` → `errNoCamera` (CL-007-1).
+  2. **Subir imagen:** `MediaStore.ACTION_PICK_IMAGES` si existe (Android 13+, o 11–12 con la extensión de SDK 2); si no, `ACTION_OPEN_DOCUMENT` con `image/*` (CA-007-03).
+  3. **Copia acotada:** lee la URI con `ContentResolver` en un hilo de fondo, contando bytes y abortando al pasar de 30 × 10⁶ (CA-007-14). Nunca abre rutas `file://` ni URIs de nuestro propio `FileProvider` o de `/data/data/<app>` (T-3). No usa el nombre del archivo.
+  4. **Limpieza (I-4):**
+     - dimensiones de la cabecera antes de reservar memoria (`ImageDecoder.OnHeaderDecodedListener` en Android 9+; `BitmapFactory` con `inJustDecodeBounds` en Android 8) → rechazo si > 64 MP;
+     - decodificación con la orientación aplicada, en **sRGB** y reducida a ≤ 24 MP (`setTargetSize` exacto en Android 9+; en Android 8, `inSampleSize` + `ExifInterface` del sistema, que puede dejarla algo por debajo de 24 MP);
+     - GIF: solo el primer fotograma; transparencias sobre blanco (CL-007-4);
+     - **Android 14+:** se quita el *gainmap* (`setGainmap(null)`) antes de codificar, porque `Bitmap.compress` lo escribiría (Ultra HDR);
+     - se codifica en JPEG con `Bitmap.compress` (sin metadatos por construcción): **versión completa** en teselas de ≤ 4096 × 4096 px (límite de textura de la GPU; una captura de 1080 × 20 000 da 5 franjas), **versión de pantalla** recortada al tamaño físico de la pantalla en vertical (I-2) y **miniatura** de 176 px de lado corto (44 dp × 4);
+     - todo en un directorio de preparación `cache/import/<id>/`; cancelable; 20 s como máximo (el límite lo pone Dart).
+  5. **Pantalla encendida:** `FLAG_KEEP_SCREEN_ON` activado o desactivado desde Dart.
+  6. Si Android mata la app con la cámara abierta, el resultado llega a una actividad nueva sin llamada pendiente: se ignora y el temporal lo borra el barrido (CL-007-7).
+- **Estado (Riverpod):**
+  - `ImageImportController` (por editor): estados `idle | preparing | ready(StagedImage) | error`, cancelación, "Preparando imagen…" solo tras 400 ms, y un único vuelo a la vez;
+  - `KeepScreenOnController`: se activa con la tarea actual con imagen o el visor en primer plano y el ajuste `keepScreenOn` (por defecto `true`, en `SettingsRepository`); un `Listener` en la raíz reinicia los 10 min con cada toque; se desactiva al cambiar de pantalla, pasar a segundo plano o a una tarea sin imagen (CA-007-12).
+- **Presentación:**
+  - `AttachSheet` (hoja "Añadir a la tarea") con `showUnaSheet` y `SheetRow` de dos líneas; "Subir archivo" y "Cargar URL" sin efecto (DEV-18).
+  - Editor: vista previa (versión de pantalla, `BoxFit.cover`) con "Quitar adjunto" de 48 dp, texto opcional, "Preparando imagen…" + "Cancelar", avisos de error, foco y anuncios de CA-007-22; guardar con imagen en modo `create` salta la hoja de posición (CA-007-05).
+  - `CurrentTaskScreen`: imagen a sangre (`Image.file` de la versión de pantalla, `gaplessPlayback`, sin animación de aparición), logotipo y menú con fondo blanco, pie (recuadro negro, 22 px, 800, 3 líneas, a 146 px del borde, escala de texto limitada a ×1,6), un único nodo semántico con papel de imagen, pista y acciones (CA-007-08, CA-007-21).
+  - `ImageViewerScreen`: ruta propia con `InteractiveViewer` controlado por un `TransformationController`:
+    - a ×1, imagen al ancho y desplazamiento solo vertical (`panAxis: vertical`); ampliada, libre;
+    - doble toque por pasos ×1 → ×2,5 → ×8 → ×1 centrado en el punto (animado; salto con reducir movimiento);
+    - teselas decodificadas con `cacheWidth` según el nivel (a ×1, al ancho de la pantalla) para no ocupar memoria de más;
+    - acciones del lector Ampliar/Reducir/Ajustar al ancho, valor "Ampliación ×2,5" y desplazamiento; atajos + / − / 0 y flechas;
+    - gira: `SystemChrome.setPreferredOrientations` con todas al abrirlo y solo `portraitUp` al cerrarlo (el manifiesto sigue en vertical; `setRequestedOrientation` lo sustituye mientras tanto) (CA-007-11);
+    - fundido de 400 ms con reducir movimiento.
+  - "Adjunto no disponible" (`MissingAttachmentCard`): si falta o no se puede decodificar la versión completa; si solo faltan las derivadas, se regeneran en segundo plano desde la completa (CA-007-19).
+  - Listado: miniatura de 44 px (decorativa) o insignia "FOTO"/"IMAGEN"; textos "Foto"/"Imagen" en filas, confirmación de eliminar y anuncios (CA-007-20/21).
+  - Completar y eliminar: la cara de la nota ya se captura como imagen (I-3); con adjunto, la cara es la imagen recortada, como en la pantalla (CL-003-4).
+- **Web de pruebas (CL-007-12):** implementación de `ImageImporter` con `<input type=file>` (con `capture` para "Hacer foto") mediante `dart:js_interop` (sin paquetes), limpieza con `createImageBitmap` + `canvas.toBlob('image/jpeg')` y `AttachmentStore` en memoria.
+- **Barrido (CA-007-16):** tras el primer fotograma (`addPostFrameCallback` + `Future.delayed`), `AttachmentJanitor.sweep()` borra los directorios de `attachments/` que no están en la BD y todo `cache/import/` salvo las importaciones en curso (registro en memoria).
+
+## 2. Cambios por capa
+
+| Capa | Archivos o módulos | Cambio |
+|---|---|---|
+| Dominio | `entities/attachment.dart`, `entities/task.dart`, `entities/image_type.dart` (sniffer), `ports/attachment_store.dart`, `ports/image_importer.dart`, `ports/task_repository.dart`, `usecases/create_task.dart`, `usecases/edit_task.dart` (sustituye a `update_task_text.dart`), `usecases/delete_current_task.dart`, `usecases/delete_pending_task.dart`, `services/attachment_janitor.dart` | Entidad, invariante texto-o-adjunto, tipos por contenido, puertos, casos de uso y servicio único de borrado |
+| Datos | `drift_task_repository.dart`, `in_memory_task_repository.dart`, `attachments/file_attachment_store.dart`, `attachments/memory_attachment_store.dart`, `import/native_image_importer.dart`, `import/web_image_importer.dart`, `platform/screen_awake.dart` | Lectura con adjunto, transacciones, archivos, canal nativo y web |
+| Estado | `features/attachments/image_import_controller.dart`, `features/attachments/keep_screen_on_controller.dart`, `app/providers.dart` | Importación, pantalla encendida, proveedores |
+| Presentación | `features/attachments/` (`attach_sheet.dart`, `attachment_preview.dart`, `image_viewer_screen.dart`, `missing_attachment_card.dart`, `task_image.dart`); `editor/task_editor_screen.dart`, `current_task/current_task_screen.dart`, `task_list/task_list_row.dart`, `delete/…`, `complete/…`, `app/una_app.dart` (barrido y `Listener`) | Hoja, editor, pantalla principal, visor, listado, animaciones |
+| Nativo | `MainActivity.kt`, `ImageImport.kt`, `ImageSanitizer.kt`, `AndroidManifest.xml` (`<provider>` no exportado), `res/xml/import_paths.xml` | Cámara, selector, copia acotada, limpieza, pantalla encendida |
+| l10n | `app_es.arb`, `app_en.arb` | Claves de la §7 de la spec |
+| Tokens | `design/tokens.json` → `tokens.g.dart` | Pie (22 px, 800, 146 px, ×1,6), miniatura 44, `viewerFade` 400 ms, `importIndicatorDelay` 400 ms, zoom (2,5 y 8) |
+| Documentos | `docs/architecture.md` §2/§4, `docs/PLAN.md` D18, ADR-0004 | 64 MP y 24 MP sin límite de lado (la spec manda); rutas de los adjuntos y copia |
+
+## 3. Modelo de datos y migraciones
+
+**Sin cambios de esquema** (`schemaVersion` sigue en 1). Se usan las columnas de `attachments` que ya existen:
+
+| Columna | Valor en la 007 |
+|---|---|
+| `kind` / `origin` | `image` / `camera` o `gallery` (decide "Foto" o "Imagen") |
+| `mime` | `image/jpeg` (lo guardado); el tipo de entrada no se guarda |
+| `relPath` | `attachments/<id>/full` (prefijo; teselas `full-<fila>-<col>.jpg`, calculadas con `width`, `height` y 4096) |
+| `displayRelPath` / `thumbRelPath` | `attachments/<id>/screen.jpg` / `attachments/<id>/thumb.jpg` |
+| `byteSize`, `width`, `height` | De la versión completa |
+| `originalName`, `sha256`, `sourceUrl`… | Nulos |
+
+- **Invariante nueva en el dominio:** texto no vacío **o** adjunto. `Task.text` ya es anulable.
+- **Copia de seguridad:** `files/` no está en `cloud-backup` (Android 12+) ni en las reglas de Android 9–11; sí en `device-transfer` (Android 12+). **[Hecho, plataforma]** En Android 9–11 no existe una regla solo para la transferencia entre dispositivos, así que ahí las imágenes tampoco se transfieren; lo anoto en ADR-0004.
+- **Restaurar una copia sin imágenes:** la fila del adjunto existe y los archivos no → "Adjunto no disponible" (H-7, CA-007-19). El barrido nunca borra filas, solo archivos sin fila.
+
+## 4. Dependencias nuevas
+
+**Ninguna** en Dart. En Android, `FileProvider` es de `androidx.core`, que ya llega de forma transitiva con el *embedding* de Flutter. **[Suposición]** Lo compruebo en T-007-05; si no llegara, la alternativa es un `ContentProvider` propio de unas 60 líneas (sin dependencia) en vez de declarar `androidx.core`.
+
+Descartados: `image_picker` (copia el archivo entero sin límite antes de devolverlo, conserva el nombre original y su recuperación tras la muerte del proceso no encaja con CL-007-7), `image` (codificar en Dart es 15 veces más lento, H-4), `photo_view` y `wakelock_plus` (lo cubren `InteractiveViewer` y una línea de Kotlin).
+
+## 5. Estrategia de tests
+
+**Ficheros de prueba:** `tools/fixtures/gen_image_fixtures.py` (Pillow, en el Mac; `sips` para el HEIC) genera y se versionan en `app/integration_test/fixtures/`: foto con EXIF/GPS/XMP/miniatura interna y las 8 orientaciones, PNG con `tEXt` y transparencia, WebP con EXIF, GIF de 5 000 fotogramas, HEIC y HEIC corrupto, JPEG con datos tras `FFD9`, JPEG Ultra HDR (si el emulador lo produce), 63 MP y 65 MP, 50 MP, captura de 1080 × 20 000, cabecera truncada, dimensiones falsas, bomba PNG, SVG con extensión `.png`, AVIF, 31 MB.
+
+| Criterio de aceptación | Tipo de test | Archivo |
+|---|---|---|
+| CA-007-13 (tipos) | Unitario del sniffer con los primeros bytes de cada formato y de los rechazados | `test/domain/image_type_test.dart` |
+| CA-007-04/06, invariante | Unitarios de `validateTaskContent`, `CreateTask` con adjunto (siempre arriba), `EditTask` (añadir, sustituir, quitar; conserva `rank` y color; sin texto ni imagen → error) | `test/domain/create_task_test.dart`, `edit_task_test.dart` |
+| CA-007-16/17 | Unitarios de `AttachmentJanitor` con almacén falso: cada camino llama a `discard`; `sweep` borra huérfanos y temporales, respeta las completadas y las importaciones en curso; fallo de borrado → barrido | `test/domain/attachment_janitor_test.dart`, `delete_*_test.dart` |
+| Datos | Contrato del repositorio (memoria y drift): tarea con adjunto en la actual y en la cola, transacción de alta y de edición, `delete` borra la fila del adjunto, `attachmentIds` | `test/data/repository_contract_test.dart` |
+| Datos | `FileAttachmentStore` en un directorio temporal: `commit` atómico (rename), `discard`, `sweep`, estado de los archivos (ok, derivadas perdidas, perdido) | `test/data/file_attachment_store_test.dart` |
+| CA-007-18 | Test que lee las reglas XML de copia: `files/` fuera de la nube en 9–11 y 12+, dentro de `device-transfer` | `test/app/backup_rules_test.dart` |
+| CA-007-01/04/15/22 | Widget con `ImageImporter` falso: hoja y sus filas, vista previa, texto opcional, sustituir, quitar, "Preparando imagen…" a los 400 ms, cancelar, errores, foco y anuncios | `test/features/attachments/attach_sheet_test.dart`, `editor_image_test.dart` |
+| CA-007-05/06, CL-007-8 | Widget de flujo: crear con imagen desde la principal y desde el listado (fila 1, resaltada, foco); editar sin mover; doble toque en "Continuar" | `test/features/attachments/image_flow_test.dart` |
+| CA-007-08/21 | Widget: imagen a sangre, logotipo y menú con fondo, pie de 3 líneas, lectura y acciones | `test/features/current_task/current_task_image_test.dart` |
+| CA-007-09/10/11/23 | Widget del visor: ancho completo, desplazamiento vertical, doble toque por pasos y centrado, pellizco, acciones del lector y teclas, orientaciones pedidas al abrir y cerrar, reducir movimiento | `test/features/attachments/image_viewer_test.dart` |
+| CA-007-12 | Unitario de `KeepScreenOnController` con reloj falso (10 min, toques, cambio de pantalla, segundo plano) | `test/features/attachments/keep_screen_on_test.dart` |
+| CA-007-19 | Widget: falta la completa, está corrupta, faltan las derivadas (regenera sin avisar); acciones de la tarjeta | `test/features/attachments/missing_attachment_test.dart` |
+| CA-007-20, CL-007-9 | Widget del listado (miniatura, insignia, textos) y de completar/eliminar con imagen | `test/features/task_list/…`, `test/features/delete/…`, `test/features/complete/…` |
+| CA-007-23 | Widget con texto al 200 % en 360 dp y `meetsGuideline` (tamaño, etiquetas, contraste) | `test/features/attachments/image_a11y_test.dart` |
+| Aspecto | *Goldens* frente al prototipo: hoja "Añadir", editor con imagen, tarea actual con imagen y pie, fila con miniatura, visor, "Adjunto no disponible" (es/en, ×1 y ×2) | `test/goldens/image_golden_test.dart` |
+| CA-007-02/03/07/13/14, CL-007-2/3/4/5/6/10 | **Integración en el emulador** con los ficheros de prueba, llamando al canal nativo: sin metadatos (se buscan `Exif`, `http://ns.adobe.com/xap`, `tEXt`, `GPS`, datos tras `FFD9` y bytes del original), orientación, sRGB, 24 MP, teselas, límites, malformados sin cierre, nada fuera de `cache/import/`, 20 s | `integration_test/image_import_test.dart` |
+| CA-007-03 (permisos) | El CI ya ejecuta `tools/check-android-permissions.sh release`; se añade que el `<provider>` no esté exportado | `tools/check-android-permissions.sh` |
+| CA-007-08 | Arranque en frío con imagen en el Xiaomi (*profile*), p50 < 1 s | `integration_test/startup_perf_test.dart`, `docs/perf/baseline.md` |
+| Integración | Flujo completo: hacer foto (cámara del emulador), ver, visor, girar, completar; y restauración sin archivos | `integration_test/image_flow_test.dart` |
+
+## 6. Seguridad, accesibilidad y rendimiento
+
+- **Seguridad (T-3, T-7, T-8, T-13, T-2):** tipo por contenido; límites antes de decodificar; copia contada; todo en `cache/import/` y movido de forma atómica; sin nombres de archivo; `FileProvider` no exportado con permiso puntual solo sobre el archivo de la cámara; ningún permiso nuevo; sin registros con URIs, rutas ni metadatos en *release* (CL-007-10). Revisión de `security-reviewer` antes de la PR (toca importación, almacenamiento y nativo).
+- **Accesibilidad:** CA-007-21 a 23. Como en la 004 y la 006, el foco de TalkBack se prueba **en el emulador y en el Xiaomi**, no solo con tests: hoja, vuelta de la cámara, visor (acciones de zoom y desplazamiento) y cierre.
+- **Rendimiento:** la pantalla principal carga solo la versión de pantalla (I-2), ya recortada; la consulta de arranque añade un `LEFT JOIN` indexado; el barrido va después del primer fotograma. Medir en el Xiaomi: arranque en frío con imagen (CA-007-08), memoria del visor con 24 MP (< 250 MB) y fluidez del zoom.
+
+## 7. Riesgos y alternativas
+
+- **Canal nativo propio frente a `image_picker`.** Unas 400–500 líneas de Kotlin, pero con control total de CA-007-14 (copia contada, URIs rechazadas), CL-007-7 y sin dependencias. El spike S5 ya validó las mismas API. Si se complica, `image_picker` para elegir + nuestra limpieza, justificándolo según threat-model §5.
+- **Límite de textura de la GPU.** Una sola imagen de más de ~8 000–16 000 px de lado no se puede dibujar. Por eso la versión completa se guarda en teselas de 4096 px. Alternativa, si las teselas dieran problemas de costuras al ampliar: una sola imagen ≤ 8 192 px de lado para el visor (perdería detalle solo en capturas extremas).
+- **Memoria al decodificar 64 MP.** No se decodifica a tamaño completo: se pide directamente el tamaño final (≤ 24 MP ≈ 96 MB). En Android 8, `inSampleSize` a potencias de 2.
+- **Ultra HDR, fotos con movimiento y datos tras el final:** los elimina la recodificación, salvo el *gainmap*, que se quita a mano en Android 14+. Lo verifica el test de integración.
+- **Orientación sólo en el visor.** `setPreferredOrientations` en Android llama a `setRequestedOrientation` y prevalece sobre el manifiesto mientras el visor está abierto. En pantallas grandes (Android 16, ≥ 600 dp) el sistema ignora las restricciones de orientación: no es nuestro caso de referencia.
+- **Foco de TalkBack al volver de la cámara.** La actividad de la cámara es otra app: al volver, el foco se pide cuando la ruta vuelve a estar en primer plano (lección de la 004). Se comprueba en el emulador.
+- **Web de pruebas.** El `input` del navegador puede no disparar `change` si se cancela; se trata como cancelación al recuperar el foco de la ventana. Es solo para la vista previa (ADR-0010).
+- **Documentos que cambian:** D18 y `architecture.md` dicen 50 MP y "original ≤ 4096 px"; la spec aprobada dice 64 MP y 24 MP sin límite de lado. Se actualizan los documentos (la spec manda).

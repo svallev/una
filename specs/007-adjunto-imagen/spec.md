@@ -1,6 +1,6 @@
 # Spec 007: Tareas con foto o imagen (visor a pantalla completa)
 
-- **Estado:** En revisión. Reescrita el 2026-09-26 con las decisiones del propietario tras la revisión (spec-reviewer, a11y-reviewer y security-reviewer); pendiente de su aprobación
+- **Estado:** Aprobada (propietario, 2026-09-26). Reescrita ese día con sus decisiones tras la revisión (spec-reviewer, a11y-reviewer y security-reviewer)
 - **Reglas de producto:** R3 (foto con la cámara, imagen de la galería), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido), **propuesta de valor 2**
 - **Pantallas del prototipo:** 9 "Añadir (+)", 3 "Nueva tarea" (con adjunto), 1 "Tarea actual" (con imagen), 5 "Todas las tareas" (miniatura). El visor a pantalla completa y los errores no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
 - **Decisiones y ADR:** D5, D8, D10 (enmendada: giro solo en el visor), D17, D18, ADR-0002, ADR-0004 (y R-10), ADR-0011, DEV-01, DEV-02, DEV-18, DEV-35 a DEV-37; modelo de amenazas T-2, T-3, T-7, T-8, T-13, T-15
