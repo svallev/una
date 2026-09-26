@@ -148,25 +148,23 @@ class HomeRouter extends ConsumerWidget {
       explicitChildNodes: true,
       child: child,
     );
-    // Mientras se arruga, la de detrás sustituye a la eliminada sin fundido:
-    // la pantalla anterior se vería detrás de la bola (CA-004-04).
-    final screens = crumpling
-        ? screen
-        : AnimatedSwitcher(
-            duration: reduced
-                ? UnaMotion.reducedMotionFade
-                : UnaMotion.introFade,
-            // Cada pantalla es una "ruta" para el lector (se anuncia el
-            // cambio) y la que sale no se lee durante el fundido.
-            layoutBuilder: (current, previous) => Stack(
-              alignment: Alignment.center,
-              children: [
-                for (final p in previous) ExcludeSemantics(child: p),
-                ?current,
-              ],
-            ),
-            child: screen,
-          );
+    final screens = AnimatedSwitcher(
+      // Al eliminar, la de detrás sustituye a la eliminada sin fundido (se
+      // vería detrás de la bola): se monta de nuevo solo en ese momento
+      // (CA-004-04).
+      key: ValueKey('screens-${deletion.generation}'),
+      duration: reduced ? UnaMotion.reducedMotionFade : UnaMotion.introFade,
+      // Cada pantalla es una "ruta" para el lector (se anuncia el cambio) y la
+      // que sale no se lee durante el fundido.
+      layoutBuilder: (current, previous) => Stack(
+        alignment: Alignment.center,
+        children: [
+          for (final p in previous) ExcludeSemantics(child: p),
+          ?current,
+        ],
+      ),
+      child: screen,
+    );
     final celebrating =
         completion.phase == CompletionPhase.celebrating ||
         completion.phase == CompletionPhase.fading;

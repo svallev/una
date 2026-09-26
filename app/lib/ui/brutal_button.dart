@@ -85,19 +85,41 @@ class _BrutalButtonState extends State<BrutalButton> {
   bool _down = false;
   bool _focused = false;
 
+  /// Nodo accesible del botón: el aviso de foco del lector sale de él.
+  final _semanticsKey = GlobalKey();
+
   void _activate() => widget.onPressed?.call();
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.autofocus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        context.findRenderObject()?.sendSemanticsEvent(
-          const FocusSemanticEvent(),
-        );
-      });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.autofocus && !_focusAnnounced) {
+      _focusAnnounced = true;
+      _announceFocusWhenShown();
     }
+  }
+
+  bool _focusAnnounced = false;
+
+  /// Lleva el foco del lector al botón cuando su ruta (p. ej., una hoja que
+  /// sube) ha terminado de entrar: antes, su nodo aún no está en el árbol
+  /// accesible.
+  void _announceFocusWhenShown() {
+    void send() => WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _semanticsKey.currentContext?.findRenderObject()?.sendSemanticsEvent(
+        const FocusSemanticEvent(),
+      );
+    });
+    final entrance = ModalRoute.of(context)?.animation;
+    if (entrance == null || entrance.isCompleted) return send();
+    void onStatus(AnimationStatus status) {
+      if (status != AnimationStatus.completed) return;
+      entrance.removeStatusListener(onStatus);
+      send();
+    }
+
+    entrance.addStatusListener(onStatus);
   }
 
   @override
@@ -165,6 +187,8 @@ class _BrutalButtonState extends State<BrutalButton> {
     final sink = widget.ghost ? 1.0 : 4.0;
     final offset = pressed ? Offset(sink, sink) : Offset.zero;
     return Semantics(
+      key: _semanticsKey,
+      container: true,
       button: true,
       enabled: enabled,
       label: widget.label,

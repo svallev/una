@@ -1,4 +1,5 @@
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/menu/menu_sheet.dart';
 import 'package:app/ui/brutal_button.dart';
@@ -188,6 +189,91 @@ void main() {
         await tester.tap(_button('Cancelar'));
         await tester.pumpAndSettle();
         expect(find.byType(DeleteConfirmSheet), findsNothing);
+      },
+    );
+
+    for (final reduced in [false, true]) {
+      testWidgets(
+        'CA-004-10: el aviso de foco del lector sale del botón "Cancelar"${reduced ? ' (reducir movimiento)' : ''}',
+        (tester) async {
+          final focusEvents = <int>[];
+          tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                (message) async {
+                  final map = message! as Map<Object?, Object?>;
+                  if (map['type'] == 'focus') {
+                    focusEvents.add(map['nodeId']! as int);
+                  }
+                  return null;
+                },
+              );
+          addTearDown(
+            () => tester.binding.defaultBinaryMessenger
+                .setMockDecodedMessageHandler<Object?>(
+                  SystemChannels.accessibility,
+                  null,
+                ),
+          );
+          final handle = tester.ensureSemantics();
+          await pumpUnaApp(
+            tester,
+            repo: InMemoryTaskRepository(),
+            tasks: ['Primera'],
+            screenReader: true,
+            reduced: reduced,
+          );
+          await _openConfirm(tester);
+          final cancel = tester.getSemantics(
+            find.descendant(
+              of: find.byType(DeleteConfirmSheet),
+              matching: find.bySemanticsLabel('Cancelar'),
+            ),
+          );
+          expect(focusEvents, contains(cancel.id));
+          handle.dispose();
+        },
+      );
+    }
+
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'P6: la hoja cumple contraste y objetivos táctiles (texto ×$scale)',
+        (tester) async {
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          final handle = tester.ensureSemantics();
+          await pumpUnaApp(
+            tester,
+            repo: InMemoryTaskRepository(),
+            tasks: ['Llamar a Marta'],
+          );
+          await _openConfirm(tester);
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          handle.dispose();
+        },
+      );
+    }
+
+    testWidgets(
+      'CA-004-02: al cancelar con teclado, el foco vuelve a la tarea',
+      (tester) async {
+        await pumpUnaApp(
+          tester,
+          repo: InMemoryTaskRepository(),
+          tasks: ['Primera'],
+        );
+        await _openConfirm(tester);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        final focused = FocusManager.instance.primaryFocus!.context!;
+        expect(
+          focused.findAncestorWidgetOfExactType<CurrentTaskScreen>(),
+          isNotNull,
+        );
+        expect(focused.findAncestorWidgetOfExactType<BrutalButton>(), isNull);
       },
     );
   });

@@ -96,45 +96,49 @@ class _CrumpleOverlayState extends State<CrumpleOverlay>
   @override
   Widget build(BuildContext context) {
     final t = _t!;
+    // Ni toques, ni lector, ni teclado: los controles de encima solo se ven
+    // (CA-004-05).
     return IgnorePointer(
-      child: ExcludeSemantics(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (_reduced)
-              FadeTransition(
-                // `fadeOut .6s ease`.
-                opacity: ReverseAnimation(
-                  CurvedAnimation(parent: t, curve: Curves.ease),
+      child: ExcludeFocus(
+        child: ExcludeSemantics(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (_reduced)
+                FadeTransition(
+                  // `fadeOut .6s ease`.
+                  opacity: ReverseAnimation(
+                    CurvedAnimation(parent: t, curve: Curves.ease),
+                  ),
+                  child: widget.face,
+                )
+              else
+                AnimatedBuilder(
+                  animation: t,
+                  builder: (context, face) =>
+                      _CrumplingNote(frame: CrumpleFrame(t.value), face: face!),
+                  child: RepaintBoundary(child: widget.face),
                 ),
-                child: widget.face,
-              )
-            else
-              AnimatedBuilder(
-                animation: t,
-                builder: (context, face) =>
-                    _CrumplingNote(frame: CrumpleFrame(t.value), face: face!),
-                child: RepaintBoundary(child: widget.face),
-              ),
-            widget.chrome(_ctaHide),
-            if (!_reduced)
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    // Prototipo: `bottom: 30px`.
-                    padding: const EdgeInsets.only(
-                      bottom: UnaSpace.xl + UnaSpace.xxs,
-                    ),
-                    child: AnimatedBuilder(
-                      animation: t,
-                      builder: (_, _) =>
-                          TrashCan(pose: CrumpleFrame(t.value).trash),
+              widget.chrome(_ctaHide),
+              if (!_reduced)
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      // Prototipo: `bottom: 30px`.
+                      padding: const EdgeInsets.only(
+                        bottom: UnaSpace.xl + UnaSpace.xxs,
+                      ),
+                      child: AnimatedBuilder(
+                        animation: t,
+                        builder: (_, _) =>
+                            TrashCan(pose: CrumpleFrame(t.value).trash),
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

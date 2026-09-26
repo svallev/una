@@ -14,8 +14,10 @@ import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../complete/complete_task_action.dart';
+import '../complete/completion_controller.dart';
 import '../complete/hold_to_complete_button.dart';
 import '../delete/delete_task_action.dart';
+import '../delete/deletion_controller.dart';
 import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
 
@@ -80,7 +82,13 @@ class CurrentTaskScreen extends ConsumerWidget {
         builder: (context, child) => Opacity(
           opacity: 1 - hide.value,
           child: Transform.translate(
-            offset: Offset(0, UnaSpace.m * hide.value),
+            // Con "reducir movimiento", solo se desvanece (P6).
+            offset: Offset(
+              0,
+              MediaQuery.disableAnimationsOf(context)
+                  ? 0
+                  : UnaSpace.m * hide.value,
+            ),
             child: child,
           ),
         ),
@@ -195,6 +203,10 @@ class CurrentTaskScreen extends ConsumerWidget {
 
 /// Abre el menú (spec 005) y lo que se elija: editar, eliminar o crear.
 Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
+  // Nunca durante completar o eliminar (CA-003-09, CA-004-05).
+  if (ref.read(completionProvider).busy || ref.read(deletionProvider).busy) {
+    return;
+  }
   final task = ref.read(currentTaskProvider);
   if (task == null) return;
   final pending = await ref.read(taskRepositoryProvider).countPending();

@@ -85,8 +85,6 @@ class AppDatabase extends _$AppDatabase {
     onCreate: (m) => m.createAll(),
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
-      // Lo eliminado no se queda en páginas libres del archivo (ADR-0011, P4).
-      await customStatement('PRAGMA secure_delete = ON');
     },
   );
 }

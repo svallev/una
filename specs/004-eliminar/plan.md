@@ -2,7 +2,7 @@
 
 - **Spec:** `specs/004-eliminar/spec.md` (estado: Aprobada, 2026-09-26)
 - **ADR aplicables:** ADR-0011 (eliminar sin deshacer), ADR-0002 (repositorio, esquema v1)
-- **Estado del plan:** Aprobado (propietario, 2026-09-26): primero sin textura de ruido; detrás de la última, la pantalla "Todo hecho." completa
+- **Estado del plan:** Implementado (2026-09-26) · Aprobado (propietario, 2026-09-26): primero sin textura de ruido; detrás de la última, la pantalla "Todo hecho." completa
 - **Rama:** `feat/004-eliminar`, sobre `feat/002-005-crear-menu-editar` (PR #8), porque el menú de la 005 es el punto de entrada. Cuando se fusione la PR #8, se rebasa sobre `main`.
 
 ## 1. Resumen del enfoque
@@ -63,7 +63,13 @@ Ninguna.
 
 ## 6. Seguridad, accesibilidad y rendimiento
 
-- **Privacidad (P4):** el contenido se borra en la misma transacción que marca la eliminación, con `secure_delete`. No hay registros ni analítica.
+- **Privacidad (P4):** el contenido se borra en la misma transacción que marca la eliminación, con `secure_delete` activado al abrir **cada conexión** (también cubre lo que borren las migraciones futuras). Un test sobre archivo comprueba que el texto no queda ni en la BD ni en su journal. No hay registros ni analítica.
+- **Riesgos residuales aceptados (revisión de seguridad, 2026-09-26):**
+  - **[Hecho]** El journal de SQLite (modo DELETE) se desvincula sin sobrescribirse: el texto puede quedar en bloques libres del sistema de archivos, recuperable solo con root y análisis forense (FBE + TRIM). No usar `journal_mode=PERSIST`; si se pasa a WAL, añadir `wal_checkpoint(TRUNCATE)` tras eliminar.
+  - **[Hecho]** Copias de seguridad (ADR-0004): la última copia conserva el texto hasta la siguiente (≈ 24 h), y restaurar una copia anterior a la eliminación hace que la tarea **vuelva como pendiente**. Se explicará en "Acerca de" (spec 010) y figura en el modelo de amenazas (T-7).
+  - **[Hecho]** Las páginas liberadas antes de la 004 (ediciones de la 005) no se limpian; solo afecta al móvil del propietario antes del lanzamiento.
+  - **[Hecho]** Si la app pasa a segundo plano durante el arrugado, la captura de Recientes puede mostrar la nota eliminada hasta que se vuelve a abrir (la app no usa `FLAG_SECURE`).
+  - **[Pendiente, bloques 1–3]** Decidir qué campos se vacían en la marca de borrado cuando existan `dueDate`, `parentId`, `source` y `externalId` con contenido.
 - **Accesibilidad:** confirmación modal con foco en "Cancelar", acción personalizada, un único anuncio, foco al terminar, reducir movimiento, texto al 200 %.
 - **Rendimiento:** la animación usa recorte y transformaciones (sin capas fuera de pantalla salvo la sombra) y se medirá en el Xiaomi con el perfilador (objetivo: sin fotogramas perdidos a 120 Hz, como S2). `secure_delete` añade escritura solo al borrar. El arranque no cambia.
 

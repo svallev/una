@@ -190,6 +190,8 @@ void main() {
         screenReader: true,
       );
       await _delete(tester);
+      // Cuando la hoja ya ha bajado.
+      await tester.pump(UnaMotion.sheetOut);
       expect(announcements, ['Tarea eliminada. Siguiente: Segunda']);
       await _crumple(tester);
       final focused = FocusManager.instance.primaryFocus!.context!;
@@ -214,6 +216,7 @@ void main() {
         screenReader: true,
       );
       await _delete(tester);
+      await tester.pump(UnaMotion.sheetOut);
       expect(announcements, ['Tarea eliminada. Todo hecho.']);
       await _crumple(tester);
       await tester.pumpAndSettle();
@@ -323,6 +326,66 @@ void main() {
       }
       await tester.pumpAndSettle();
       expect(find.byType(DeleteConfirmSheet), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'CA-004-05: durante el arrugado el teclado no llega al menú ni completa la siguiente',
+    (tester) async {
+      final repo = await pumpUnaApp(
+        tester,
+        repo: _Repo(),
+        tasks: ['Primera', 'Segunda', 'Tercera'],
+      );
+      await _delete(tester);
+      await tester.pump(UnaMotion.crumple * 0.3);
+      for (var i = 0; i < 4; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      }
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+      await tester.pump(UnaMotion.holdToComplete);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+      await tester.pump(_frame);
+      expect(find.byType(MenuSheet), findsNothing);
+      await _crumple(tester);
+      expect(await repo.countPending(), 2);
+      expect(find.text('Segunda'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'CA-004-11: tras eliminar la última, el aviso de foco del lector sale del título "Todo hecho."',
+    (tester) async {
+      final focusEvents = <int>[];
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(SystemChannels.accessibility, (
+            message,
+          ) async {
+            final map = message! as Map<Object?, Object?>;
+            if (map['type'] == 'focus') focusEvents.add(map['nodeId']! as int);
+            return null;
+          });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+      final handle = tester.ensureSemantics();
+      await pumpUnaApp(
+        tester,
+        repo: _Repo(),
+        tasks: ['Única'],
+        screenReader: true,
+      );
+      await _delete(tester);
+      focusEvents.clear();
+      await _crumple(tester);
+      final title = tester.getSemantics(find.bySemanticsLabel('Todo hecho.'));
+      expect(focusEvents, contains(title.id));
+      handle.dispose();
     },
   );
 }

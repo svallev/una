@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:app/data/db/app_database.dart';
@@ -264,6 +265,42 @@ void main() {
       final row = await db.customSelect('PRAGMA secure_delete').getSingle();
       expect(row.data.values.single, 1);
       await db.close();
+    },
+  );
+
+  test(
+    'ADR-0011 / CA-004-09: el texto eliminado no queda en el archivo de la BD',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('una_secure_delete');
+      final file = File('${dir.path}/una.sqlite');
+      // Uno corto y otro de más de 4 KB (páginas de desbordamiento).
+      const short = 'MARCADOR-CORTO-7Q2X';
+      final long = 'MARCADOR-LARGO-9Z4K ' * 300;
+      var db = openAppDatabaseFile(file);
+      var repo = DriftTaskRepository(db);
+      final at = DateTime.utc(2026, 9, 26);
+      await repo.insert(_task('a', 'C').withText(short, at));
+      await repo.insert(_task('b', 'M').withText(long, at));
+      await repo.insert(_task('c', 'X'));
+      await db.close();
+
+      db = openAppDatabaseFile(file);
+      repo = DriftTaskRepository(db);
+      expect(await repo.delete('a', at), isTrue);
+      expect(await repo.delete('b', at), isTrue);
+      await db.close();
+
+      final bytes = [
+        for (final suffix in ['', '-journal', '-wal'])
+          if (File('${file.path}$suffix').existsSync())
+            ...File('${file.path}$suffix').readAsBytesSync(),
+      ];
+      final content = latin1.decode(bytes);
+      expect(content.contains('MARCADOR-CORTO'), isFalse);
+      expect(content.contains('MARCADOR-LARGO'), isFalse);
+      // La que no se eliminó sigue ahí.
+      expect(content.contains('Tarea c'), isTrue);
+      await dir.delete(recursive: true);
     },
   );
 

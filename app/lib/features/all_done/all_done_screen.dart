@@ -100,6 +100,9 @@ class _AllDoneScreenState extends State<AllDoneScreen>
                             );
                             return Opacity(
                               opacity: v,
+                              // El foco del lector puede llegar al título
+                              // mientras entra (CA-003-07, CA-004-11).
+                              alwaysIncludeSemantics: true,
                               child: Transform.translate(
                                 offset: Offset(
                                   0,
