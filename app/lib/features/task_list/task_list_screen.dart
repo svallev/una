@@ -758,7 +758,9 @@ class _Header extends StatelessWidget {
             0,
           ),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 68 - UnaSpace.sm),
+            constraints: const BoxConstraints(
+              minHeight: UnaSizes.listHeader - UnaSpace.sm,
+            ),
             child: Row(
               children: [
                 Semantics(

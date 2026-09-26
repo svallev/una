@@ -207,6 +207,9 @@ abstract final class UnaSizes {
   static const double trashHeight = 76.0;
   static const double trashStroke = 3.2;
   static const double iconS = 16.0;
+  static const double listIcon = 20.0;
+  static const double listGrip = 18.0;
+  static const double listHeader = 68.0;
   static const double linkButton = 44.0;
   static const double bodyMaxWidth = 300.0;
   static const double confettiBorder = 2.0;

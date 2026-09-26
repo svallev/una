@@ -147,12 +147,12 @@ class TaskListRow extends StatelessWidget {
           const SizedBox(width: _gap),
           _RowButton(
             onPressed: onEdit,
-            child: const UnaIcon(UnaIcons.edit, size: _iconSize),
+            child: const UnaIcon(UnaIcons.edit, size: UnaSizes.listIcon),
           ),
           const SizedBox(width: _gap),
           _RowButton(
             onPressed: onDelete,
-            child: const UnaIcon(UnaIcons.trash, size: _iconSize),
+            child: const UnaIcon(UnaIcons.trash, size: UnaSizes.listIcon),
           ),
         ],
       ),
@@ -200,8 +200,6 @@ class TaskListRow extends StatelessWidget {
       child: body,
     );
   }
-
-  static const _iconSize = 20.0;
 }
 
 /// Botón cuadrado de la fila (asa, Editar, Eliminar): 48 dp, transparente, con
@@ -281,7 +279,7 @@ class _Grip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox.square(
-    dimension: 18,
+    dimension: UnaSizes.listGrip,
     child: CustomPaint(painter: _GripPainter()),
   );
 }
