@@ -128,7 +128,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
 | Clave | ES | EN | Nota |
 |---|---|---|---|
 | `deleteTitle` | ¿Eliminar esta tarea? | Delete this task? | |
-| `deleteBody` | “{label}” desaparecerá sin marcarse como hecha. | "{label}" will disappear without being marked as done. | Comillas “” del prototipo |
+| `deleteBody` | “{label}” desaparecerá sin marcarse como hecha. | “{label}” will disappear without being marked as done. | Comillas “” del prototipo |
 | `deleteConfirm` | Eliminar | Delete | Clave propia (contexto distinto de `menuDelete`) |
 | `deleteA11yAction` | Eliminar tarea | Delete task | La reutiliza el listado (006) |
 | `a11yDeletedNext` | Tarea eliminada. Siguiente: {text} | Task deleted. Next: {text} | |

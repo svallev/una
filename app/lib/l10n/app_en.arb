@@ -48,5 +48,12 @@
   "menuNewTask": "New task",
   "menuSettings": "Settings and profile",
   "menuClose": "Close menu",
-  "menuAllTasksCount": "{count, plural, =1{1 task} other{{count} tasks}}"
+  "menuAllTasksCount": "{count, plural, =1{1 task} other{{count} tasks}}",
+  "deleteTitle": "Delete this task?",
+  "deleteBody": "“{label}” will disappear without being marked as done.",
+  "deleteConfirm": "Delete",
+  "deleteA11yAction": "Delete task",
+  "a11yDeletedNext": "Task deleted. Next: {text}",
+  "a11yDeletedAllDone": "Task deleted. All done.",
+  "deleteError": "We couldn't delete the task"
 }
