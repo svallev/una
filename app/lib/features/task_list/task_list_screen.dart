@@ -963,11 +963,14 @@ class _RowSlotState extends State<_RowSlot>
       builder: (context, _) => widget.builder(_shadowAt(_flash.value)),
     );
     row = _MeasureHeight(onHeight: widget.onSize, child: row);
-    if (widget.lifted) {
-      // Invisible en su sitio mientras se arrastra; el lector la sigue
-      // teniendo (TalkBack también arrastra con doble toque mantenido).
-      row = Opacity(opacity: 0, alwaysIncludeSemantics: true, child: row);
-    }
+    // Invisible en su sitio mientras se arrastra; el lector la sigue teniendo
+    // (TalkBack también arrastra con doble toque mantenido). Siempre con el
+    // mismo envoltorio: si cambiara, se perdería el gesto en curso.
+    row = Opacity(
+      opacity: widget.lifted ? 0 : 1,
+      alwaysIncludeSemantics: true,
+      child: row,
+    );
     return Focus(focusNode: _focus, child: row);
   }
 }

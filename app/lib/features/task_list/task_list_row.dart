@@ -83,7 +83,16 @@ class TaskListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drag = this.drag;
+    final given = this.drag;
+    // El arrastre siempre se mide con la fila entera, también desde el asa.
+    final drag = given == null
+        ? null
+        : RowDragCallbacks(
+            onStart: (_, global) => given.onStart(context, global),
+            onUpdate: given.onUpdate,
+            onEnd: given.onEnd,
+            onCancel: given.onCancel,
+          );
     final text = Text(
       task.text ?? '',
       maxLines: 3,
