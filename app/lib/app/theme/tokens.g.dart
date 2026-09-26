@@ -144,6 +144,12 @@ abstract final class UnaFontSizes {
   /// {value: 13, unit: px}
   static const double caption = 13.0;
 
+  /// Texto de la primera fila del listado (tarea actual)
+  static const double listFirst = 20.0;
+
+  /// Texto de las demás filas del listado
+  static const double listItem = 16.0;
+
   /// {value: 12, unit: px}
   static const double tag = 12.0;
 
