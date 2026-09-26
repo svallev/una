@@ -48,7 +48,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-14 | **Hecha** | `0d51598` |
 | T-007-15 | **Hecha** | `ea613b3` |
 | T-007-16 | **Hecha** (DEV-40, sin "Sustituir"); **Kotlin sin compilar** (el entorno en la nube no descarga el SDK de Android) | `1e00ed9`, `90c2a8e` |
-| T-007-17 | **Hecha** | (este commit) |
+| T-007-17 | **Hecha** | `21633c9` |
 | T-007-18 a 25 | Pendientes | — |
 
 Las decisiones y cambios respecto al plan están en `plan.md` §8.
