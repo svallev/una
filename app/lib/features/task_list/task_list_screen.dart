@@ -98,6 +98,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
   _Drag? _drag;
 
+  /// Posición del dedo durante el arrastre: mueve solo la fila levantada, sin
+  /// reconstruir la lista en cada movimiento.
+  final _pointerY = ValueNotifier<double>(0);
+
   /// Tras soltar, las filas se colocan sin transición (`.li.still`).
   bool _freeze = false;
   Timer? _freezeTimer;
@@ -128,6 +132,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     _tapTimer?.cancel();
     _scroll.dispose();
     _newTaskFocus.dispose();
+    _pointerY.dispose();
     super.dispose();
   }
 
@@ -284,6 +289,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     }
     final origin = row.localToGlobal(Offset.zero, ancestor: area);
     final scrollable = Scrollable.of(rowContext);
+    _pointerY.value = global.dy;
     setState(() {
       _drag = _Drag(
         id: task.id,
@@ -311,6 +317,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     final d = _drag;
     if (d == null) return;
     d.pointerY = global.dy;
+    _pointerY.value = global.dy;
     _retarget();
     d.autoScroller.startAutoScrollIfNecessary(_liftedGlobalRect());
   }
@@ -332,7 +339,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     for (var i = 0; i < d.tops.length; i++) {
       if (i != d.from && d.tops[i] + d.heights[i] / 2 < center) to++;
     }
-    setState(() => d.to = to);
+    // Las demás filas solo se recolocan cuando cambia el destino.
+    if (to != d.to) setState(() => d.to = to);
   }
 
   double get _liftedTop {
@@ -630,24 +638,35 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       children: [
         Positioned.fill(child: list),
         if (drag != null)
-          Positioned(
-            left: drag.rowLeft,
-            top: _liftedTop,
-            width: drag.rowWidth,
-            child: IgnorePointer(
-              child: ExcludeSemantics(
-                child: _LiftShadow(
-                  reduced: reduced,
-                  builder: (shadow) => TaskListRow(
-                    task: tasks.firstWhere(
-                      (t) => t.id == drag.id,
-                      orElse: () => tasks[drag.from],
-                    ),
-                    first: false,
-                    palette: UnaPalettes.classic,
-                    lifted: true,
+          Positioned.fill(
+            child: ValueListenableBuilder<double>(
+              valueListenable: _pointerY,
+              builder: (context, pointerY, child) => Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: drag.rowLeft,
+                    top: drag.rowTop + pointerY - drag.downY,
+                    width: drag.rowWidth,
+                    child: child!,
+                  ),
+                ],
+              ),
+              child: IgnorePointer(
+                child: ExcludeSemantics(
+                  child: _LiftShadow(
                     reduced: reduced,
-                    shadow: shadow,
+                    builder: (shadow) => TaskListRow(
+                      task: tasks.firstWhere(
+                        (t) => t.id == drag.id,
+                        orElse: () => tasks[drag.from],
+                      ),
+                      first: false,
+                      palette: UnaPalettes.classic,
+                      lifted: true,
+                      reduced: reduced,
+                      shadow: shadow,
+                    ),
                   ),
                 ),
               ),
