@@ -32,6 +32,24 @@ void main() {
     });
   });
 
+  group('validateTaskContent', () {
+    test('CA-007-04: con imagen, el texto es opcional', () {
+      expect(validateTaskContent('  ', hasAttachment: true), isNull);
+      expect(validateTaskContent(' Horario ', hasAttachment: true), 'Horario');
+      expect(
+        () => validateTaskContent('a' * 10001, hasAttachment: true),
+        throwsA(isA<InvalidTaskText>()),
+      );
+    });
+
+    test('CA-007-06: sin texto ni imagen no es válida', () {
+      expect(
+        () => validateTaskContent('', hasAttachment: false),
+        throwsA(isA<InvalidTaskText>()),
+      );
+    });
+  });
+
   group('ColorPicker', () {
     test('CA-001-08: nunca repite el color de la tarea actual', () {
       final picker = ColorPicker(Random(1));
