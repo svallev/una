@@ -51,7 +51,8 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-17 | **Hecha** | `21633c9` |
 | T-007-18 | **Hecha** (las reglas ya cumplían; test y revisión del ADR-0004) | `14e51cd` |
 | T-007-19 | **Hecha** (probada en Chromium con el build real y la CSP) | `3002d49` |
-| T-007-20 a 25 | Pendientes | — |
+| T-007-20 | **Hecha** (sin fallos reales; regla de fuentes en `CLAUDE.md`) | `3cb505a` |
+| T-007-21 a 25 | Pendientes | — |
 
 Las decisiones y cambios respecto al plan están en `plan.md` §8.
 
