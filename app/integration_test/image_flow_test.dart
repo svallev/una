@@ -15,7 +15,6 @@ import 'package:app/data/import/native_image_importer.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/attachments/attachment_preview.dart';
-import 'package:app/features/attachments/image_viewer_screen.dart';
 import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
@@ -155,26 +154,10 @@ void main() {
       isEmpty,
     );
 
-    // Visor: se abre al tocar, amplía con doble toque y se cierra.
+    // Tocar la imagen no abre nada (sin visor, propietario 2026-09-27).
     await tester.tap(find.byType(TaskImage));
     await tester.pumpAndSettle();
-    expect(find.byType(ImageViewerScreen), findsOneWidget);
-    final center = tester.getCenter(find.byType(InteractiveViewer));
-    await tester.tapAt(center);
-    await tester.pump(const Duration(milliseconds: 60));
-    await tester.tapAt(center);
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<InteractiveViewer>(find.byType(InteractiveViewer))
-          .transformationController!
-          .value
-          .getMaxScaleOnAxis(),
-      greaterThan(1),
-    );
-    await tester.tap(find.bySemanticsLabel(_l10n(tester).viewerClose));
-    await tester.pumpAndSettle();
-    expect(find.byType(ImageViewerScreen), findsNothing);
+    expect(find.byType(CurrentTaskScreen), findsOneWidget);
 
     // Restauración sin imágenes (copia en la nube, ADR-0004): la BD tiene
     // la tarea, pero sus archivos no están.
@@ -201,7 +184,7 @@ void main() {
   });
 
   testWidgets('CL-007-2: una captura de 1080 × 20 000 se ve al ancho y se '
-      'desplaza en vertical en el visor', (tester) async {
+      'desplaza en vertical en la tarea actual', (tester) async {
     await _wipe();
     await bootstrap(openImages: _openImages);
     await tester.pumpAndSettle();
@@ -217,25 +200,15 @@ void main() {
         .currentTask())!;
     expect(task.attachment!.tiles.rows, 5);
 
-    await tester.tap(find.byType(TaskImage));
+    final scroll = find.descendant(
+      of: find.byType(TaskImage),
+      matching: find.byType(Scrollable),
+    );
+    await tester.drag(scroll, const Offset(0, -2000));
     await tester.pumpAndSettle();
-    final viewer = find.byType(InteractiveViewer);
-    Offset translation() {
-      final t = tester
-          .widget<InteractiveViewer>(viewer)
-          .transformationController!
-          .value
-          .getTranslation();
-      return Offset(t.x, t.y);
-    }
-
-    await tester.drag(viewer, const Offset(0, -2000));
-    await tester.pumpAndSettle();
-    expect(translation().dy, lessThan(-1000));
-    expect(translation().dx, 0);
-    // Con el visor abierto, la pantalla principal queda fuera de escena.
-    await tester.tap(find.bySemanticsLabel(_l10n(tester).viewerClose));
-    await tester.pumpAndSettle();
+    final position = tester.state<ScrollableState>(scroll).position;
+    expect(position.pixels, greaterThan(1000));
+    expect(position.axis, Axis.vertical);
     await _shutdown(tester);
   });
 }

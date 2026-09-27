@@ -348,33 +348,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorRemoveAttachment => 'Quitar adjunto';
 
   @override
-  String get imageOpenHint => 'ver la imagen entera';
-
-  @override
-  String get viewerTitle => 'Imagen de la tarea';
-
-  @override
-  String get viewerClose => 'Cerrar';
-
-  @override
-  String get zoomIn => 'Ampliar';
-
-  @override
-  String get zoomOut => 'Reducir';
-
-  @override
-  String get zoomFit => 'Ajustar al ancho';
-
-  @override
-  String a11yZoomLevel(double level) {
-    final intl.NumberFormat levelNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String levelString = levelNumberFormat.format(level);
-
-    return 'Ampliación por $levelString';
-  }
-
-  @override
   String get errImageType =>
       'Este tipo de imagen no se admite. Prueba con una foto JPEG, PNG o HEIC.';
 

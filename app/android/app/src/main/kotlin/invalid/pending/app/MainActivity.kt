@@ -8,7 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var images: ImageImport? = null
-    private var rotation: ViewerRotation? = null
+    private var rotation: ImageRotation? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -16,20 +16,13 @@ class MainActivity : FlutterActivity() {
         images = ImageImport(this).also {
             MethodChannel(messenger, ImageImport.CHANNEL).setMethodCallHandler(it)
         }
-        val screen = MethodChannel(messenger, "una/screen")
-        val viewerRotation = ViewerRotation(this) {
-            screen.invokeMethod("landscape", null)
-        }.also { rotation = it }
+        val imageRotation = ImageRotation(this).also { rotation = it }
         // Pantalla encendida mientras se ve un adjunto (spec 007, CA-007-12) y
-        // giro del visor (CA-007-11).
-        screen.setMethodCallHandler { call, result ->
+        // giro de la tarea actual con imagen (CA-007-11).
+        MethodChannel(messenger, "una/screen").setMethodCallHandler { call, result ->
             when (call.method) {
-                "watchLandscape" -> {
-                    viewerRotation.watch(call.arguments == true)
-                    result.success(null)
-                }
-                "viewerRotation" -> {
-                    viewerRotation.follow(call.arguments == true)
+                "rotateWithImage" -> {
+                    imageRotation.follow(call.arguments == true)
                     result.success(null)
                 }
                 "keepOn" -> {
@@ -66,7 +59,6 @@ class MainActivity : FlutterActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         images?.dispose()
         images = null
-        rotation?.watch(false)
         rotation?.follow(false)
         rotation = null
         super.cleanUpFlutterEngine(flutterEngine)

@@ -23,7 +23,6 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Tarea web / URL | Web task / URL | `AttachmentKind.web` | Tarea que muestra una página web. |
 | Instantánea / captura | Snapshot | `snapshot` | Imagen de página completa de una URL, guardada al crearla, para verla sin conexión. |
 | Miniatura | Thumbnail | `thumbnail`, `thumb.jpg` | Versión pequeña de un adjunto para el listado: cuadrada y recortada, de 176 px (se ve a 44). |
-| Visor | Viewer | `ImageViewerScreen` | Pantalla completa que se abre al tocar la imagen: al ancho, con desplazamiento vertical y zoom opcional (spec 007). |
 | Versión completa | Full version | `relPath` (prefijo de las teselas) | Copia de la imagen que guarda la app: recodificada, sin metadatos y como mucho de 24 MP, sin límite de lado. |
 | Tesela | Tile | `ImageTiles`, `full-<fila>-<columna>.jpg` | Trozo de 4096 px como máximo de la versión completa. |
 | Versión de pantalla | Display version | `displayRelPath`, `screen.jpg` | Recorte al tamaño de la pantalla para pintar la tarea actual rápido al abrir (CA-001-09). |

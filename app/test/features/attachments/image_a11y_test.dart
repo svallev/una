@@ -6,7 +6,6 @@ import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/image_importer.dart';
 import 'package:app/features/attachments/attach_sheet.dart';
 import 'package:app/features/attachments/attachment_preview.dart';
-import 'package:app/features/attachments/image_viewer_screen.dart';
 import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_thumbnail.dart';
@@ -15,7 +14,6 @@ import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/focus_ring.dart';
-import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -221,19 +219,6 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('visor', (tester) async {
-      final handle = tester.ensureSemantics();
-      await repo.insert(await imageTask('t1'));
-      await pumpBig(tester);
-      await tester.tap(find.byType(TaskImage));
-      await tester.pumpAndSettle();
-      expect(find.byType(ImageViewerScreen), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await _reachable(tester, find.bySemanticsLabel('Cerrar'));
-      await _meetsGuidelines(tester);
-      handle.dispose();
-    });
-
     for (final text in [_long, null]) {
       testWidgets('"Adjunto no disponible" ${text == null ? 'sin' : 'con'} '
           'texto: tarjeta y acción enteras', (tester) async {
@@ -302,77 +287,6 @@ void main() {
         find.descendant(of: of, matching: find.byType(FocusRing)),
       ),
     ].any((r) => r.visible);
-
-    testWidgets('CA-007-21 / WCAG 2.1.1: con teclado, Tab llega a la imagen, '
-        'se ve el anillo e Intro abre el visor', (tester) async {
-      await repo.insert(await imageTask('t1', text: 'Horario'));
-      await pumpUnaApp(tester, repo: repo, overrides: overrides());
-      await tester.pumpAndSettle();
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pumpAndSettle();
-      expect(ringVisible(tester, find.byType(TaskImage)), isTrue);
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
-      expect(find.byType(ImageViewerScreen), findsOneWidget);
-    });
-
-    testWidgets('visor: el anillo se ve en la imagen con teclado; tras pasar '
-        'a "Cerrar" con Tab, + sigue ampliando; Esc cierra', (tester) async {
-      await repo.insert(await imageTask('t1', text: 'Horario'));
-      await pumpUnaApp(tester, repo: repo, overrides: overrides());
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(TaskImage));
-      await tester.pumpAndSettle();
-      // Modo teclado.
-      await tester.sendKeyEvent(LogicalKeyboardKey.shift);
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widgetList<FocusRing>(
-              find.descendant(
-                of: find.byType(ImageViewerScreen),
-                matching: find.byType(FocusRing),
-              ),
-            )
-            .first
-            .visible,
-        isTrue,
-      );
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pumpAndSettle();
-      expect(ringVisible(tester, find.byType(UnaIcon).last), isTrue);
-      final viewer = find.byType(InteractiveViewer);
-      double scale() => tester
-          .widget<InteractiveViewer>(viewer)
-          .transformationController!
-          .value
-          .getMaxScaleOnAxis();
-      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
-      await tester.pumpAndSettle();
-      expect(scale(), greaterThan(1));
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
-      expect(find.byType(ImageViewerScreen), findsNothing);
-    });
-
-    testWidgets('visor: el lector lee la imagen antes que "Cerrar"', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      await repo.insert(await imageTask('t1', text: 'Horario'));
-      await pumpUnaApp(tester, repo: repo, overrides: overrides());
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(TaskImage));
-      await tester.pumpAndSettle();
-      expect(
-        tester.semantics.simulatedAccessibilityTraversal(
-          startNode: find.semantics.byLabel('Foto'),
-          endNode: find.semantics.byLabel('Cerrar'),
-        ),
-        isNotEmpty,
-      );
-      handle.dispose();
-    });
 
     testWidgets('"Quitar adjunto" recibe el foco con Tab y muestra el anillo', (
       tester,
@@ -467,8 +381,8 @@ void main() {
 
   group('CA-007-22: foco y anuncios', () {
     // El resto de filas de la tabla tienen su test junto a su pantalla:
-    // editor_image_test (vuelta, cancelar, quitar, preparando, error),
-    // image_viewer_test (abrir, zoom, cerrar) y missing_attachment_test.
+    // editor_image_test (vuelta, cancelar, quitar, preparando, error) y
+    // missing_attachment_test.
     testWidgets('abrir la hoja "Añadir": la hoja se anuncia por su nombre y '
         'empieza por el título como encabezado', (tester) async {
       final handle = tester.ensureSemantics();

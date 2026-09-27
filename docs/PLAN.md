@@ -20,7 +20,7 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D7 | Eliminar es **definitivo**: sin deshacer y sin "Nada pendiente."; ~~queda una marca de borrado sin contenido~~ **no queda nada: la tarea se borra del todo** (propietario, 2026-09-26; ADR-0011 sustituye a ADR-0006; ADR-0012 sustituye a ADR-0011) |
 | D8 | Las completadas **conservan el adjunto** — **Sustituida por el ADR-0012 (2026-09-26): no hay histórico; completar y eliminar borran la tarea del todo** |
 | D9 | URL: **captura de página completa** para verla sin conexión |
-| D10 | Visor: **zoom + pantalla encendida** (hasta 10 min sin tocar); sin brillo máximo; **gira solo el visor** (enmienda del propietario, 2026-09-26, spec 007) |
+| D10 | Imagen: **pantalla encendida** (hasta 10 min sin tocar); sin brillo máximo. **Sin visor** (ADR-0013): la imagen al ancho con desplazamiento vertical en la tarea y pellizco que vuelve al soltar; **solo gira la tarea actual con imagen**, que en horizontal muestra solo la imagen y el logotipo (enmiendas del propietario, 2026-09-26 y 2026-09-27, spec 007) |
 | D11 | Sin biometría en la v1 |
 | D12 | Mínimos: **iOS 16 / Android 8 (API 26)** |
 | D13 | Menú: **"Configuración"** mínima, sin perfil |
@@ -56,7 +56,7 @@ flowchart LR
 | **F1 Spikes (Android + web)** | S1 arranque (Android) · S2 animaciones · S3 PDF y visor del sistema (Android: intent) · S4 captura web (Android) · S5 importación y backup (Android) · S6 web + Vercel. Las partes iOS de S1, S3, S4 y S5 pasan a F-iOS (D17). Código **desechable** en `spikes/` (rama propia, no se fusiona). **Requiere aprobación.** | M | F0 | Criterios de ADR-0001 cumplidos en Android → ADR-0001 **Aceptado para Android**, provisional para iOS; si no → ADR de cambio a Expo |
 | **F2 Esqueleto + 001** *(✅ completada el 2026-09-25, PR #3)* | `app/` + identidad + l10n + tokens + BD v1 + repositorio + CI + web + la spec 001 completa | L | F1 | CA-001 en verde; arranque p50 < 1 s medido; preview en Vercel por PR |
 | **F3 Núcleo** ✅ *(002, 003 y 005 el 2026-09-25; 004 y 006 el 2026-09-26)* | 002 crear y posición → 003 completar → 004 eliminar → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
-| **F4 Adjuntos** *(en curso: 007 implementada y revisada, pendiente de las pruebas en el dispositivo, 2026-09-27; después ADR-0012)* | 007 imagen (canal de importación + visor) → 008 documento → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
+| **F4 Adjuntos** *(en curso: 007 implementada y revisada, pendiente de las pruebas en el dispositivo, 2026-09-27; después ADR-0012)* | 007 imagen (canal de importación; sin visor, ADR-0013) → 008 documento → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
 | **010** | Idioma y Configuración (tras diseñar la pantalla) | S | F3 (se puede hacer en paralelo con F4) | CA-010 en verde |
 | **F5 Endurecimiento** | Auditoría de accesibilidad (VoiceOver, TalkBack, Switch, texto grande), pruebas MASTG, presupuesto de rendimiento y tamaño, política de privacidad, fichas de tienda, capturas, manifiesto de privacidad y Data Safety, iconos | M | F4, 010 | Checklist de publicación completa; 0 hallazgos altos |
 | **F6 Beta Android y v1.0** | Play: Internal testing y prueba cerrada con **12 testers durante 14 días** (cuenta personal nueva), corrección de errores, v1.0 en Google Play | M + 14 días | F5 + cuenta de Play | Aprobación en Google Play; feedback de los testers (sin telemetría: formulario o correo) |
@@ -70,7 +70,7 @@ flowchart LR
 2. **003** antes que **004**: comparten la infraestructura de animación y el estado vacío; completar es más central.
 3. **005** después de 004: el menú enlaza con eliminar.
 4. **006** cierra el núcleo (depende de todo lo anterior).
-5. **007** establece el canal de importación y el visor que reutilizan 008 y 009.
+5. **007** establece el canal de importación que reutilizan 008 y 009 (sin visor de imágenes, ADR-0013).
 6. **009** al final: mayor riesgo técnico (captura web) y de seguridad.
 
 ## 5. Registro de riesgos
@@ -96,7 +96,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R-15 | Web de pruebas poco representativa (canvas, accesibilidad) | Alta | Baja | Los criterios de accesibilidad y rendimiento se verifican solo en dispositivo | — |
 | R-16 | Deriva entre prototipo e implementación | Media | Media | `screen-map.md`, `prototype-deviations.md` y *goldens* | Cada PR de UI |
 | R-18 | **iOS aplazado (D17):** problemas propios de iOS (arranque, captura con WKWebView, QuickLook, Data Protection, revisión de App Store) se descubren tarde y obligan a rehacer trabajo | Media | Media | Toda la integración nativa detrás de puertos (`SystemViewer`, `WebSnapshotter`, `ImageSanitizer`) con implementación Android primero; nada de APIs solo de Android en el dominio; **CI compila iOS sin firmar desde F2** (macOS runner, gratis en repo público) para detectar roturas de compilación; F-iOS empieza por los spikes iOS | Cada PR (job iOS de CI); inicio de F-iOS |
-| R-17 | Pantallas sin diseño (Configuración, visor, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (010, 007–009) | Antes de F3/F4 |
+| R-17 | Pantallas sin diseño (Configuración, visor de documentos, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (010, 007–009) | Antes de F3/F4 |
 | R-19 | Tamaño del APK por encima del presupuesto (27,6 MB arm64 en el spike, con PDFium, SQLite y WebView) | Media | Baja | App bundle por ABI, sin símbolos, `--analyze-size` en CI; revisar dependencias | F2 |
 
 ## 6. Trazabilidad de reglas → specs

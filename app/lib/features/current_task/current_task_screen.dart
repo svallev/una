@@ -8,18 +8,17 @@ import '../../app/providers.dart';
 import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
-import '../../data/platform/viewer_rotation.dart';
+import '../../data/platform/image_rotation.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/focus_on_signal.dart';
-import '../../ui/focus_ring.dart';
+import '../../ui/full_width.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../attachments/attachment_health.dart';
-import '../attachments/image_viewer_screen.dart';
 import '../attachments/keep_screen_on_controller.dart';
 import '../attachments/missing_attachment_card.dart';
 import '../attachments/task_image.dart';
@@ -75,7 +74,6 @@ class CurrentTaskScreen extends ConsumerWidget {
     Future<bool> complete() => completeTask(context, ref, task);
     Future<void> openMenu() => _openMenu(context, ref);
     Future<void> delete() => confirmAndDeleteTask(context, ref, task);
-    Future<void> openViewer() => _openViewer(context, ref, task);
     Widget hidden(Widget child) => Visibility(
       visible: false,
       maintainSize: true,
@@ -120,6 +118,13 @@ class CurrentTaskScreen extends ConsumerWidget {
         ref.watch(attachmentHealthProvider(attachment)).health ==
             AttachmentHealth.missing;
     final showImage = attachment != null && !missing;
+    // En horizontal (solo gira la tarea con imagen), solo la imagen y el
+    // logotipo: sin menú, botón ni pie (CA-007-11, propietario 2026-09-27).
+    final landscape =
+        showImage &&
+        !faceOnly &&
+        !chromeOnly &&
+        mq.orientation == Orientation.landscape;
     final kind = isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage;
 
     /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
@@ -137,9 +142,6 @@ class CurrentTaskScreen extends ConsumerWidget {
         }),
         // Papel de imagen, salvo si la lectura ya acaba en "imagen".
         image: isPhoto && showImage,
-        // Activarla abre el visor (CA-007-09/21).
-        hint: showImage && !faceOnly ? l10n.imageOpenHint : null,
-        onTap: showImage && !faceOnly ? openViewer : null,
         // También se completa (CA-003-07) y se elimina (CA-004-10) desde la
         // tarea.
         customSemanticsActions: faceOnly
@@ -208,18 +210,19 @@ class CurrentTaskScreen extends ConsumerWidget {
                 children: [
                   wordmark,
                   const Spacer(),
-                  _Order(
-                    1,
-                    child: SquareIconButton(
-                      icon: UnaIcons.menu,
-                      label: l10n.menuButton,
-                      fill: showImage
-                          ? UnaColors.surface
-                          : UnaPalettes.classic[task.colorKey %
-                                UnaPalettes.classic.length],
-                      onPressed: openMenu,
+                  if (!landscape)
+                    _Order(
+                      1,
+                      child: SquareIconButton(
+                        icon: UnaIcons.menu,
+                        label: l10n.menuButton,
+                        fill: showImage
+                            ? UnaColors.surface
+                            : UnaPalettes.classic[task.colorKey %
+                                  UnaPalettes.classic.length],
+                        onPressed: openMenu,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -254,17 +257,19 @@ class CurrentTaskScreen extends ConsumerWidget {
                       ),
                     ),
             ),
-            cta(
-              _Order(
-                2,
-                child: HoldToCompleteButton(
-                  label: l10n.completeButton,
-                  a11yAction: l10n.completeA11yAction,
-                  a11yHint: l10n.completeA11yHint,
-                  onComplete: complete,
+            // En horizontal se completa con la acción del lector (CA-003-07).
+            if (!landscape)
+              cta(
+                _Order(
+                  2,
+                  child: HoldToCompleteButton(
+                    label: l10n.completeButton,
+                    a11yAction: l10n.completeA11yAction,
+                    a11yHint: l10n.completeA11yHint,
+                    onComplete: complete,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -285,11 +290,12 @@ class CurrentTaskScreen extends ConsumerWidget {
                           _Order(
                             0,
                             child: taskNode(
-                              _ImageLayer(
-                                onOpen: faceOnly ? null : openViewer,
+                              _RotatesWithImage(
+                                enabled: !faceOnly,
+                                fullWidth: landscape,
                                 child: TaskImage(
                                   attachment: attachment,
-                                  caption: text,
+                                  caption: landscape ? null : text,
                                 ),
                               ),
                             ),
@@ -411,170 +417,72 @@ class _MissingAttachment extends ConsumerWidget {
   }
 }
 
-/// Visor de la imagen (CA-007-09); al cerrarlo, el foco vuelve a la tarea.
-Future<void> _openViewer(BuildContext context, WidgetRef ref, Task task) async {
-  final attachment = task.attachment;
-  // Nunca durante completar o eliminar (CA-003-09, CA-004-05), ni con otra
-  // pantalla encima: un toque o un giro más no abre un segundo visor.
-  // `isCurrent` se consulta al navegador en el momento, no en la última
-  // construcción.
-  if (attachment == null ||
-      !(ModalRoute.of(context)?.isCurrent ?? true) ||
-      ref.read(completionProvider).busy ||
-      ref.read(deletionProvider).busy) {
-    return;
-  }
-  await Navigator.of(context)
-      .push(ImageViewerScreen.route(context, attachment));
-  if (!context.mounted) return;
-  ref.read(screenFocusProvider.notifier).signal();
-}
-
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
 /// pantalla y teclado), aunque el menú esté arriba en pantalla.
-/// La imagen de la tarea actual: tocarla, o poner el móvil en horizontal
-/// mientras se ve, abre el visor (CA-007-09 y CA-007-11); pellizcarla la amplía
-/// ahí mismo y, al soltar, vuelve al 100 % (CA-007-10). Con
-/// teclado o interruptores se llega con Tab y se abre con Intro o Espacio, con
-/// el anillo por dentro del borde (WCAG 2.1.1 y 2.4.7). La lectura y las
-/// acciones del lector son las del nodo de la tarea, sin añadir nada.
-class _ImageLayer extends StatefulWidget {
-  const _ImageLayer({required this.onOpen, required this.child});
+/// Mientras se ve la tarea actual con imagen (y es la pantalla de arriba, no
+/// bajo el menú, el editor o el listado), la app gira con el móvil
+/// (CA-007-11); si no, solo en vertical. En horizontal pide todo el ancho
+/// aunque el marco de la app lo limite en tablets (CL-001-7).
+class _RotatesWithImage extends StatefulWidget {
+  const _RotatesWithImage({
+    required this.enabled,
+    required this.fullWidth,
+    required this.child,
+  });
 
-  final VoidCallback? onOpen;
+  final bool enabled;
+  final bool fullWidth;
   final Widget child;
 
   @override
-  State<_ImageLayer> createState() => _ImageLayerState();
+  State<_RotatesWithImage> createState() => _RotatesWithImageState();
 }
 
-class _ImageLayerState extends State<_ImageLayer>
-    with SingleTickerProviderStateMixin {
-  bool _focused = false;
-  bool? _watching;
+class _RotatesWithImageState extends State<_RotatesWithImage> {
+  bool? _rotating;
+  bool _fullWidth = false;
 
-  /// Zoom de vistazo (CA-007-10): la imagen sigue a los dedos mientras se
-  /// pellizca y, al soltar, vuelve al 100 %. Sin visor ni "Cerrar".
-  final _zoom = ValueNotifier<Matrix4>(Matrix4.identity());
-  Offset? _pinchStart;
-  late final _back = AnimationController(
-    vsync: this,
-    duration: UnaMotion.viewerZoom,
-  );
-  Animation<Matrix4>? _backTween;
-
-  void _onScaleStart(ScaleStartDetails d) {
-    _back.stop();
-    _pinchStart = d.pointerCount >= 2 ? d.localFocalPoint : null;
-  }
-
-  void _onScaleUpdate(ScaleUpdateDetails d) {
-    if (widget.onOpen == null || d.pointerCount < 2) return;
-    // El segundo dedo puede llegar después del primero.
-    final start = _pinchStart ??= d.localFocalPoint;
-    final scale = d.scale.clamp(1.0, UnaMotion.viewerZoomMax);
-    // El punto que estaba bajo los dedos sigue bajo ellos.
-    _zoom.value = Matrix4.identity()
-      ..translateByDouble(d.localFocalPoint.dx, d.localFocalPoint.dy, 0, 1)
-      ..scaleByDouble(scale, scale, 1, 1)
-      ..translateByDouble(-start.dx, -start.dy, 0, 1);
-  }
-
-  void _onScaleEnd(ScaleEndDetails _) {
-    _pinchStart = null;
-    if (_zoom.value.isIdentity()) return;
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _zoom.value = Matrix4.identity();
-      return;
+  void _update() {
+    final on = widget.enabled && (ModalRoute.isCurrentOf(context) ?? true);
+    if (on != _rotating) {
+      _rotating = on;
+      unawaited(ImageRotation.follow(on));
     }
-    _backTween = Matrix4Tween(
-      begin: _zoom.value,
-      end: Matrix4.identity(),
-    ).animate(CurvedAnimation(parent: _back, curve: UnaMotion.standardCurve));
-    unawaited(_back.forward(from: 0));
-  }
-
-  late final StreamSubscription<void> _landscape = ViewerRotation.landscape
-      .listen((_) {
-        if (mounted && _watching == true) widget.onOpen?.call();
-      });
-
-  /// Solo se vigila el giro con la tarea a la vista (no bajo el editor, el
-  /// menú o el visor).
-  void _updateWatch() {
-    final on =
-        widget.onOpen != null && (ModalRoute.isCurrentOf(context) ?? true);
-    if (on == _watching) return;
-    _watching = on;
-    unawaited(ViewerRotation.watchLandscape(on));
+    final fullWidth = on && widget.fullWidth;
+    if (fullWidth != _fullWidth) {
+      _fullWidth = fullWidth;
+      // Fuera de la construcción: el marco de la app lo escucha.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => fullWidthRequests.value += fullWidth ? 1 : -1,
+      );
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _landscape; // Se suscribe al montarse.
-    _updateWatch();
+    _update();
   }
 
   @override
-  void didUpdateWidget(_ImageLayer oldWidget) {
+  void didUpdateWidget(_RotatesWithImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _updateWatch();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _back.addListener(() {
-      final tween = _backTween;
-      if (tween != null) _zoom.value = tween.value;
-    });
+    _update();
   }
 
   @override
   void dispose() {
-    _back.dispose();
-    _zoom.dispose();
-    unawaited(_landscape.cancel());
-    if (_watching == true) unawaited(ViewerRotation.watchLandscape(false));
+    if (_rotating ?? false) unawaited(ImageRotation.follow(false));
+    if (_fullWidth) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => fullWidthRequests.value--,
+      );
+    }
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    final onOpen = widget.onOpen;
-    return FocusableActionDetector(
-      enabled: onOpen != null,
-      includeFocusSemantics: false,
-      onShowFocusHighlight: (v) => setState(() => _focused = v),
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (_) {
-            onOpen?.call();
-            return null;
-          },
-        ),
-      },
-      child: FocusRing(
-        visible: _focused,
-        inside: true,
-        child: GestureDetector(
-          // Toda la imagen, cargada o no.
-          behavior: HitTestBehavior.opaque,
-          onTap: onOpen,
-          onScaleStart: _onScaleStart,
-          onScaleUpdate: _onScaleUpdate,
-          onScaleEnd: _onScaleEnd,
-          child: ValueListenableBuilder<Matrix4>(
-            valueListenable: _zoom,
-            builder: (_, zoom, child) =>
-                Transform(transform: zoom, child: child),
-            child: widget.child,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _Order extends StatelessWidget {

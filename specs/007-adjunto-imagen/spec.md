@@ -1,9 +1,9 @@
-# Spec 007: Tareas con foto o imagen (visor a pantalla completa)
+# Spec 007: Tareas con foto o imagen
 
 - **Estado:** Aprobada (propietario, 2026-09-26). Reescrita ese día con sus decisiones tras la revisión (spec-reviewer, a11y-reviewer y security-reviewer)
 - **Reglas de producto:** R3 (foto con la cámara, imagen de la galería), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido), **propuesta de valor 2**
-- **Pantallas del prototipo:** 9 "Añadir (+)", 3 "Nueva tarea" (con adjunto), 1 "Tarea actual" (con imagen), 5 "Todas las tareas" (miniatura). El visor a pantalla completa y los errores no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
-- **Decisiones y ADR:** D5, D8, D10 (enmendada: giro solo en el visor), D17, D18, ADR-0002, ADR-0004 (y R-10), ADR-0011, DEV-01, DEV-02, DEV-18, DEV-35 a DEV-40; modelo de amenazas T-2, T-3, T-7, T-8, T-13, T-15
+- **Pantallas del prototipo:** 9 "Añadir (+)", 3 "Nueva tarea" (con adjunto), 1 "Tarea actual" (con imagen), 5 "Todas las tareas" (miniatura). Los errores, el giro y el pellizco no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil. **Sin visor** (propietario, 2026-09-27, ADR-0013)
+- **Decisiones y ADR:** D5, D8, D10 (enmendada: solo gira la tarea actual con imagen), D17, D18, ADR-0002, ADR-0004 (y R-10), ADR-0011, DEV-01, DEV-02, DEV-18, DEV-36, DEV-38 a DEV-43; modelo de amenazas T-2, T-3, T-7, T-8, T-13, T-15
 - **Dependencias:** 001, 002, 003, 004, 005, 006
 - **Cierra lo diferido a la 007 (parte de imagen):** CA-001-02 ("+"), CA-002-09, CL-003-4, CL-003-8, CA-004-01 (etiqueta sin texto), CL-004-3, CA-005-07, CL-005-3, CA-006-02 (miniatura), CA-006-18 (tipo de adjunto) y el pendiente de `specs/006-listado/plan.md` §7 (un único servicio de purga). Documentos y URL siguen en 008 y 009
 
@@ -78,38 +78,31 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Dado** que la tarea actual tiene una imagen
   - **Cuando** se abre la app en frío
   - **Entonces** la imagen ocupa **todo el ancho** de la pantalla, sin perder nada por los lados (detrás del logotipo, el menú y el botón de completar), y aparece en el tiempo de CA-001-09 (< 1 s p50, dispositivo de referencia, *release*), sin ningún toque.
-  - Si es más baja que la pantalla, queda el color de la nota arriba y abajo; si es más alta, se ve la parte de arriba y el resto en el visor (DEV-41; propietario, 2026-09-27; antes, recortada para llenar la pantalla, como en el prototipo).
+  - Si es más baja que la pantalla, queda el color de la nota arriba y abajo; si es más alta, se desplaza en vertical (CA-007-09; DEV-41; propietario, 2026-09-27; antes, recortada para llenar la pantalla, como en el prototipo).
   - El logotipo y el menú llevan fondo blanco sobre la imagen.
   - Si hay texto, se ve como pie sobre la imagen: recuadro negro con texto blanco (22 px, peso 800), 146 px por encima del borde inferior. Máximo 3 líneas con "…"; el lector lee el texto completo.
-- **CA-007-09 Visor a pantalla completa (D10, DEV-35, DEV-37)**
+- **CA-007-09 Imagen entera a lo ancho, sin visor (DEV-41; propietario, 2026-09-27, ADR-0013)**
   - **Dado** la tarea actual con imagen
-  - **Cuando** toca la imagen (o la activa con el lector)
-  - **Entonces** se abre el visor:
-    - la imagen **al 100 % del ancho** de la pantalla, sobre el color papel;
-    - si es más alta que la pantalla, se desplaza **solo en vertical**;
-    - arriba a la izquierda, el botón "Cerrar" (48 dp); el gesto atrás también cierra;
-    - al cerrar, se vuelve a la tarea actual con el foco en ella;
-    - en tablets y plegables, el visor usa todo el ancho de la pantalla aunque el resto de la app esté limitado a 600 px (CL-001-7);
-    - aparece con un fundido corto (el de las hojas); con reducir movimiento, el de 400 ms (CA-007-23).
-- **CA-007-10 Zoom opcional en el visor (D10)**
-  - **Dado** el visor
-  - **Cuando** pellizca, o toca dos veces
   - **Entonces**:
-    - la imagen se amplía hasta ×8; el doble toque va por pasos (×1 → ×2,5 → ×8 → ×1) y centra la ampliación en el punto tocado;
-    - ampliada, se puede desplazar en las dos direcciones;
-    - al volver a ×1 (pellizcando o con el doble toque), vuelve el ancho completo y el desplazamiento solo vertical.
-  - En la tarea actual (vertical), pellizcar amplía la imagen ahí mismo, siguiendo a los dedos, y al soltar vuelve al 100 % (al instante con reducir movimiento), sin pasar por el visor ni mostrar "Cerrar" (propietario, 2026-09-27). Un toque sigue abriendo el visor.
-- **CA-007-11 Girar en el visor (D10 enmendada)**
-  - **Dado** el visor
+    - la imagen ocupa **el 100 % del ancho** de la pantalla; nunca se pierde nada por los lados;
+    - si es más alta que la pantalla, se desplaza **solo en vertical**, ahí mismo;
+    - tocarla no hace nada: no hay visor ni botón "Cerrar";
+    - completar y el menú siguen como en cualquier tarea.
+- **CA-007-10 Zoom de vistazo con el pellizco (DEV-43; propietario, 2026-09-27)**
+  - **Dado** la tarea actual con imagen, en vertical o en horizontal
+  - **Cuando** pellizca la imagen
+  - **Entonces** la imagen se amplía ahí mismo, hasta ×8, siguiendo a los dedos (sin desplazarse mientras hay dos dedos), y **al soltar vuelve al 100 %**: con una animación corta, o al instante con reducir movimiento.
+  - No hay zoom que se quede puesto ni acciones de zoom: para ampliar sin gestos, la lupa del sistema (excepción a P6, ADR-0013).
+- **CA-007-11 Solo gira la tarea actual con imagen (D10 enmendada; DEV-42)**
+  - **Dado** la tarea actual con imagen a la vista (sin el menú, el editor ni el listado encima)
   - **Cuando** gira el móvil a horizontal
-  - **Entonces** el visor gira y la imagen vuelve al ancho completo (×1).
-  - El resto de la app sigue solo en vertical; al cerrar el visor en horizontal, la tarea actual se ve en vertical.
-  - Con la tarea actual con imagen a la vista, poner el móvil en horizontal abre el visor ya girado, sin tocar la pantalla (propietario, 2026-09-27). No lo abre con otra pantalla encima (editor, menú, listado) ni con el bloqueo de rotación activo. Cerrado con "Cerrar" en horizontal, no se reabre hasta volver a vertical y girar otra vez.
-  - Al volver el móvil a vertical, el visor se cierra solo y se ve la tarea actual, sin pulsar "Cerrar" (propietario, 2026-09-27). Abierto en vertical, sigue abierto hasta que se cierre.
-  - Gira solo, sin tocar la pantalla, y respeta el bloqueo de rotación del sistema. A ×1 la imagen va siempre al ancho, con desplazamiento vertical, también en horizontal (propietario, 2026-09-27).
+  - **Entonces** la pantalla gira sola, sin tocar nada, y en horizontal solo se ven **la imagen, a todo el ancho y con desplazamiento vertical, y el logotipo**: sin menú, sin botón de completar y sin el pie de texto. Al volver a vertical, vuelve todo.
+  - En horizontal se sigue pudiendo completar o eliminar con las acciones del lector (CA-003-07, CA-004-10).
+  - Respeta el bloqueo de rotación del sistema. El resto de la app (y la tarea sin imagen) queda solo en vertical.
+  - En tablets y plegables, en horizontal usa todo el ancho de la pantalla aunque el resto de la app esté limitado a 600 px (CL-001-7).
 - **CA-007-12 Pantalla encendida, con límite (D10)**
   - **Dado** que el ajuste "Mantener la pantalla encendida con adjuntos" está activo (por defecto sí; su pantalla llega con la spec 010)
-  - **Cuando** se ve la tarea actual con imagen o su visor
+  - **Cuando** se ve la tarea actual con imagen
   - **Entonces** la pantalla no se apaga por inactividad **mientras se use**: tras **10 minutos sin tocarla** vuelven el apagado y el bloqueo normales del teléfono.
   - Solo cuentan como uso los **toques** en la pantalla; las teclas de un teclado físico no reinician los 10 minutos (propietario, 2026-09-26).
   - También vuelven al pasar a otra pantalla de la app (menú, editor, listado), a segundo plano o a una tarea sin imagen.
@@ -190,12 +183,10 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - pantalla principal: "Tarea actual: {texto}. Con foto" (o "Con imagen"), o "Tarea actual: Foto" (o "Imagen") si no hay texto (se reutilizan `attachmentPhoto`/`attachmentImage`, §7);
     - nunca se dice "imagen" dos veces: una imagen de la galería **no** lleva papel de imagen, porque su lectura ya dice "imagen" y TalkBack añadiría otra vez "imagen" (propietario, 2026-09-26);
     - con "Adjunto no disponible" (CA-007-19): "Tarea actual: {texto}. Adjunto no disponible", o "Tarea actual: Foto. Adjunto no disponible" sin texto;
-    - activarla abre el visor, con la pista "ver la imagen entera";
     - acciones, en este orden: Completar tarea, Eliminar tarea;
     - fila del listado (cierra CA-006-18): "{n} de {total}: {texto}. Con foto", o "{n} de {total}: Foto" sin texto;
     - anuncios de completar y eliminar sin texto (cierra CL-003-8): "Tarea completada. Siguiente: Foto".
-  - En el visor, la imagen tiene las acciones Ampliar, Reducir y Ajustar al ancho (solo las aplicables, en ese orden) y las de desplazamiento cuando se puede desplazar. El nivel se lee como valor ("Ampliación por 2,5": "por" escrito, para que todos los lectores lo digan igual; propietario, 2026-09-27).
-  - Con teclado físico: + / − / 0 amplían, reducen y ajustan; las flechas desplazan.
+  - Sin visor no hay acciones de zoom ni teclas de zoom: para ampliar, la lupa del sistema (ADR-0013).
 - **CA-007-22 Foco y anuncios**
   - **Dado** un lector de pantalla activo
   - **Cuando** ocurre cada acción
@@ -210,15 +201,12 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     | "Preparando imagen…" | "Cancelar" | "Preparando imagen…" |
     | Quitar adjunto | El botón (+) | "Adjunto quitado" |
     | Error al importar | El botón (+) | El texto del error |
-    | Abrir el visor | La imagen | "Imagen de la tarea" (nombre de la pantalla) |
-    | Ampliar o reducir | No se mueve | El nuevo nivel |
-    | Cerrar el visor | La tarea actual | Ninguno |
 
 - **CA-007-23 Reducir movimiento y texto grande**
   - **Dado** "reducir movimiento" o el texto al 200 %
-  - **Cuando** se usan la hoja, el editor, la pantalla principal o el visor
+  - **Cuando** se usan la hoja, el editor o la pantalla principal
   - **Entonces**:
-    - con reducir movimiento, el zoom salta sin animarse, el visor aparece con un fundido (400 ms) y "Preparando imagen…" no se anima;
+    - con reducir movimiento, al soltar el pellizco la imagen vuelve al 100 % sin animarse y "Preparando imagen…" no se anima;
     - con el texto al 200 % en un móvil de 360 dp:
       - las filas de la hoja crecen en alto;
       - el pie se limita a ×1,6 y 3 líneas;
@@ -231,7 +219,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 | ID | Situación | Comportamiento |
 |---|---|---|
 | CL-007-1 | No hay ninguna app de cámara (tablet, cámara desactivada) | Aviso "No hay ninguna app de cámara disponible."; el editor queda como estaba |
-| CL-007-2 | Captura larga (1080 × 20 000) | Pantalla principal: recortada, como cualquier imagen. Visor: al ancho y con desplazamiento vertical; se lee el texto a ×1 |
+| CL-007-2 | Captura larga (1080 × 20 000) | Pantalla principal: al ancho y con desplazamiento vertical; se lee el texto sin ampliar |
 | CL-007-3 | Sin espacio libre al importar o al guardar | "Tu teléfono no tiene espacio libre" (con "Reintentar" al guardar, como `editorSaveError`); no se crea la tarea y no quedan temporales |
 | CL-007-4 | Imagen con transparencia (PNG, WebP) | Las zonas transparentes se ven sobre blanco |
 | CL-007-5 | Foto de 50 MP de la cámara del móvil | Se acepta (≤ 64 MP) y se guarda reducida a 24 MP |
@@ -260,14 +248,13 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 ## 6. Accesibilidad
 
 - Lectura, foco y anuncios: CA-007-21 y CA-007-22. La miniatura del listado es decorativa.
-- Alternativas a los gestos del visor (WCAG 2.5.1 y 2.5.7): el doble toque por pasos llega a ×8 con un dedo, y además hay acciones del lector y teclas. El desplazamiento tiene acciones de desplazamiento. La lupa del sistema (triple toque) sigue funcionando.
-- El visor no tiene modo inmersivo: "Cerrar" siempre se ve y siempre se puede enfocar.
+- **Excepción a P6 (propietario, 2026-09-27, ADR-0013):** el pellizco de la tarea actual es un zoom de vistazo que vuelve al soltar y no tiene alternativa en la app para lector, teclado o switch. Para ampliar sin gestos se usa la lupa del sistema (ampliación de accesibilidad de Android), que funciona en toda la app. Nada depende del zoom: completar, eliminar y el menú tienen sus acciones.
 - Contraste:
   - logotipo y menú con fondo blanco sobre la imagen (como el prototipo);
   - pie blanco sobre negro (18,9:1);
   - el anillo de foco del teclado lleva borde blanco y negro para verse sobre cualquier foto.
-- Objetivos táctiles ≥ 48 dp: "Quitar adjunto" (40 en el prototipo, DEV-36), X de la hoja, "Cerrar" del visor, "Cancelar", "Quitar adjunto" y "Eliminar tarea".
-- Orientación (WCAG 1.3.4): el visor gira (CA-007-11); el resto de la app queda en vertical, como excepción registrada (D10).
+- Objetivos táctiles ≥ 48 dp: "Quitar adjunto" (40 en el prototipo, DEV-36), X de la hoja, "Cancelar", "Quitar adjunto" y "Eliminar tarea".
+- Orientación (WCAG 1.3.4): la tarea actual con imagen gira (CA-007-11); el resto de la app queda en vertical, como excepción registrada (D10).
 - **[Pendiente P-5, v1.1]** Descripción de la imagen escrita por el usuario.
 
 ## 7. Textos (ES / EN)
@@ -291,11 +278,6 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 | `a11yPhotoAdded` | Foto añadida | Photo added | |
 | `a11yImageAdded` | Imagen añadida | Image added | |
 | `a11yAttachmentRemoved` | Adjunto quitado | Attachment removed | |
-| `imageOpenHint` | ver la imagen entera | see the whole image | Pista de activación |
-| `viewerTitle` | Imagen de la tarea | Task image | Nombre de la pantalla del visor |
-| `viewerClose` | Cerrar | Close | |
-| `zoomIn` / `zoomOut` / `zoomFit` | Ampliar / Reducir / Ajustar al ancho | Zoom in / Zoom out / Fit to width | |
-| `a11yZoomLevel` | Ampliación por {level} | Zoom times {level} | Solo para el lector; `level` con formato local (2,5 / 2.5). Antes "×{level}" (propietario, 2026-09-27) |
 | `errImageType` | Este tipo de imagen no se admite. Prueba con una foto JPEG, PNG o HEIC. | This image type isn't supported. Try a JPEG, PNG or HEIC photo. | |
 | `errImageTooBig` | La imagen es demasiado grande (máx. {max} MB). | The image is too large (max {max} MB). | |
 | `errImageTooManyPixels` | La imagen tiene demasiada resolución (máx. {max} megapíxeles). | The image resolution is too high (max {max} megapixels). | |
@@ -308,14 +290,14 @@ Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction`
 
 ## 8. Fuera de alcance
 
-- Brillo máximo (D10); editar o recortar la imagen; varias imágenes por tarea; girar fuera del visor.
+- Brillo máximo (D10); editar o recortar la imagen; varias imágenes por tarea; visor a pantalla completa (retirado, ADR-0013); girar fuera de la tarea con imagen.
 - Descripción alternativa escrita por el usuario (P-5, v1.1).
 - La copia de las imágenes en la nube (tarea propia antes de la v1.0) y el ajuste de "Recientes" (spec 010).
 
 ## 9. Preguntas abiertas
 
-- **[Resuelto 2026-09-26, propietario]** En la pantalla principal, la imagen recortada como el prototipo; al tocarla, visor a pantalla completa al ancho, con desplazamiento vertical y zoom opcional (DEV-35, DEV-37).
-- **[Resuelto 2026-09-26, propietario]** Girar solo en el visor (D10 enmendada).
+- **[Resuelto 2026-09-26, propietario; cambiado el 2026-09-27]** Sin visor: la imagen, al ancho y con desplazamiento vertical en la propia tarea; el pellizco amplía y vuelve al soltar (ADR-0013, DEV-41, DEV-43).
+- **[Resuelto 2026-09-27, propietario]** Solo gira la tarea actual con imagen; en horizontal, solo la imagen y el logotipo (D10 enmendada, DEV-42).
 - **[Resuelto 2026-09-26, propietario]** Pantalla encendida hasta 10 minutos sin tocarla.
 - **[Resuelto 2026-09-26, propietario]** "Adjunto no disponible" sin "Sustituir": la interacción, lo más simple posible (una sola acción).
 - **[Resuelto 2026-09-26, propietario]** Un solo adjunto por tarea (imagen, foto, documento o URL). No hay botón "Sustituir" en ninguna parte: en el editor, (+) sigue visible con un adjunto y lo que se cargue sustituye al que había (CA-007-04).
@@ -325,10 +307,9 @@ Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction`
   - "Foto"/"Imagen" sin guardar el nombre original;
   - editar no mueve la tarea;
   - "Subir archivo" y "Cargar URL" inactivas hasta 008 y 009;
-  - zoom por pasos con acciones accesibles y sin modo inmersivo;
   - pie de 3 líneas;
   - P-5 en la v1.1;
   - tipos por contenido (sin AVIF, sin HEIC en Android 8);
   - completadas conservan la imagen, con borrado en la 010;
   - "Recientes" en la 010;
-  - visor y errores con los componentes existentes.
+  - errores con los componentes existentes.

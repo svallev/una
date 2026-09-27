@@ -216,16 +216,6 @@ void main() {
     await golden(tester, 'current_task_photo_es');
   }, skip: _skip);
 
-  testWidgets('CA-007-09: visor', (tester) async {
-    await loadPhoto(tester);
-    await repo.insert(await imageTask('t1', text: 'Horario'));
-    await pumpApp(tester);
-    await tester.tap(find.byType(TaskImage));
-    await tester.pumpAndSettle();
-    await decodeImages(tester);
-    await golden(tester, 'viewer_es');
-  }, skip: _skip);
-
   testWidgets('CA-007-19: "Adjunto no disponible"', (tester) async {
     await loadPhoto(tester);
     await repo.insert(await imageTask('t1', text: 'Horario del festival'));

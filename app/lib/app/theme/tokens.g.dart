@@ -233,7 +233,6 @@ abstract final class UnaSizes {
   static const double removeAttachment = 48.0;
   static const double removeAttachmentIcon = 14.0;
   static const double removeAttachmentStroke = 3.4;
-  static const double viewerClose = 48.0;
 }
 
 abstract final class UnaBorders {
@@ -380,8 +379,8 @@ abstract final class UnaMotion {
   /// "Preparando imagen…" solo aparece si la importación tarda más (CA-007-15)
   static const Duration importIndicatorDelay = Duration(milliseconds: 400);
 
-  /// Animación del doble toque en el visor; con reducir movimiento, salta
-  static const Duration viewerZoom = Duration(milliseconds: 250);
+  /// Vuelta al 100 % al soltar el pellizco en la tarea con imagen (CA-007-10); con reducir movimiento, salta
+  static const Duration imageZoomBack = Duration(milliseconds: 250);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);
@@ -393,6 +392,5 @@ abstract final class UnaMotion {
   static const Cubic easeCurve = Cubic(0.25, 0.1, 0.25, 1.0);
   static const double dragThreshold = 6.0;
   static const double dragTilt = -1.5;
-  static const double viewerZoomStep = 2.5;
-  static const double viewerZoomMax = 8.0;
+  static const double imageZoomMax = 8.0;
 }

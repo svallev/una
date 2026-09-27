@@ -1,4 +1,4 @@
-# Tareas — Spec 007: Tareas con foto o imagen (visor a pantalla completa)
+# Tareas — Spec 007: Tareas con foto o imagen
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se marca `[P]` si puede hacerse en paralelo con la anterior. Una PR puede agrupar varias tareas consecutivas.
 
@@ -17,7 +17,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-11 | Hoja "Añadir a la tarea" y enganche del (+) en el editor | 02, 10 | `attach_sheet_test` | CA-007-01 |
 | T-007-12 | Editor con imagen: vista previa, quitar, sustituir, texto opcional, guardar arriba sin hoja de posición (principal y listado), editar sin mover, errores, foco y anuncios | 11 | `editor_image_test`, `image_flow_test` | CA-007-04/05/06/15/22, CL-007-8 |
 | T-007-13 | Pantalla principal con imagen: a sangre, logotipo y menú con fondo, pie, semántica y acciones | 07 | `current_task_image_test` | CA-007-08/21 |
-| T-007-14 | Visor: ancho completo, desplazamiento vertical, zoom por pasos y pellizco, teselas por nivel, acciones del lector, teclado, girar solo aquí, fundido con reducir movimiento, foco al cerrar | 13 | `image_viewer_test` | CA-007-09/10/11/21/22/23 |
+| T-007-14 | Imagen en la tarea actual (sin visor, ADR-0013): al ancho, desplazamiento vertical con teselas, pellizco que vuelve al soltar, giro solo aquí (acelerómetro nativo) y en horizontal solo imagen y logotipo | 13 | `current_task_image_test` | CA-007-09/10/11/23 |
 | T-007-15 | Pantalla encendida: canal nativo, `KeepScreenOnController`, `Listener` en la raíz, ajuste `keepScreenOn` por defecto | 13 | `keep_screen_on_test` | CA-007-12 |
 | T-007-16 | "Adjunto no disponible" y regeneración de derivadas en segundo plano; barrido tras el primer fotograma | 06, 13 | `missing_attachment_test`; test del barrido en el arranque | CA-007-16/19 |
 | T-007-17 | Resto de la app: miniatura e insignia en el listado; "Foto"/"Imagen" en filas, eliminar y anuncios; cara con imagen en completar y eliminar | 13 | Tests del listado, completar y eliminar | CA-007-20/21, CL-007-9 |
@@ -25,9 +25,9 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-19 | Web de pruebas: `WebImageImporter` (`<input type=file>`, `canvas` a JPEG) y almacén en memoria | 10 | Build web y prueba a mano en el navegador | CL-007-12 |
 | T-007-20 | Accesibilidad global: texto al 200 % en 360 dp, `meetsGuideline`, tabla de foco y anuncios completa | 12–17 | `image_a11y_test` | CA-007-21/22/23 |
 | T-007-21 | Documentos: D18 y `architecture.md` (64 MP, 24 MP sin límite de lado, rutas, teselas), glosario, desviaciones del prototipo si aparecen | 09 | Revisión | — |
-| T-007-22 | *Goldens* (hoja, editor con imagen, tarea actual con imagen, fila con miniatura, visor, adjunto no disponible) en Linux con la etiqueta `actualizar-goldens` | 12–17 | CI | Aspecto |
-| T-007-23 | Integración en el emulador (flujo, restauración sin archivos) y rendimiento en el Xiaomi (arranque con imagen, memoria del visor; con tu permiso y `--keep-app-running`) | 09–17 | `integration_test`; `docs/perf/baseline.md` | CA-007-08, CL-007-2/7 |
-| T-007-24 | TalkBack y teclado en el emulador (hoja, vuelta de la cámara, visor, cierre) | 20 | Lista de la revisión de accesibilidad | CA-007-21/22 |
+| T-007-22 | *Goldens* (hoja, editor con imagen, tarea actual con imagen, fila con miniatura, adjunto no disponible) en Linux con la etiqueta `actualizar-goldens` | 12–17 | CI | Aspecto |
+| T-007-23 | Integración en el emulador (flujo, restauración sin archivos) y rendimiento en el Xiaomi (arranque con imagen, memoria de la tarea con imagen; con tu permiso y `--keep-app-running`) | 09–17 | `integration_test`; `docs/perf/baseline.md` | CA-007-08, CL-007-2/7 |
+| T-007-24 | TalkBack y teclado en el emulador (hoja, vuelta de la cámara, tarea actual con imagen) | 20 | Lista de la revisión de accesibilidad | CA-007-21/22 |
 | T-007-25 | Revisiones: `a11y-reviewer`, `security-reviewer`, `/security-check`, `/i18n-check`, `/tokens-validate` | 22–24 | Hallazgos resueltos o registrados | DoD |
 
 ## Estado (2026-09-26)
@@ -45,7 +45,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-11 | **Hecha** (DEV-38) | `cc161d9` |
 | T-007-12 | **Hecha** (DEV-39) | `6afa8bc` |
 | T-007-13 | **Hecha** | `285677b` |
-| T-007-14 | **Hecha** | `0d51598` |
+| T-007-14 | **Hecha**; rehecha sin visor el 2026-09-27 (ADR-0013) | `0d51598` y la de este cambio |
 | T-007-15 | **Hecha** | `ea613b3` |
 | T-007-16 | **Hecha** (DEV-40, sin "Sustituir"); **Kotlin sin compilar** (el entorno en la nube no descarga el SDK de Android) | `1e00ed9`, `90c2a8e` |
 | T-007-17 | **Hecha** | `21633c9` |

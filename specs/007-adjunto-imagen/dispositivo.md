@@ -17,7 +17,7 @@ Guía para la sesión en local. Todo lo que se pudo hacer sin dispositivo está 
 - **Hecho:** T-007-01 a 22 y T-007-25 (`tasks.md`, estado). Decisiones y cambios, en el plan §8. No queda ninguna decisión pendiente del propietario.
 - **Sin probar todavía** (la nube no puede descargar el SDK de Android):
   - el Kotlin de T-007-16 y de las correcciones de T-007-25 **no se ha compilado nunca**; es lo primero (§1);
-  - `integration_test/image_flow_test.dart` y `viewer_perf_test.dart` compilan, pero no se han ejecutado.
+  - `integration_test/image_flow_test.dart` compila, pero no se ha ejecutado.
 - **Recordatorios:**
   - en el Mac, los goldens se omiten (se generan y comparan en Linux, `docs/testing.md`); si alguno cambia, no se suben imágenes del Mac;
   - los tests que miden anchos o texto grande cargan las fuentes reales (`CLAUDE.md`, Convenciones);
@@ -50,30 +50,18 @@ fvm flutter test integration_test/image_flow_test.dart -d emulator-5554
 
 - [x] `image_import_test`: sin metadatos, orientación, sRGB, 24 MP, teselas, límites, malformados, cancelar. **[Hecho 2026-09-27]** 13/13 en el Pixel 6a (API 36).
 - [x] `image_flow_test`:
-  - foto → tarea actual → visor (doble toque) → cerrar;
+  - foto → tarea actual (tocar la imagen no abre nada: sin visor, ADR-0013);
   - restaurada sin archivos → "Adjunto no disponible" → eliminar;
-  - captura de 1080 × 20 000 en 5 franjas, con desplazamiento vertical.
+  - captura de 1080 × 20 000 en 5 franjas, con desplazamiento vertical en la tarea actual.
 
   **[Hecho 2026-09-27]** 2/2 tras dos correcciones (plan §8):
   - **Fallo de la app:** con una foto vertical, "Guardar" quedaba fuera de la pantalla (y = 1070 en una pantalla de 914). Corregido en `AttachmentPreview`, con test de regresión en `editor_image_test.dart`.
-  - **Fallo del test:** la captura larga terminaba con el visor abierto y `_shutdown` no encontraba la pantalla principal.
 
 ## 3. Rendimiento en el Xiaomi (T-007-23, con permiso)
 
-**Memoria y fluidez del visor.** Presupuesto: ampliar a ×8 añade < 200 MB sobre la tarea actual (redefinido el 2026-09-27, `docs/architecture.md` §7).
+**Memoria de la tarea con imagen.** Presupuesto: la imagen de 24 MP añade < 200 MB sobre la misma tarea con texto (`docs/architecture.md` §7). Se mide con `dumpsys meminfo` con la app *profile* normal (`flutter build apk --profile` + `adb install -r`), en un proceso nuevo y con la tarea ya guardada: en vertical, desplazándose, pellizcando y en horizontal.
 
-```bash
-fvm flutter drive --profile --no-dds --keep-app-running \
-  --driver=test_driver/perf_driver.dart \
-  --target=integration_test/viewer_perf_test.dart -d <serial>
-```
-
-Resultados en `build/viewer_zoom_frames.json` y `build/viewer_memory_mb.json`. Se copian a `docs/perf/baseline.md`.
-
-La medida que manda es `dumpsys meminfo` con la app *profile* normal (`flutter build apk --profile` + `adb install -r`), en un proceso nuevo y con la tarea ya guardada. El test es solo un aviso: arrastra la importación y no ve toda la memoria de la GPU.
-
-- [x] Memoria: el visor a ×8 añade +150 MB de PSS (`dumpsys`) y +89 MB de RSS en el test. **[Hecho 2026-09-27]** Detalle en `docs/perf/baseline.md`. El presupuesto anterior (< 250 MB en total) no se podía cumplir: la app ya ocupa ~350 MB de RSS en la pantalla principal.
-- [x] Fotogramas del zoom dentro del presupuesto de 120 Hz. **[Hecho 2026-09-27]** Peor fotograma: 2,6 ms; ninguno fuera de presupuesto.
+- [ ] Memoria dentro del presupuesto. **[Pendiente]** El visor y su test de rendimiento se retiraron (ADR-0013); sus medidas ya no aplican.
 
 **Arranque en frío con imagen** (CA-007-08: p50 < 1 s, con la imagen ya visible).
 
@@ -101,35 +89,25 @@ tools/measure-cold-start.sh <serial> 20
 - [ ] **CL-007-6:** **[No probado: el propietario decide no probarlo, 2026-09-27; cubierto por los tests de M1]** una imagen de Google Fotos que solo está en la nube, sin conexión, da "No hemos podido leer esta imagen." en 20 s como mucho. "Cancelar" responde en 2 s aunque el proveedor esté colgado (hallazgo M1).
 - [x] **CL-007-7:** con la cámara abierta, `adb shell am kill invalid.pending.app.debug`. Al volver se ve el editor sin imagen (o la tarea actual si pasaron 10 min) y no queda nada en `cache/import/` tras el barrido.
   **[Hecho 2026-09-27, emulador]** Proceso muerto, foto hecha y "Done": la app se reabre en el editor sin imagen; `cache/import/` vacía y sin `attachments/`.
-- [x] **CA-007-11:** el visor gira; al volver a la tarea, la pantalla está en vertical; el resto de la app no gira.
-  **[Hecho 2026-09-27]** Xiaomi: el sistema gira a `ROTATION_90` con el visor (`SCREEN_ORIENTATION_USER`); la tarea actual pide `PORTRAIT`. Emulador: en horizontal, la foto al ancho con desplazamiento vertical y solo "Cerrar"; al volver a vertical sigue el visor; "Cerrar" vuelve a la tarea en vertical.
-  **Decidido por el propietario (2026-09-27):** a ×1 la imagen va **siempre al ancho, con desplazamiento vertical**, también en horizontal (sin cambios: CA-007-09). Girar no cierra el visor.
-- [ ] **Pellizco** hasta ×8; al soltar cerca de ×1, vuelve al ancho completo.
-  **[Pendiente]** El propietario informa de que no funciona. Los tests de widgets pellizcan bien (dos dedos a la vez y con el segundo 120 ms después; fotos horizontales y verticales). Falta confirmar que la prueba se hizo en el visor y no en la tarea actual, que no amplía.
+- [ ] **CA-007-11:** en la tarea actual con imagen, girar el móvil gira la pantalla **sin tocar nada**; en horizontal solo se ven la imagen (a todo el ancho, con desplazamiento vertical) y el logotipo; al volver a vertical, vuelven el menú, el botón y el pie. Con el menú abierto, o en otra pantalla, no gira; con el bloqueo de rotación, tampoco.
+  **[Hecho 2026-09-27, emulador]** Con el acelerómetro simulado: vertical, horizontal (solo imagen y logotipo), vertical otra vez; con el menú abierto no gira. **[Pendiente]** En el Xiaomi.
+  **Lección:** en HyperOS, con `SCREEN_ORIENTATION_USER`, no giraba hasta el siguiente toque; ahora lo decide el acelerómetro (`ImageRotation.kt`).
+- [ ] **Pellizco (CA-007-10):** en vertical y en horizontal, pellizcar amplía la imagen ahí mismo y al soltar vuelve al 100 %; sin visor ni "Cerrar".
+- [x] **Imagen al ancho (CA-007-09, DEV-41):** una foto nueva se ve entera a lo ancho en vertical. **[Hecho 2026-09-27, Xiaomi, propietario]** Las fotos añadidas antes del cambio siguen recortadas.
 - [ ] **CA-007-12:** **[No probado: el propietario decide no probarlo, 2026-09-27; cubierto por `keep_screen_on_test.dart`]** con la imagen visible, la pantalla no se apaga mientras se toca; tras 10 minutos sin tocarla, sí. Para probarlo rápido, se puede acortar el tiempo en una compilación de depuración.
 
 ## 5. TalkBack (T-007-24)
 
 - [ ] **Hoja "Añadir":** se anuncia su nombre y el foco empieza en el título. Cerrarla con la X, con el gesto atrás o tocando fuera devuelve el foco a (+).
 - [ ] **Vuelta de la cámara:** se oye entero "Foto añadida", sin que lo corte la lectura del nuevo foco. Igual con "Imagen añadida", "Preparando imagen…", "Adjunto quitado" y los errores.
-- [ ] **Tarea actual con imagen:** se lee "Tarea actual: {texto}. Con foto" o "Tarea actual: Foto". Doble toque abre el visor. Las acciones son Completar tarea y Eliminar tarea.
-- [ ] **Visor:**
-  - se lee "Imagen de la tarea" y el foco está en la imagen;
-  - el valor se lee "Ampliación por 2,5";
-  - las acciones son Ampliar, Reducir y Ajustar al ancho;
-  - la imagen se lee antes que "Cerrar".
-- [ ] **Visor ampliado:** el desplazamiento con dos dedos funciona también en horizontal. Si solo va en vertical hasta agotarse, se anota: es una limitación de Flutter en Android.
+- [ ] **Tarea actual con imagen:** se lee "Tarea actual: {texto}. Con foto" o "Tarea actual: Foto". Doble toque no abre nada. Las acciones son Completar tarea y Eliminar tarea, también en horizontal (sin botón visible).
+- [ ] **Lupa del sistema** (excepción a P6, ADR-0013): con la ampliación de accesibilidad de Android activada, se puede ampliar la imagen de la tarea.
 - [ ] **Pantalla encendida:** usando solo gestos del lector (explorar tocando y acciones) durante más de 10 minutos, la pantalla no se apaga.
 - [ ] **Listado:** "{n} de {total}: {texto}. Con foto". La miniatura no se lee.
 
 ## 6. Switch Access y teclado físico (T-007-24)
 
-- [ ] **Switch Access:** abrir el visor desde la tarea; Ampliar, Reducir, Ajustar al ancho y Cerrar.
-- [ ] **Teclado: Tab en la tarea actual** llega a la imagen. El anillo blanco y negro se ve sobre una foto oscura y sobre una clara. Intro abre el visor.
-- [ ] **Teclado en el visor:**
-  - + / − / 0 y las flechas funcionan, también después de pasar a "Cerrar" con Tab;
-  - Esc cierra;
-  - el anillo de "Cerrar" se ve.
+- [ ] **Switch Access:** en la tarea con imagen, llegar a Completar tarea y al menú.
 - [ ] **Teclado en el editor:** Tab llega a "Quitar adjunto" y se ve su anillo.
 - [ ] **Texto al 200 %:** con un error de importación, el aviso queda encima de los botones y no tapa el (+).
 

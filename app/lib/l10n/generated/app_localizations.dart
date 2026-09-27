@@ -668,48 +668,6 @@ abstract class AppLocalizations {
   /// **'Quitar adjunto'**
   String get editorRemoveAttachment;
 
-  /// Pista de activación de la imagen; se lee tras «Toca dos veces para». CA-007-21
-  ///
-  /// In es, this message translates to:
-  /// **'ver la imagen entera'**
-  String get imageOpenHint;
-
-  /// Nombre de la pantalla del visor. CA-007-22
-  ///
-  /// In es, this message translates to:
-  /// **'Imagen de la tarea'**
-  String get viewerTitle;
-
-  /// Botón de cerrar el visor. CA-007-09
-  ///
-  /// In es, this message translates to:
-  /// **'Cerrar'**
-  String get viewerClose;
-
-  /// Acción del visor. CA-007-21
-  ///
-  /// In es, this message translates to:
-  /// **'Ampliar'**
-  String get zoomIn;
-
-  /// Acción del visor. CA-007-21
-  ///
-  /// In es, this message translates to:
-  /// **'Reducir'**
-  String get zoomOut;
-
-  /// Acción del visor. CA-007-21
-  ///
-  /// In es, this message translates to:
-  /// **'Ajustar al ancho'**
-  String get zoomFit;
-
-  /// Valor del nivel de zoom en el visor, solo para el lector: "por" escrito, no "×" (propietario, 2026-09-27). CA-007-21
-  ///
-  /// In es, this message translates to:
-  /// **'Ampliación por {level}'**
-  String a11yZoomLevel(double level);
-
   /// Error de importación. Spec 007 §5
   ///
   /// In es, this message translates to:
