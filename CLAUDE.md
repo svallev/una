@@ -15,7 +15,7 @@ App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y d
 
 spec (**Aprobada**) → plan → tareas → implementación con tests → verificación de los CA → DoD.
 Skills: `/spec-new`, `/spec-implement NNN`, `/adr-new`, `/security-check`, `/i18n-check`, `/strings-add`, `/tokens-validate`, `/release-checklist`.
-Subagentes: `spec-reviewer`, `security-reviewer`, `a11y-reviewer`, `test-writer`.
+Subagentes: `spec-reviewer`, `security-reviewer`, `a11y-reviewer`, `test-writer` y `spec-task` (ejecuta una tarea T-NNN-XX de principio a fin; la sesión coordinadora lanza uno por tarea).
 Si el código y la spec discrepan, **se para y se pregunta**; no se "arregla" la spec en silencio.
 
 ## Stack y comandos (a partir de F2; provisional según ADR-0001)
