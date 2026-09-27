@@ -51,7 +51,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-    'CA-004-03/07/08/09: eliminar en el dispositivo no deja contenido y al rearrancar se ve "Todo hecho."',
+    'CA-004-03/07/08/09 (ADR-0012): eliminar en el dispositivo borra la '
+    'tarea y al rearrancar se ve "Todo hecho."',
     (tester) async {
       // El menú se busca por su etiqueta accesible.
       final semantics = tester.ensureSemantics();
@@ -77,11 +78,9 @@ void main() {
 
       await _deleteFromMenu(tester);
       expect(find.byType(AllDoneScreen), findsOneWidget);
-      final gone = (await repo.findById(first.id))!;
-      expect(gone.deletedAt, isNotNull);
-      expect(gone.text, isNull);
+      expect(await repo.findById(first.id), isNull);
 
-      // Rearranque: sin pendientes y con una eliminada → "Todo hecho.".
+      // Rearranque: sin pendientes, pero ya hubo una tarea → "Todo hecho.".
       await tester.pumpWidget(const SizedBox());
       await repo.db.close();
       await bootstrap();

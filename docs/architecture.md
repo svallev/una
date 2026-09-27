@@ -103,7 +103,7 @@ erDiagram
     int createdAt "epoch ms UTC"
     int updatedAt "epoch ms UTC"
     int completedAt "nullable"
-    int deletedAt "nullable = tombstone"
+    int deletedAt "nullable, sin uso desde v2 (ADR-0012)"
     int dueDate "nullable (Bloque 1)"
     text parentId "nullable FK tasks.id (Bloque 2)"
     text source "local | todoist | keep | gtasks | mstodo | anydo (Bloque 3)"
@@ -138,9 +138,9 @@ erDiagram
 ```
 
 - **Índices:** `tasks(status, deletedAt, rank)`; `attachments(taskId)`; `tasks(parentId)` y `tasks(source, externalId)` único parcial (futuro).
-- **Invariantes (se prueban en el dominio):** una tarea tiene `text` no vacío **o** un adjunto (o ambos); una tarea web no lleva texto en la v1 (como el prototipo); `rank` es único entre las pendientes no borradas; `completedAt` no es nulo ⇔ `status = completed`; una tarea eliminada no aparece en ninguna consulta de UI.
-- **Ajustes v1:** `locale` (`system | es | en`), `keepScreenOn` (bool, true), `palette` (`classic`), `firstRunDone` (bool), `notifications` (reservado). Las claves se versionan con el esquema.
-- **Versionado:** `schemaVersion = 1` desde el primer build. Cada cambio → nueva versión, captura en `app/drift_schemas/`, paso de migración y **test de migración** generado (ADR-0002).
+- **Invariantes (se prueban en el dominio):** una tarea tiene `text` no vacío **o** un adjunto (o ambos); una tarea web no lleva texto en la v1 (como el prototipo); `rank` es único entre las pendientes; desde el esquema v2 (ADR-0012) solo se guardan tareas pendientes: completar y eliminar las borran, y `status`, `completedAt` y `deletedAt` quedan sin uso.
+- **Ajustes v1:** `locale` (`system | es | en`), `keepScreenOn` (bool, true), `palette` (`classic`), `firstRunDone` (bool), `hasEverHadTasks` (bool: ya se guardó alguna tarea; decide entre "Todo hecho." y el editor de la primera tarea; lo activa `insert` en su transacción, ADR-0012), `notifications` (reservado). Las claves se versionan con el esquema.
+- **Versionado:** `schemaVersion = 2` (v2, ADR-0012: la migración borra una vez las completadas y las marcas de borrado, y activa `hasEverHadTasks`; mismas tablas). Cada cambio → nueva versión, captura en `app/drift_schemas/`, paso de migración y **test de migración** generado (ADR-0002).
 
 ### Casos de uso ↔ reglas
 
@@ -148,8 +148,8 @@ erDiagram
 |---|---|---|
 | `CreateTask(text, position)` | inserta con `rank` antes de la primera (`top`) o después de la última (`end`); `colorKey` ≠ el de la actual | R3, R4 |
 | `CreateTask(attachment)` | importa el archivo → inserta **top** siempre | R5 |
-| `CompleteTask(current)` | `status = completed`, `completedAt = now`; conserva el adjunto. **ADR-0012: borra la tarea del todo, con sus adjuntos y archivos** | R9, R14, D8 |
-| `DeleteTask(id)` | en una transacción: `deletedAt = updatedAt = now`, `text = null` y se borran sus adjuntos; después, sus archivos. Sin deshacer. **ADR-0012: se borra la fila, sin marca** | R10, ADR-0011 |
+| `CompleteTask(current)` | `remove(id)`: borra la fila y las de sus adjuntos en una transacción; después, sus archivos (`AttachmentJanitor`). Sin histórico | R9, ADR-0012 |
+| `DeleteTask(id)` | `remove(id)`, igual que completar; sin marca y sin deshacer | R10, ADR-0012 |
 | `ReorderTask(id, newIndex)` | nuevo `rank` entre los vecinos; el índice 0 ⇒ pasa a ser la actual | R13 |
 | `EditTask(id, text, attachment?)` | actualiza y conserva `rank` y `colorKey` | R11, R13 |
 

@@ -37,7 +37,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
 - **CA-004-03 Los datos, antes de la animación**
   - **Dado** la confirmación
   - **Cuando** pulsa "Eliminar"
-  - **Entonces** la eliminación se guarda **antes** de empezar la animación (ADR-0011): la tarea deja de estar en la cola y ya no tiene contenido. *Enmienda (ADR-0012, aceptado 2026-09-26):* la tarea se borra del todo, sin marca de borrado. Si la app se mata o pasa a segundo plano durante la animación, al volver se ve la siguiente tarea o "Todo hecho.", sin repetir la animación.
+  - **Entonces** la eliminación se guarda **antes** de empezar la animación (ADR-0011): la tarea deja de estar en la cola y ya no tiene contenido. *Enmienda (ADR-0012, aceptado 2026-09-26; implementada 2026-09-27):* la tarea se borra del todo, sin marca de borrado. Si la app se mata o pasa a segundo plano durante la animación, al volver se ve la siguiente tarea o "Todo hecho.", sin repetir la animación.
 - **CA-004-04 Animación de arrugado**
   - **Dado** la eliminación guardada
   - **Cuando** empieza la animación
@@ -65,7 +65,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
   - **Dado** que no queda ninguna tarea pendiente y hay al menos una completada **o eliminada**
   - **Cuando** se abre la app en frío (o vuelve de segundo plano tras 10 min, CA-001-12)
   - **Entonces** se ve "Todo hecho.". Enmienda CA-003-11 y CA-001-05: el editor de la primera tarea solo se abre si nunca se ha guardado ninguna tarea.
-  - *Enmienda (ADR-0012, aceptado 2026-09-26):* se decide con el ajuste "ya se guardó alguna tarea", no con las completadas ni las eliminadas, que ya no se guardan.
+  - *Enmienda (ADR-0012, aceptado 2026-09-26; implementada 2026-09-27):* se decide con el ajuste "ya se guardó alguna tarea", no con las completadas ni las eliminadas, que ya no se guardan.
 
 **Datos**
 
@@ -77,7 +77,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
     - tiene `deletedAt` y `updatedAt` con la hora de la eliminación y `text` nulo;
     - no quedan filas de adjuntos ni archivos suyos (en cuanto haya adjuntos, 007–009);
     - solo queda la marca de borrado (ADR-0011).
-  - *Enmienda (ADR-0012, aceptado 2026-09-26):* no queda **nada**: ni la fila ni la marca de borrado.
+  - *Enmienda (ADR-0012, aceptado 2026-09-26; implementada 2026-09-27):* no queda **nada**: ni la fila ni la marca de borrado.
 
 **Accesibilidad**
 

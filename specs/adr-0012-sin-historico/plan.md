@@ -115,3 +115,14 @@ Tests que cambian porque comprobaban el histórico (se reescriben, no se borran)
 - Specs: marcar las enmiendas del ADR-0012 como **implementadas** (con el commit).
 - `specs/007-adjunto-imagen/tasks.md`: nota de que CA-007-17 queda sustituido.
 - `docs/testing.md`: nada.
+
+## 9. Cambios durante la implementación (2026-09-27)
+
+- **Consultas de pendientes:** se mantiene el filtro `deletedAt IS NULL` (el plan decía quitarlo). No cambia el resultado, porque tras la migración no queda ninguna marca, y así el índice `(status, deletedAt, rank)` sigue dando el orden sin ordenar en memoria.
+- **Fallo encontrado y corregido: `hasEverHadTasks` en el arranque.** `main.dart` solo leía el ajuste si no había tarea actual, como hacía con `hasHistory`. Con tareas pendientes al abrir, quedaba en falso y, al completar la última, se habría visto el editor de la primera tarea en lugar de "Todo hecho." (antes lo tapaba `mark()` al completar). Ahora `readBootState` (en `providers.dart`) lo calcula igual para `main.dart` y para los arneses de test: con una tarea actual, `true`; si no, el ajuste. Lo cubre CA-003-05 en `completion_flow_test`, que fallaba con el cálculo antiguo.
+- **La rotura de una tarea con imagen:** completar ya borra sus archivos, y en la pausa antes de romperse la tarea se ve en la pantalla normal. Si su comprobación de archivos se volvía a lanzar, aparecía "Adjunto no disponible". La tarea que se está completando no comprueba sus archivos (`CurrentTaskScreen`, `completionProvider`), igual que la cara de la rotura. Lo cubre `image_elsewhere_test`.
+- **Limpieza:** `Task.complete()` y `Task.tombstone()` se quitan (nada los usa); los tres casos de uso ya no reciben el reloj.
+- **T-0012-09, en el emulador:**
+  - con una build de `main` (v1) se crearon 2 pendientes (una con foto) y se completó una con foto, que en v1 conservaba su imagen;
+  - al instalar encima la v2, siguen las 2 pendientes, la completada desaparece y el barrido borra su imagen;
+  - al completar las dos se ve "Todo hecho.", también tras volver a abrir, y completar una tarea con foto borra sus archivos.

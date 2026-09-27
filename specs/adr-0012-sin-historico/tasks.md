@@ -18,9 +18,19 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-0012-10 | Documentos (plan §8): `architecture.md`, `threat-model.md` T-7, enmiendas marcadas como implementadas | 08 | Revisión | — |
 | T-0012-11 | Revisiones: `security-reviewer` (borra datos: migración y borrado), `/security-check` | 10 | Hallazgos resueltos o registrados | DoD |
 
+## Estado (2026-09-27)
+
+| Tareas | Estado | Commits |
+|---|---|---|
+| T-0012-01, 02 | **Hechas** (migración v1 → v2 y su test) | `fe4ebc2` |
+| T-0012-03 a 07 | **Hechas** (contrato, repositorios, casos de uso, arranque, barrido; ver el plan §9) | `8a72099` |
+| T-0012-08, 09 | **Hechas** en el emulador (integración y actualización real desde v1) | este cambio |
+| T-0012-10 | **Hecha** (documentos) | este cambio |
+| T-0012-11 | Pendiente: `security-reviewer` y `/security-check` | — |
+
 ## Cierre
 
-- [ ] Tests de migración, contrato, dominio, widgets y goldens en verde (los goldens no deberían cambiar).
-- [ ] Integración y actualización desde v1 comprobadas en el emulador.
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Enmiendas del ADR-0012 en las specs 001, 003, 004 y 007 marcadas como **implementadas**.
+- [x] Tests de migración, contrato, dominio, widgets y goldens en verde (los goldens no cambian).
+- [x] Integración y actualización desde v1 comprobadas en el emulador.
+- [ ] Definition of Done (`specs/constitution.md`) completa (falta T-0012-11 y CI).
+- [x] Enmiendas del ADR-0012 en las specs 001, 003, 004 y 007 marcadas como **implementadas**.
