@@ -53,7 +53,8 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-19 | **Hecha** (probada en Chromium con el build real y la CSP) | `3002d49` |
 | T-007-20 | **Hecha** (sin fallos reales; regla de fuentes en `CLAUDE.md`) | `3cb505a` |
 | T-007-21 | **Hecha** (sin desviaciones nuevas del prototipo) | `fe8fe7a` |
-| T-007-22 a 25 | Pendientes | — |
+| T-007-22 | **Hecha** (generados en Linux con la versión de CI; corrige el logotipo cortado a 200 %) | `cce6c9f`, `a32e11b` |
+| T-007-23 a 25 | Pendientes | — |
 
 Las decisiones y cambios respecto al plan están en `plan.md` §8.
 
