@@ -33,6 +33,7 @@ Future<void> bootstrap({
           attachmentStoreProvider.overrideWithValue(images.store),
           attachmentImagesProvider.overrideWithValue(images.images),
           imageImporterProvider.overrideWithValue(images.importer),
+          pdfImporterProvider.overrideWithValue(images.pdfImporter),
           bootStateProvider.overrideWithValue(boot),
         ],
         child: const UnaApp(),

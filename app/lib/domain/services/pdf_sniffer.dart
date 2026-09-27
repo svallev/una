@@ -19,7 +19,11 @@ const _signature = [0x25, 0x50, 0x44, 0x46, 0x2D]; // %PDF-
 /// ¿Es un PDF por el contenido (CA-008-02)? Como PDFium, busca `%PDF-` en los
 /// primeros [PdfLimits.headBytes] bytes; la extensión y el tipo declarado no
 /// cuentan. Que se pueda abrir se comprueba después, con el motor.
+///
+/// Un documento de marcado (HTML, XML, SVG: empieza por `<` tras espacios o
+/// una marca BOM) nunca es un PDF, aunque lleve `%PDF-` dentro (CL-008-7).
 bool isPdf(List<int> head) {
+  if (_isMarkup(head)) return false;
   final end = head.length < PdfLimits.headBytes
       ? head.length
       : PdfLimits.headBytes;
@@ -31,4 +35,22 @@ bool isPdf(List<int> head) {
     return true;
   }
   return false;
+}
+
+bool _isMarkup(List<int> head) {
+  var i = 0;
+  if (head.length >= 3 &&
+      head[0] == 0xEF &&
+      head[1] == 0xBB &&
+      head[2] == 0xBF) {
+    i = 3; // BOM de UTF-8
+  }
+  while (i < head.length &&
+      (head[i] == 0x20 ||
+          head[i] == 0x09 ||
+          head[i] == 0x0A ||
+          head[i] == 0x0D)) {
+    i++;
+  }
+  return i < head.length && head[i] == 0x3C; // <
 }

@@ -3,6 +3,7 @@ import 'package:app/data/attachments/attachment_images.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/image_services.dart';
 import 'package:app/data/import/unavailable_image_importer.dart';
+import 'package:app/data/import/unavailable_pdf_importer.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/data/repository_factory.dart';
 import 'package:app/features/app_error/storage_error_screen.dart';
@@ -21,6 +22,7 @@ Future<ImageServices> _images() async {
     store: store,
     images: MemoryAttachmentImages(store),
     importer: const UnavailableImageImporter(),
+    pdfImporter: const UnavailablePdfImporter(),
   );
 }
 

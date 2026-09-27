@@ -36,6 +36,18 @@ void main() {
       );
     });
 
+    test('CL-008-7: HTML, XML o SVG con %PDF- dentro no son PDF', () {
+      expect(
+        isPdf(ascii.encode('<!DOCTYPE html><body>%PDF-1.7</body>')),
+        isFalse,
+      );
+      expect(isPdf(ascii.encode('  \n<svg>%PDF-1.4</svg>')), isFalse);
+      expect(
+        isPdf([0xEF, 0xBB, 0xBF, ...ascii.encode('<?xml?>%PDF-1.7')]),
+        isFalse,
+      );
+    });
+
     test('rechaza la cabecera después de 1024 bytes', () {
       expect(
         isPdf([...List.filled(1020, 0x20), ...ascii.encode('%PDF-')]),
