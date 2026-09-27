@@ -106,6 +106,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
   final _plusFocus = FocusNode();
   final _plusSemantics = GlobalKey();
+  final _buttonsKey = GlobalKey();
 
   /// Cambian para llevar el foco a la vista previa o a "Cancelar" (CA-007-22).
   int _previewSignal = 0;
@@ -176,7 +177,12 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   Future<void> _attach() async {
     if (_saving || ref.read(imageImportProvider).preparing) return;
     final choice = await showAttachSheet(context);
-    if (choice == null || !mounted) return;
+    if (!mounted) return;
+    if (choice == null) {
+      // Cerrada sin elegir: el foco vuelve a (+) (CA-007-22).
+      _focusPlus();
+      return;
+    }
     final origin = switch (choice) {
       AttachChoice.camera => AttachmentOrigin.camera,
       AttachChoice.gallery => AttachmentOrigin.gallery,
@@ -225,11 +231,34 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     if (error != null && before?.error == null) {
       final l10n = AppLocalizations.of(context);
       // El aviso se anuncia solo (spec 007 §5).
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(importErrorText(l10n, error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(importErrorText(l10n, error)),
+          // Encima de los botones: no tapa el (+), que recibe el foco
+          // (WCAG 2.4.11).
+          behavior: SnackBarBehavior.floating,
+          margin: _aboveButtons(),
+        ),
+      );
       ref.read(imageImportProvider.notifier).clearError();
       _focusPlus();
     }
+  }
+
+  /// Margen de un aviso flotante que queda justo encima de la fila de
+  /// botones, mida lo que mida con el texto grande.
+  EdgeInsets _aboveButtons() {
+    final box = _buttonsKey.currentContext?.findRenderObject() as RenderBox?;
+    final screen = MediaQuery.sizeOf(context).height;
+    final top = box == null || !box.hasSize
+        ? screen
+        : box.localToGlobal(Offset.zero).dy;
+    return EdgeInsets.fromLTRB(
+      UnaSpace.l,
+      0,
+      UnaSpace.l,
+      (screen - top).clamp(0, screen) + UnaSpace.s,
+    );
   }
 
   void _announce(String message) => unawaited(
@@ -561,6 +590,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                         UnaSpace.xxl,
                       ),
                       child: Row(
+                        key: _buttonsKey,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           BrutalButton.icon(

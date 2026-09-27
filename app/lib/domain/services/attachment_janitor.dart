@@ -72,12 +72,16 @@ class AttachmentJanitor {
     final stored = await store.storedIds();
     final staging = await store.stagingIds();
     final known = await repository.attachmentIds();
+    // Protegidas: las activas al empezar (que pueden haberse guardado ya y no
+    // estar en `known`) y las que empiecen durante el barrido.
+    bool protected(String id) =>
+        active.contains(id) || registry.active.contains(id);
     for (final id in stored) {
-      if (!known.contains(id) && !active.contains(id)) await discard(id);
+      if (!known.contains(id) && !protected(id)) await discard(id);
     }
     for (final name in staging) {
       // La cámara escribe `<id>.camera` junto a la preparación `<id>`.
-      if (!active.contains(name.split('.').first)) {
+      if (!protected(name.split('.').first)) {
         try {
           await store.deleteStaging(name);
         } on Object {

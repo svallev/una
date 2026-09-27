@@ -12,6 +12,7 @@ import '../../domain/entities/task.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/focus_on_signal.dart';
+import '../../ui/focus_ring.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
@@ -283,10 +284,8 @@ class CurrentTaskScreen extends ConsumerWidget {
                           _Order(
                             0,
                             child: taskNode(
-                              GestureDetector(
-                                // Toda la imagen, cargada o no.
-                                behavior: HitTestBehavior.opaque,
-                                onTap: faceOnly ? null : openViewer,
+                              _ImageLayer(
+                                onOpen: faceOnly ? null : openViewer,
                                 child: TaskImage(
                                   attachment: attachment,
                                   caption: text,
@@ -428,6 +427,52 @@ Future<void> _openViewer(BuildContext context, WidgetRef ref, Task task) async {
 
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
 /// pantalla y teclado), aunque el menú esté arriba en pantalla.
+/// La imagen de la tarea actual: tocarla abre el visor (CA-007-09). Con
+/// teclado o interruptores se llega con Tab y se abre con Intro o Espacio, con
+/// el anillo por dentro del borde (WCAG 2.1.1 y 2.4.7). La lectura y las
+/// acciones del lector son las del nodo de la tarea, sin añadir nada.
+class _ImageLayer extends StatefulWidget {
+  const _ImageLayer({required this.onOpen, required this.child});
+
+  final VoidCallback? onOpen;
+  final Widget child;
+
+  @override
+  State<_ImageLayer> createState() => _ImageLayerState();
+}
+
+class _ImageLayerState extends State<_ImageLayer> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final onOpen = widget.onOpen;
+    return FocusableActionDetector(
+      enabled: onOpen != null,
+      includeFocusSemantics: false,
+      onShowFocusHighlight: (v) => setState(() => _focused = v),
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            onOpen?.call();
+            return null;
+          },
+        ),
+      },
+      child: FocusRing(
+        visible: _focused,
+        inside: true,
+        child: GestureDetector(
+          // Toda la imagen, cargada o no.
+          behavior: HitTestBehavior.opaque,
+          onTap: onOpen,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
 class _Order extends StatelessWidget {
   const _Order(this.order, {required this.child});
   final double order;

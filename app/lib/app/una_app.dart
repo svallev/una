@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -96,10 +97,16 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
-      // Cada toque cuenta como uso para la pantalla encendida (CA-007-12).
+      // Cada toque cuenta como uso para la pantalla encendida (CA-007-12),
+      // también explorar tocando con TalkBack (llega como *hover* táctil).
       builder: (context, child) => Listener(
         behavior: HitTestBehavior.translucent,
         onPointerDown: (_) => ref.read(keepScreenOnProvider.notifier).touched(),
+        onPointerHover: (e) {
+          if (e.kind == PointerDeviceKind.touch) {
+            ref.read(keepScreenOnProvider.notifier).touched();
+          }
+        },
         child: appFrame(context, child),
       ),
       home: HomeRouter(key: ValueKey(_resetGeneration)),

@@ -15,6 +15,7 @@ import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.io.Closeable
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
@@ -46,7 +47,15 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
 
     private val main = Handler(Looper.getMainLooper())
     private val executor = Executors.newFixedThreadPool(2)
+
+    /**
+     * Cancelar nunca espera en la cola de [executor]: si una copia está
+     * bloqueada en `read()` (proveedor en la nube sin red), cerrar su flujo la
+     * desbloquea y el borrado va por su propio hilo.
+     */
+    private val cleaner = Executors.newSingleThreadExecutor()
     private val cancelled = ConcurrentHashMap<String, AtomicBoolean>()
+    private val openStreams = ConcurrentHashMap<String, Closeable>()
 
     /** Llamada de Dart que espera el resultado de la cámara o del selector. */
     private var pending: MethodChannel.Result? = null
@@ -170,21 +179,43 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                 require(ID.matches(cameraId)) { "id" }
                 val file = File(importRoot, "$cameraId.camera")
                 try {
-                    FileInputStream(file).use { boundedCopy(it, id, maxBytes, flag) }
+                    FileInputStream(file).use { tracked(id, it) { boundedCopy(it, id, maxBytes, flag) } }
                 } finally {
                     file.delete() // Ninguna otra copia de lo que escribió la cámara.
                 }
             } else {
                 val uri = Uri.parse(token)
-                // Solo contenido de otras apps; nunca archivos ni nuestro propio
-                // FileProvider (datos de la app, T-3).
-                if (uri.scheme != ContentResolver.SCHEME_CONTENT || uri.authority == authority) {
-                    throw ImportException("unreadable")
-                }
+                // Solo contenido de otras apps; nunca archivos ni un proveedor
+                // de la propia app (datos de la app, T-3).
+                if (!isForeignContent(uri)) throw ImportException("unreadable")
                 val input = activity.contentResolver.openInputStream(uri)
                     ?: throw ImportException("unreadable")
-                input.use { boundedCopy(it, id, maxBytes, flag) }
+                input.use { tracked(id, it) { boundedCopy(it, id, maxBytes, flag) } }
             }
+        }
+    }
+
+    /**
+     * ¿`content://` de otra app? Rechaza la autoridad con usuario
+     * (`0@<pkg>.imports`, que `ContentResolver` resolvería a nuestro
+     * FileProvider) y cualquier proveedor cuyo paquete sea el nuestro.
+     */
+    private fun isForeignContent(uri: Uri): Boolean {
+        if (uri.scheme != ContentResolver.SCHEME_CONTENT) return false
+        val auth = uri.authority ?: return false
+        if (auth.contains('@') || auth == authority) return false
+        @Suppress("DEPRECATION")
+        val provider = activity.packageManager.resolveContentProvider(auth, 0)
+        return provider?.packageName != activity.packageName
+    }
+
+    /** Registra el flujo de [id] mientras dura [block], para que cancelar lo cierre. */
+    private fun <T> tracked(id: String, stream: Closeable, block: () -> T): T {
+        openStreams[id] = stream
+        try {
+            return block()
+        } finally {
+            openStreams.remove(id, stream)
         }
     }
 
@@ -200,9 +231,11 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         cancelled[id] = flag
         background(result, id) {
             val allowed = path == "/dev/zero" || path == "/dev/urandom" ||
-                File(path).canonicalPath.startsWith(File(activity.cacheDir, "fixtures").canonicalPath)
+                File(path).canonicalPath.startsWith(
+                    File(activity.cacheDir, "fixtures").canonicalPath + File.separator,
+                )
             if (!allowed) throw ImportException("unreadable")
-            FileInputStream(path).use { boundedCopy(it, id, maxBytes(call), flag) }
+            FileInputStream(path).use { tracked(id, it) { boundedCopy(it, id, maxBytes(call), flag) } }
         }
     }
 
@@ -219,7 +252,13 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                 val buf = ByteArray(BUFFER)
                 while (true) {
                     if (flag.get()) throw ImportException("cancelled")
-                    val n = input.read(buf)
+                    val n = try {
+                        input.read(buf)
+                    } catch (e: IOException) {
+                        // Cerrado por `cancel` mientras esperaba datos.
+                        if (flag.get()) throw ImportException("cancelled")
+                        throw e
+                    }
                     if (n < 0) break
                     total += n
                     if (total > maxBytes) throw ImportException("tooLarge")
@@ -330,7 +369,9 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
 
     private fun cancel(id: String, result: MethodChannel.Result) {
         cancelled[id]?.set(true)
-        executor.execute {
+        // Desbloquea una copia parada en `read()`.
+        openStreams.remove(id)?.let { runCatching { it.close() } }
+        cleaner.execute {
             File(importRoot, id).deleteRecursively()
             File(importRoot, "$id.camera").delete()
             main.post { result.success(null) }
@@ -350,7 +391,7 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         work: () -> Any?,
     ) {
         executor.execute {
-            val outcome: Result<Any?> = try {
+            var outcome: Result<Any?> = try {
                 Result.success(work())
             } catch (e: ImportException) {
                 Result.failure(e)
@@ -358,6 +399,11 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                 Result.failure(ImportException("unreadable"))
             } catch (e: Exception) {
                 Result.failure(ImportException("unreadable"))
+            }
+            if (outcome.isSuccess && cancelled[id]?.get() == true) {
+                // Cancelada mientras terminaba (quizá tras el borrado de
+                // `cancel`, que no la esperaba): se descarta lo escrito.
+                outcome = Result.failure(ImportException("cancelled"))
             }
             if (outcome.isFailure) {
                 // Error o cancelación: no queda nada de esta importación.
@@ -375,5 +421,6 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
 
     fun dispose() {
         executor.shutdownNow()
+        cleaner.shutdown()
     }
 }

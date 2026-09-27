@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../ui/boxed_icon_button.dart';
 import '../../ui/focus_on_signal.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
@@ -58,17 +59,21 @@ class AttachmentPreview extends StatelessWidget {
             if (image != null)
               FocusOnSignal(
                 signal: focusSignal,
-                child: Semantics(
-                  image: true,
-                  label: semanticLabel,
-                  excludeSemantics: true,
-                  child: Image(
-                    image: image,
-                    fit: BoxFit.cover,
-                    gaplessPlayback: true,
-                    // Sin la versión de pantalla, el recuadro queda en blanco
-                    // (el aviso de adjunto perdido es de la pantalla principal).
-                    errorBuilder: (_, _, _) => const SizedBox.expand(),
+                // Tapada por "Preparando imagen…", el lector no la lee.
+                child: ExcludeSemantics(
+                  excluding: preparing,
+                  child: Semantics(
+                    image: true,
+                    label: semanticLabel,
+                    excludeSemantics: true,
+                    child: Image(
+                      image: image,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      // Sin la versión de pantalla, el recuadro queda en blanco
+                      // (el aviso de adjunto perdido es de la pantalla principal).
+                      errorBuilder: (_, _, _) => const SizedBox.expand(),
+                    ),
                   ),
                 ),
               ),
@@ -76,8 +81,12 @@ class AttachmentPreview extends StatelessWidget {
               Positioned(
                 top: UnaSpace.s - UnaSpace.xxs,
                 right: UnaSpace.s - UnaSpace.xxs,
-                child: _RemoveButton(
+                child: BoxedIconButton(
                   label: l10n.editorRemoveAttachment,
+                  icon: UnaIcons.close,
+                  dimension: UnaSizes.removeAttachment,
+                  iconSize: UnaSizes.removeAttachmentIcon,
+                  iconStroke: UnaSizes.removeAttachmentStroke,
                   onPressed: onRemove,
                 ),
               ),
@@ -89,44 +98,6 @@ class AttachmentPreview extends StatelessWidget {
                 cancelFocusSignal: cancelFocusSignal,
               ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RemoveButton extends StatelessWidget {
-  const _RemoveButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: label,
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: Material(
-        color: UnaColors.surface,
-        shape: const Border.fromBorderSide(
-          BorderSide(color: UnaColors.ink, width: UnaBorders.strongWidth),
-        ),
-        child: InkWell(
-          onTap: onPressed,
-          highlightColor: UnaColors.pressed,
-          splashFactory: NoSplash.splashFactory,
-          child: const SizedBox.square(
-            dimension: UnaSizes.removeAttachment,
-            child: Center(
-              child: UnaIcon(
-                UnaIcons.close,
-                size: UnaSizes.removeAttachmentIcon,
-                strokeWidth: UnaSizes.removeAttachmentStroke,
-              ),
-            ),
-          ),
         ),
       ),
     );

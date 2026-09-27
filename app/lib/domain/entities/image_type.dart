@@ -60,7 +60,9 @@ ImageType? sniffImageType(List<int> head, {required bool heicSupported}) {
   if (starts('ftyp'.codeUnits, 4) && head.length >= 12) {
     final boxSize =
         (head[0] << 24) | (head[1] << 16) | (head[2] << 8) | head[3];
-    final end = boxSize.clamp(16, head.length);
+    // Sin ver todas las marcas no se puede descartar AVIF: no se admite.
+    if (boxSize < 16 || boxSize > head.length) return null;
+    final end = boxSize;
     final brands = <String>{ascii(8, 12)};
     for (var i = 16; i + 4 <= end; i += 4) {
       brands.add(ascii(i, i + 4));

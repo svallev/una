@@ -43,8 +43,18 @@ class FileAttachmentStore implements AttachmentStore {
   Directory _staging(String id) =>
       Directory('${stagingRoot.path}/${_checked(id)}');
 
-  /// Archivo de un adjunto guardado ([relPath] de [Attachment]).
-  File file(String relPath) => File('${filesRoot.path}/$relPath');
+  /// Archivo de un adjunto guardado ([relPath] de [Attachment]). Solo
+  /// `attachments/<id>/<nombre>.jpg`: nunca sale de su carpeta.
+  File file(String relPath) {
+    if (!_validRelPath.hasMatch(relPath)) {
+      throw ArgumentError.value(relPath, 'relPath');
+    }
+    return File('${filesRoot.path}/$relPath');
+  }
+
+  static final _validRelPath = RegExp(
+    r'^attachments/[A-Za-z0-9_-]{1,64}/[a-z0-9-]{1,32}\.jpg$',
+  );
 
   /// Archivo de una preparación (vista previa en el editor antes de guardar).
   File stagingFile(String id, String name) =>

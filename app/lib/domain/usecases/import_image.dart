@@ -66,7 +66,8 @@ class ImportJob {
         _owner.timeout,
         onTimeout: () async {
           _cancelled = true;
-          await importer.cancel(id);
+          // No se espera: si la copia está colgada, el aviso sale igual.
+          unawaited(_cancelNative(importer));
           throw const ImageImportFailure(ImageImportError.unreadable);
         },
       );
@@ -108,7 +109,16 @@ class ImportJob {
   /// Cancela la preparación y la borra (CA-007-15).
   Future<void> cancel() async {
     _cancelled = true;
-    await _owner.importer.cancel(id);
+    await _cancelNative(_owner.importer);
     await _owner.janitor.discardStaging(id);
   }
+
+  /// Cancelar nunca deja el editor esperando: como mucho [cancelTimeout]; lo
+  /// que quede en la preparación lo borra `discardStaging` o el barrido.
+  Future<void> _cancelNative(ImageImporter importer) => importer
+      .cancel(id)
+      .timeout(cancelTimeout, onTimeout: () {})
+      .catchError((Object _) {});
+
+  static const cancelTimeout = Duration(seconds: 2);
 }
