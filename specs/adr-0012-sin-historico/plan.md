@@ -10,7 +10,7 @@
   No hay spec nueva: este plan implementa esas enmiendas.
 - **ADR aplicables:** ADR-0012 (sustituye a ADR-0011), ADR-0002 (repositorio, migraciones), ADR-0004 (copias).
 - **Cuándo:** después de fusionar la spec 007 en `main`, en la rama `feat/adr-0012-sin-historico` creada desde `main` (decisión del propietario, 2026-09-26).
-- **Estado del plan:** Borrador (2026-09-27), pendiente del "sí" del propietario.
+- **Estado del plan:** **Aprobado** (propietario, 2026-09-27). Viaja en la PR de la spec 007 solo como documentación; se implementa en su propia rama después.
 
 ## 1. Resumen del enfoque
 
