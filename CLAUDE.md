@@ -2,7 +2,7 @@
 
 App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y deja un único elemento (foto, PDF, web) a pantalla completa nada más abrirla. Sin servidor, sin cuentas y sin analítica. Nombre provisional: "Una." (nunca literal en el código: `AppIdentity` / clave l10n `appName`).
 
-**Fase actual:** F4 (adjuntos), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). El código de la app está en `app/`: en `main` están las specs 001–007 y el ADR-0012 (sin histórico; esquema v2). La 007 no tiene visor de imágenes (ADR-0013). **Siguiente:** la spec 008 (documento), que está **En revisión**: primero `spec-reviewer` y la aprobación del propietario; después plan, tareas e implementación (`/spec-implement 008`). Pendientes anotados: H-5 y H-6 (`specs/adr-0012-sin-historico/plan.md` §9) y los puntos de la auditoría de F5 (`docs/PLAN.md`). No hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
+**Fase actual:** F4 (adjuntos), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). El código de la app está en `app/`: en `main` están las specs 001–007 y el ADR-0012 (sin histórico; esquema v2). La 007 no tiene visor de imágenes (ADR-0013). **Siguiente:** la spec 008 (**solo PDF** en la v1, ADR-0014), **Aprobada** el 2026-09-27: plan, tareas e implementación (`/spec-implement 008`). Pendientes anotados: H-5 y H-6 (`specs/adr-0012-sin-historico/plan.md` §9) y los puntos de la auditoría de F5 (`docs/PLAN.md`). No hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
 
 ## Lee primero
 

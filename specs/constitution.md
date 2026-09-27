@@ -2,7 +2,7 @@
 
 > Principios que **no se negocian**. Toda spec, plan, tarea y PR se revisa contra este documento.
 > Para cambiarlo hace falta un ADR que lo justifique y la aprobación explícita del propietario del producto.
-> Versión 1.1 · 2026-09-27 (nota de excepciones bajo P6, ADR-0013). Versión 1.0 · 2026-09-24
+> Versión 1.2 · 2026-09-27 (excepción del horizontal ampliada al PDF, ADR-0014). Versión 1.1 · 2026-09-27 (nota de excepciones bajo P6, ADR-0013). Versión 1.0 · 2026-09-24
 
 ## Principios
 
@@ -26,6 +26,7 @@ WCAG 2.2 AA como mínimo. Toda acción por gesto (mantener pulsado, arrastrar, d
 
 > **Excepciones aprobadas por el propietario** (cada una con su ADR, su mitigación y su criterio de revisión):
 > - [ADR-0013](../docs/adr/0013-sin-visor-de-imagenes.md) (2026-09-27): el pellizco de la tarea con imagen no tiene alternativa en la app (WCAG 2.5.1; se usa la lupa del sistema), y el horizontal de la tarea con imagen es solo para verla, sin menú ni botón de completar (WCAG 1.3.4 y 2.1.1).
+> - [ADR-0014](../docs/adr/0014-solo-pdf-en-la-v1.md) (2026-09-27): la misma excepción del horizontal se amplía a la tarea con PDF, que gira igual que la de imagen; en los dos casos, el botón "Volver a vertical" vuelve a la vista completa.
 
 ### P7. i18n desde el primer día
 No hay textos incrustados en el código. Todos los textos (incluidos fechas, plurales y etiquetas de accesibilidad) salen de los archivos de traducción, en español y en inglés. El nombre de la app está centralizado y no aparece en el código, las rutas ni los identificadores.

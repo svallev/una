@@ -33,7 +33,7 @@ flowchart TB
     IMP[ImportPipeline: bytes mágicos · límites · ImageSanitizer nativo sin EXIF · miniaturas]
     WV[WebView en vivo: webview_flutter endurecida · WebSnapshotter nativo Kotlin/Swift]
     PDF[pdfrx]
-    NV[Canal nativo: QuickLook · FileProvider/ACTION_VIEW]
+    NV[Canal nativo: QuickLook · FileProvider/ACTION_VIEW — no en la v1, ADR-0014]
   end
   UI --> STATE --> UC
   UC --> E
@@ -157,21 +157,21 @@ erDiagram
 
 ```mermaid
 flowchart LR
-  A[Selector del sistema / cámara / URL] --> B{Tipo por bytes mágicos}
-  B -- no admitido --> X[Error: tipo no admitido]
-  B -- admitido --> C{¿Tamaño ≤ límite?}
+  A[Selector del sistema / cámara / URL] --> C{¿Tamaño ≤ límite? contado al copiar}
   C -- no --> Y[Error: demasiado grande]
   C -- sí --> D[Copiar a tmp del sandbox]
-  D --> E{kind}
+  D --> B{Tipo por el contenido}
+  B -- no admitido --> X[Error: tipo no admitido]
+  B -- admitido --> E{kind}
   E -- image --> F[ImageSanitizer nativo: dimensiones por la cabecera ≤ 64 MP → decodificar con orientación → JPEG sin metadatos ≤ 24 MP en teselas de 4096 px + pantalla + miniatura]
   E -- pdf --> G[Abrir con pdfrx en modo solo lectura → miniatura p.1 → pageCount]
-  E -- document --> H[Guardar tal cual → icono por tipo]
+  E -- document --> H[Guardar tal cual → icono por tipo — no en la v1, ADR-0014]
   E -- web --> I[WebSnapshotter nativo → recorrer la página → captura completa ≤ 16 000 px → miniatura; SSL/HTTP ≥ 400 = fallo]
   F & G & H & I --> J[Mover de forma atómica a attachments/uuid/ + sha256 salvo imágenes]
   J --> K[Insertar Task + Attachment en una transacción]
 ```
 
-Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D18), documento 25 MB, captura web 20 000 px de alto. La importación no bloquea la UI (las imágenes, en un hilo nativo; el resto, en un *isolate*) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
+Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D18; en la v1 el único documento, ADR-0014), captura web 20 000 px de alto. La importación no bloquea la UI (las imágenes, en un hilo nativo; el resto, en un *isolate*) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
 
 ### Imágenes (spec 007)
 
@@ -198,7 +198,7 @@ Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D1
 | I-4 | **`ImageSanitizer` nativo** (Android `ImageDecoder` + `Bitmap.compress`; iOS ImageIO) | S5: 12 MP en 0,77 s frente a 12 s en Dart puro |
 | I-5 | Captura web: SSL inválido (siempre cancelado) y HTTP ≥ 400 del marco principal = fallo | S4: sin esto se guardaba una página en blanco |
 | I-6 | Captura web: recorrer la página por pasos antes de capturar | S4: huecos en webs que animan al hacer *scroll* |
-| I-7 | Visor del sistema: comprobar si hay app antes de lanzar el intent y mostrar nuestro mensaje | S3: selector del sistema vacío y en inglés |
+| I-7 | Visor del sistema: comprobar si hay app antes de lanzar el intent y mostrar nuestro mensaje (no se usa en la v1, ADR-0014; aplica a los enlaces `mailto:`/`tel:` del PDF) | S3: selector del sistema vacío y en inglés |
 
 ## 5. Plataforma e integración nativa
 
@@ -206,7 +206,7 @@ Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D1
 |---|---|---|
 | Fotos y archivos sin permisos amplios | PHPicker, UIDocumentPicker | Photo Picker, SAF (`ACTION_OPEN_DOCUMENT`) |
 | Cámara | Permiso de cámara **al pulsar "Hacer foto"** | Ídem (o intent de cámara del sistema, que no necesita permiso) |
-| Visor del sistema | QLPreviewController | `ACTION_VIEW` + FileProvider |
+| Visor del sistema (no en la v1, ADR-0014) | QLPreviewController | `ACTION_VIEW` + FileProvider |
 | Pantalla encendida | `isIdleTimerDisabled` mientras hay un adjunto visible | `FLAG_KEEP_SCREEN_ON` |
 | Red | ATS por defecto (sin excepciones) | `network_security_config`: `cleartextTrafficPermitted=false` |
 | Backup | Application Support incluido, Caches excluido | `dataExtractionRules` / `fullBackupContent` (ADR-0004) |

@@ -10,16 +10,16 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Arriba del todo | On top | `QueuePosition.top` | Insertar antes de la tarea actual: la nueva pasa a ser la actual. |
 | A la cola | At the end | `QueuePosition.end` | Insertar después de la última tarea pendiente. |
 | Posición (rango) | Rank | `rank` | Clave de orden fraccional (*fractional indexing*) en texto. Permite insertar entre dos tareas sin renumerar. |
-| Completar | Complete | `complete()` | Marcar la tarea actual como hecha manteniendo pulsado. Pasa al histórico. |
+| Completar | Complete | `complete()` | Marcar la tarea actual como hecha manteniendo pulsado. La tarea y sus archivos se borran (sin histórico, ADR-0012). |
 | Mantener pulsado | Press and hold | `HoldToComplete` | Gesto de 1,2 s que completa la tarea. |
 | Eliminar | Delete | `delete()` | Quitar una tarea **sin** completarla. Es definitivo: no hay deshacer (ADR-0011). |
 | Marca de borrado | Tombstone | `deletedAt` | Registro mínimo de que una tarea se eliminó. Sirve para una futura sincronización. |
 | Histórico | History | `history` | Tareas completadas con su fecha. En la v1 se guarda pero no se muestra. **Retirado por el ADR-0012 (2026-09-26): no se guarda lo hecho.** |
 | Adjunto | Attachment | `Attachment` | Archivo copiado dentro de la app y asociado a una tarea: imagen, PDF, documento o captura de URL. |
-| Tipo de adjunto | Attachment kind | `AttachmentKind` | `image`, `pdf`, `document`, `web`. |
+| Tipo de adjunto | Attachment kind | `AttachmentKind` | `image`, `pdf`, `web`; `document` (otros formatos) no se usa en la v1 (ADR-0014). |
 | Foto | Photo | `AttachmentKind.image` (origen `camera`) | Imagen hecha con la cámara desde la app. |
 | Imagen | Image | `AttachmentKind.image` (origen `gallery`) | Imagen elegida de la galería. |
-| Documento | Document | `AttachmentKind.document` | Archivo no PDF (Word, Excel, TXT…) que se abre con el visor del sistema. |
+| Documento | Document | `AttachmentKind.pdf` (v1); `AttachmentKind.document` (futuro) | Archivo adjunto que no es una imagen ni una URL. **En la v1 solo PDF** (ADR-0014): se ve en la propia tarea, al ancho, con desplazamiento y zoom. |
 | Tarea web / URL | Web task / URL | `AttachmentKind.web` | Tarea que muestra una página web. |
 | Instantánea / captura | Snapshot | `snapshot` | Imagen de página completa de una URL, guardada al crearla, para verla sin conexión. |
 | Miniatura | Thumbnail | `thumbnail`, `thumb.jpg` | Versión pequeña de un adjunto para el listado: cuadrada y recortada, de 176 px (se ve a 44). |
@@ -27,10 +27,13 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Tesela | Tile | `ImageTiles`, `full-<fila>-<columna>.jpg` | Trozo de 4096 px como máximo de la versión completa. |
 | Versión de pantalla | Display version | `displayRelPath`, `screen.jpg` | Recorte al tamaño de la pantalla para pintar la tarea actual rápido al abrir (CA-001-09). |
 | Preparación | Staging | `cache/import/<id>`, `StagedImage` | Zona temporal donde se copia y limpia una imagen antes de guardarla con la tarea. |
-| Adjunto no disponible | Missing attachment | `AttachmentFiles.missing`, `MissingAttachmentCard` | La versión completa falta o no se puede leer: se muestra la tarjeta con una sola acción. |
+| Adjunto no disponible | Missing attachment | `AttachmentFiles.missing`, `MissingAttachmentCard` | El archivo principal del adjunto (la versión completa de la imagen o el PDF) falta o no se puede leer: se muestra la tarjeta con una sola acción. |
 | Barrido | Sweep | `AttachmentJanitor` | Limpieza, tras el primer fotograma, de adjuntos sin tarea y preparaciones abandonadas. |
 | Pie | Caption | `caption` | Texto de la tarea sobre su imagen (recuadro negro, texto blanco). |
-| Visor del sistema | System viewer | `SystemViewer` | QuickLook (iOS) o la app que registre el tipo (Android). |
+| Franja | Strip | `AttachmentStrip` | Barra negra fija sobre el PDF con "PDF", el nombre y el tamaño (spec 008). |
+| Última posición | Last position | `lastPosition` | Página y desplazamiento dentro de ella donde se dejó de ver un PDF; al volver, se ve ahí (spec 008). |
+| Volver a vertical | Back to portrait | `backToPortrait` | Botón de la tarea con imagen o PDF en horizontal que pone la app en vertical (spec 008). |
+| Visor del sistema | System viewer | `SystemViewer` | QuickLook (iOS) o la app que registre el tipo (Android). **No se usa en la v1** (ADR-0014). |
 | Nota adhesiva | Sticky note | `StickyNote` | Representación visual de una tarea (color de la paleta). |
 | Color de la nota | Note color | `colorKey` | Índice 0–4 de la paleta. Se guarda con la tarea. |
 | Listado | Task list | `TaskListScreen` | Pantalla "Todas las tareas" (se abre con "Todas mis tareas" del menú). |

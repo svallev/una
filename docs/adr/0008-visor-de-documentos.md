@@ -1,6 +1,6 @@
 # ADR-0008: PDF dentro de la tarea (pdfrx); el resto de documentos, con el visor del sistema
 
-- **Estado:** Aceptado para Android (spike S3, 2026-09-24); provisional para iOS
+- **Estado:** Aceptado para Android (spike S3, 2026-09-24); provisional para iOS. **Enmendado por el [ADR-0014](0014-solo-pdf-en-la-v1.md) (2026-09-27):** en la v1 solo se adjuntan PDF; la tarjeta con "Abrir", el visor del sistema, los demás tipos y D19 no aplican en la v1
 - **Fecha:** 2026-09-24
 - **Relacionado:** spec 008, DEV-03, modelo de amenazas (T-3)
 
@@ -29,6 +29,8 @@
 - Versión web de pruebas: pdfrx funciona con WASM; el resto se descarga o se muestra la tarjeta.
 
 ## Resultados del spike S3 (2026-09-24, Android)
+
+> Nota (2026-09-27): los CA-008-xx citados abajo son de la versión anterior de la spec 008; con el ADR-0014 cambió la numeración.
 
 - pdfrx: visor listo en 18–20 ms (PDF de 9 MB, 300 páginas, PDF con JavaScript); **ningún JavaScript ejecutado**; los enlaces piden confirmación.
 - FileProvider en solo lectura correcto. En un Android sin app de Office, el sistema muestra un selector vacío y en inglés: **comprobar antes con `queryIntentActivities`** y mostrar nuestro mensaje (CA-008-08).
