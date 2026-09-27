@@ -8,7 +8,7 @@ import 'package:app/domain/entities/image_type.dart';
 import 'package:app/domain/ports/id_generator.dart';
 import 'package:app/domain/ports/image_importer.dart';
 import 'package:app/domain/services/attachment_janitor.dart';
-import 'package:app/features/attachments/image_import_controller.dart';
+import 'package:app/features/attachments/attachment_import_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -50,13 +50,14 @@ void main() {
       ],
     );
     // El editor la mantiene viva mientras está abierto.
-    container.listen(imageImportProvider, (_, _) {});
+    container.listen(attachmentImportProvider, (_, _) {});
   });
 
   tearDown(() => container.dispose());
 
-  ImageImportController ctrl() => container.read(imageImportProvider.notifier);
-  ImageImportState state() => container.read(imageImportProvider);
+  AttachmentImportController ctrl() =>
+      container.read(attachmentImportProvider.notifier);
+  AttachmentImportState state() => container.read(attachmentImportProvider);
   Future<Set<String>> staging() => store.stagingIds();
 
   testWidgets('CA-007-13: el tipo se decide por el contenido y queda lista', (

@@ -5,8 +5,8 @@ import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/image_importer.dart';
+import 'package:app/features/attachments/attachment_import_controller.dart';
 import 'package:app/features/attachments/attachment_preview.dart';
-import 'package:app/features/attachments/image_import_controller.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/una_sheet.dart';
@@ -83,9 +83,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  ImageImportState importState(WidgetTester tester) =>
+  AttachmentImportState importState(WidgetTester tester) =>
       ProviderScope.containerOf(tester.element(find.byType(TaskEditorScreen)))
-          .read(imageImportProvider);
+          .read(attachmentImportProvider);
 
   bool plusFocused(WidgetTester tester) => tester
       .widget<BrutalButton>(

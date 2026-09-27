@@ -3,7 +3,7 @@ import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/features/attachments/attach_sheet.dart';
-import 'package:app/features/attachments/image_import_controller.dart';
+import 'package:app/features/attachments/attachment_import_controller.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/ui/sheet_row.dart';
 import 'package:flutter/material.dart';
@@ -205,7 +205,10 @@ void main() {
 
         expect(find.byType(AttachSheet), findsNothing);
         expect(importer.origins, [origin]);
-        expect(containerOf(tester).read(imageImportProvider).image, isNotNull);
+        expect(
+          containerOf(tester).read(attachmentImportProvider).image,
+          isNotNull,
+        );
       },
     );
   }
@@ -220,7 +223,10 @@ void main() {
       await tester.tap(find.text('Subir imagen'));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(containerOf(tester).read(imageImportProvider).preparing, isTrue);
+      expect(
+        containerOf(tester).read(attachmentImportProvider).preparing,
+        isTrue,
+      );
 
       await tester.tap(_plus);
       await tester.pump(const Duration(milliseconds: 100));
@@ -235,7 +241,10 @@ void main() {
 
       await tester.pump(const Duration(seconds: 5));
       await tester.pump(const Duration(seconds: 1));
-      expect(containerOf(tester).read(imageImportProvider).image, isNotNull);
+      expect(
+        containerOf(tester).read(attachmentImportProvider).image,
+        isNotNull,
+      );
     },
   );
 

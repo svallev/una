@@ -20,8 +20,8 @@ import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
 import '../../ui/wordmark.dart';
 import '../attachments/attach_sheet.dart';
+import '../attachments/attachment_import_controller.dart';
 import '../attachments/attachment_preview.dart';
-import '../attachments/image_import_controller.dart';
 import '../attachments/import_error_text.dart';
 import '../current_task/current_task_screen.dart';
 import 'placement_sheet.dart';
@@ -112,8 +112,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   int _previewSignal = 0;
   int _cancelSignal = 0;
 
-  /// La imagen recién elegida, aún en la preparación.
-  StagedImage? get _staged => ref.read(imageImportProvider).image;
+  /// El adjunto recién elegido (imagen o PDF), aún en la preparación.
+  StagedAttachment? get _staged => ref.read(attachmentImportProvider).staged;
 
   /// El adjunto que ya tenía la tarea y sigue en ella.
   Attachment? get _existing =>
@@ -175,7 +175,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   /// nueva la sustituye (CA-007-04). Mientras se prepara una imagen no hace
   /// nada, sin verse desactivado (CA-007-15, DEV-17).
   Future<void> _attach() async {
-    if (_saving || ref.read(imageImportProvider).preparing) return;
+    if (_saving || ref.read(attachmentImportProvider).preparing) return;
     final choice = await showAttachSheet(context);
     if (!mounted) return;
     if (choice == null) {
@@ -187,7 +187,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       AttachChoice.camera => AttachmentOrigin.camera,
       AttachChoice.gallery => AttachmentOrigin.gallery,
     };
-    final outcome = await ref.read(imageImportProvider.notifier).pick(origin);
+    final outcome = await ref
+        .read(attachmentImportProvider.notifier)
+        .pick(origin);
     if (!mounted) return;
     switch (outcome) {
       case ImportOutcome.added:
@@ -212,7 +214,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   Future<void> _removeImage() async {
     if (_saving) return;
     if (_staged != null) {
-      await ref.read(imageImportProvider.notifier).remove();
+      await ref.read(attachmentImportProvider.notifier).remove();
     } else {
       _removedExisting = true;
     }
@@ -222,9 +224,17 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     _focusPlus();
   }
 
-  void _onImportChanged(ImageImportState? before, ImageImportState now) {
+  void _onImportChanged(
+    AttachmentImportState? before,
+    AttachmentImportState now,
+  ) {
     if (now.showPreparing && !(before?.showPreparing ?? false)) {
-      _announce(AppLocalizations.of(context).imagePreparing);
+      final l10n = AppLocalizations.of(context);
+      _announce(
+        now.preparingKind == AttachmentKind.pdf
+            ? l10n.pdfPreparing
+            : l10n.imagePreparing,
+      );
       setState(() => _cancelSignal++);
     }
     final error = now.error;
@@ -240,7 +250,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
           margin: _aboveButtons(),
         ),
       );
-      ref.read(imageImportProvider.notifier).clearError();
+      ref.read(attachmentImportProvider.notifier).clearError();
       _focusPlus();
     }
   }
@@ -286,7 +296,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   void _created() => ref.read(hasEverHadTasksProvider.notifier).mark();
 
   Future<void> _save() async {
-    if (_saving || ref.read(imageImportProvider).preparing) return;
+    if (_saving || ref.read(attachmentImportProvider).preparing) return;
     if (!_canSave) {
       // Ningún botón se ve desactivado (DEV-17): sin texto no guarda y
       // devuelve el foco al campo (CL-001-1, CA-002-10, CA-005-06).
@@ -363,7 +373,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       final saved = await write();
       if (!mounted) return true;
       // La imagen ya es de la tarea: cerrar el editor no la borra.
-      ref.read(imageImportProvider.notifier).saved();
+      ref.read(attachmentImportProvider.notifier).saved();
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(saved is Task ? saved : widget.task);
       }
@@ -433,8 +443,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final l10n = AppLocalizations.of(context);
     // Mantiene viva la importación mientras el editor está abierto; al
     // cerrarlo se cancela y se borra lo no guardado.
-    final import = ref.watch(imageImportProvider);
-    ref.listen(imageImportProvider, _onImportChanged);
+    final import = ref.watch(attachmentImportProvider);
+    ref.listen(attachmentImportProvider, _onImportChanged);
     final images = ref.watch(attachmentImagesProvider);
     final staged = import.image;
     final existing = _existing;
@@ -527,7 +537,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                             onRemove: _removeImage,
                             preparing: import.showPreparing,
                             onCancelPreparing: () => unawaited(
-                              ref.read(imageImportProvider.notifier).cancel(),
+                              ref
+                                  .read(attachmentImportProvider.notifier)
+                                  .cancel(),
                             ),
                             focusSignal: _previewSignal,
                             cancelFocusSignal: _cancelSignal,
