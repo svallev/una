@@ -93,9 +93,12 @@ tools/measure-cold-start.sh <serial> 20
 - [ ] **"Hacer foto"** abre la cámara del sistema sin pedir ningún permiso (CA-007-02). La foto vuelve a la vista previa con el foco en ella.
 - [ ] **"Subir imagen"** abre el selector de fotos del sistema, sin permisos (CA-007-03).
 - [ ] **Cancelar la cámara o el selector:** el editor queda como estaba y el foco vuelve a (+).
-- [ ] **CL-007-1:** sin app de cámara (emulador sin cámara), se ve el aviso "No hay ninguna app de cámara disponible."
+  **[Hecho 2026-09-27, emulador]** Con el gesto atrás en la cámara (`camera2`) y en el selector del sistema (`photopicker`), el editor queda igual. **[Pendiente]** El foco en (+) se comprueba con TalkBack (§5): `uiautomator` no ve el foco de Flutter.
+- [x] **CL-007-1:** sin app de cámara (emulador sin cámara), se ve el aviso "No hay ninguna app de cámara disponible."
+  **[Hecho 2026-09-27, emulador]** Con `pm disable-user com.android.camera2` sale "There's no camera app available." encima de los botones, sin tapar el (+). Cámara reactivada después.
 - [ ] **CL-007-6:** una imagen de Google Fotos que solo está en la nube, sin conexión, da "No hemos podido leer esta imagen." en 20 s como mucho. "Cancelar" responde en 2 s aunque el proveedor esté colgado (hallazgo M1).
-- [ ] **CL-007-7:** con la cámara abierta, `adb shell am kill invalid.pending.app.debug`. Al volver se ve el editor sin imagen (o la tarea actual si pasaron 10 min) y no queda nada en `cache/import/` tras el barrido.
+- [x] **CL-007-7:** con la cámara abierta, `adb shell am kill invalid.pending.app.debug`. Al volver se ve el editor sin imagen (o la tarea actual si pasaron 10 min) y no queda nada en `cache/import/` tras el barrido.
+  **[Hecho 2026-09-27, emulador]** Proceso muerto, foto hecha y "Done": la app se reabre en el editor sin imagen; `cache/import/` vacía y sin `attachments/`.
 - [ ] **CA-007-11:** el visor gira; al volver a la tarea, la pantalla está en vertical; el resto de la app no gira.
 - [ ] **Pellizco** hasta ×8; al soltar cerca de ×1, vuelve al ancho completo.
 - [ ] **CA-007-12:** con la imagen visible, la pantalla no se apaga mientras se toca; tras 10 minutos sin tocarla, sí. Para probarlo rápido, se puede acortar el tiempo en una compilación de depuración.
