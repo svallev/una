@@ -499,7 +499,6 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       messenger?.hideCurrentSnackBar();
       if (result.remaining == 0) {
         // "Todo hecho." y el listado deja de existir (CL-006-3).
-        ref.read(hasHistoryProvider.notifier).mark();
         _announce(l10n.a11yDeletedAllDone, afterSheet: true);
         Navigator.of(context).popUntil((r) => r.isFirst);
         return;

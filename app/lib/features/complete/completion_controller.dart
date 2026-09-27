@@ -65,7 +65,6 @@ class CompletionController extends Notifier<CompletionState> {
       state = const CompletionState.idle();
       rethrow;
     }
-    ref.read(hasHistoryProvider.notifier).mark();
     // Respeta el ajuste del sistema y no necesita el permiso VIBRATE (DEV-19).
     unawaited(HapticFeedback.lightImpact());
     state = CompletionState(

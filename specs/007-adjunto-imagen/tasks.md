@@ -59,6 +59,8 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 Las decisiones y cambios respecto al plan están en `plan.md` §8.
 
+**Nota (ADR-0012, implementado el 2026-09-27):** CA-007-17 queda sustituido: completar una tarea con imagen borra también sus archivos, como eliminar (`specs/adr-0012-sin-historico/`).
+
 ## Cierre
 
 - [x] Todos los CA de la spec tienen test en verde (491 tests; goldens en Linux).

@@ -21,6 +21,6 @@ AppDatabase openInMemoryDatabase() => AppDatabase(
 );
 
 /// Al abrir cada conexión, antes de crear o migrar el esquema: lo eliminado
-/// no se queda en páginas libres del archivo (ADR-0011, P4), tampoco lo que
-/// borren las migraciones futuras.
+/// no se queda en páginas libres del archivo (ADR-0012, P4), tampoco lo que
+/// borran las migraciones (v2).
 const _secureDelete = 'PRAGMA secure_delete = ON';

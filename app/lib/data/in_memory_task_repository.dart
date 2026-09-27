@@ -10,6 +10,7 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   final Map<String, Task> _tasks = {};
   final StreamController<void> _changes = StreamController<void>.broadcast();
   bool _firstRunDone = false;
+  bool _hasEverHadTasks = false;
   bool _keepScreenOn = true;
 
   List<Task> get _pending => _tasks.values.where((t) => t.isPending).toList()
@@ -92,11 +93,9 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   Future<Task?> findById(String id) async => _tasks[id];
 
   @override
-  Future<bool> hasHistory() async => _tasks.values.any((t) => !t.isPending);
-
-  @override
   Future<void> insert(Task task) async {
     _tasks[task.id] = task;
+    _hasEverHadTasks = true;
     _changes.add(null);
   }
 
@@ -108,7 +107,7 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
     DateTime at,
   ) async {
     final task = _tasks[id];
-    if (task == null || task.deletedAt != null) return false;
+    if (task == null) return false;
     _tasks[id] = task.withContent(text, attachment, at);
     _changes.add(null);
     return true;
@@ -121,22 +120,16 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   };
 
   @override
-  Future<bool> complete(String id, DateTime at) async {
+  Future<bool> remove(String id) async {
     final task = _tasks[id];
     if (task == null || !task.isPending) return false;
-    _tasks[id] = task.complete(at);
+    _tasks.remove(id);
     _changes.add(null);
     return true;
   }
 
   @override
-  Future<bool> delete(String id, DateTime at) async {
-    final task = _tasks[id];
-    if (task == null || task.deletedAt != null) return false;
-    _tasks[id] = task.tombstone(at);
-    _changes.add(null);
-    return true;
-  }
+  Future<bool> hasEverHadTasks() async => _hasEverHadTasks;
 
   @override
   Future<bool> firstRunDone() async => _firstRunDone;

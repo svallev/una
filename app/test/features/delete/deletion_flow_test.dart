@@ -20,9 +20,9 @@ class _Repo extends InMemoryTaskRepository {
   bool failDelete = false;
 
   @override
-  Future<bool> delete(String id, DateTime at) async {
+  Future<bool> remove(String id) async {
     if (failDelete) throw StateError('disk I/O error');
-    return super.delete(id, at);
+    return super.remove(id);
   }
 }
 
@@ -83,10 +83,8 @@ void main() {
       );
       await _delete(tester);
 
-      // Guardada antes de la animación (CA-004-03).
-      final gone = (await repo.findById('t0'))!;
-      expect(gone.deletedAt, isNotNull);
-      expect(gone.text, isNull);
+      // Borrada antes de la animación (CA-004-03, ADR-0012).
+      expect(await repo.findById('t0'), isNull);
 
       // A mitad: la hoja ya bajó; la nota arrugándose, la papelera, y detrás
       // solo la siguiente (sin la pantalla anterior fundiéndose).
@@ -266,12 +264,12 @@ void main() {
       expect(find.byType(DeleteConfirmSheet), findsNothing);
       expect(find.text('No hemos podido eliminar la tarea'), findsOneWidget);
       expect(find.text('Primera'), findsOneWidget);
-      expect((await repo.findById('t0'))!.deletedAt, isNull);
+      expect(await repo.findById('t0'), isNotNull);
 
       repo.failDelete = false;
       await tester.tap(find.text('Reintentar'));
       await tester.pump(_frame);
-      expect((await repo.findById('t0'))!.deletedAt, isNotNull);
+      expect(await repo.findById('t0'), isNull);
       await _crumple(tester);
       expect(find.text('Segunda'), findsOneWidget);
       expect(

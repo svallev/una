@@ -38,6 +38,7 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 - [ ] Nueva `schemaVersion` + captura + test de migración.
 - [ ] Datos solo en el sandbox; clase de protección de archivos correcta; nada en almacenamiento externo.
 - [ ] Reglas de backup revisadas si hay rutas nuevas.
+- [ ] Las migraciones que borran datos van en una **transacción explícita** (drift no la abre), son idempotentes, `secure_delete` está activo antes de migrar y hay un test de que las pendientes no se tocan y de que un fallo a mitad no deja nada cambiado.
 
 ## Si toca integración nativa (T-8)
 

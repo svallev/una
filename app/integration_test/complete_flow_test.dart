@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/drift_task_repository.dart';
-import 'package:app/domain/entities/task.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
@@ -40,7 +39,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-    'CA-003-03a/05/06/11: completar en el dispositivo guarda en la BD real y al rearrancar se ve "Todo hecho."',
+    'CA-003-03a/05/06/11 (ADR-0012): completar en el dispositivo borra la '
+    'tarea de la BD real y al rearrancar se ve "Todo hecho."',
     (tester) async {
       await _wipeDatabase();
       await bootstrap();
@@ -69,12 +69,10 @@ void main() {
       expect(find.byType(AllDoneScreen), findsOneWidget);
 
       final repo = _repo(tester, AllDoneScreen);
-      final done = (await repo.findById(task.id))!;
-      expect(done.status, TaskStatus.completed);
-      expect(done.completedAt, isNotNull);
-      expect(done.text, 'Comprar pan');
+      expect(await repo.findById(task.id), isNull);
+      expect(await repo.hasEverHadTasks(), isTrue);
 
-      // Rearranque: sin pendientes y con una completada → "Todo hecho.".
+      // Rearranque: sin pendientes, pero ya hubo una tarea → "Todo hecho.".
       await tester.pumpWidget(const SizedBox());
       await repo.db.close();
       await bootstrap();

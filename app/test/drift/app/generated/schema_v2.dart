@@ -1738,8 +1738,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsData> {
   }
 }
 
-class DatabaseAtV1 extends GeneratedDatabase {
-  DatabaseAtV1(QueryExecutor e) : super(e);
+class DatabaseAtV2 extends GeneratedDatabase {
+  DatabaseAtV2(QueryExecutor e) : super(e);
   late final Tasks tasks = Tasks(this);
   late final Attachments attachments = Attachments(this);
   late final Settings settings = Settings(this);
@@ -1768,5 +1768,5 @@ class DatabaseAtV1 extends GeneratedDatabase {
     idxAttachmentsTask,
   ];
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 }

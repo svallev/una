@@ -63,14 +63,16 @@ void main() {
     },
   );
 
-  test('CA-007-17: las completadas conservan su imagen', () async {
+  test('CL-003-1 / CA-004-03 (ADR-0012): si la app muere entre quitar la '
+      'tarea y borrar sus archivos, el barrido los recoge', () async {
     final a = await saved('hecha');
     await repo.insert(
       sampleTask(id: 't').withContent('x', a, DateTime.utc(2026)),
     );
-    await repo.complete('t', DateTime.utc(2026, 9, 27));
+    // Se quita la tarea, pero no se llega a llamar a discard.
+    await repo.remove('t');
     await janitor.sweep();
-    expect(await store.storedIds(), {'hecha'});
+    expect(await store.storedIds(), isEmpty);
   });
 
   test('CA-007-16: una importación en curso nunca se barre (preparación, foto '

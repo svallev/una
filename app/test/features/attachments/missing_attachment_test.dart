@@ -207,12 +207,15 @@ void main() {
     expect(tester.getSize(find.text('Quitar adjunto')).height, greaterThan(0));
   });
 
-  group('CA-007-16/17: barrido tras el primer fotograma', () {
-    testWidgets('borra adjuntos sin tarea y temporales; respeta las '
-        'completadas y las importaciones en curso', (tester) async {
+  group('CA-007-16: barrido tras el primer fotograma', () {
+    testWidgets('borra adjuntos sin tarea (también los de una completada, '
+        'ADR-0012) y temporales; respeta las importaciones en curso', (
+      tester,
+    ) async {
       final done = await imageTask(id: 'done', rank: 'A');
       await repo.insert(done);
-      await repo.complete(done.id, DateTime.utc(2026, 9, 21));
+      // Completada sin llegar a borrar sus archivos (la app murió).
+      await repo.remove(done.id);
       await repo.insert(await imageTask(id: 'live', rank: 'B'));
       await store.commit(stageImage(store, 'orphan'), DateTime.utc(2026));
       stageImage(store, 'leftover');
@@ -225,7 +228,7 @@ void main() {
       await tester.pump(UnaApp.sweepDelay);
       await tester.pumpAndSettle();
 
-      expect(await store.storedIds(), {'done', 'live'});
+      expect(await store.storedIds(), {'live'});
       expect(await store.stagingIds(), {'importing'});
     });
   });

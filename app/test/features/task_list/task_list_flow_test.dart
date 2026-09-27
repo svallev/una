@@ -16,9 +16,9 @@ class _Repo extends InMemoryTaskRepository {
   bool failReorder = false;
 
   @override
-  Future<bool> delete(String id, DateTime at) async {
+  Future<bool> remove(String id) async {
     if (failDelete) throw StateError('disk I/O error');
-    return super.delete(id, at);
+    return super.remove(id);
   }
 
   @override
