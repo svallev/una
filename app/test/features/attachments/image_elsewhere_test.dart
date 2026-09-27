@@ -280,8 +280,9 @@ void main() {
       expect(find.byType(MissingAttachmentCard), findsNothing);
       await tester.pumpAndSettle();
       expect(announcements, contains('Tarea completada. Siguiente: Foto'));
-      // CA-007-17: la completada conserva sus archivos.
-      expect(await store.storedIds(), containsAll(['a-t1', 'a-t2']));
+      // CA-007-17 (ADR-0012): completar borra los archivos de la completada,
+      // aunque la rotura siga mostrando su imagen.
+      expect(await store.storedIds(), {'a-t2'});
     });
 
     testWidgets('el arrugado muestra la imagen (no "Adjunto no disponible"), '

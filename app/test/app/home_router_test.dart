@@ -257,11 +257,12 @@ void main() {
   });
 
   testWidgets(
-    'CA-004-08: al reabrir con solo tareas eliminadas se ve "Todo hecho.", no el editor',
+    'CA-001-05 / CA-004-08 (ADR-0012): al reabrir sin pendientes, pero con '
+    'alguna tarea guardada antes, se ve "Todo hecho.", no el editor',
     (tester) async {
       final repo = InMemoryTaskRepository();
       await repo.insert(sampleTask(id: 'a', rank: 'a'));
-      await repo.delete('a', DateTime.utc(2026, 9, 26));
+      await repo.remove('a');
       await repo.setFirstRunDone();
       await tester.pumpWidget(
         ProviderScope(
@@ -273,7 +274,7 @@ void main() {
                 currentTask: null,
                 firstRunDone: true,
                 // Igual que main.dart: solo se consulta si no hay pendientes.
-                hasHistory: await repo.hasHistory(),
+                hasEverHadTasks: await repo.hasEverHadTasks(),
               ),
             ),
           ],

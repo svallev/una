@@ -45,7 +45,7 @@ void main() {
 
   test('sigue la cola de la BD', () async {
     expect(ids(), ['a', 'b', 'c']);
-    await repo.delete('b', DateTime.utc(2026));
+    await repo.remove('b');
     await pumpEventQueue();
     expect(ids(), ['a', 'c']);
   });

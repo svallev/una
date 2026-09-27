@@ -72,8 +72,8 @@ void main() {
     expect(await repo.pendingTasks(), before);
   });
 
-  test('no mueve una tarea que ya no está pendiente', () async {
-    await repo.complete('b', clock.now());
+  test('no mueve una tarea que ya no está', () async {
+    await repo.remove('b');
     await expectLater(reorder('b', 0), throwsA(isA<TaskNotPending>()));
     expect(await order(), ['a', 'c', 'd']);
   });

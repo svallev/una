@@ -16,8 +16,6 @@ typedef _Repo = TaskRepository;
 Task _task(
   String id,
   String rank, {
-  TaskStatus status = TaskStatus.pending,
-  DateTime? deletedAt,
   int color = 0,
   Attachment? attachment,
   String? text,
@@ -27,13 +25,11 @@ Task _task(
     id: id,
     text: attachment != null ? text : (text ?? 'Tarea $id'),
     attachment: attachment,
-    status: status,
+    status: TaskStatus.pending,
     rank: rank,
     colorKey: color,
     createdAt: t,
     updatedAt: t,
-    completedAt: status == TaskStatus.completed ? t : null,
-    deletedAt: deletedAt,
   );
 }
 
@@ -81,14 +77,6 @@ void _contract(
       expect(await repo.countPending(), 3);
     });
 
-    test('completadas y eliminadas no cuentan como pendientes', () async {
-      await repo.insert(_task('done', 'A', status: TaskStatus.completed));
-      await repo.insert(_task('gone', 'B', deletedAt: DateTime.utc(2026)));
-      await repo.insert(_task('live', 'C'));
-      expect((await repo.currentTask())!.id, 'live');
-      expect(await repo.countPending(), 1);
-    });
-
     test(
       'CA-001-10: conserva todos los campos (texto, orden, color, fechas)',
       () async {
@@ -110,102 +98,52 @@ void _contract(
       expect(seen, [null, 'b', 'a']);
     });
 
-    test('CA-003-03a / CA-003-06: completar saca la tarea de la cola y la conserva en el histórico', () async {
-      await repo.insert(_task('a', 'C', color: 2));
-      await repo.insert(_task('b', 'M'));
-      expect(await repo.hasHistory(), isFalse);
-      final at = DateTime.utc(2026, 9, 25, 9, 30);
+    test('CA-003-06 / CA-004-03 / CA-004-09 (ADR-0012): quitar borra la '
+        'tarea y las filas de sus adjuntos', () async {
+      await repo.insert(_task('a', 'C', attachment: _image('ia')));
+      await repo.insert(_task('b', 'M', attachment: _image('ib')));
 
-      expect(await repo.complete('a', at), isTrue);
+      expect(await repo.remove('a'), isTrue);
 
       expect((await repo.currentTask())!.id, 'b');
       expect(await repo.countPending(), 1);
-      expect(await repo.hasHistory(), isTrue);
-      final done = (await repo.findById('a'))!;
-      expect(done.status, TaskStatus.completed);
-      expect(done.completedAt, at);
-      expect(done.updatedAt, at);
-      expect(done.text, 'Tarea a');
-      expect(done.colorKey, 2);
-      expect(done.rank, 'C');
+      expect(await repo.findById('a'), isNull);
+      expect(await repo.attachmentIds(), {'ib'});
     });
 
-    test('completar una tarea que ya no está pendiente no hace nada', () async {
-      await repo.insert(_task('done', 'A', status: TaskStatus.completed));
-      await repo.insert(_task('gone', 'B', deletedAt: DateTime.utc(2026)));
-      final later = DateTime.utc(2027);
-      expect(await repo.complete('done', later), isFalse);
-      expect(await repo.complete('gone', later), isFalse);
-      expect(await repo.complete('missing', later), isFalse);
-      expect((await repo.findById('done'))!.completedAt, isNot(later));
-      expect((await repo.findById('gone'))!.status, TaskStatus.pending);
-      expect(await repo.findById('missing'), isNull);
+    test('quitar dos veces o una que no existe no hace nada', () async {
+      await repo.insert(_task('a', 'C'));
+      expect(await repo.remove('a'), isTrue);
+      expect(await repo.remove('a'), isFalse);
+      expect(await repo.remove('missing'), isFalse);
+    });
+
+    test('CA-001-05 / CA-003-11 / CA-004-08 (ADR-0012): guardar una tarea '
+        'activa hasEverHadTasks; quitarla no lo desactiva', () async {
+      expect(await settings.hasEverHadTasks(), isFalse);
+      await repo.insert(_task('a', 'C'));
+      expect(await settings.hasEverHadTasks(), isTrue);
+      await repo.remove('a');
+      expect(await repo.currentTask(), isNull);
+      expect(await settings.hasEverHadTasks(), isTrue);
     });
 
     test(
-      'CA-004-08: una eliminada también cuenta como historia ("Todo hecho.")',
+      'watchCurrentTask emite la siguiente al quitar, y null al final',
       () async {
-        expect(await repo.hasHistory(), isFalse);
-        await repo.insert(_task('live', 'C'));
-        expect(await repo.hasHistory(), isFalse);
-        await repo.insert(_task('gone', 'B', deletedAt: DateTime.utc(2026)));
-        expect(await repo.hasHistory(), isTrue);
+        await repo.insert(_task('a', 'C'));
+        await repo.insert(_task('b', 'M'));
+        final seen = <String?>[];
+        final sub = repo.watchCurrentTask().listen((t) => seen.add(t?.id));
+        await pumpEventQueue();
+        await repo.remove('a');
+        await pumpEventQueue();
+        await repo.remove('b');
+        await pumpEventQueue();
+        await sub.cancel();
+        expect(seen, ['a', 'b', null]);
       },
     );
-
-    test('CA-004-03 / CA-004-09: eliminar saca la tarea de la cola y no deja contenido', () async {
-      await repo.insert(_task('a', 'C', color: 2));
-      await repo.insert(_task('b', 'M'));
-      final at = DateTime.utc(2026, 9, 26, 11);
-
-      expect(await repo.delete('a', at), isTrue);
-
-      expect((await repo.currentTask())!.id, 'b');
-      expect(await repo.countPending(), 1);
-      final gone = (await repo.findById('a'))!;
-      expect(gone.deletedAt, at);
-      expect(gone.updatedAt, at);
-      expect(gone.text, isNull);
-      expect(gone.status, TaskStatus.pending); // no cuenta como hecha
-      expect(gone.completedAt, isNull);
-      expect(gone.isPending, isFalse);
-    });
-
-    test('eliminar dos veces o una que no existe no hace nada', () async {
-      await repo.insert(_task('a', 'C'));
-      final first = DateTime.utc(2026, 9, 26, 11);
-      expect(await repo.delete('a', first), isTrue);
-      expect(await repo.delete('a', DateTime.utc(2027)), isFalse);
-      expect((await repo.findById('a'))!.deletedAt, first);
-      expect(await repo.delete('missing', first), isFalse);
-    });
-
-    test('eliminar la última deja la cola vacía y con historia', () async {
-      await repo.insert(_task('a', 'C'));
-      final seen = <String?>[];
-      final sub = repo.watchCurrentTask().listen((t) => seen.add(t?.id));
-      await pumpEventQueue();
-      await repo.delete('a', DateTime.utc(2026, 9, 26));
-      await pumpEventQueue();
-      await sub.cancel();
-      expect(seen, ['a', null]);
-      expect(await repo.currentTask(), isNull);
-      expect(await repo.hasHistory(), isTrue);
-    });
-
-    test('watchCurrentTask emite la siguiente al completar', () async {
-      await repo.insert(_task('a', 'C'));
-      await repo.insert(_task('b', 'M'));
-      final seen = <String?>[];
-      final sub = repo.watchCurrentTask().listen((t) => seen.add(t?.id));
-      await pumpEventQueue();
-      await repo.complete('a', DateTime.utc(2026, 9, 25));
-      await pumpEventQueue();
-      await repo.complete('b', DateTime.utc(2026, 9, 25));
-      await pumpEventQueue();
-      await sub.cancel();
-      expect(seen, ['a', 'b', null]);
-    });
 
     test(
       'CA-005-05: editar el texto conserva posición y color y cambia updatedAt',
@@ -227,8 +165,6 @@ void _contract(
     test('CA-006-02: pendingTasks devuelve las pendientes en orden', () async {
       await repo.insert(_task('b', 'M'));
       await repo.insert(_task('a', 'C'));
-      await repo.insert(_task('x', 'D', status: TaskStatus.completed));
-      await repo.insert(_task('y', 'E', deletedAt: DateTime.utc(2026)));
       await repo.insert(_task('c', 'X'));
       expect((await repo.pendingTasks()).map((t) => t.id), ['a', 'b', 'c']);
     });
@@ -243,7 +179,7 @@ void _contract(
       await pumpEventQueue();
       await repo.reorder('b', 'A', DateTime.utc(2026, 9, 26));
       await pumpEventQueue();
-      await repo.delete('a', DateTime.utc(2026, 9, 26));
+      await repo.remove('a');
       await pumpEventQueue();
       await sub.cancel();
       expect(seen.first, ['a', 'b']);
@@ -272,21 +208,18 @@ void _contract(
       },
     );
 
-    test('reordenar una tarea que no está pendiente no hace nada', () async {
-      await repo.insert(_task('x', 'D', status: TaskStatus.completed));
-      await repo.insert(_task('y', 'E', deletedAt: DateTime.utc(2026)));
+    test('reordenar una tarea que ya no está no hace nada', () async {
+      await repo.insert(_task('x', 'D'));
+      await repo.remove('x');
       final at = DateTime.utc(2026, 9, 26);
       expect(await repo.reorder('x', 'A', at), isFalse);
-      expect(await repo.reorder('y', 'A', at), isFalse);
       expect(await repo.reorder('missing', 'A', at), isFalse);
-      expect((await repo.findById('x'))!.rank, 'D');
     });
 
     test('CL-006-8: renumerar conserva el orden con claves cortas y de igual longitud', () async {
       await repo.insert(_task('a', 'V'));
       await repo.insert(_task('b', 'V${'1' * 60}'));
       await repo.insert(_task('c', 'W'));
-      await repo.insert(_task('x', 'A', status: TaskStatus.completed));
       final at = DateTime.utc(2026, 9, 26, 13);
       await repo.renumberPending(at);
       final after = await repo.pendingTasks();
@@ -294,8 +227,6 @@ void _contract(
       expect(after.map((t) => t.rank.length).toSet().length, 1);
       expect(after.every((t) => t.rank.length <= Rank.maxLength), isTrue);
       expect(after.every((t) => t.updatedAt == at), isTrue);
-      // Las que no están pendientes no se tocan.
-      expect((await repo.findById('x'))!.rank, 'A');
     });
 
     test('CA-007-08: la tarea actual y la cola llegan con su imagen', () async {
@@ -345,20 +276,6 @@ void _contract(
       expect((await repo.currentTask())!.id, 'a');
     });
 
-    test(
-      'CA-007-16/17: eliminar quita la fila del adjunto; completar la conserva',
-      () async {
-        await repo.insert(_task('a', 'C', attachment: _image('ia')));
-        await repo.insert(_task('b', 'M', attachment: _image('ib')));
-        final at = DateTime.utc(2026, 9, 26);
-        await repo.complete('a', at);
-        expect((await repo.findById('a'))!.attachment!.id, 'ia');
-        await repo.delete('b', at);
-        expect((await repo.findById('b'))!.attachment, isNull);
-        expect(await repo.attachmentIds(), {'ia'});
-      },
-    );
-
     test('ajuste de primer uso', () async {
       expect(await settings.firstRunDone(), isFalse);
       await settings.setFirstRunDone();
@@ -389,7 +306,7 @@ void main() {
   });
 
   test(
-    'CA-004-09: al eliminar se borran las filas de sus adjuntos (drift)',
+    'CA-004-09: al quitar se borran las filas de sus adjuntos (drift)',
     () async {
       final db = openInMemoryDatabase();
       final repo = DriftTaskRepository(db);
@@ -412,7 +329,7 @@ void main() {
       await attach('x1', 'a');
       await attach('x2', 'b');
 
-      await repo.delete('a', DateTime.utc(2026, 9, 26));
+      await repo.remove('a');
 
       final left = await db.select(db.attachments).get();
       expect(left.map((r) => r.id), ['x2']);
@@ -421,7 +338,7 @@ void main() {
   );
 
   test(
-    'ADR-0011: secure_delete activo para no dejar texto en páginas libres',
+    'ADR-0012: secure_delete activo para no dejar texto en páginas libres',
     () async {
       final db = openInMemoryDatabase();
       final row = await db.customSelect('PRAGMA secure_delete').getSingle();
@@ -431,7 +348,7 @@ void main() {
   );
 
   test(
-    'ADR-0011 / CA-004-09: el texto eliminado no queda en el archivo de la BD',
+    'ADR-0012 / CA-004-09: el texto quitado no queda en el archivo de la BD',
     () async {
       final dir = await Directory.systemTemp.createTemp('una_secure_delete');
       final file = File('${dir.path}/una.sqlite');
@@ -448,8 +365,8 @@ void main() {
 
       db = openAppDatabaseFile(file);
       repo = DriftTaskRepository(db);
-      expect(await repo.delete('a', at), isTrue);
-      expect(await repo.delete('b', at), isTrue);
+      expect(await repo.remove('a'), isTrue);
+      expect(await repo.remove('b'), isTrue);
       await db.close();
 
       final bytes = [

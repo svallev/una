@@ -159,10 +159,7 @@ void main() {
     await pump(tester, tasks: ['Siguiente']);
     expect(awake.on, isTrue);
     final container = tester.element(find.byType(TaskImage));
-    await repo.complete(
-      (await repo.currentTask())!.id,
-      DateTime.utc(2026, 9, 26),
-    );
+    await repo.remove((await repo.currentTask())!.id);
     await tester.pumpAndSettle();
     expect(container.mounted, isFalse);
     expect(awake.on, isFalse);

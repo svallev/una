@@ -110,12 +110,17 @@ class CurrentTaskScreen extends ConsumerWidget {
     final attachment = task.attachment;
     final isPhoto = attachment?.isPhoto ?? false;
     // Falta la versión completa: "Adjunto no disponible" (CA-007-19).
-    // La cara de completar y eliminar (faceOnly) no comprueba: al eliminar,
-    // los archivos ya se han borrado y se ve la imagen que ya estaba cargada.
+    // La tarea que se completa o se elimina no comprueba: sus archivos ya se
+    // han borrado (ADR-0012) y se ve la imagen que ya estaba cargada, también
+    // en la pausa antes de romperse.
+    final leaving = ref.watch(
+      completionProvider.select((c) => c.busy && c.task?.id == task.id),
+    );
     final missing =
         attachment != null &&
         !faceOnly &&
         !chromeOnly &&
+        !leaving &&
         ref.watch(attachmentHealthProvider(attachment)).health ==
             AttachmentHealth.missing;
     final showImage = attachment != null && !missing;

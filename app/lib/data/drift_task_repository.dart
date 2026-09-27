@@ -17,6 +17,7 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   final Clock clock;
 
   static const _firstRunKey = 'firstRunDone';
+  static const _hasEverHadTasksKey = 'hasEverHadTasks';
   static const _keepScreenOnKey = 'keepScreenOn';
 
   SimpleSelectStatement<$TasksTable, TaskRow> _pendingQuery() =>
@@ -52,6 +53,11 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
     if (limit != null) q.limit(limit);
     return q;
   }
+
+  /// Pendiente: sin marca (tras la migración a v2 no queda ninguna, pero así
+  /// las consultas siguen usando el índice `(status, deletedAt, rank)`).
+  static Expression<bool> _pendingWhere($TasksTable t) =>
+      t.status.equals(TaskStatus.pending.name) & t.deletedAt.isNull();
 
   Expression<bool> get _isPending =>
       db.tasks.status.equals(TaskStatus.pending.name) &
@@ -162,24 +168,13 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
-  Future<bool> hasHistory() async {
-    final q = db.select(db.tasks)
-      ..where(
-        (t) =>
-            t.status.equals(TaskStatus.completed.name) |
-            t.deletedAt.isNotNull(),
-      )
-      ..limit(1);
-    return (await q.getSingleOrNull()) != null;
-  }
-
-  @override
   Future<void> insert(Task task) => db.transaction(() async {
     await db.into(db.tasks).insert(_toRow(task));
     final a = task.attachment;
     if (a != null) {
       await db.into(db.attachments).insert(_toAttachmentRow(task.id, a));
     }
+    await _setFlag(_hasEverHadTasksKey, true);
   });
 
   @override
@@ -217,45 +212,37 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
-  Future<bool> complete(String id, DateTime at) async {
-    final ms = at.millisecondsSinceEpoch;
-    final rows =
-        await (db.update(db.tasks)..where(
-              (t) =>
-                  t.id.equals(id) &
-                  t.status.equals(TaskStatus.pending.name) &
-                  t.deletedAt.isNull(),
-            ))
-            .write(
-              TasksCompanion(
-                status: Value(TaskStatus.completed.name),
-                completedAt: Value(ms),
-                updatedAt: Value(ms),
-              ),
-            );
-    return rows > 0;
-  }
+  Future<bool> remove(String id) => db.transaction(() async {
+    final exists = await (db.select(
+      db.tasks,
+    )..where((t) => t.id.equals(id) & _pendingWhere(t))).getSingleOrNull();
+    if (exists == null) return false;
+    // Primero los adjuntos (clave foránea). Los archivos los borra
+    // AttachmentJanitor después (CA-007-16).
+    await (db.delete(db.attachments)..where((a) => a.taskId.equals(id))).go();
+    await (db.delete(db.tasks)..where((t) => t.id.equals(id))).go();
+    return true;
+  });
 
   @override
-  Future<bool> delete(String id, DateTime at) {
-    final ms = at.millisecondsSinceEpoch;
-    return db.transaction(() async {
-      final rows =
-          await (db.update(
-            db.tasks,
-          )..where((t) => t.id.equals(id) & t.deletedAt.isNull())).write(
-            TasksCompanion(
-              body: const Value(null),
-              deletedAt: Value(ms),
-              updatedAt: Value(ms),
-            ),
-          );
-      if (rows == 0) return false;
-      // Los archivos los borra AttachmentJanitor después (CA-007-16).
-      await (db.delete(db.attachments)..where((a) => a.taskId.equals(id))).go();
-      return true;
-    });
+  Future<bool> hasEverHadTasks() => _flag(_hasEverHadTasksKey);
+
+  Future<bool> _flag(String key) async {
+    final row = await (db.select(
+      db.settingEntries,
+    )..where((s) => s.key.equals(key))).getSingleOrNull();
+    return row != null && jsonDecode(row.value) == true;
   }
+
+  Future<void> _setFlag(String key, bool value) => db
+      .into(db.settingEntries)
+      .insertOnConflictUpdate(
+        SettingEntriesCompanion.insert(
+          key: key,
+          value: jsonEncode(value),
+          updatedAt: clock.now().millisecondsSinceEpoch,
+        ),
+      );
 
   @override
   Future<bool> firstRunDone() async {

@@ -5,7 +5,6 @@ import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/color_picker.dart';
-import 'package:app/domain/entities/task.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
@@ -27,16 +26,16 @@ class _Repo extends InMemoryTaskRepository {
   bool failComplete = false;
 
   @override
-  Future<bool> complete(String id, DateTime at) async {
+  Future<bool> remove(String id) async {
     if (failComplete) throw StateError('disk I/O error');
-    return super.complete(id, at);
+    return super.remove(id);
   }
 }
 
 Future<_Repo> _app(
   WidgetTester tester, {
   List<String> tasks = const [],
-  bool hasHistory = false,
+  bool hasEverHadTasks = false,
   bool screenReader = false,
   bool reduced = false,
 }) async {
@@ -60,19 +59,19 @@ Future<_Repo> _app(
       sampleTask(id: 't$i', text: text, rank: 'M$i', colorKey: i % 5),
     );
   }
+  if (hasEverHadTasks && tasks.isEmpty) {
+    // Alguna vez hubo una tarea (ADR-0012): se guarda y se quita.
+    await repo.insert(sampleTask(id: 'old'));
+    await repo.remove('old');
+  }
   await repo.setFirstRunDone();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         taskRepositoryProvider.overrideWithValue(repo),
         settingsRepositoryProvider.overrideWithValue(repo),
-        bootStateProvider.overrideWithValue(
-          BootState(
-            currentTask: await repo.currentTask(),
-            firstRunDone: true,
-            hasHistory: hasHistory,
-          ),
-        ),
+        // Como el arranque real (main.dart).
+        bootStateProvider.overrideWithValue(await readBootState(repo, repo)),
         colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
       ],
       child: const UnaApp(),
@@ -113,8 +112,9 @@ void main() {
       final repo = await _app(tester, tasks: ['Primera', 'Segunda']);
       await _hold(tester);
 
-      // Guardada antes de animar; la tarea sigue en pantalla con el relleno.
-      expect((await repo.findById('t0'))!.status, TaskStatus.completed);
+      // Borrada antes de animar (ADR-0012); la tarea sigue en pantalla con el
+      // relleno.
+      expect(await repo.findById('t0'), isNull);
       expect(find.text('Primera'), findsOneWidget);
       expect(find.byType(CelebrationOverlay), findsNothing);
 
@@ -281,13 +281,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(CelebrationOverlay), findsNothing);
       expect(find.text('No hemos podido completar la tarea'), findsOneWidget);
-      expect((await repo.findById('t0'))!.status, TaskStatus.pending);
+      expect(await repo.findById('t0'), isNotNull);
       expect(find.text('Primera'), findsWidgets);
 
       repo.failComplete = false;
       await tester.tap(find.text('Reintentar'));
       await tester.pump(_frame);
-      expect((await repo.findById('t0'))!.status, TaskStatus.completed);
+      expect(await repo.findById('t0'), isNull);
       await _celebrate(tester);
       expect(find.text('Segunda'), findsOneWidget);
       expect(
@@ -345,9 +345,10 @@ void main() {
   );
 
   testWidgets(
-    'CA-003-11: sin pendientes y con completadas, al abrir se ve "Todo hecho."',
+    'CA-003-11 (ADR-0012): sin pendientes, pero con alguna tarea guardada '
+    'antes, al abrir se ve "Todo hecho."',
     (tester) async {
-      await _app(tester, hasHistory: true);
+      await _app(tester, hasEverHadTasks: true);
       expect(find.byType(AllDoneScreen), findsOneWidget);
       expect(find.byType(TaskEditorScreen), findsNothing);
       await tester.pump(UnaMotion.enter);
@@ -389,7 +390,7 @@ void main() {
   testWidgets(
     'CA-003-10: "Crear una tarea" abre el editor; atrás vuelve a "Todo hecho." y al guardar se ve la tarea',
     (tester) async {
-      await _app(tester, hasHistory: true);
+      await _app(tester, hasEverHadTasks: true);
       await tester.tap(find.text('Crear una tarea'));
       await tester.pumpAndSettle();
       expect(find.byType(TaskEditorScreen), findsOneWidget);

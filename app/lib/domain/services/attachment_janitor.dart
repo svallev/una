@@ -63,8 +63,9 @@ class AttachmentJanitor {
   void release(String id) => registry.remove(id);
 
   /// Borra los adjuntos que no pertenecen a ninguna tarea y todas las
-  /// preparaciones, salvo las importaciones en curso (CA-007-16). Las tareas
-  /// completadas conservan sus archivos (CA-007-17).
+  /// preparaciones, salvo las importaciones en curso (CA-007-16). También los
+  /// de una tarea completada o eliminada si la app murió antes de `discard`,
+  /// y los que deja la migración a v2 (ADR-0012).
   Future<void> sweep() async {
     final active = registry.active;
     // Primero el disco y después la BD: lo que se guarde entre medias no está

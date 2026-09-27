@@ -2,8 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import 'attachment.dart';
 
-/// Estado de una tarea. Una tarea eliminada no cambia de estado: lleva
-/// `deletedAt` (marca de borrado sin contenido, ADR-0011).
+/// Estado de una tarea. Desde ADR-0012 todas las tareas guardadas están
+/// pendientes: completar y eliminar las borran. `completed`, `completedAt` y
+/// `deletedAt` se conservan porque siguen en el esquema, sin uso.
 enum TaskStatus { pending, completed }
 
 /// Tarea (docs/architecture.md §3). Inmutable; los cambios crean copias.
@@ -86,43 +87,6 @@ class Task {
     createdAt: createdAt,
     updatedAt: at,
     completedAt: completedAt,
-    deletedAt: deletedAt,
-    dueDate: dueDate,
-    parentId: parentId,
-    source: source,
-    externalId: externalId,
-    attachment: attachment,
-  );
-
-  /// La marca de borrado de esta tarea (spec 004, ADR-0011): sin texto, con
-  /// `deletedAt` y sin volver a contar como pendiente ni como hecha.
-  Task tombstone(DateTime at) => Task(
-    id: id,
-    text: null,
-    status: status,
-    rank: rank,
-    colorKey: colorKey,
-    createdAt: createdAt,
-    updatedAt: at,
-    completedAt: completedAt,
-    deletedAt: at,
-    dueDate: dueDate,
-    parentId: parentId,
-    source: source,
-    externalId: externalId,
-  );
-
-  /// La misma tarea, completada en [at] (spec 003, CA-003-03a). Conserva su
-  /// texto, su color y su adjunto: queda en el histórico (R14, D8).
-  Task complete(DateTime at) => Task(
-    id: id,
-    text: text,
-    status: TaskStatus.completed,
-    rank: rank,
-    colorKey: colorKey,
-    createdAt: createdAt,
-    updatedAt: at,
-    completedAt: at,
     deletedAt: deletedAt,
     dueDate: dueDate,
     parentId: parentId,

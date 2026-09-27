@@ -61,7 +61,6 @@ class DeletionController extends Notifier<DeletionState> {
       state = DeletionState(DeletionPhase.idle, generation: generation);
       rethrow;
     }
-    ref.read(hasHistoryProvider.notifier).mark();
     state = DeletionState(
       DeletionPhase.crumpling,
       task: result.deleted,

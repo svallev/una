@@ -130,7 +130,7 @@ class HomeRouter extends ConsumerWidget {
     final focusSignal = ref.watch(screenFocusProvider);
     final task = ref.watch(currentTaskProvider);
     final firstRunDone = ref.watch(firstRunDoneProvider);
-    final hasHistory = ref.watch(hasHistoryProvider);
+    final hasEverHadTasks = ref.watch(hasEverHadTasksProvider);
     final reduced = MediaQuery.disableAnimationsOf(context);
     final completing = completion.phase == CompletionPhase.completing;
     // Mientras se guarda, la tarea sigue en pantalla; mientras se arruga,
@@ -151,7 +151,7 @@ class HomeRouter extends ConsumerWidget {
         faceOnly: crumpling,
         focusSignal: focusSignal,
       );
-    } else if (hasHistory || crumpling) {
+    } else if (hasEverHadTasks || crumpling) {
       child = AllDoneScreen(
         key: const ValueKey('all-done'),
         // Tras eliminar la última: sin el botón hasta que cae en la papelera

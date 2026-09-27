@@ -55,11 +55,8 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
         taskRepositoryProvider.overrideWithValue(repo),
         settingsRepositoryProvider.overrideWithValue(repo),
         bootStateProvider.overrideWithValue(
-          BootState(
-            currentTask: await repo.currentTask(),
-            firstRunDone: true,
-            keepScreenOn: await repo.keepScreenOn(),
-          ),
+          // Como el arranque real (main.dart), con el primer uso hecho.
+          await readBootState(repo, repo),
         ),
         colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
         if (clock != null) clockProvider.overrideWithValue(clock),

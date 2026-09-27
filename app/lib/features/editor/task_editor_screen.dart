@@ -280,6 +280,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     WidgetsBinding.instance.scheduleFrame();
   }
 
+  /// Ya se ha guardado alguna tarea: sin pendientes, "Todo hecho." y no el
+  /// editor de la primera (CA-001-05, ADR-0012). La BD lo guarda en la misma
+  /// transacción que la tarea.
+  void _created() => ref.read(hasEverHadTasksProvider.notifier).mark();
+
   Future<void> _save() async {
     if (_saving || ref.read(imageImportProvider).preparing) return;
     if (!_canSave) {
@@ -291,18 +296,22 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final image = _staged;
     switch (widget.mode) {
       case EditorMode.first:
-        await _write(
+        if (await _write(
           () => ref
               .read(createTaskProvider)
               .call(_controller.text, colorKey: _colorKey, image: image),
-        );
+        )) {
+          _created();
+        }
       case EditorMode.create when image != null:
         // Con imagen, siempre arriba y sin preguntar (CA-007-05).
-        await _write(
+        if (await _write(
           () => ref
               .read(createTaskProvider)
               .call(_controller.text, colorKey: _colorKey, image: image),
-        );
+        )) {
+          _created();
+        }
       case EditorMode.create:
         // Sin adjunto se pregunta dónde va (CA-002-02).
         final position = await showPlacementSheet(
@@ -316,6 +325,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
               .read(createTaskProvider)
               .call(_controller.text, position: position, colorKey: _colorKey),
         );
+        if (saved) _created();
         if (saved &&
             position == QueuePosition.end &&
             !widget.fromList &&

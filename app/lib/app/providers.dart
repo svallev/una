@@ -112,7 +112,7 @@ final editTaskProvider = Provider<EditTask>(
 final completeCurrentTaskProvider = Provider<CompleteCurrentTask>(
   (ref) => CompleteCurrentTask(
     repository: ref.watch(taskRepositoryProvider),
-    clock: ref.watch(clockProvider),
+    janitor: ref.watch(attachmentJanitorProvider),
   ),
 );
 
@@ -120,7 +120,6 @@ final deleteCurrentTaskProvider = Provider<DeleteCurrentTask>(
   (ref) => DeleteCurrentTask(
     repository: ref.watch(taskRepositoryProvider),
     janitor: ref.watch(attachmentJanitorProvider),
-    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -128,7 +127,6 @@ final deletePendingTaskProvider = Provider<DeletePendingTask>(
   (ref) => DeletePendingTask(
     repository: ref.watch(taskRepositoryProvider),
     janitor: ref.watch(attachmentJanitorProvider),
-    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -139,17 +137,19 @@ final reorderTaskProvider = Provider<ReorderTask>(
   ),
 );
 
-/// ¿Hay tareas completadas o eliminadas? Sin pendientes, decide entre
-/// "Todo hecho." y el editor de la primera tarea (CA-003-11, CA-004-08).
-final hasHistoryProvider = NotifierProvider<HasHistoryController, bool>(
-  HasHistoryController.new,
-);
+/// ¿Se ha guardado alguna tarea alguna vez? Sin pendientes, decide entre
+/// "Todo hecho." y el editor de la primera tarea (CA-001-05, CA-003-11,
+/// CA-004-08, ADR-0012).
+final hasEverHadTasksProvider =
+    NotifierProvider<HasEverHadTasksController, bool>(
+      HasEverHadTasksController.new,
+    );
 
-class HasHistoryController extends Notifier<bool> {
+class HasEverHadTasksController extends Notifier<bool> {
   @override
-  bool build() => ref.read(bootStateProvider).hasHistory;
+  bool build() => ref.read(bootStateProvider).hasEverHadTasks;
 
-  /// Tras completar o eliminar una tarea.
+  /// Tras crear una tarea.
   void mark() => state = true;
 }
 
@@ -213,17 +213,33 @@ class FirstRunController extends Notifier<bool> {
   void markDone() => state = true;
 }
 
+/// Lee lo que decide la primera pantalla (CA-001-09). Con una tarea actual,
+/// es que ya se guardó alguna; si no, lo dice el ajuste: "Todo hecho." o el
+/// editor de la primera tarea (CA-003-11, CA-004-08, ADR-0012).
+Future<BootState> readBootState(
+  TaskRepository tasks,
+  SettingsRepository settings,
+) async {
+  final current = await tasks.currentTask();
+  return BootState(
+    currentTask: current,
+    firstRunDone: await settings.firstRunDone(),
+    hasEverHadTasks: current != null || await settings.hasEverHadTasks(),
+    keepScreenOn: await settings.keepScreenOn(),
+  );
+}
+
 /// Resultado del arranque.
 class BootState {
   const BootState({
     required this.currentTask,
     required this.firstRunDone,
-    this.hasHistory = false,
+    this.hasEverHadTasks = false,
     this.keepScreenOn = true,
   });
   final Task? currentTask;
   final bool firstRunDone;
-  final bool hasHistory;
+  final bool hasEverHadTasks;
 
   /// Ajuste "Mantener la pantalla encendida con adjuntos" (CA-007-12).
   final bool keepScreenOn;
