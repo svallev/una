@@ -52,7 +52,7 @@ class ImageSanitizer(
         const val TILE = 4096
         const val THUMB = 176
         private const val FULL_QUALITY = 90
-        private const val SCREEN_QUALITY = 85
+        const val SCREEN_QUALITY = 85
         private const val THUMB_QUALITY = 80
     }
 
