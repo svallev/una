@@ -61,7 +61,7 @@ fvm flutter test integration_test/image_flow_test.dart -d emulator-5554
 
 **Memoria de la tarea con imagen.** Presupuesto: la imagen de 24 MP añade < 200 MB sobre la misma tarea con texto (`docs/architecture.md` §7). Se mide con `dumpsys meminfo` con la app *profile* normal (`flutter build apk --profile` + `adb install -r`), en un proceso nuevo y con la tarea ya guardada: en vertical, desplazándose, pellizcando y en horizontal.
 
-- [ ] Memoria dentro del presupuesto. **[Pendiente]** El visor y su test de rendimiento se retiraron (ADR-0013); sus medidas ya no aplican.
+- [x] Memoria dentro del presupuesto. **[Hecho 2026-09-27]** Xiaomi: 213 MB de PSS con la foto; la imagen añade como mucho ~100 MB (detalle en `docs/perf/baseline.md`).
 
 **Arranque en frío con imagen** (CA-007-08: p50 < 1 s, con la imagen ya visible).
 
@@ -73,7 +73,7 @@ fvm flutter test integration_test/image_flow_test.dart -d emulator-5554
 tools/measure-cold-start.sh <serial> 20
 ```
 
-- [x] p50 < 1 s. Anotarlo en `docs/perf/baseline.md` junto al arranque con texto (198 ms). **[Hecho 2026-09-27]** p50 = 226 ms, p90 = 255 ms (n = 20).
+- [x] p50 < 1 s. Anotarlo en `docs/perf/baseline.md` junto al arranque con texto (198 ms). **[Hecho 2026-09-27]** p50 = 226 ms, p90 = 255 ms (n = 20); sin visor, p50 = 245 ms.
 - [x] Se ve la imagen en el primer fotograma, no un fondo vacío. **[Hecho 2026-09-27]**
 
 ## 4. A mano: cámara, selector y ciclo de vida
@@ -81,7 +81,7 @@ tools/measure-cold-start.sh <serial> 20
 - [x] **"Hacer foto"** abre la cámara del sistema sin pedir ningún permiso (CA-007-02). La foto vuelve a la vista previa con el foco en ella.
   **[Hecho 2026-09-27, Xiaomi, propietario]** Sin permisos; la foto vuelve a la vista previa con "Guardar" visible. El foco se comprueba en el §5.
 - [x] **"Subir imagen"** abre el selector de fotos del sistema, sin permisos (CA-007-03). **[Hecho 2026-09-27, Xiaomi, propietario]**
-  **[Pendiente, fallo]** El propietario informa de que, tras elegir una foto, a veces se queda en la galería y deja cambiar de foto en lugar de volver a la app. Sin reproducir todavía (hace falta la app `.debug` en el Xiaomi).
+  **[Hecho 2026-09-27]** El propietario llegó a ver que el selector se quedaba en la galería, pero después confirma que funciona bien; se descarta.
 - [ ] **Cancelar la cámara o el selector:** el editor queda como estaba y el foco vuelve a (+).
   **[Hecho 2026-09-27, emulador]** Con el gesto atrás en la cámara (`camera2`) y en el selector del sistema (`photopicker`), el editor queda igual. **[Pendiente]** El foco en (+) se comprueba con TalkBack (§5): `uiautomator` no ve el foco de Flutter.
 - [x] **CL-007-1:** sin app de cámara (emulador sin cámara), se ve el aviso "No hay ninguna app de cámara disponible."
@@ -89,10 +89,10 @@ tools/measure-cold-start.sh <serial> 20
 - [ ] **CL-007-6:** **[No probado: el propietario decide no probarlo, 2026-09-27; cubierto por los tests de M1]** una imagen de Google Fotos que solo está en la nube, sin conexión, da "No hemos podido leer esta imagen." en 20 s como mucho. "Cancelar" responde en 2 s aunque el proveedor esté colgado (hallazgo M1).
 - [x] **CL-007-7:** con la cámara abierta, `adb shell am kill invalid.pending.app.debug`. Al volver se ve el editor sin imagen (o la tarea actual si pasaron 10 min) y no queda nada en `cache/import/` tras el barrido.
   **[Hecho 2026-09-27, emulador]** Proceso muerto, foto hecha y "Done": la app se reabre en el editor sin imagen; `cache/import/` vacía y sin `attachments/`.
-- [ ] **CA-007-11:** en la tarea actual con imagen, girar el móvil gira la pantalla **sin tocar nada**; en horizontal solo se ven la imagen (a todo el ancho, con desplazamiento vertical) y el logotipo; al volver a vertical, vuelven el menú, el botón y el pie. Con el menú abierto, o en otra pantalla, no gira; con el bloqueo de rotación, tampoco.
-  **[Hecho 2026-09-27, emulador]** Con el acelerómetro simulado: vertical, horizontal (solo imagen y logotipo), vertical otra vez; con el menú abierto no gira. **[Pendiente]** En el Xiaomi.
+- [x] **CA-007-11:** en la tarea actual con imagen, girar el móvil gira la pantalla **sin tocar nada**; en horizontal solo se ven la imagen (a todo el ancho, con desplazamiento vertical) y el logotipo; al volver a vertical, vuelven el menú, el botón y el pie. Con el menú abierto, o en otra pantalla, no gira; con el bloqueo de rotación, tampoco.
+  **[Hecho 2026-09-27]** Emulador (acelerómetro simulado): vertical, horizontal (solo imagen y logotipo), vertical otra vez; con el menú abierto no gira. Xiaomi: el propietario confirma que gira sin tocar.
   **Lección:** en HyperOS, con `SCREEN_ORIENTATION_USER`, no giraba hasta el siguiente toque; ahora lo decide el acelerómetro (`ImageRotation.kt`).
-- [ ] **Pellizco (CA-007-10):** en vertical y en horizontal, pellizcar amplía la imagen ahí mismo y al soltar vuelve al 100 %; sin visor ni "Cerrar".
+- [x] **Pellizco (CA-007-10):** en vertical y en horizontal, pellizcar amplía la imagen ahí mismo y al soltar vuelve al 100 %; sin visor ni "Cerrar". **[Hecho 2026-09-27, Xiaomi, propietario]** También el desplazamiento vertical de una captura larga.
 - [x] **Imagen al ancho (CA-007-09, DEV-41):** una foto nueva se ve entera a lo ancho en vertical. **[Hecho 2026-09-27, Xiaomi, propietario]** Las fotos añadidas antes del cambio siguen recortadas.
 - [ ] **CA-007-12:** **[No probado: el propietario decide no probarlo, 2026-09-27; cubierto por `keep_screen_on_test.dart`]** con la imagen visible, la pantalla no se apaga mientras se toca; tras 10 minutos sin tocarla, sí. Para probarlo rápido, se puede acortar el tiempo en una compilación de depuración.
 

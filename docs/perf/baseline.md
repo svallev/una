@@ -61,7 +61,16 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 
 ## Tarea actual con imagen (spec 007, T-007-23)
 
-- **[Pendiente]** Medir la memoria de la tarea actual con la imagen de 24 MP (teselas al ancho, desplazamiento vertical y pellizco) con `dumpsys meminfo` en un proceso nuevo (presupuesto en `docs/architecture.md` §7). El visor y su test de rendimiento se retiraron (ADR-0013, 2026-09-27); sus medidas ya no aplican.
+- **Fecha:** 2026-09-27 (sin visor, ADR-0013). **Presupuesto** (`docs/architecture.md` §7): la imagen de 24 MP añade < 200 MB sobre la misma tarea con texto. **Método:** `dumpsys meminfo` en un proceso nuevo.
+
+| Dónde | Tarea | PSS total | RSS total | Nota |
+|---|---|---|---|---|
+| Xiaomi (app real, *release*) | Foto de la cámara, en horizontal | 213 MB | 335 MB | Con la GPU |
+| Emulador (Pixel 6a, *profile*) | Solo texto | 113 MB | 226 MB | Sin GPU (`Graphics: 0`) |
+| Emulador (Pixel 6a, *profile*) | La misma, con 24 MP (5999 × 4000): vertical, desplazada y en horizontal | 107–112 MB | 226–233 MB | Sin GPU |
+
+- **[Hecho]** Dentro del presupuesto, con margen: en el Xiaomi la app entera con la foto ocupa 213 MB de PSS, así que la imagen añade como mucho ~100 MB sobre una tarea con texto (~113 MB en el emulador sin GPU). Es lo esperado: las teselas se decodifican al ancho de la pantalla (~4 MB por capa), no a ×8 como el visor retirado.
+- **[Pendiente, opcional]** La diferencia exacta en el Xiaomi (texto frente a 24 MP en la app `.profile`); el emulador no cuenta la memoria de la GPU.
 - **[Pendiente]** En gama media (R-02), y sobre todo en Android 8 con 2–3 GB, el pico de la importación de 50 MP (~620 MB de RSS, medido el 2026-09-27) es el riesgo principal.
 
 ## Arranque en frío con imagen (spec 007, CA-007-08)
@@ -75,6 +84,7 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 
 - **[Hecho]** CA-007-08 se cumple: p50 = 23 % del presupuesto; +28 ms sobre el arranque con texto (198 ms).
 - **[Hecho]** La foto se ve en el primer fotograma (captura justo al volver `am start -W`), sin fondo vacío previo.
+- **Repetido sin visor** (2026-09-27, imagen al ancho con teselas encima de la versión de pantalla): n = 20, mín 212, **p50 245 ms**, p90 262, máx 278 ms. Sigue en el 25 % del presupuesto.
 
 ## Cómo repetir la medición
 
