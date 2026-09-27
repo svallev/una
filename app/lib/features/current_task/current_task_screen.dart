@@ -1,18 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show OrdinalSortKey;
-import 'package:flutter/semantics.dart' show CustomSemanticsAction;
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
+import '../../data/platform/image_rotation.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/focus_on_signal.dart';
+import '../../ui/full_width.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
+import '../attachments/attachment_health.dart';
+import '../attachments/keep_screen_on_controller.dart';
+import '../attachments/missing_attachment_card.dart';
+import '../attachments/task_image.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/completion_controller.dart';
 import '../complete/hold_to_complete_button.dart';
@@ -97,41 +107,96 @@ class CurrentTaskScreen extends ConsumerWidget {
       );
     }
 
+    final attachment = task.attachment;
+    final isPhoto = attachment?.isPhoto ?? false;
+    // Falta la versión completa: "Adjunto no disponible" (CA-007-19).
+    // La cara de completar y eliminar (faceOnly) no comprueba: al eliminar,
+    // los archivos ya se han borrado y se ve la imagen que ya estaba cargada.
+    final missing =
+        attachment != null &&
+        !faceOnly &&
+        !chromeOnly &&
+        ref.watch(attachmentHealthProvider(attachment)).health ==
+            AttachmentHealth.missing;
+    final showImage = attachment != null && !missing;
+    // En horizontal (solo gira la tarea con imagen), solo la imagen y el
+    // logotipo: sin menú, botón ni pie (CA-007-11, propietario 2026-09-27).
+    final landscape =
+        showImage &&
+        !faceOnly &&
+        !chromeOnly &&
+        mq.orientation == Orientation.landscape;
+    final kind = isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage;
+
+    /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
+    /// y sin decir "imagen" dos veces (CA-007-21).
+    Widget taskNode(Widget child, {_ImageScroll? scroll}) => FocusOnSignal(
+      signal: focusSignal,
+      child: Semantics(
+        // Una imagen más alta que la pantalla se desplaza también con las
+        // acciones del lector y de Switch Access (CA-007-09, WCAG 2.1.1).
+        onScrollUp: scroll?.canForward ?? false ? scroll!.forward : null,
+        onScrollDown: scroll?.canBack ?? false ? scroll!.back : null,
+        label: l10n.currentTaskSemantics(switch (attachment) {
+          null => text,
+          _ when missing => l10n.a11yAttachmentMissing(
+            text.isEmpty ? kind : text,
+          ),
+          _ when text.isEmpty => kind,
+          _ => isPhoto ? l10n.a11yWithPhoto(text) : l10n.a11yWithImage(text),
+        }),
+        // Papel de imagen, salvo si la lectura ya acaba en "imagen".
+        image: isPhoto && showImage,
+        // También se completa (CA-003-07) y se elimina (CA-004-10) desde la
+        // tarea.
+        customSemanticsActions: faceOnly
+            ? null
+            : {
+                CustomSemanticsAction(label: l10n.completeA11yAction): complete,
+                CustomSemanticsAction(label: l10n.deleteA11yAction): delete,
+              },
+        excludeSemantics: true,
+        child: child,
+      ),
+    );
+
     final noteText = MediaQuery(
       data: mq.copyWith(
         textScaler: mq.textScaler.clamp(maxScaleFactor: maxNoteTextScale),
       ),
-      child: FocusOnSignal(
-        signal: focusSignal,
-        child: Semantics(
-          label: l10n.currentTaskSemantics(text),
-          // También se completa (CA-003-07) y se elimina (CA-004-10) desde la
-          // tarea.
-          customSemanticsActions: faceOnly
-              ? null
-              : {
-                  CustomSemanticsAction(label: l10n.completeA11yAction):
-                      complete,
-                  CustomSemanticsAction(label: l10n.deleteA11yAction): delete,
-                },
-          excludeSemantics: true,
-          child: LayoutBuilder(
-            builder: (context, constraints) => SizedBox(
-              width: double.infinity,
-              child: Text(
+      child: taskNode(
+        LayoutBuilder(
+          builder: (context, constraints) => SizedBox(
+            width: double.infinity,
+            child: Text(
+              text,
+              style: UnaTheme.fitNoteText(
                 text,
-                style: UnaTheme.fitNoteText(
-                  text,
-                  maxWidth: constraints.maxWidth,
-                  textScaler: MediaQuery.textScalerOf(context),
-                  textDirection: Directionality.of(context),
-                ),
+                maxWidth: constraints.maxWidth,
+                textScaler: MediaQuery.textScalerOf(context),
+                textDirection: Directionality.of(context),
               ),
             ),
           ),
         ),
       ),
     );
+
+    // Con imagen, logotipo y menú llevan fondo blanco (CA-007-08, prototipo
+    // `chromeBg`); el logotipo, con 8 px a cada lado sin moverse.
+    const logoPad = UnaSpace.s;
+    final Widget wordmark = !showImage
+        ? const Wordmark()
+        : Transform.translate(
+            offset: const Offset(-logoPad, 0),
+            child: const ColoredBox(
+              color: UnaColors.surface,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: logoPad),
+                child: Wordmark(),
+              ),
+            ),
+          );
 
     final content = SafeArea(
       child: Padding(
@@ -148,43 +213,68 @@ class CurrentTaskScreen extends ConsumerWidget {
             header(
               Row(
                 children: [
-                  const Wordmark(),
+                  wordmark,
                   const Spacer(),
-                  _Order(
-                    1,
-                    child: SquareIconButton(
-                      icon: UnaIcons.menu,
-                      label: l10n.menuButton,
-                      fill: UnaPalettes
-                          .classic[task.colorKey % UnaPalettes.classic.length],
-                      onPressed: openMenu,
+                  if (!landscape)
+                    _Order(
+                      1,
+                      child: SquareIconButton(
+                        icon: UnaIcons.menu,
+                        label: l10n.menuButton,
+                        fill: showImage
+                            ? UnaColors.surface
+                            : UnaPalettes.classic[task.colorKey %
+                                  UnaPalettes.classic.length],
+                        onPressed: openMenu,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
             Expanded(
-              // La zona desplazable es su propio nodo: el orden va aquí.
-              child: _Order(
-                0,
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: chromeOnly ? hidden(noteText) : noteText,
+              // Con imagen, la tarea está detrás, a sangre.
+              child: showImage
+                  ? const SizedBox.shrink()
+                  : missing
+                  ? _Order(
+                      0,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: chromeOnly
+                              ? const SizedBox.shrink()
+                              : _MissingAttachment(
+                                  task: task,
+                                  header: faceOnly
+                                      ? (c) => c
+                                      : (c) => taskNode(c),
+                                  interactive: !faceOnly,
+                                ),
+                        ),
+                      ),
+                    )
+                  // La zona desplazable es su propio nodo: el orden va aquí.
+                  : _Order(
+                      0,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: chromeOnly ? hidden(noteText) : noteText,
+                        ),
+                      ),
+                    ),
+            ),
+            // En horizontal se completa con la acción del lector (CA-003-07).
+            if (!landscape)
+              cta(
+                _Order(
+                  2,
+                  child: HoldToCompleteButton(
+                    label: l10n.completeButton,
+                    a11yAction: l10n.completeA11yAction,
+                    a11yHint: l10n.completeA11yHint,
+                    onComplete: complete,
                   ),
                 ),
               ),
-            ),
-            cta(
-              _Order(
-                2,
-                child: HoldToCompleteButton(
-                  label: l10n.completeButton,
-                  a11yAction: l10n.completeA11yAction,
-                  a11yHint: l10n.completeA11yHint,
-                  onComplete: complete,
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -195,10 +285,37 @@ class CurrentTaskScreen extends ConsumerWidget {
         policy: OrderedTraversalPolicy(),
         child: chromeOnly
             ? content
-            : StickyNote(colorKey: task.colorKey, child: content),
+            : StickyNote(
+                colorKey: task.colorKey,
+                child: !showImage
+                    ? content
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _Order(
+                            0,
+                            child: _RotatesWithImage(
+                              enabled: !faceOnly,
+                              fullWidth: landscape,
+                              builder: (scroll) => taskNode(
+                                TaskImage(
+                                  attachment: attachment,
+                                  caption: landscape ? null : text,
+                                  scroll: scroll.controller,
+                                ),
+                                scroll: scroll,
+                              ),
+                            ),
+                          ),
+                          content,
+                        ],
+                      ),
+              ),
       ),
     );
-    return faceOnly || chromeOnly ? ExcludeSemantics(child: screen) : screen;
+    if (faceOnly || chromeOnly) return ExcludeSemantics(child: screen);
+    // Con imagen, la pantalla no se apaga mientras se usa (CA-007-12).
+    return KeepScreenOnWhileVisible(enabled: showImage, child: screen);
   }
 }
 
@@ -231,8 +348,234 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
   await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
 }
 
+/// "Adjunto no disponible" en la pantalla principal, con su única acción
+/// (CA-007-19).
+class _MissingAttachment extends ConsumerWidget {
+  const _MissingAttachment({
+    required this.task,
+    required this.header,
+    required this.interactive,
+  });
+
+  final Task task;
+  final Widget Function(Widget) header;
+  final bool interactive;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MissingAttachmentCard(
+      text: task.text ?? '',
+      header: header,
+      onRemove: interactive ? () => _remove(context, ref) : () {},
+      onDelete: interactive
+          ? () => confirmAndDeleteTask(context, ref, task)
+          : () {},
+    );
+  }
+
+  bool _busy(WidgetRef ref) =>
+      ref.read(completionProvider).busy || ref.read(deletionProvider).busy;
+
+  /// "Quitar adjunto" (con texto).
+  Future<void> _remove(BuildContext context, WidgetRef ref) async {
+    if (_busy(ref)) return;
+    final l10n = AppLocalizations.of(context);
+    final view = View.of(context);
+    final direction = Directionality.of(context);
+    final saved = await _save(
+      context,
+      ref,
+      () => ref
+          .read(editTaskProvider)
+          .call(task, task.text ?? '', attachment: const RemoveAttachment()),
+    );
+    if (!saved) return;
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        view,
+        l10n.a11yAttachmentRemoved,
+        direction,
+      ),
+    );
+  }
+
+  Future<bool> _save(
+    BuildContext context,
+    WidgetRef ref,
+    Future<Object?> Function() write,
+  ) async {
+    try {
+      await write();
+      // El foco vuelve a la tarea, ya sin la tarjeta.
+      ref.read(screenFocusProvider.notifier).signal();
+      return true;
+    } on Object catch (e) {
+      if (!context.mounted) return false;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isNoSpaceError(e) ? l10n.storageErrorNoSpace : l10n.editorSaveError,
+          ),
+        ),
+      );
+      return false;
+    }
+  }
+}
+
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
 /// pantalla y teclado), aunque el menú esté arriba en pantalla.
+/// Desplazamiento de la imagen de la tarea actual: por pasos del 80 % de la
+/// pantalla, sin animar con reducir movimiento.
+class _ImageScroll {
+  _ImageScroll(this.controller, this._reduced);
+
+  final ScrollController controller;
+  final bool Function() _reduced;
+
+  ScrollPosition? get _position =>
+      controller.hasClients ? controller.position : null;
+  bool get canForward {
+    final p = _position;
+    return p != null && p.pixels < p.maxScrollExtent - 0.5;
+  }
+
+  bool get canBack {
+    final p = _position;
+    return p != null && p.pixels > p.minScrollExtent + 0.5;
+  }
+
+  void forward() => _by(1);
+  void back() => _by(-1);
+
+  void _by(int direction) {
+    final p = _position;
+    if (p == null) return;
+    final to = (p.pixels + direction * p.viewportDimension * 0.8).clamp(
+      p.minScrollExtent,
+      p.maxScrollExtent,
+    );
+    if (_reduced()) {
+      p.jumpTo(to);
+    } else {
+      unawaited(
+        p.animateTo(
+          to,
+          duration: UnaMotion.imageZoomBack,
+          curve: UnaMotion.standardCurve,
+        ),
+      );
+    }
+  }
+}
+
+/// Mientras se ve la tarea actual con imagen (y es la pantalla de arriba, no
+/// bajo el menú, el editor o el listado), la app gira con el móvil
+/// (CA-007-11); si no, solo en vertical. En horizontal pide todo el ancho
+/// aunque el marco de la app lo limite en tablets (CL-001-7). También es la
+/// dueña del desplazamiento de la imagen: acciones del lector y Av Pág / Re Pág
+/// con teclado (CA-007-09, WCAG 2.1.1).
+class _RotatesWithImage extends StatefulWidget {
+  const _RotatesWithImage({
+    required this.enabled,
+    required this.fullWidth,
+    required this.builder,
+  });
+
+  final bool enabled;
+  final bool fullWidth;
+  final Widget Function(_ImageScroll scroll) builder;
+
+  @override
+  State<_RotatesWithImage> createState() => _RotatesWithImageState();
+}
+
+class _RotatesWithImageState extends State<_RotatesWithImage> {
+  bool? _rotating;
+  bool _fullWidth = false;
+  final _controller = ScrollController();
+  late final _scroll = _ImageScroll(
+    _controller,
+    () => mounted && MediaQuery.disableAnimationsOf(context),
+  );
+  (bool, bool)? _can;
+
+  /// Las acciones del lector cambian al llegar arriba o abajo del todo.
+  void _onScroll() {
+    final can = (_scroll.canForward, _scroll.canBack);
+    if (can != _can && mounted) setState(() => _can = can);
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent || !(_rotating ?? false)) return false;
+    if (event.logicalKey == LogicalKeyboardKey.pageDown && _scroll.canForward) {
+      _scroll.forward();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.pageUp && _scroll.canBack) {
+      _scroll.back();
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onScroll);
+    HardwareKeyboard.instance.addHandler(_onKey);
+    // Cuánto se puede desplazar solo se sabe tras la primera medida.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+  }
+
+  void _update() {
+    final on = widget.enabled && (ModalRoute.isCurrentOf(context) ?? true);
+    if (on != _rotating) {
+      _rotating = on;
+      unawaited(ImageRotation.follow(on));
+    }
+    final fullWidth = on && widget.fullWidth;
+    if (fullWidth != _fullWidth) {
+      _fullWidth = fullWidth;
+      // Fuera de la construcción: el marco de la app lo escucha.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => fullWidthRequests.value += fullWidth ? 1 : -1,
+      );
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _update();
+    // Al girar cambia la altura de la imagen.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+  }
+
+  @override
+  void didUpdateWidget(_RotatesWithImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _update();
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    _controller.dispose();
+    if (_rotating ?? false) unawaited(ImageRotation.follow(false));
+    if (_fullWidth) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => fullWidthRequests.value--,
+      );
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(_scroll);
+}
+
 class _Order extends StatelessWidget {
   const _Order(this.order, {required this.child});
   final double order;

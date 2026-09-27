@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/fonts.dart';
 import 'list_harness.dart';
 
 /// Etiquetas de todos los nodos, en el orden en que los recorre el lector.
@@ -49,6 +50,8 @@ Future<void> _action(WidgetTester tester, String row, String action) async {
 }
 
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets(
     'CA-006-18: orden de lectura, una parada por fila y el título primero',
     (tester) async {

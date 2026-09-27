@@ -51,6 +51,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
   - **Dado** una tarea completada
   - **Cuando** se consulta la BD
   - **Entonces** la tarea se conserva con su texto, su adjunto (archivos intactos) y la fecha de finalización; no aparece en ninguna pantalla de la v1.
+  - *Enmienda (ADR-0012, aceptado 2026-09-26):* **se sustituye:** al completar, la tarea se borra del todo (fila, adjunto y archivos) antes de la animación; no queda histórico. Nueva redacción: «Dado una tarea completada, cuando se consulta la BD, entonces no queda nada de ella: ni fila, ni adjunto, ni archivos». R14 y D8 se retiran.
 
 **Después de "Todo hecho."**
 
@@ -63,6 +64,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
   - **Cuando** se abre la app en frío (o vuelve de segundo plano tras 10 min, CA-001-12)
   - **Entonces** se ve "Todo hecho." (no el editor). Enmienda CA-001-05, que queda para cuando no hay ninguna tarea, ni pendiente ni completada.
   - *Enmienda (spec 004, CA-004-08):* también con tareas eliminadas y ninguna completada.
+  - *Enmienda (ADR-0012, aceptado 2026-09-26):* "hay al menos una completada o eliminada" pasa a ser "ya se guardó alguna tarea" (ajuste sí/no).
 
 **Errores**
 
@@ -101,7 +103,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
 | CL-003-5 | Reducir movimiento activado | El relleno se mantiene; sin rotura ni confeti: fundido `reducedMotionFade` (0,4 s) a una enhorabuena estática que dura lo mismo (CA-003-04) |
 | CL-003-6 | Toque breve (menos de 1,2 s) | Como soltar antes de tiempo (CA-003-02). **Sin pista visual ni texto adicional** (decisión del propietario, 2026-09-24) |
 | CL-003-7 | La app pasa a segundo plano durante la rotura o la enhorabuena | Al volver se ve la siguiente tarea o "Todo hecho.", sin repetir la animación |
-| CL-003-8 | Tarea solo con adjunto (sin texto), en el anuncio de CA-003-07 | `{texto}` = nombre del adjunto (llega con 007–009) |
+| CL-003-8 | Tarea solo con adjunto (sin texto), en el anuncio de CA-003-07 | `{texto}` = "Foto" o "Imagen" (CA-007-21); documento y URL, 008–009 |
 
 Solo vertical en la v1 (CL-001-7): no hay rotación durante la animación.
 
@@ -143,6 +145,6 @@ Ver el histórico o borrarlo (Bloque 4). **Deshacer una tarea completada** (P-4:
 
 ## 9. Preguntas abiertas
 
-- **[Resuelto 2026-09-24, revisable] P-5:** toque breve sin pista visual (CL-003-6). La pista del lector de pantalla (§6) se mantiene porque no es visible.
+- **[Resuelto 2026-09-24, revisable] Toque breve** (antes "P-5", que en `docs/PLAN.md` es otra pregunta): sin pista visual (CL-003-6). La pista del lector de pantalla (§6) se mantiene porque no es visible.
 - **[Resuelto 2026-09-25] P-4:** **no** hay "Deshacer" tras completar: mantener pulsado 1,2 s ya evita los accidentes (decisión del propietario).
 - **[Resuelto 2026-09-25]** Gesto atrás desde el editor abierto en "Todo hecho.": vuelve a "Todo hecho." (CA-003-10). Reabrir sin pendientes: "Todo hecho." (CA-003-11). La enhorabuena no se salta con un toque (CA-003-04). Vibración ligera al completar (CA-003-03a, DEV-19).

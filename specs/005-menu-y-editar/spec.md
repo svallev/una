@@ -41,7 +41,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
   - **Dado** una tarea sin adjunto en modo editar
   - **Cuando** borra todo el texto y pulsa "Guardar cambios"
   - **Entonces** no se guarda y el foco vuelve al campo; el botón **no** se ve desactivado (DEV-17). Para quitar la tarea existe Eliminar.
-- **CA-005-07 Editar una tarea con adjunto** — *[Diferido a 007–009]*
+- **CA-005-07 Editar una tarea con adjunto** — Imagen: CA-007-06. Documento: *[Diferido a 008]*
   - **Dado** una tarea con imagen o documento
   - **Cuando** elige "Editar"
   - **Entonces** el editor muestra el adjunto, el botón "Quitar adjunto" y el texto opcional; se puede cambiar el texto, quitar el adjunto (si queda texto) o sustituirlo con (+). Sustituirlo **no** mueve la tarea.
@@ -74,7 +74,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 |---|---|---|
 | CL-005-1 | Cancelar la edición con cambios (o gesto atrás) | Se descartan sin preguntar (P-3) |
 | CL-005-2 | Guardar sin cambios | Se vuelve sin modificar `updatedAt` |
-| CL-005-3 | Quitar el adjunto de una tarea sin texto | *[Diferido a 007–009]* "Guardar cambios" no guarda hasta que haya texto u otro adjunto (sin verse desactivado) |
+| CL-005-3 | Quitar el adjunto de una tarea sin texto | Imagen: CA-007-06 · *[Documento: 008]* "Guardar cambios" no guarda hasta que haya texto u otro adjunto (sin verse desactivado) |
 
 ## 5. Errores
 

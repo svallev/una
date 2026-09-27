@@ -8,6 +8,7 @@ import 'package:app/domain/entities/task.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 /// Monta un widget con tema, localización y repositorio en memoria.
@@ -23,6 +24,7 @@ Future<InMemoryTaskRepository> pumpWithApp(
   double textScale = 1.0,
   EdgeInsets viewInsets = EdgeInsets.zero,
   Size size = const Size(390, 844),
+  List<Override> overrides = const [],
 }) async {
   final r = repo ?? InMemoryTaskRepository();
   // La superficie del test coincide con la pantalla simulada (por defecto es 800 × 600).
@@ -40,6 +42,7 @@ Future<InMemoryTaskRepository> pumpWithApp(
         bootStateProvider.overrideWithValue(
           BootState(currentTask: currentTask, firstRunDone: firstRunDone),
         ),
+        ...overrides,
       ],
       child: MediaQuery(
         data: MediaQueryData(
@@ -50,6 +53,8 @@ Future<InMemoryTaskRepository> pumpWithApp(
           textScaler: TextScaler.linear(textScale),
         ),
         child: MaterialApp(
+          // Como la app: sin la cinta "DEBUG" (goldens de toda la app).
+          debugShowCheckedModeBanner: false,
           theme: UnaTheme.light(),
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

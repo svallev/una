@@ -1,4 +1,8 @@
 import 'package:app/app/storage_errors.dart';
+import 'package:app/data/attachments/attachment_images.dart';
+import 'package:app/data/attachments/memory_attachment_store.dart';
+import 'package:app/data/image_services.dart';
+import 'package:app/data/import/unavailable_image_importer.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/data/repository_factory.dart';
 import 'package:app/features/app_error/storage_error_screen.dart';
@@ -8,9 +12,21 @@ import 'package:app/ui/brutal_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fonts.dart';
 import '../support/pump_app.dart';
 
+Future<ImageServices> _images() async {
+  final store = MemoryAttachmentStore();
+  return (
+    store: store,
+    images: MemoryAttachmentImages(store),
+    importer: const UnavailableImageImporter(),
+  );
+}
+
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets(
     'CL-001-6: si la BD no abre se ve el error recuperable y Reintentar vuelve a abrirla',
     (tester) async {
@@ -22,7 +38,7 @@ void main() {
         return (tasks: r, settings: r);
       }
 
-      await bootstrap(open: open);
+      await bootstrap(open: open, openImages: _images);
       await tester.pump();
       expect(find.byType(StorageErrorScreen), findsOneWidget);
       expect(
@@ -46,6 +62,7 @@ void main() {
     tester,
   ) async {
     await bootstrap(
+      openImages: _images,
       open: () async =>
           throw StateError('SqliteException(13): database or disk is full'),
     );

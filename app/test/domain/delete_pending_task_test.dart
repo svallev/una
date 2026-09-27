@@ -1,8 +1,10 @@
+import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/domain/usecases/delete_pending_task.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/attachments.dart';
 import '../support/pump_app.dart';
 
 class _FixedClock implements Clock {
@@ -13,13 +15,19 @@ class _FixedClock implements Clock {
 
 void main() {
   late InMemoryTaskRepository repo;
+  late MemoryAttachmentStore store;
   late _FixedClock clock;
   late DeletePendingTask delete;
 
   setUp(() async {
     repo = InMemoryTaskRepository();
     clock = _FixedClock();
-    delete = DeletePendingTask(repository: repo, clock: clock);
+    store = MemoryAttachmentStore();
+    delete = DeletePendingTask(
+      repository: repo,
+      janitor: janitorFor(repo, store),
+      clock: clock,
+    );
     for (final (id, rank) in [('a', 'C'), ('b', 'M'), ('c', 'X')]) {
       await repo.insert(sampleTask(id: id, rank: rank, text: 'Tarea $id'));
     }
@@ -68,4 +76,16 @@ void main() {
     await expectLater(delete('missing'), throwsA(isA<TaskNotPending>()));
     expect((await repo.findById('a'))!.deletedAt, isNull);
   });
+
+  test(
+    'CA-007-16: eliminar desde el listado usa el mismo borrado de archivos',
+    () async {
+      final a = await store.commit(stageImage(store, 'img'), clock.value);
+      await repo.insert(
+        sampleTask(id: 'd', rank: 'Z').withContent('Foto', a, clock.value),
+      );
+      await delete('d');
+      expect(await store.storedIds(), isEmpty);
+    },
+  );
 }

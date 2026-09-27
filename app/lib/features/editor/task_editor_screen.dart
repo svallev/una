@@ -8,14 +8,21 @@ import '../../app/providers.dart';
 import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
+import '../../domain/entities/attachment.dart';
 import '../../domain/entities/queue_position.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/ports/image_importer.dart';
+import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
 import '../../ui/wordmark.dart';
+import '../attachments/attach_sheet.dart';
+import '../attachments/attachment_preview.dart';
+import '../attachments/image_import_controller.dart';
+import '../attachments/import_error_text.dart';
 import '../current_task/current_task_screen.dart';
 import 'placement_sheet.dart';
 
@@ -29,7 +36,8 @@ enum EditorMode {
   /// "¿Dónde la pones?" (spec 002).
   create,
 
-  /// Editar el texto de una tarea: "Cancelar" y "Guardar cambios" (spec 005).
+  /// Editar el texto y la imagen de una tarea: "Cancelar" y "Guardar
+  /// cambios" (specs 005 y 007).
   edit,
 }
 
@@ -93,7 +101,29 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       ref.read(firstTaskColorProvider);
   bool _saving = false;
 
-  bool get _canSave => !_saving && _controller.text.trim().isNotEmpty;
+  /// Al editar, se quitó el adjunto que ya tenía la tarea (CA-007-06).
+  bool _removedExisting = false;
+
+  final _plusFocus = FocusNode();
+  final _plusSemantics = GlobalKey();
+  final _buttonsKey = GlobalKey();
+
+  /// Cambian para llevar el foco a la vista previa o a "Cancelar" (CA-007-22).
+  int _previewSignal = 0;
+  int _cancelSignal = 0;
+
+  /// La imagen recién elegida, aún en la preparación.
+  StagedImage? get _staged => ref.read(imageImportProvider).image;
+
+  /// El adjunto que ya tenía la tarea y sigue en ella.
+  Attachment? get _existing =>
+      _removedExisting ? null : widget.task?.attachment;
+
+  bool get _hasImage => _staged != null || _existing != null;
+
+  /// Con imagen, el texto es opcional (CA-007-04).
+  bool get _canSave =>
+      !_saving && (_controller.text.trim().isNotEmpty || _hasImage);
 
   @override
   void initState() {
@@ -103,6 +133,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       offset: _controller.text.length,
     );
     _controller.addListener(_onChanged);
+    // Con imagen, el teclado no se abre solo (CA-007-04).
+    if (_existing != null) return;
     // `autofocus` no basta: al venir de la bienvenida, esta aún tiene el foco
     // mientras se funde y el campo no lo recibiría (ni se abriría el teclado).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -135,23 +167,141 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   void dispose() {
     _controller.dispose();
     _fieldFocus.dispose();
+    _plusFocus.dispose();
     super.dispose();
   }
 
-  Future<void> _save() async {
+  /// (+): hoja "Añadir a la tarea" (CA-007-01). Con una imagen ya elegida, la
+  /// nueva la sustituye (CA-007-04). Mientras se prepara una imagen no hace
+  /// nada, sin verse desactivado (CA-007-15, DEV-17).
+  Future<void> _attach() async {
+    if (_saving || ref.read(imageImportProvider).preparing) return;
+    final choice = await showAttachSheet(context);
+    if (!mounted) return;
+    if (choice == null) {
+      // Cerrada sin elegir: el foco vuelve a (+) (CA-007-22).
+      _focusPlus();
+      return;
+    }
+    final origin = switch (choice) {
+      AttachChoice.camera => AttachmentOrigin.camera,
+      AttachChoice.gallery => AttachmentOrigin.gallery,
+    };
+    final outcome = await ref.read(imageImportProvider.notifier).pick(origin);
+    if (!mounted) return;
+    switch (outcome) {
+      case ImportOutcome.added:
+        // La imagen nueva sustituye a la que tenía la tarea.
+        if (widget.task?.attachment != null) _removedExisting = true;
+        _fieldFocus.unfocus();
+        setState(() => _previewSignal++);
+        final l10n = AppLocalizations.of(context);
+        _announce(
+          origin == AttachmentOrigin.camera
+              ? l10n.a11yPhotoAdded
+              : l10n.a11yImageAdded,
+        );
+      case ImportOutcome.unchanged:
+        _focusPlus();
+      case ImportOutcome.failed:
+        break; // El aviso lo muestra `_onImportChanged`.
+    }
+  }
+
+  /// "Quitar adjunto" (CA-007-06, CA-007-22).
+  Future<void> _removeImage() async {
     if (_saving) return;
+    if (_staged != null) {
+      await ref.read(imageImportProvider.notifier).remove();
+    } else {
+      _removedExisting = true;
+    }
+    if (!mounted) return;
+    setState(() {});
+    _announce(AppLocalizations.of(context).a11yAttachmentRemoved);
+    _focusPlus();
+  }
+
+  void _onImportChanged(ImageImportState? before, ImageImportState now) {
+    if (now.showPreparing && !(before?.showPreparing ?? false)) {
+      _announce(AppLocalizations.of(context).imagePreparing);
+      setState(() => _cancelSignal++);
+    }
+    final error = now.error;
+    if (error != null && before?.error == null) {
+      final l10n = AppLocalizations.of(context);
+      // El aviso se anuncia solo (spec 007 §5).
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(importErrorText(l10n, error)),
+          // Encima de los botones: no tapa el (+), que recibe el foco
+          // (WCAG 2.4.11).
+          behavior: SnackBarBehavior.floating,
+          margin: _aboveButtons(),
+        ),
+      );
+      ref.read(imageImportProvider.notifier).clearError();
+      _focusPlus();
+    }
+  }
+
+  /// Margen de un aviso flotante que queda justo encima de la fila de
+  /// botones, mida lo que mida con el texto grande.
+  EdgeInsets _aboveButtons() {
+    final box = _buttonsKey.currentContext?.findRenderObject() as RenderBox?;
+    final screen = MediaQuery.sizeOf(context).height;
+    final top = box == null || !box.hasSize
+        ? screen
+        : box.localToGlobal(Offset.zero).dy;
+    return EdgeInsets.fromLTRB(
+      UnaSpace.l,
+      0,
+      UnaSpace.l,
+      (screen - top).clamp(0, screen) + UnaSpace.s,
+    );
+  }
+
+  void _announce(String message) => unawaited(
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      Directionality.of(context),
+    ),
+  );
+
+  void _focusPlus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _plusFocus.requestFocus();
+      _plusSemantics.currentContext?.findRenderObject()?.sendSemanticsEvent(
+        const FocusSemanticEvent(),
+      );
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  Future<void> _save() async {
+    if (_saving || ref.read(imageImportProvider).preparing) return;
     if (!_canSave) {
       // Ningún botón se ve desactivado (DEV-17): sin texto no guarda y
       // devuelve el foco al campo (CL-001-1, CA-002-10, CA-005-06).
       _fieldFocus.requestFocus();
       return;
     }
+    final image = _staged;
     switch (widget.mode) {
       case EditorMode.first:
         await _write(
           () => ref
               .read(createTaskProvider)
-              .call(_controller.text, colorKey: _colorKey),
+              .call(_controller.text, colorKey: _colorKey, image: image),
+        );
+      case EditorMode.create when image != null:
+        // Con imagen, siempre arriba y sin preguntar (CA-007-05).
+        await _write(
+          () => ref
+              .read(createTaskProvider)
+              .call(_controller.text, colorKey: _colorKey, image: image),
         );
       case EditorMode.create:
         // Sin adjunto se pregunta dónde va (CA-002-02).
@@ -180,10 +330,16 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
           );
         }
       case EditorMode.edit:
+        final task = widget.task!;
+        final AttachmentEdit edit = image != null
+            ? ReplaceAttachment(image)
+            : _removedExisting && task.attachment != null
+            ? const RemoveAttachment()
+            : const KeepAttachment();
         await _write(
           () => ref
-              .read(updateTaskTextProvider)
-              .call(widget.task!, _controller.text),
+              .read(editTaskProvider)
+              .call(task, _controller.text, attachment: edit),
         );
     }
   }
@@ -196,6 +352,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     try {
       final saved = await write();
       if (!mounted) return true;
+      // La imagen ya es de la tarea: cerrar el editor no la borra.
+      ref.read(imageImportProvider.notifier).saved();
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(saved is Task ? saved : widget.task);
       }
@@ -219,9 +377,73 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     }
   }
 
+  /// Campo de texto: la etiqueta del prototipo está oculta y solo da nombre al
+  /// campo (spec 001 §6). Un solo nodo.
+  Widget _field(AppLocalizations l10n, TextStyle textStyle, String hint) =>
+      MergeSemantics(
+        child: Semantics(
+          label: switch (widget.mode) {
+            EditorMode.first => l10n.editorTagFirst,
+            EditorMode.create => l10n.editorTagNew,
+            EditorMode.edit => l10n.editorTagEdit,
+          },
+          child: TextField(
+            controller: _controller,
+            focusNode: _fieldFocus,
+            autofocus: _existing == null && _staged == null,
+            maxLines: null,
+            maxLength: Task.maxTextLength,
+            // El teclado no aprende del texto de las tareas
+            // (MASVS-STORAGE-2, decisión del propietario).
+            enableIMEPersonalizedLearning: false,
+            textCapitalization: TextCapitalization.sentences,
+            style: textStyle,
+            cursorColor: UnaColors.ink,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isCollapsed: true,
+              contentPadding: const EdgeInsets.all(UnaSpace.s),
+              hintText: hint,
+              hintStyle: textStyle.copyWith(color: UnaColors.placeholder),
+              semanticCounterText: '',
+              counterText: '',
+            ),
+            buildCounter: (
+              _, {
+              required currentLength,
+              required isFocused,
+              maxLength,
+            }) => null,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Mantiene viva la importación mientras el editor está abierto; al
+    // cerrarlo se cancela y se borra lo no guardado.
+    final import = ref.watch(imageImportProvider);
+    ref.listen(imageImportProvider, _onImportChanged);
+    final images = ref.watch(attachmentImagesProvider);
+    final staged = import.image;
+    final existing = _existing;
+    final ImageProvider? previewImage = staged != null
+        ? images.staged(staged.id, 'screen.jpg')
+        : existing != null
+        ? images.stored(existing.screenPath)
+        : null;
+    final previewIsPhoto =
+        (staged?.origin ?? existing?.origin) == AttachmentOrigin.camera;
+    final withAttachment = previewImage != null || import.showPreparing;
+    const attachmentTextStyle = TextStyle(
+      fontFamily: UnaFonts.display,
+      fontSize: UnaFontSizes.attachmentText,
+      fontWeight: UnaFontWeights.extrabold,
+      height: 1.05,
+      letterSpacing: UnaLetterSpacing.tighter * UnaFontSizes.attachmentText,
+      color: UnaColors.ink,
+    );
     final length = _controller.text.characters.length;
     final mq = MediaQuery.of(context);
     const textStyle = TextStyle(
@@ -256,8 +478,12 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                         UnaSpace.m,
                         0,
                       ),
-                      child: SizedBox(
-                        height: kMinInteractiveDimension,
+                      // Al menos 48 dp, y más con el texto grande: el
+                      // logotipo no se corta (CA-007-23).
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minHeight: kMinInteractiveDimension,
+                        ),
                         child: Row(
                           children: [
                             const Wordmark(),
@@ -265,78 +491,87 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                             if (widget.mode != EditorMode.first)
                               UnaLinkButton(
                                 label: l10n.editorCancel,
+                                height: kMinInteractiveDimension,
                                 onPressed: () => Navigator.of(context).pop(),
                               ),
                           ],
                         ),
                       ),
                     ),
-                    // Texto centrado en la nota, como en el prototipo.
-                    Expanded(
-                      child: Padding(
+                    if (withAttachment) ...[
+                      // Prototipo `hasDraftAtt`: vista previa y, debajo, el
+                      // texto opcional más pequeño.
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            UnaSpace.ml,
+                            UnaSizes.attachPreviewTop,
+                            UnaSpace.l,
+                            0,
+                          ),
+                          child: AttachmentPreview(
+                            image: previewImage,
+                            semanticLabel: previewIsPhoto
+                                ? l10n.attachmentPhoto
+                                : l10n.attachmentImage,
+                            onRemove: _removeImage,
+                            preparing: import.showPreparing,
+                            onCancelPreparing: () => unawaited(
+                              ref.read(imageImportProvider.notifier).cancel(),
+                            ),
+                            focusSignal: _previewSignal,
+                            cancelFocusSignal: _cancelSignal,
+                          ),
+                        ),
+                      ),
+                      Padding(
                         padding: const EdgeInsets.fromLTRB(
                           UnaSpace.m,
-                          0,
+                          UnaSpace.s + UnaSpace.xxs,
                           UnaSpace.m,
-                          UnaSpace.l,
+                          0,
                         ),
-                        child: Center(
-                          child: MediaQuery(
-                            // Mismo límite de escala que la nota (CA-001-07, CL-001-9).
-                            data: mq.copyWith(
-                              textScaler: mq.textScaler.clamp(
-                                maxScaleFactor:
-                                    CurrentTaskScreen.maxNoteTextScale,
-                              ),
-                            ),
-                            // La etiqueta del prototipo está oculta: solo da
-                            // nombre al campo (spec 001 §6). Un solo nodo.
-                            child: MergeSemantics(
-                              child: Semantics(
-                                label: switch (widget.mode) {
-                                  EditorMode.first => l10n.editorTagFirst,
-                                  EditorMode.create => l10n.editorTagNew,
-                                  EditorMode.edit => l10n.editorTagEdit,
-                                },
-                                child: TextField(
-                                  controller: _controller,
-                                  focusNode: _fieldFocus,
-                                  autofocus: true,
-                                  maxLines: null,
-                                  maxLength: Task.maxTextLength,
-                                  // El teclado no aprende del texto de las tareas
-                                  // (MASVS-STORAGE-2, decisión del propietario).
-                                  enableIMEPersonalizedLearning: false,
-                                  textCapitalization:
-                                      TextCapitalization.sentences,
-                                  style: textStyle,
-                                  cursorColor: UnaColors.ink,
-                                  decoration: InputDecoration(
-                                    border: InputBorder.none,
-                                    isCollapsed: true,
-                                    contentPadding: const EdgeInsets.all(
-                                      UnaSpace.s,
-                                    ),
-                                    hintText: l10n.editorPlaceholder,
-                                    hintStyle: textStyle.copyWith(
-                                      color: UnaColors.placeholder,
-                                    ),
-                                    semanticCounterText: '',
-                                    counterText: '',
-                                  ),
-                                  buildCounter: (
-                                    _, {
-                                    required currentLength,
-                                    required isFocused,
-                                    maxLength,
-                                  }) => null,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minHeight: UnaSizes.attachTextField,
+                          ),
+                          child: _field(
+                            l10n,
+                            attachmentTextStyle,
+                            l10n.editorAttachmentPlaceholder,
+                          ),
+                        ),
+                      ),
+                    ] else
+                      // Texto centrado en la nota, como en el prototipo.
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            UnaSpace.m,
+                            0,
+                            UnaSpace.m,
+                            UnaSpace.l,
+                          ),
+                          child: Center(
+                            child: MediaQuery(
+                              // Mismo límite de escala que la nota (CA-001-07, CL-001-9).
+                              data: mq.copyWith(
+                                textScaler: mq.textScaler.clamp(
+                                  maxScaleFactor:
+                                      CurrentTaskScreen.maxNoteTextScale,
                                 ),
+                              ),
+                              // La etiqueta del prototipo está oculta: solo da
+                              // nombre al campo (spec 001 §6). Un solo nodo.
+                              child: _field(
+                                l10n,
+                                textStyle,
+                                l10n.editorPlaceholder,
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
                     if (length >= TaskEditorScreen.counterFrom)
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -355,13 +590,15 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                         UnaSpace.xxl,
                       ),
                       child: Row(
+                        key: _buttonsKey,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Adjuntar llega con las specs 007–009.
                           BrutalButton.icon(
                             label: l10n.attachButton,
                             icon: UnaIcons.plus,
-                            onPressed: () {},
+                            focusNode: _plusFocus,
+                            semanticsKey: _plusSemantics,
+                            onPressed: _attach,
                           ),
                           const SizedBox(width: UnaSpace.m),
                           Flexible(

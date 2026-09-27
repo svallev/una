@@ -5,6 +5,7 @@ import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/app_harness.dart';
@@ -18,6 +19,7 @@ Future<InMemoryTaskRepository> openList(
   bool screenReader = false,
   bool reduced = false,
   Clock? clock,
+  List<Override> overrides = const [],
 }) async {
   final r = await pumpUnaApp(
     tester,
@@ -26,6 +28,7 @@ Future<InMemoryTaskRepository> openList(
     screenReader: screenReader,
     reduced: reduced,
     clock: clock,
+    overrides: overrides,
   );
   await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
   await tester.pumpAndSettle();

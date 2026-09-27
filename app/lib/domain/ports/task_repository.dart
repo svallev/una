@@ -1,3 +1,4 @@
+import '../entities/attachment.dart';
 import '../entities/task.dart';
 
 /// Puerto de persistencia de tareas (ADR-0002). La UI y los casos de uso
@@ -36,11 +37,22 @@ abstract interface class TaskRepository {
   /// "Todo hecho." y el editor de la primera tarea (CA-003-11, CA-004-08).
   Future<bool> hasHistory();
 
+  /// Guarda la tarea y su adjunto, si lo tiene, en una transacción.
   Future<void> insert(Task task);
 
-  /// Cambia el texto de la tarea [id] sin tocar su posición ni su color
-  /// (spec 005). Devuelve false si no existe o está eliminada.
-  Future<bool> updateText(String id, String text, DateTime at);
+  /// Cambia el texto y el adjunto de la tarea [id] sin tocar su posición ni su
+  /// color (specs 005 y 007), en una transacción. [attachment] null = sin
+  /// adjunto. Devuelve false (y no cambia nada) si no existe o está eliminada.
+  Future<bool> updateContent(
+    String id,
+    String? text,
+    Attachment? attachment,
+    DateTime at,
+  );
+
+  /// Ids de todos los adjuntos guardados en la BD (de pendientes y de
+  /// completadas), para el barrido de archivos huérfanos (CA-007-16/17).
+  Future<Set<String>> attachmentIds();
 
   /// Marca como completada la tarea pendiente [id] (spec 003). Devuelve false
   /// (y no cambia nada) si ya no está pendiente.
@@ -56,4 +68,9 @@ abstract interface class TaskRepository {
 abstract interface class SettingsRepository {
   Future<bool> firstRunDone();
   Future<void> setFirstRunDone();
+
+  /// "Mantener la pantalla encendida con adjuntos" (CA-007-12). Por defecto,
+  /// sí; su pantalla llega con la spec 010.
+  Future<bool> keepScreenOn();
+  Future<void> setKeepScreenOn(bool value);
 }

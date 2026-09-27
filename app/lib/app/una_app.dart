@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/all_done/all_done_screen.dart';
 import '../features/app_error/storage_error_screen.dart';
+import '../features/attachments/keep_screen_on_controller.dart';
 import '../features/complete/celebration_overlay.dart';
 import '../features/complete/completion_controller.dart';
 import '../features/current_task/current_task_screen.dart';
@@ -12,6 +16,7 @@ import '../features/delete/deletion_controller.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../ui/full_width.dart';
 import '../ui/semantics_action_order.dart';
 import 'app_identity.g.dart';
 import 'locale_resolution.dart';
@@ -26,6 +31,10 @@ class UnaApp extends ConsumerStatefulWidget {
 
   /// Tras este tiempo en segundo plano se vuelve a la tarea actual (P-2, CA-001-12).
   static const resetAfter = Duration(minutes: 10);
+
+  /// El barrido de adjuntos huérfanos espera a que la primera pantalla ya se
+  /// vea y se haya decodificado su imagen (CA-007-16, sin retrasar CA-001-09).
+  static const sweepDelay = Duration(seconds: 2);
 
   @override
   ConsumerState<UnaApp> createState() => _UnaAppState();
@@ -44,7 +53,19 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       onHide: () => _hiddenAt = ref.read(clockProvider).now(),
       onShow: _onShow,
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sweep = Timer(UnaApp.sweepDelay, () async {
+        if (!mounted) return;
+        try {
+          await ref.read(attachmentJanitorProvider).sweep();
+        } on Object {
+          // Se reintenta en el siguiente arranque. Sin registrar nada.
+        }
+      });
+    });
   }
+
+  Timer? _sweep;
 
   void _onShow() {
     final hiddenAt = _hiddenAt;
@@ -61,6 +82,7 @@ class _UnaAppState extends ConsumerState<UnaApp> {
 
   @override
   void dispose() {
+    _sweep?.cancel();
     _lifecycle.dispose();
     super.dispose();
   }
@@ -75,7 +97,18 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
-      builder: appFrame,
+      // Cada toque cuenta como uso para la pantalla encendida (CA-007-12),
+      // también explorar tocando con TalkBack (llega como *hover* táctil).
+      builder: (context, child) => Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => ref.read(keepScreenOnProvider.notifier).touched(),
+        onPointerHover: (e) {
+          if (e.kind == PointerDeviceKind.touch) {
+            ref.read(keepScreenOnProvider.notifier).touched();
+          }
+        },
+        child: appFrame(context, child),
+      ),
       home: HomeRouter(key: ValueKey(_resetGeneration)),
     );
   }
@@ -249,11 +282,20 @@ Widget appFrame(BuildContext context, Widget? child) {
   if (l10n != null) registerSemanticsActionOrder(l10n);
   final centered = ColoredBox(
     color: UnaColors.paper,
-    child: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: UnaSizes.contentMaxWidth),
-        child: child,
+    child: ValueListenableBuilder<int>(
+      valueListenable: fullWidthRequests,
+      // El visor va al ancho completo de la pantalla (CA-007-09).
+      builder: (context, fullWidth, child) => Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: fullWidth > 0
+                ? double.infinity
+                : UnaSizes.contentMaxWidth,
+          ),
+          child: child,
+        ),
       ),
+      child: child,
     ),
   );
   return kIsWeb ? WebPreviewBanner(child: centered) : centered;

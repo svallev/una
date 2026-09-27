@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Falla si el manifiesto combinado de Android pide permisos no permitidos (threat-model T-13).
+# Falla si el manifiesto combinado de Android pide permisos no permitidos (threat-model T-13)
+# o exporta algún <provider> (T-8).
 #
 #   tools/check-android-permissions.sh [release|debug]     (desde app/, tras compilar esa variante)
 #
@@ -36,6 +37,16 @@ while IFS= read -r perm; do
     status=1
   fi
 done < <(grep -oE '<uses-permission(-sdk-23)?[^>]*>' "$MANIFEST" | grep -oE 'android:name="[^"]+"' | sed 's/android:name="\(.*\)"/\1/' | sort -u)
+
+# Ningún <provider> exportado (T-8): el FileProvider de la cámara (spec 007) da permisos
+# puntuales con grantUriPermissions, nunca acceso general.
+while IFS= read -r provider; do
+  [ -z "$provider" ] && continue
+  if ! grep -q 'android:exported="false"' <<<"$provider"; then
+    echo "::error::<provider> exportado o sin android:exported=\"false\" en $MODE: $(grep -oE 'android:name="[^"]+"' <<<"$provider" | head -n1)"
+    status=1
+  fi
+done < <(tr '\n' ' ' < "$MANIFEST" | grep -oE '<provider[^>]*>')
 
 [ "$status" -eq 0 ] && echo "Permisos de $MODE correctos ($count revisados; $MANIFEST)."
 exit $status

@@ -44,7 +44,7 @@ Apuntar algo nuevo sin perder el foco: el usuario decide si pasa a ser lo que ha
   - **Cuando** pulsa "Cancelar" o usa el gesto atrás
   - **Entonces** se descarta sin preguntar (como el prototipo; P-3 resuelto) y se vuelve a la pantalla principal (o al listado si se abrió desde él, CA-006-15).
 - **CA-002-08 Volver al listado** — Sustituido por CA-006-15.
-- **CA-002-09 Adjuntos no preguntan (R5)** — *[Diferido a 007–009]*.
+- **CA-002-09 Adjuntos no preguntan (R5)** — Imagen: CA-007-05. Documento y URL: *[Diferido a 008–009]*.
 - **CA-002-10 Continuar sin texto**
   - **Dado** el editor sin texto (o solo espacios) y sin adjunto
   - **Cuando** pulsa "Continuar →"

@@ -279,4 +279,100 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get attachSheetTitle => 'Añadir a la tarea';
+
+  @override
+  String get attachSheetClose => 'Cerrar';
+
+  @override
+  String get attachTakePhoto => 'Hacer foto';
+
+  @override
+  String get attachTakePhotoHint => 'Con la cámara · va arriba del todo';
+
+  @override
+  String get attachPickImage => 'Subir imagen';
+
+  @override
+  String get attachPickImageHint => 'Desde tu galería · va arriba del todo';
+
+  @override
+  String get attachPickFile => 'Subir archivo';
+
+  @override
+  String get attachPickFileHint => 'PDF, Word, Excel… · va arriba del todo';
+
+  @override
+  String get attachUrl => 'Cargar URL';
+
+  @override
+  String get attachUrlHint => 'Una página web · va arriba del todo';
+
+  @override
+  String get imagePreparing => 'Preparando imagen…';
+
+  @override
+  String get imagePreparingCancel => 'Cancelar';
+
+  @override
+  String get attachmentPhoto => 'Foto';
+
+  @override
+  String get attachmentImage => 'Imagen';
+
+  @override
+  String a11yWithPhoto(String text) {
+    return '$text. Con foto';
+  }
+
+  @override
+  String a11yWithImage(String text) {
+    return '$text. Con imagen';
+  }
+
+  @override
+  String get a11yPhotoAdded => 'Foto añadida';
+
+  @override
+  String get a11yImageAdded => 'Imagen añadida';
+
+  @override
+  String get a11yAttachmentRemoved => 'Adjunto quitado';
+
+  @override
+  String get editorAttachmentPlaceholder => 'Añade un texto (opcional)';
+
+  @override
+  String get editorRemoveAttachment => 'Quitar adjunto';
+
+  @override
+  String get errImageType =>
+      'Este tipo de imagen no se admite. Prueba con una foto JPEG, PNG o HEIC.';
+
+  @override
+  String errImageTooBig(int max) {
+    return 'La imagen es demasiado grande (máx. $max MB).';
+  }
+
+  @override
+  String errImageTooManyPixels(int max) {
+    return 'La imagen tiene demasiada resolución (máx. $max megapíxeles).';
+  }
+
+  @override
+  String get errImageUnreadable =>
+      'No hemos podido leer esta imagen. Prueba con otra.';
+
+  @override
+  String get errNoCamera => 'No hay ninguna app de cámara disponible.';
+
+  @override
+  String get attachmentMissing => 'Adjunto no disponible';
+
+  @override
+  String a11yAttachmentMissing(String text) {
+    return '$text. Adjunto no disponible';
+  }
 }

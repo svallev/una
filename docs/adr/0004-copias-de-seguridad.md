@@ -45,3 +45,12 @@
   - La transferencia entre dispositivos (cable o Wi-Fi directo) no cambia.
   - El futuro `BackupAgent` (F4) respeta la misma condición (`BackupDataOutput.getTransportFlags()`).
 - **Consecuencia:** quien no tenga bloqueo de pantalla no tiene copia en la nube. El texto de "Acerca de" (spec 010) lo explica y recomienda activar el bloqueo.
+
+## Revisión: imágenes de la spec 007 (2026-09-26)
+
+- **[Hecho]** Rutas: la BD está en `app_flutter/` (dominio `root`), las imágenes en `files/attachments/<id>/` (dominio `file`) y la preparación en `cache/import/`, que Android nunca copia.
+- **[Hecho]** Copia en la nube en esta versión: **solo la BD y los ajustes**, nunca las imágenes (Android 12+ y 9–11); en Android 8, nada. Así la cuota de 25 MB nunca descarta la copia (R-10). Lo comprueba `app/test/app/backup_rules_test.dart` sobre los XML reales.
+- **[Hecho]** Transferencia entre dispositivos (Android 12+, `device-transfer`): todo, imágenes incluidas.
+- **[Hecho, plataforma]** **Android 9–11 no tiene una regla solo para la transferencia entre dispositivos**: `fullBackupContent` se aplica igual a la nube y a la transferencia. Como las imágenes no pueden ir a la nube, en Android 9–11 **tampoco se transfieren**. Tras restaurar o transferir sin ellas, la tarea muestra "Adjunto no disponible" (CA-007-19).
+- **[Pendiente, antes de la v1.0]** El `BackupAgent` con presupuesto de 20 MB y prioridades (primero la tarea actual; después, la cola). Con el ADR-0012 ya no hay completadas: la regla "nunca las completadas" deja de hacer falta.
+

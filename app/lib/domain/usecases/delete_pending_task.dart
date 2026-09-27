@@ -1,6 +1,7 @@
 import '../entities/task.dart';
 import '../ports/clock.dart';
 import '../ports/task_repository.dart';
+import '../services/attachment_janitor.dart';
 
 /// La tarea ya no está pendiente (completada, eliminada o inexistente).
 class TaskNotPending implements Exception {
@@ -19,9 +20,14 @@ typedef PendingDeletionResult = ({
 /// Elimina de forma definitiva cualquier tarea pendiente (spec 006, ADR-0011):
 /// a diferencia de `DeleteCurrentTask`, no exige que sea la actual.
 class DeletePendingTask {
-  DeletePendingTask({required this.repository, required this.clock});
+  DeletePendingTask({
+    required this.repository,
+    required this.janitor,
+    required this.clock,
+  });
 
   final TaskRepository repository;
+  final AttachmentJanitor janitor;
   final Clock clock;
 
   Future<PendingDeletionResult> call(String id) async {
@@ -31,6 +37,8 @@ class DeletePendingTask {
     if (!await repository.delete(id, clock.now())) {
       throw const TaskNotPending();
     }
+    // Después de guardar, los archivos (CA-007-16).
+    if (task.attachment case final a?) await janitor.discard(a.id);
     return (
       deleted: task,
       next: await repository.currentTask(),

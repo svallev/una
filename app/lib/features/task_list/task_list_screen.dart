@@ -15,6 +15,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/una_icons.dart';
+import '../attachments/task_labels.dart';
 import '../delete/delete_confirm_sheet.dart';
 import '../editor/task_editor_screen.dart';
 import 'move_sheet.dart';
@@ -475,7 +476,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     if (_drag != null) return;
     final confirmed = await showDeleteConfirmSheet(
       context,
-      label: task.text ?? '',
+      label: taskLabel(AppLocalizations.of(context), task),
       ignoreEarlyTaps: byTouch,
     );
     if (!mounted) return;
@@ -512,7 +513,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       final next = result.next;
       _announce(
         result.wasCurrent && next != null
-            ? l10n.a11yDeletedNext(next.text ?? '')
+            ? l10n.a11yDeletedNext(taskLabel(l10n, next))
             : l10n.a11yDeletedFromList(result.remaining),
         afterSheet: true,
       );
@@ -647,8 +648,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           first: first,
           palette: UnaPalettes.classic,
           semanticsLabel: first
-              ? l10n.a11yRowCurrent(total, task.text ?? '')
-              : l10n.a11yRowPosition(position, total, task.text ?? ''),
+              ? l10n.a11yRowCurrent(total, taskReading(l10n, task))
+              : l10n.a11yRowPosition(position, total, taskReading(l10n, task)),
           editHint: l10n.listEditHint,
           actions: actions,
           onEdit: () => _edit(task),

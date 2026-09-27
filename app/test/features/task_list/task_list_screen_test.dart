@@ -8,9 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/app_harness.dart';
+import '../../support/fonts.dart';
 import 'list_harness.dart';
 
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets(
     'CA-006-01: se abre desde el menú en dos pasos y sin transición',
     (tester) async {

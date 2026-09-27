@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
 const _frame = Duration(milliseconds: 16);
@@ -104,6 +105,8 @@ Future<void> _celebrate(WidgetTester tester, {Duration? hold}) async {
 }
 
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets(
     'CA-003-03a/03b/04: guarda, rompe la nota sobre la enhorabuena y pasa a la siguiente',
     (tester) async {

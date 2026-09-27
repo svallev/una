@@ -541,6 +541,174 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{Tarea eliminada. Queda 1} other{Tarea eliminada. Quedan {count}}}'**
   String a11yDeletedFromList(int count);
+
+  /// Título y nombre de la hoja "Añadir". CA-007-01
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir a la tarea'**
+  String get attachSheetTitle;
+
+  /// X de la hoja "Añadir". CA-007-01
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get attachSheetClose;
+
+  /// Fila de la hoja "Añadir". CA-007-01
+  ///
+  /// In es, this message translates to:
+  /// **'Hacer foto'**
+  String get attachTakePhoto;
+
+  /// Segunda línea de "Hacer foto"; el lector la lee tras una coma
+  ///
+  /// In es, this message translates to:
+  /// **'Con la cámara · va arriba del todo'**
+  String get attachTakePhotoHint;
+
+  /// Fila de la hoja "Añadir". CA-007-01
+  ///
+  /// In es, this message translates to:
+  /// **'Subir imagen'**
+  String get attachPickImage;
+
+  /// Segunda línea de "Subir imagen"
+  ///
+  /// In es, this message translates to:
+  /// **'Desde tu galería · va arriba del todo'**
+  String get attachPickImageHint;
+
+  /// Fila de la hoja "Añadir"; sin efecto hasta la spec 008 (DEV-18)
+  ///
+  /// In es, this message translates to:
+  /// **'Subir archivo'**
+  String get attachPickFile;
+
+  /// Segunda línea de "Subir archivo" (DEV-02)
+  ///
+  /// In es, this message translates to:
+  /// **'PDF, Word, Excel… · va arriba del todo'**
+  String get attachPickFileHint;
+
+  /// Fila de la hoja "Añadir"; sin efecto hasta la spec 009 (DEV-18)
+  ///
+  /// In es, this message translates to:
+  /// **'Cargar URL'**
+  String get attachUrl;
+
+  /// Segunda línea de "Cargar URL"
+  ///
+  /// In es, this message translates to:
+  /// **'Una página web · va arriba del todo'**
+  String get attachUrlHint;
+
+  /// Indicador de importación lenta (> 400 ms). CA-007-15
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando imagen…'**
+  String get imagePreparing;
+
+  /// Cancela la importación. CA-007-15
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get imagePreparingCancel;
+
+  /// Tarea sin texto con foto de la cámara (listado, eliminar, anuncios); insignia FOTO. CA-007-20
+  ///
+  /// In es, this message translates to:
+  /// **'Foto'**
+  String get attachmentPhoto;
+
+  /// Tarea sin texto con imagen de la galería; insignia IMAGEN. CA-007-20
+  ///
+  /// In es, this message translates to:
+  /// **'Imagen'**
+  String get attachmentImage;
+
+  /// Lectura de una tarea con texto y foto. CA-007-21
+  ///
+  /// In es, this message translates to:
+  /// **'{text}. Con foto'**
+  String a11yWithPhoto(String text);
+
+  /// Lectura de una tarea con texto e imagen. CA-007-21
+  ///
+  /// In es, this message translates to:
+  /// **'{text}. Con imagen'**
+  String a11yWithImage(String text);
+
+  /// Anuncio al volver de la cámara. CA-007-22
+  ///
+  /// In es, this message translates to:
+  /// **'Foto añadida'**
+  String get a11yPhotoAdded;
+
+  /// Anuncio al volver del selector. CA-007-22
+  ///
+  /// In es, this message translates to:
+  /// **'Imagen añadida'**
+  String get a11yImageAdded;
+
+  /// Anuncio tras "Quitar adjunto". CA-007-22
+  ///
+  /// In es, this message translates to:
+  /// **'Adjunto quitado'**
+  String get a11yAttachmentRemoved;
+
+  /// Campo de texto del editor con imagen: el texto es opcional. CA-007-04 (spec 005)
+  ///
+  /// In es, this message translates to:
+  /// **'Añade un texto (opcional)'**
+  String get editorAttachmentPlaceholder;
+
+  /// Botón X sobre la vista previa del editor. CA-007-04 (spec 005)
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar adjunto'**
+  String get editorRemoveAttachment;
+
+  /// Error de importación. Spec 007 §5
+  ///
+  /// In es, this message translates to:
+  /// **'Este tipo de imagen no se admite. Prueba con una foto JPEG, PNG o HEIC.'**
+  String get errImageType;
+
+  /// Error de importación. Spec 007 §5
+  ///
+  /// In es, this message translates to:
+  /// **'La imagen es demasiado grande (máx. {max} MB).'**
+  String errImageTooBig(int max);
+
+  /// Error de importación. Spec 007 §5
+  ///
+  /// In es, this message translates to:
+  /// **'La imagen tiene demasiada resolución (máx. {max} megapíxeles).'**
+  String errImageTooManyPixels(int max);
+
+  /// Error de importación (ilegible, corrupta o tiempo agotado). Spec 007 §5
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido leer esta imagen. Prueba con otra.'**
+  String get errImageUnreadable;
+
+  /// Sin app de cámara. CL-007-1
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ninguna app de cámara disponible.'**
+  String get errNoCamera;
+
+  /// Tarjeta de adjunto perdido. CA-007-19
+  ///
+  /// In es, this message translates to:
+  /// **'Adjunto no disponible'**
+  String get attachmentMissing;
+
+  /// Lectura de la tarea actual cuyo adjunto falta: {text} es el texto de la tarea o «Foto»/«Imagen». CA-007-19/21
+  ///
+  /// In es, this message translates to:
+  /// **'{text}. Adjunto no disponible'**
+  String a11yAttachmentMissing(String text);
 }
 
 class _AppLocalizationsDelegate

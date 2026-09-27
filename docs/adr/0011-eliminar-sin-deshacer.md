@@ -1,6 +1,6 @@
 # ADR-0011: Eliminar es definitivo (sin deshacer), con marca de borrado sin contenido
 
-- **Estado:** Aceptado (propietario, 2026-09-26)
+- **Estado:** Sustituido por ADR-0012 (2026-09-26)
 - **Fecha:** 2026-09-26
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
 - **Relacionado:** sustituye a ADR-0006; spec 004; ADR-0002; D7 en `docs/PLAN.md`; DEV-09, DEV-10

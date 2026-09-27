@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'attachment.dart';
+
 /// Estado de una tarea. Una tarea eliminada no cambia de estado: lleva
 /// `deletedAt` (marca de borrado sin contenido, ADR-0011).
 enum TaskStatus { pending, completed }
@@ -21,6 +23,7 @@ class Task {
     this.parentId,
     this.source = 'local',
     this.externalId,
+    this.attachment,
   });
 
   /// Longitud máxima del texto (spec 001, CL-001-2).
@@ -44,24 +47,34 @@ class Task {
   final String source;
   final String? externalId;
 
+  /// Adjunto (v1: 0..1). Una tarea tiene texto no vacío o adjunto, o ambos.
+  final Attachment? attachment;
+
   bool get isPending => status == TaskStatus.pending && deletedAt == null;
 
-  /// La misma tarea con otro texto (spec 005): conserva posición y color.
-  Task withText(String newText, DateTime at) => Task(
-    id: id,
-    text: newText,
-    status: status,
-    rank: rank,
-    colorKey: colorKey,
-    createdAt: createdAt,
-    updatedAt: at,
-    completedAt: completedAt,
-    deletedAt: deletedAt,
-    dueDate: dueDate,
-    parentId: parentId,
-    source: source,
-    externalId: externalId,
-  );
+  /// La misma tarea con otro texto (spec 005): conserva posición, color y
+  /// adjunto.
+  Task withText(String newText, DateTime at) =>
+      withContent(newText, attachment, at);
+
+  /// La misma tarea con otro contenido (spec 007): conserva posición y color.
+  Task withContent(String? newText, Attachment? newAttachment, DateTime at) =>
+      Task(
+        id: id,
+        text: newText,
+        status: status,
+        rank: rank,
+        colorKey: colorKey,
+        createdAt: createdAt,
+        updatedAt: at,
+        completedAt: completedAt,
+        deletedAt: deletedAt,
+        dueDate: dueDate,
+        parentId: parentId,
+        source: source,
+        externalId: externalId,
+        attachment: newAttachment,
+      );
 
   /// La misma tarea en otra posición de la cola (spec 006).
   Task withRank(String newRank, DateTime at) => Task(
@@ -78,6 +91,7 @@ class Task {
     parentId: parentId,
     source: source,
     externalId: externalId,
+    attachment: attachment,
   );
 
   /// La marca de borrado de esta tarea (spec 004, ADR-0011): sin texto, con
@@ -114,6 +128,7 @@ class Task {
     parentId: parentId,
     source: source,
     externalId: externalId,
+    attachment: attachment,
   );
 
   @override
@@ -127,13 +142,24 @@ class Task {
       other.createdAt == createdAt &&
       other.updatedAt == updatedAt &&
       other.completedAt == completedAt &&
-      other.deletedAt == deletedAt;
+      other.deletedAt == deletedAt &&
+      other.attachment == attachment;
 
   @override
   int get hashCode => Object.hash(id, text, status, rank, colorKey, updatedAt);
 
   @override
   String toString() => 'Task($id, rank: $rank, status: ${status.name})';
+}
+
+/// Normaliza y valida el texto de una tarea con adjunto (spec 007, CA-007-04):
+/// el texto es opcional y se devuelve null si queda vacío.
+String? validateTaskContent(String raw, {required bool hasAttachment}) {
+  if (!hasAttachment) return validateTaskText(raw);
+  final text = raw.trim();
+  if (text.isEmpty) return null;
+  if (text.length > Task.maxTextLength) throw const InvalidTaskText.tooLong();
+  return text;
 }
 
 /// Normaliza y valida el texto de una tarea (sin adjunto).

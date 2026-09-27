@@ -61,12 +61,14 @@ class SheetHeader extends StatelessWidget {
 }
 
 /// Fila de las hojas (menú, "Mover"; `.mrow` del prototipo): 58 px, icono de 22, texto de 19 en negrita.
+/// Con [subtitle], dos líneas y 64 px como mínimo ("Añadir a la tarea", spec 007).
 class SheetRow extends StatelessWidget {
   const SheetRow({
     super.key,
     required this.icon,
     required this.label,
     required this.onTap,
+    this.subtitle,
     this.color = UnaColors.ink,
     this.divider = false,
     this.enabled = true,
@@ -83,6 +85,11 @@ class SheetRow extends StatelessWidget {
 
   final UnaIconData icon;
   final String label;
+
+  /// Segunda línea, en monoespaciada. El lector la lee tras el nombre, con
+  /// una pausa en lugar del "·" ("Hacer foto. Con la cámara, va arriba del
+  /// todo").
+  final String? subtitle;
   final VoidCallback onTap;
   final Color color;
   final bool divider;
@@ -92,12 +99,24 @@ class SheetRow extends StatelessWidget {
   /// Prototipo: `.mrow:disabled { opacity: .35 }`.
   static const _disabledOpacity = 0.35;
 
+  String get _semanticLabel {
+    final sub = subtitle;
+    final main = sub == null ? label : '$label. ${sub.replaceAll(' · ', ', ')}';
+    return trailingSemantics == null ? main : '$main, $trailingSemantics';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final labelStyle = TextStyle(
+      fontFamily: UnaFonts.display,
+      fontSize: UnaFontSizes.bodyL,
+      fontWeight: UnaFontWeights.bold,
+      color: color,
+    );
     return Semantics(
       button: true,
       enabled: enabled,
-      label: trailingSemantics == null ? label : '$label, $trailingSemantics',
+      label: _semanticLabel,
       hint: enabled ? null : disabledHint,
       excludeSemantics: true,
       onTap: enabled ? onTap : null,
@@ -110,7 +129,11 @@ class SheetRow extends StatelessWidget {
             highlightColor: UnaColors.pressed,
             splashFactory: NoSplash.splashFactory,
             child: Container(
-              height: UnaSizes.menuRow,
+              height: subtitle == null ? UnaSizes.menuRow : null,
+              // Con texto grande, la fila de dos líneas crece.
+              constraints: subtitle == null
+                  ? null
+                  : const BoxConstraints(minHeight: UnaSizes.sheetRowTall),
               // A la derecha, sin margen: el total queda alineado con el borde
               // del botón "Nueva tarea".
               padding: const EdgeInsets.only(left: UnaSpace.xs),
@@ -129,15 +152,30 @@ class SheetRow extends StatelessWidget {
                   UnaIcon(icon, color: color),
                   const SizedBox(width: UnaSpace.m),
                   Expanded(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: UnaFonts.display,
-                        fontSize: UnaFontSizes.bodyL,
-                        fontWeight: UnaFontWeights.bold,
-                        color: color,
-                      ),
-                    ),
+                    child: subtitle == null
+                        ? Text(label, style: labelStyle)
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: UnaSpace.s,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(label, style: labelStyle),
+                                const SizedBox(height: UnaSpace.xxs),
+                                Text(
+                                  subtitle!,
+                                  style: TextStyle(
+                                    fontFamily: UnaFonts.mono,
+                                    fontSize: UnaFontSizes.micro,
+                                    fontWeight: UnaFontWeights.regular,
+                                    color: color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                   ),
                   if (trailing != null)
                     Text(

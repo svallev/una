@@ -2,7 +2,7 @@
 
 App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y deja un único elemento (foto, PDF, web) a pantalla completa nada más abrirla. Sin servidor, sin cuentas y sin analítica. Nombre provisional: "Una." (nunca literal en el código: `AppIdentity` / clave l10n `appName`).
 
-**Fase actual:** F0 (preparación), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). **No hay código de la app.** No crees `app/` ni hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
+**Fase actual:** F4 (adjuntos), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). El código de la app está en `app/`: las specs 001–006 están en `main`, y la 007 está implementada en la rama `feat/007-adjunto-imagen-c2zgoo`, pendiente solo de las pruebas en el dispositivo (`specs/007-adjunto-imagen/dispositivo.md`). Después viene el ADR-0012 (`specs/adr-0012-sin-historico/`). No hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
 
 ## Lee primero
 
@@ -43,6 +43,7 @@ node ../tools/validate-tokens.mjs    # tokens (desde la raíz: node tools/valida
 - **Textos:** todos en ARB ES + EN (incluidas las etiquetas de accesibilidad). Ninguno incrustado.
 - **Accesibilidad:** cada gesto tiene su acción semántica; respeta reducir movimiento y el texto grande; objetivos táctiles ≥ 44.
 - **Tests:** cada test cita su CA (`'CA-003-02: …'`). Relojes inyectables. Sin red en los tests.
+- **Tests que miden (anchos, desbordamientos, texto al 200 %, contraste, goldens):** empiezan con `setUpAll(loadAppFonts)` (`test/support/fonts.dart`). Sin ella, Flutter usa su fuente de pruebas, en la que cada letra mide 1 em: salen desbordamientos que no existen. Un desbordamiento visto sin las fuentes reales no es un fallo. Al revés, `textContrastGuideline` puede fallar en falso con las fuentes reales en texto pequeño (trazos finos): el contraste lo garantiza `validate-tokens`.
 - **Esquema de BD:** cualquier cambio = nueva `schemaVersion` + captura + test de migración.
 - Distingue en los documentos **[Hecho] / [Suposición] / [Pendiente]**.
 

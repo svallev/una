@@ -8,6 +8,7 @@ import '../../app/storage_errors.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/complete_current_task.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../attachments/task_labels.dart';
 import 'completion_controller.dart';
 
 /// Completa [task] desde la pantalla principal (gesto, teclado o acción
@@ -34,7 +35,7 @@ Future<bool> completeTask(
         view,
         next == null
             ? l10n.a11yCompletedAllDone
-            : l10n.a11yCompletedNext(next.text ?? ''),
+            : l10n.a11yCompletedNext(taskLabel(l10n, next)),
         direction,
       ),
     );
