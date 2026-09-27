@@ -1,0 +1,16 @@
+# Huellas de PDFium (spec 008, threat-model §5). pdfium_dart (vía pdfrx) lo descarga al
+# compilar desde github.com/bblanchon/pdfium-binaries sin verificarlo; CI comprueba que el
+# libpdfium.so de cada APK de release es exactamente este (tools/check-pdfium.sh).
+#
+# Release: chromium/7811 (publicada 2026-04-27), compilación SIN V8 (sin JavaScript).
+# Comprobado el 2026-09-27: el sha256 de cada .tgz coincide con el "digest" que publica
+# GitHub para el asset, y el .so extraído a mano coincide con el del APK.
+#   pdfium-android-arm64.tgz  f51539cadeb5135534305b8bdf8685ce2fbe9991dbbc5b35f553108411b9ed14
+#   pdfium-android-arm.tgz    bb9250eefb33343f56f27f7e60c81ab3236d932c40e21557bf02ca4c276eb832
+#   pdfium-android-x64.tgz    23faaf6f993a39524d9dc7fafbb760e295f8bd5e9ffa46139bad2299fb5c80f3
+#
+# Al actualizar pdfrx/pdfium_dart: repetir la comprobación y actualizar este archivo en la PR.
+# <abi> <sha256 de lib/<abi>/libpdfium.so>
+arm64-v8a ef8c440d29e2a0820a65554487d23020bd88756ee2d6aad8f8fb59bab3b2eb14
+armeabi-v7a 3d67be8a7f8a4f77e5a91530fbab69e0b27a8f4f4db5d4a0df512fbfaf40bd27
+x86_64 dd8c2880d41baf4c6406d5d2bf0c1beffe42b45e756ff08a9c612ad35d5a5c64

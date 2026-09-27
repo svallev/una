@@ -104,13 +104,21 @@ jobs:
         run: |
           bash ../tools/check-android-permissions.sh release
           bash ../tools/check-android-permissions.sh debug
+      - name: PDFium fijado (tools/pdfium.lock, threat-model §5)
+        working-directory: app
+        run: bash ../tools/check-pdfium.sh
       - name: Tamaño de descarga (< 25 MB por ABI)
         working-directory: app
+        # Las librerías nativas van sin comprimir dentro del APK (extractNativeLibs=false);
+        # la tienda descarga comprimido. Se mide el APK comprimido (gzip -9), que se
+        # parece a la descarga real (spec 008: con PDFium, ~12,7 MB en arm64 frente a
+        # 27 MB del archivo).
         run: |
           for apk in build/app/outputs/flutter-apk/app-*-release.apk; do
-            size=$(stat -c %s "$apk")
-            echo "$apk: $((size / 1024 / 1024)) MB"
-            [ "$size" -lt $((25 * 1024 * 1024)) ] || { echo "::error::$apk supera 25 MB"; exit 1; }
+            raw=$(stat -c %s "$apk")
+            size=$(gzip -9 -c "$apk" | wc -c)
+            echo "$apk: $((raw / 1024 / 1024)) MB en disco, $((size / 1024 / 1024)) MB comprimido"
+            [ "$size" -lt $((25 * 1024 * 1024)) ] || { echo "::error::$apk supera 25 MB comprimido"; exit 1; }
           done
 
   ios:

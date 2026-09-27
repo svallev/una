@@ -35,3 +35,9 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 - [ ] Todos los CA de la spec tienen test en verde.
 - [ ] Definition of Done (`specs/constitution.md`) completa.
 - [ ] Spec marcada como **Implementada**.
+
+## Estado
+
+| Tareas | Estado | Commit |
+|---|---|---|
+| T-008-01 | **Hecha.** `pdfrx` 2.6.5 fijada. PDFium (`chromium/7811`, sin V8) fijado por sha256 en `tools/pdfium.lock` y comprobado en CI (`tools/check-pdfium.sh`; propietario, 2026-09-27, opción 1). Release sin permisos; `url_launcher` transitivo con una actividad no exportada; licencias correctas; web con el WASM local (la CSP de la web de pruebas se revisa en T-008-21). El tamaño de CI pasa a medirse comprimido (arm64: 27 MB en disco, ~12,7 MB comprimido) | (este) |

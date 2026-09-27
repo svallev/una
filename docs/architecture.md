@@ -226,7 +226,7 @@ Regla: nada detrás de un flag llega a producción sin su spec aprobada.
 | Arranque en caliente | < 300 ms | ídem |
 | Animaciones | 60 fps, 0 fotogramas > 32 ms en el primer uso | DevTools / `FrameTiming` en un test de rendimiento |
 | Abrir PDF (primera página) | < 500 ms | spike S3 |
-| Tamaño de descarga | Android < 25 MB (por ABI, AAB); iOS < 40 MB | `flutter build --analyze-size` en CI (aviso si crece > 5 %) |
+| Tamaño de descarga | Android < 25 MB (por ABI, AAB); iOS < 40 MB | CI: cada APK de release por ABI, comprimido con `gzip -9` (las librerías nativas van sin comprimir en el APK; con PDFium, spec 008: 27 MB en disco y ~12,7 MB comprimido en arm64) |
 | Memoria con imagen | La tarea actual con la imagen más grande que se guarda (24 MP) añade < 200 MB sobre la misma tarea con texto (decisión del propietario, 2026-09-27; el anterior, < 250 MB en total, era inalcanzable: la app ya ocupa ~350 MB de RSS en la pantalla principal del Xiaomi) | `dumpsys meminfo` (PSS y RSS totales, con la GPU) en un proceso nuevo |
 
 ## 8. Internacionalización
