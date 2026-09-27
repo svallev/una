@@ -85,8 +85,8 @@ La medida que manda es `dumpsys meminfo` con la app *profile* normal (`flutter b
 tools/measure-cold-start.sh <serial> 20
 ```
 
-- [ ] p50 < 1 s. Anotarlo en `docs/perf/baseline.md` junto al arranque con texto (198 ms).
-- [ ] Se ve la imagen en el primer fotograma, no un fondo vacío.
+- [x] p50 < 1 s. Anotarlo en `docs/perf/baseline.md` junto al arranque con texto (198 ms). **[Hecho 2026-09-27]** p50 = 226 ms, p90 = 255 ms (n = 20).
+- [x] Se ve la imagen en el primer fotograma, no un fondo vacío. **[Hecho 2026-09-27]**
 
 ## 4. A mano: cámara, selector y ciclo de vida
 

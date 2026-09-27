@@ -88,6 +88,18 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 
 - **[Hecho]** Muy por debajo del presupuesto de 120 Hz (8,3 ms).
 
+## Arranque en frío con imagen (spec 007, CA-007-08)
+
+- **Fecha:** 2026-09-27 · **Dispositivo:** Xiaomi 15T Pro · **Compilación:** `flutter build apk --release --split-per-abi --target-platform android-arm64` (20,7 MB)
+- **Estado:** app real, con una foto de la cámara como tarea actual (creada a mano por el propietario); mismo método que el arranque con texto.
+
+| n | mín | **p50** | p90 | máx |
+|---|---|---|---|---|
+| 20 | 202 ms | **226 ms** | 255 ms | 464 ms |
+
+- **[Hecho]** CA-007-08 se cumple: p50 = 23 % del presupuesto; +28 ms sobre el arranque con texto (198 ms).
+- **[Hecho]** La foto se ve en el primer fotograma (captura justo al volver `am start -W`), sin fondo vacío previo.
+
 ## Cómo repetir la medición
 
 ```bash
