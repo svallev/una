@@ -58,3 +58,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // ImageImport.kt usa FileProvider. Se declara con la misma versión que ya llegaba de forma
+    // transitiva con Flutter, para que un cambio de versión no pase inadvertido (threat-model §5, B4).
+    implementation("androidx.core:core:1.13.1")
+}
