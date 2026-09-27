@@ -371,7 +371,7 @@ class AppLocalizationsEs extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String levelString = levelNumberFormat.format(level);
 
-    return 'Ampliación ×$levelString';
+    return 'Ampliación por $levelString';
   }
 
   @override

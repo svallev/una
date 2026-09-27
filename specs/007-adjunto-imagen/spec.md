@@ -189,7 +189,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - acciones, en este orden: Completar tarea, Eliminar tarea;
     - fila del listado (cierra CA-006-18): "{n} de {total}: {texto}. Con foto", o "{n} de {total}: Foto" sin texto;
     - anuncios de completar y eliminar sin texto (cierra CL-003-8): "Tarea completada. Siguiente: Foto".
-  - En el visor, la imagen tiene las acciones Ampliar, Reducir y Ajustar al ancho (solo las aplicables, en ese orden) y las de desplazamiento cuando se puede desplazar. El nivel se lee como valor ("Ampliación ×2,5").
+  - En el visor, la imagen tiene las acciones Ampliar, Reducir y Ajustar al ancho (solo las aplicables, en ese orden) y las de desplazamiento cuando se puede desplazar. El nivel se lee como valor ("Ampliación por 2,5": "por" escrito, para que todos los lectores lo digan igual; propietario, 2026-09-27).
   - Con teclado físico: + / − / 0 amplían, reducen y ajustan; las flechas desplazan.
 - **CA-007-22 Foco y anuncios**
   - **Dado** un lector de pantalla activo
@@ -290,7 +290,7 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 | `viewerTitle` | Imagen de la tarea | Task image | Nombre de la pantalla del visor |
 | `viewerClose` | Cerrar | Close | |
 | `zoomIn` / `zoomOut` / `zoomFit` | Ampliar / Reducir / Ajustar al ancho | Zoom in / Zoom out / Fit to width | |
-| `a11yZoomLevel` | Ampliación ×{level} | Zoom ×{level} | `level` con formato local (2,5 / 2.5) |
+| `a11yZoomLevel` | Ampliación por {level} | Zoom times {level} | Solo para el lector; `level` con formato local (2,5 / 2.5). Antes "×{level}" (propietario, 2026-09-27) |
 | `errImageType` | Este tipo de imagen no se admite. Prueba con una foto JPEG, PNG o HEIC. | This image type isn't supported. Try a JPEG, PNG or HEIC photo. | |
 | `errImageTooBig` | La imagen es demasiado grande (máx. {max} MB). | The image is too large (max {max} MB). | |
 | `errImageTooManyPixels` | La imagen tiene demasiada resolución (máx. {max} megapíxeles). | The image resolution is too high (max {max} megapixels). | |

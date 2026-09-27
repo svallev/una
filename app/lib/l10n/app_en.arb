@@ -101,7 +101,7 @@
   "zoomIn": "Zoom in",
   "zoomOut": "Zoom out",
   "zoomFit": "Fit to width",
-  "a11yZoomLevel": "Zoom ×{level}",
+  "a11yZoomLevel": "Zoom times {level}",
   "errImageType": "This image type isn't supported. Try a JPEG, PNG or HEIC photo.",
   "errImageTooBig": "The image is too large (max {max} MB).",
   "errImageTooManyPixels": "The image resolution is too high (max {max} megapixels).",

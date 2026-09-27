@@ -704,10 +704,10 @@ abstract class AppLocalizations {
   /// **'Ajustar al ancho'**
   String get zoomFit;
 
-  /// Valor del nivel de zoom en el visor. CA-007-21
+  /// Valor del nivel de zoom en el visor, solo para el lector: "por" escrito, no "×" (propietario, 2026-09-27). CA-007-21
   ///
   /// In es, this message translates to:
-  /// **'Ampliación ×{level}'**
+  /// **'Ampliación por {level}'**
   String a11yZoomLevel(double level);
 
   /// Error de importación. Spec 007 §5

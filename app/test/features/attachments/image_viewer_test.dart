@@ -304,7 +304,7 @@ void main() {
         tester.getSemantics(_viewerImage),
         isSemantics(
           label: 'Foto',
-          value: 'Ampliación ×1',
+          value: 'Ampliación por 1',
           isImage: true,
           customActions: [const CustomSemanticsAction(label: 'Ampliar')],
         ),
@@ -324,12 +324,12 @@ void main() {
       act('Ampliar');
       await tester.pumpAndSettle();
       expect(scale(tester), closeTo(2.5, 0.001));
-      expect(announcements.last, 'Ampliación ×2,5');
+      expect(announcements.last, 'Ampliación por 2,5');
       expect(
         tester.getSemantics(_viewerImage),
         isSemantics(
           label: 'Foto',
-          value: 'Ampliación ×2,5',
+          value: 'Ampliación por 2,5',
           isImage: true,
           customActions: [
             const CustomSemanticsAction(label: 'Ampliar'),
@@ -345,7 +345,7 @@ void main() {
         tester.getSemantics(_viewerImage),
         isSemantics(
           label: 'Foto',
-          value: 'Ampliación ×8',
+          value: 'Ampliación por 8',
           isImage: true,
           customActions: [
             const CustomSemanticsAction(label: 'Reducir'),
@@ -360,10 +360,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(scale(tester), 1);
       expect(announcements, [
-        'Ampliación ×2,5',
-        'Ampliación ×8',
-        'Ampliación ×2,5',
-        'Ampliación ×1',
+        'Ampliación por 2,5',
+        'Ampliación por 8',
+        'Ampliación por 2,5',
+        'Ampliación por 1',
       ]);
       handle.dispose();
     });

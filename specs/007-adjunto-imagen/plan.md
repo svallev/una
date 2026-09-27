@@ -145,6 +145,8 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
 | Pantalla encendida | Solo los toques cuentan como uso; el teclado físico no reinicia los 10 minutos | CA-007-12 |
 | "Adjunto no disponible" | **Sin "Sustituir":** una sola acción, "Quitar adjunto" (con texto) o "Eliminar tarea" (sin texto). Para otra imagen, se edita la tarea | CA-007-16/19, DEV-40 |
 | Un adjunto por tarea | Un solo adjunto (imagen, foto, documento o URL). En el editor, (+) sigue visible con un adjunto y lo que se cargue sustituye al anterior; no hay botón "Sustituir" en ninguna parte | CA-007-04, spec §9 |
+| Nivel de zoom en voz alta (2026-09-27) | El lector dice "Ampliación por 2,5": `a11yZoomLevel` lleva "por" escrito en lugar de "×" (EN: "Zoom times 2.5") | CA-007-21, spec §7 |
+| "Subir archivo" y "Cargar URL" (2026-09-27) | De momento el lector no dice nada al activarlas (sin "Próximamente"), hasta las specs 008 y 009 | DEV-18 |
 | Texto nuevo | `a11yAttachmentMissing` ("{text}. Adjunto no disponible"), añadido a la §7 | CA-007-19/21 |
 
 ### Decisiones técnicas (propias, dentro de lo aprobado)
@@ -211,9 +213,7 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
     - compilar el Kotlin nuevo (T-007-16 y estas correcciones);
     - declarar `androidx.core` en Gradle con versión fijada (B4: hoy llega de forma transitiva con Flutter);
     - comprobar en el dispositivo: TalkBack (anuncios completos tras cada cambio de foco, desplazamiento horizontal ampliado, pantalla encendida solo con gestos del lector), Switch Access y teclado físico (anillo sobre foto clara y oscura).
-  - **[Pendiente, decisión del propietario]:**
-    - leer el nivel de zoom como "Ampliación 2,5 veces" en lugar de "×2,5";
-    - que "Subir archivo" y "Cargar URL" digan al lector "Próximamente" (DEV-18).
+  - **Decidido por el propietario (2026-09-27):** el zoom se lee "Ampliación por 2,5"; "Subir archivo" y "Cargar URL" siguen sin decir nada (tabla de arriba).
 
 ### Pendiente de verificar
 

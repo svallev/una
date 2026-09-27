@@ -371,7 +371,7 @@ class AppLocalizationsEn extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String levelString = levelNumberFormat.format(level);
 
-    return 'Zoom ×$levelString';
+    return 'Zoom times $levelString';
   }
 
   @override
