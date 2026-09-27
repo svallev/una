@@ -1,6 +1,6 @@
 # Spec 008: Tareas con PDF
 
-- **Estado:** **Aprobada** (propietario, 2026-09-27). Reescrita ese día con sus respuestas a dos revisiones de `spec-reviewer`: **en la v1 solo se sube PDF** (ADR-0014)
+- **Estado:** **Aprobada** (propietario, 2026-09-27). Reescrita ese día con sus respuestas a dos revisiones de `spec-reviewer`: **en la v1 solo se sube PDF** (ADR-0014). Enmendada el mismo día por el propietario: **20 páginas como máximo** (CA-008-03)
 - **Reglas de producto:** R3 (documento, **solo PDF en la v1**), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido), **propuesta de valor 2**
 - **Pantallas del prototipo:** 9 "Añadir (+)", 3 "Nueva tarea" (con documento), 10 "Tarea con documento (abierto)", 5 "Todas las tareas" (insignia). Los errores y el giro no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
 - **Decisiones y ADR:** **ADR-0014 (solo PDF en la v1)**, D5, D6 y D19 (enmendadas por el ADR-0014), D10 (enmendada: también gira la tarea con PDF), D17, D18, ADR-0004 (y R-10), ADR-0008 (enmendado por el ADR-0014), ADR-0010, ADR-0011, ADR-0012 (completar borra los archivos), ADR-0013 (**no** aplica al PDF: el zoom del PDF se queda y tiene alternativas), DEV-01, DEV-18 a DEV-42 citadas (enmendadas DEV-02, DEV-03, DEV-18, DEV-39, DEV-40 y DEV-42), DEV-36; modelo de amenazas T-2, T-3, T-5, T-7
@@ -39,10 +39,13 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - **Cuando** se importa
   - **Entonces** se acepta solo si su **contenido** es un PDF que se puede abrir; la extensión y el tipo declarado no cuentan. Un PDF sin extensión o con otra extensión se acepta.
   - Cualquier otra cosa (Word, Excel, texto, HTML, imágenes, ZIP, ejecutables…), aunque se llame `.pdf`, se rechaza con "Solo se pueden subir archivos PDF."
-- **CA-008-03 Límite de 10 MB (D18)**
+- **CA-008-03 Límites: 10 MB y 20 páginas (D18)**
   - **Dado** un archivo
-  - **Cuando** pasa de 10 MB
-  - **Entonces** se rechaza con "El PDF es demasiado grande (máx. 10 MB)." El tamaño se comprueba antes que el contenido.
+  - **Cuando** pasa de 10 MB, o es un PDF de más de 20 páginas
+  - **Entonces** se rechaza:
+    - por tamaño, con "El PDF es demasiado grande (máx. 10 MB)."; el tamaño se comprueba antes que el contenido;
+    - por páginas, con "El PDF tiene demasiadas páginas (máx. 20)."; las páginas se cuentan al abrirlo, antes de dibujar nada.
+  - Motivo: la tarea con PDF es para **consulta rápida** (entradas, horarios, un mapa, instrucciones), no para leer documentos largos (propietario, 2026-09-27).
 - **CA-008-04 Editor con PDF**
   - **Dado** un PDF elegido
   - **Cuando** se muestra el editor
@@ -143,7 +146,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
     - la importación no bloquea la interfaz;
     - tras 20 s se aborta con "No hemos podido leer este PDF.";
     - un PDF se comprueba al importar: si no se puede abrir, no tiene páginas, pide contraseña para abrirse (CL-008-1) o no se puede dibujar su primera página, se rechaza;
-    - con los ficheros de prueba malformados (PDF truncado, con referencias cíclicas, con una bomba de compresión, de 0 páginas, de 10 000 páginas (se acepta si no pasa de 10 MB), un `.pdf` que es HTML o ZIP, nombre con `../`, dirección que apunta a los datos de la propia app) la app **nunca se cierra** y no escribe nada fuera de su zona temporal.
+    - con los ficheros de prueba malformados (PDF truncado, con referencias cíclicas, con una bomba de compresión, de 0 páginas, de 10 000 páginas (se rechaza por páginas sin quedarse colgada), un `.pdf` que es HTML o ZIP, nombre con `../`, dirección que apunta a los datos de la propia app) la app **nunca se cierra** y no escribe nada fuera de su zona temporal.
 - **CA-008-15 Preparando el PDF**
   - **Dado** una importación que tarda más de 400 ms
   - **Cuando** está en curso
@@ -221,7 +224,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
 | CL-008-2 | PDF con solo contraseña de permisos (se abre sin escribir nada) | Se acepta y se ve normal |
 | CL-008-3 | PDF corrupto, de 0 páginas o cuya primera página no se puede dibujar | Se rechaza al importar: "No hemos podido leer este PDF." |
 | CL-008-4 | Una página intermedia no se puede dibujar o tarda más de 5 s | Esa página se ve en blanco con el borde; las demás, bien. La app no se cierra |
-| CL-008-5 | PDF de 300 páginas de texto en < 10 MB | Se desplaza de la 1 a la 300 sin cerrarse, y la tarea añade < 200 MB de memoria sobre la misma tarea con texto (medida como en la 007, `architecture.md` §7) |
+| CL-008-5 | PDF de 20 páginas escaneadas de casi 10 MB (el caso más pesado admitido) | Se desplaza de la 1 a la 20 sin cerrarse, y la tarea añade < 200 MB de memoria sobre la misma tarea con texto (medida como en la 007, `architecture.md` §7) |
 | CL-008-6 | Nombre con rutas, caracteres de control o de cambio de dirección | Se sanea (CA-008-07); el archivo se guarda con un nombre generado |
 | CL-008-7 | Archivo de Drive que solo está en la nube, sin conexión, o documento nativo de Google Docs | "No hemos podido leer este PDF."; el editor queda como estaba |
 | CL-008-8 | Sin espacio al importar o al guardar | `storageErrorNoSpace` (con "Reintentar" al guardar); no se crea la tarea ni quedan temporales |
@@ -239,6 +242,7 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 |---|---|
 | No es un PDF | "Solo se pueden subir archivos PDF." |
 | Demasiado grande | "El PDF es demasiado grande (máx. 10 MB)." |
+| Demasiadas páginas | "El PDF tiene demasiadas páginas (máx. 20)." |
 | Protegido con contraseña | "Este PDF está protegido con contraseña." |
 | Ilegible, corrupto o tiempo agotado | "No hemos podido leer este PDF." |
 | Enlace sin app | "No hay ninguna app para abrir este enlace." |
@@ -275,6 +279,7 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 | `a11yPdfAdded` | PDF añadido | PDF added | |
 | `errPdfType` | Solo se pueden subir archivos PDF. | Only PDF files can be uploaded. | |
 | `errPdfTooBig` | El PDF es demasiado grande (máx. {max} MB). | The PDF is too large (max {max} MB). | `max` = 10 |
+| `errPdfTooManyPages` | El PDF tiene demasiadas páginas (máx. {max}). | The PDF has too many pages (max {max}). | `max` = 20 |
 | `errPdfProtected` | Este PDF está protegido con contraseña. | This PDF is password-protected. | |
 | `errPdfUnreadable` | No hemos podido leer este PDF. | We couldn't read this PDF. | |
 | `errNoAppForLink` | No hay ninguna app para abrir este enlace. | There's no app to open this link. | |
@@ -301,10 +306,11 @@ Se reutilizan `currentTaskSemantics` ("Tarea actual: {text}", prefijo en horizon
 - **[Resuelto 2026-09-27, propietario]** Sin indicador de página: el PDF se ve al 100 % del ancho, con desplazamiento y zoom.
 - **[Resuelto 2026-09-27, propietario]** Los enlaces siguen siendo enlaces salvo los peligrosos: `http(s)`, `mailto:` y `tel:` con confirmación; el resto no hace nada.
 - **[Resuelto 2026-09-27, propietario]** Al volver, la última posición vista, también tras cerrar la app. **[Suposición]** Hace falta guardar esa posición por tarea; el plan dirá dónde (si es en la base de datos, con una `schemaVersion` nueva y su test de migración).
+- **[Resuelto 2026-09-27, propietario]** **20 páginas como máximo**, además de los 10 MB: la tarea con PDF es de consulta rápida (CA-008-03).
 - **[Resuelto 2026-09-27, propietario]** Pantalla encendida solo con PDF (el único tipo de la v1).
 - **[Resuelto 2026-09-27, propietario]** Se guarda el **nombre** del PDF, saneado (CA-008-07).
 - **[Resuelto 2026-09-27, propietario]** Un PDF con contraseña de apertura se **rechaza** al importar (CL-008-1).
 - **[Resuelto 2026-09-27, propietario]** "Volver a vertical" también en la tarea con imagen (CA-008-11 enmienda CA-007-11; se implementa en esta spec).
 - **[Resuelto 2026-09-27]** Desviaciones del prototipo registradas: DEV-02 ("PDF · va arriba del todo"), DEV-03 (solo PDF), DEV-18 ("Subir archivo" funciona desde la 008), DEV-40 (icono de documento) y DEV-42 (también gira el PDF, con "Volver a vertical").
 - **[Resuelto 2026-09-27, propietario]** El horizontal es igual con imagen y con PDF, así que la excepción de accesibilidad ya aprobada para el horizontal de la imagen (WCAG 1.3.4 y 2.1.1, ADR-0013) se amplía al PDF en el ADR-0014 y en la nota de P6 de la constitución. "Volver a vertical" la mitiga en los dos casos.
-- **[Pendiente P-6, spec 009]** Si una URL apunta a un PDF, se ofrece guardarlo como tarea con PDF (esta spec), con el mismo límite de 10 MB.
+- **[Pendiente P-6, spec 009]** Si una URL apunta a un PDF, se ofrece guardarlo como tarea con PDF (esta spec), con los mismos límites (10 MB y 20 páginas).

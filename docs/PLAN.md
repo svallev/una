@@ -28,7 +28,7 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D15 | Bundle ID con un dominio neutro que se comprará → **[Pendiente]** |
 | D16 | Código en inglés; documentación en español |
 | D17 | **Android primero** (2026-09-24): se desarrolla y valida todo en Android (emulador + web de pruebas) sin instalar Xcode. iOS se aborda al final, en la fase **F-iOS**, y solo si el propietario decide seguir (PD-7). La arquitectura sigue siendo multiplataforma; CI compila iOS sin firmar desde F2 |
-| D18 | **PDF de 10 MB como máximo** (2026-09-24). ~~El resto de documentos, 25 MB~~ (sin otros documentos en la v1, ADR-0014); las imágenes, 30 MB y **64 MP**, guardadas como mucho a 24 MP y sin límite de lado (spec 007, 2026-09-26) |
+| D18 | **PDF de 10 MB como máximo** (2026-09-24) **y 20 páginas** (2026-09-27, spec 008: consulta rápida). ~~El resto de documentos, 25 MB~~ (sin otros documentos en la v1, ADR-0014); las imágenes, 30 MB y **64 MP**, guardadas como mucho a 24 MP y sin límite de lado (spec 007, 2026-09-26) |
 | D19 | ~~**TXT, CSV y MD se muestran dentro de la app** como texto plano, sin interpretar marcado (2026-09-24, resuelve PD-8). Word, Excel, PowerPoint, ODF, RTF e iWork siguen con el visor del sistema~~ **Aplazada por el ADR-0014 (2026-09-27): en la v1 solo se adjuntan PDF** |
 | — | Skills, plugins y MCP **solo a nivel de proyecto**, revisados antes de instalar y nunca con `-g`/`-y` |
 

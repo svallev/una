@@ -22,7 +22,7 @@
 
 En la v1 **solo se adjuntan PDF** (propietario, 2026-09-27):
 
-- "Subir archivo" admite solo PDF, decidido por el contenido; hasta 10 MB (D18). Los PDF que piden contraseña para abrirse se rechazan.
+- "Subir archivo" admite solo PDF, decidido por el contenido; hasta 10 MB (D18) y **20 páginas** (consulta rápida, no lectura de documentos largos). Los PDF que piden contraseña para abrirse se rechazan.
 - El PDF se ve **en la propia tarea**, al 100 % del ancho, con desplazamiento vertical, **sin indicador de página**, y vuelve a la **última posición vista**.
 - El **zoom se queda puesto** (a diferencia de la imagen) y tiene alternativas accesibles (acciones del lector, Switch Access y teclado): **no hay excepción a P6** para el PDF.
 - La tarea con PDF **gira exactamente igual** que la de imagen (enmienda D10): en horizontal se ven el adjunto al ancho, el logotipo y el botón "Volver a vertical", que se añade también a la imagen (enmienda CA-007-11). La excepción de accesibilidad del horizontal de la imagen (WCAG 1.3.4 y 2.1.1, ADR-0013) se amplía al PDF, con "Volver a vertical" como mitigación en los dos casos.
