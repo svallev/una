@@ -98,6 +98,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - la imagen se amplía hasta ×8; el doble toque va por pasos (×1 → ×2,5 → ×8 → ×1) y centra la ampliación en el punto tocado;
     - ampliada, se puede desplazar en las dos direcciones;
     - al volver a ×1 (pellizcando o con el doble toque), vuelve el ancho completo y el desplazamiento solo vertical.
+  - Pellizcar para ampliar la imagen en la tarea actual abre el visor ya ampliado (×2,5) en ese punto; desde ahí se sigue como en el visor (propietario, 2026-09-27). Un toque sigue abriéndolo a ×1.
 - **CA-007-11 Girar en el visor (D10 enmendada)**
   - **Dado** el visor
   - **Cuando** gira el móvil a horizontal
