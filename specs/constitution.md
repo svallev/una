@@ -2,7 +2,7 @@
 
 > Principios que **no se negocian**. Toda spec, plan, tarea y PR se revisa contra este documento.
 > Para cambiarlo hace falta un ADR que lo justifique y la aprobación explícita del propietario del producto.
-> Versión 1.0 · 2026-09-24
+> Versión 1.1 · 2026-09-27 (nota de excepciones bajo P6, ADR-0013). Versión 1.0 · 2026-09-24
 
 ## Principios
 
@@ -23,6 +23,9 @@ Referencia: OWASP MASVS/MASTG. Todo archivo o URL importado se considera **no co
 
 ### P6. Accesible siempre
 WCAG 2.2 AA como mínimo. Toda acción por gesto (mantener pulsado, arrastrar, doble toque) tiene una alternativa accesible para lector de pantalla, teclado y switch. Se respetan "reducir movimiento", el texto dinámico y los objetivos táctiles de **≥ 44 pt**.
+
+> **Excepciones aprobadas por el propietario** (cada una con su ADR, su mitigación y su criterio de revisión):
+> - [ADR-0013](../docs/adr/0013-sin-visor-de-imagenes.md) (2026-09-27): el pellizco de la tarea con imagen no tiene alternativa en la app (WCAG 2.5.1; se usa la lupa del sistema), y el horizontal de la tarea con imagen es solo para verla, sin menú ni botón de completar (WCAG 1.3.4 y 2.1.1).
 
 ### P7. i18n desde el primer día
 No hay textos incrustados en el código. Todos los textos (incluidos fechas, plurales y etiquetas de accesibilidad) salen de los archivos de traducción, en español y en inglés. El nombre de la app está centralizado y no aparece en el código, las rutas ni los identificadores.
