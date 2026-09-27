@@ -99,8 +99,9 @@ tools/measure-cold-start.sh <serial> 20
 ## 5. TalkBack (T-007-24)
 
 - [ ] **Hoja "Añadir":** se anuncia su nombre y el foco empieza en el título. Cerrarla con la X, con el gesto atrás o tocando fuera devuelve el foco a (+).
+  **[Fallo, 2026-09-27, emulador con TalkBack]** Al abrirla, el foco de TalkBack va a la X de cerrar, no al título. Al cerrarla con atrás, va a "Cancelar" (primer elemento del editor), no a (+). Los tests de widgets pasan porque comprueban el evento de foco, que TalkBack ignora. Pendiente de decidir el arreglo con el propietario.
 - [ ] **Vuelta de la cámara:** se oye entero "Foto añadida", sin que lo corte la lectura del nuevo foco. Igual con "Imagen añadida", "Preparando imagen…", "Adjunto quitado" y los errores.
-- [ ] **Tarea actual con imagen:** se lee "Tarea actual: {texto}. Con foto" o "Tarea actual: Foto". Doble toque no abre nada. Las acciones son Completar tarea y Eliminar tarea, también en horizontal (sin botón visible).
+- [x] **Tarea actual con imagen:** **[Hecho 2026-09-27, emulador]** el foco inicial está en la tarea entera (un solo nodo) y el doble toque no abre nada. Se lee "Tarea actual: {texto}. Con foto" o "Tarea actual: Foto". Doble toque no abre nada. Las acciones son Completar tarea y Eliminar tarea, también en horizontal (sin botón visible).
 - [ ] **Lupa del sistema** (excepción a P6, ADR-0013): con la ampliación de accesibilidad de Android activada, se puede ampliar la imagen de la tarea.
 - [ ] **Pantalla encendida:** usando solo gestos del lector (explorar tocando y acciones) durante más de 10 minutos, la pantalla no se apaga.
 - [ ] **Listado:** "{n} de {total}: {texto}. Con foto". La miniatura no se lee.

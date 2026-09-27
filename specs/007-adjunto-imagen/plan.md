@@ -215,6 +215,8 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
   - **Giro (CA-007-11, DEV-42):** solo gira la tarea actual con imagen, y en horizontal solo se ven la imagen (a todo el ancho, `fullWidthRequests`) y el logotipo. **Lección del Xiaomi:** con `SCREEN_ORIENTATION_USER` no giraba hasta el siguiente toque, porque el sensor de orientación del sistema (`dev_orient`, MTK) de HyperOS no emitía hasta entonces, mientras que la Galería, que lee el acelerómetro, giraba sola. Por eso `ImageRotation.kt` (`OrientationEventListener`, sin permisos) fija `PORTRAIT`, `LANDSCAPE` o `REVERSE_LANDSCAPE` mientras la tarea con imagen es la pantalla de arriba, con márgenes para no oscilar, respetando el bloqueo de rotación y sin leer el sensor en segundo plano. `SystemChrome` sigue pidiendo las orientaciones (iOS, tests).
   - Las imágenes guardadas antes de DEV-41 conservan su `screen.jpg` recortada: la app no está publicada y el propietario las vuelve a añadir. **[Pendiente]** Los goldens de la tarea actual con imagen cambian: hay que regenerarlos en Linux (CI o la nube, `docs/testing.md`).
 
+  - **TalkBack en el emulador (T-007-24), fallos de foco en el editor:** al abrir la hoja "Añadir", el foco va a la X y no al título; al cerrarla con atrás, va a "Cancelar" y no a (+) (CA-007-22). Ya estaban antes de retirar el visor. TalkBack enfoca un nodo de la ventana nueva e ignora `FocusSemanticEvent`. **[Pendiente]** Decidir el arreglo con el propietario.
+
 ### Pendiente de verificar
 
 - **[Hecho 2026-09-27]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`) en el Mac.
