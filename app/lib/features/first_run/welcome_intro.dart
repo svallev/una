@@ -179,9 +179,13 @@ class _WelcomeIntroState extends State<WelcomeIntro> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Misma cabecera que el editor: el logotipo no salta.
-                    const SizedBox(
-                      height: kMinInteractiveDimension,
-                      child: Align(
+                    // Al menos 48 dp, y más con el texto grande: el logotipo no se
+                    // corta (CA-007-23).
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: kMinInteractiveDimension,
+                      ),
+                      child: const Align(
                         alignment: Alignment.centerLeft,
                         child: Wordmark(),
                       ),

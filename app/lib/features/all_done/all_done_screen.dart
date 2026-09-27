@@ -84,9 +84,13 @@ class _AllDoneScreenState extends State<AllDoneScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(
-                        height: kMinInteractiveDimension,
-                        child: Align(
+                      // Al menos 48 dp, y más con el texto grande: el logotipo no se
+                      // corta (CA-007-23).
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minHeight: kMinInteractiveDimension,
+                        ),
+                        child: const Align(
                           alignment: Alignment.centerLeft,
                           child: Wordmark(),
                         ),

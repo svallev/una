@@ -449,8 +449,12 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                         UnaSpace.m,
                         0,
                       ),
-                      child: SizedBox(
-                        height: kMinInteractiveDimension,
+                      // Al menos 48 dp, y más con el texto grande: el
+                      // logotipo no se corta (CA-007-23).
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minHeight: kMinInteractiveDimension,
+                        ),
                         child: Row(
                           children: [
                             const Wordmark(),
@@ -458,6 +462,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                             if (widget.mode != EditorMode.first)
                               UnaLinkButton(
                                 label: l10n.editorCancel,
+                                height: kMinInteractiveDimension,
                                 onPressed: () => Navigator.of(context).pop(),
                               ),
                           ],
