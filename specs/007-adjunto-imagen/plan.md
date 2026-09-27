@@ -215,6 +215,12 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
     - comprobar en el dispositivo: TalkBack (anuncios completos tras cada cambio de foco, desplazamiento horizontal ampliado, pantalla encendida solo con gestos del lector), Switch Access y teclado físico (anillo sobre foto clara y oscura).
   - **Decidido por el propietario (2026-09-27):** el zoom se lee "Ampliación por 2,5"; "Subir archivo" y "Cargar URL" siguen sin decir nada (tabla de arriba).
 
+- **Preparación de T-007-23/24** (en la nube, sin ejecutar):
+  - `integration_test/image_flow_test.dart`: flujo completo con el canal nativo, el disco y la interfaz reales; solo el selector entrega un fichero de prueba (`FixtureImporter`, en `integration_test/support/`). Cubre foto → tarea actual → visor, restauración sin archivos y la captura larga.
+  - `integration_test/viewer_perf_test.dart`: fotogramas del zoom hasta ×8 y memoria (RSS) con la imagen más grande que se guarda.
+  - `dispositivo.md`: guía con los comandos y las comprobaciones a mano (cámara, selector, ciclo de vida, TalkBack, Switch Access y teclado).
+  - El arranque en frío con imagen se mide con `tools/measure-cold-start.sh`, como el de texto; no hace falta el `startup_perf_test.dart` previsto en el §5.
+
 ### Pendiente de verificar
 
 - **[Pendiente]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`): el entorno en la nube no puede descargar el SDK de Android. Se compila en el Mac con `fvm flutter build apk --debug`.

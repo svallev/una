@@ -55,7 +55,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-21 | **Hecha** (sin desviaciones nuevas del prototipo) | `fe8fe7a` |
 | T-007-22 | **Hecha** (generados en Linux con la versión de CI; corrige el logotipo cortado a 200 %) | `cce6c9f`, `a32e11b` |
 | T-007-25 | **Hecha** (hallazgos corregidos; Kotlin y comprobaciones en el dispositivo, en local) | `86581b8`, `91b5045`, `33abc03` |
-| T-007-23, 24 | Pendientes (en local: emulador y Xiaomi) | — |
+| T-007-23, 24 | Pendientes (en local: emulador y Xiaomi). Tests y guía preparados: `dispositivo.md` | _pendiente_ |
 
 Las decisiones y cambios respecto al plan están en `plan.md` §8.
 
