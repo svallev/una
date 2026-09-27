@@ -221,8 +221,13 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
   - `dispositivo.md`: guía con los comandos y las comprobaciones a mano (cámara, selector, ciclo de vida, TalkBack, Switch Access y teclado).
   - El arranque en frío con imagen se mide con `tools/measure-cold-start.sh`, como el de texto; no hace falta el `startup_perf_test.dart` previsto en el §5.
 
+- **Sesión en local (2026-09-27), dispositivo.md §1–2:**
+  - El Kotlin compila (`build apk --debug` y `--release`). `androidx.core:core:1.13.1` declarada en Gradle con la versión que ya llegaba de forma transitiva (B4); el árbol resuelto no cambia.
+  - **Corregido, fallo encontrado en el emulador:** con una foto vertical, la vista previa del editor crecía con la imagen y "Guardar" quedaba fuera de la pantalla. `SliverFillRemaining` mide la columna por su altura intrínseca máxima y la de `Image` sigue la proporción de la foto. La imagen va ahora en `Positioned.fill` (no cuenta en la altura intrínseca del `Stack`), con un mínimo en el que cabe "Quitar adjunto". Los tests de widgets usaban un PNG de 1 × 1 y no lo veían: el test nuevo lo decodifica de verdad. El golden `editor_image_es` no debería cambiar (foto 3:4 en pantalla alta), **[Pendiente]** confirmarlo en CI.
+  - `image_flow_test`: además, la captura larga cierra el visor antes de desmontar la app.
+
 ### Pendiente de verificar
 
-- **[Pendiente]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`): el entorno en la nube no puede descargar el SDK de Android. Se compila en el Mac con `fvm flutter build apk --debug`.
+- **[Hecho 2026-09-27]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`) en el Mac.
 - **[Pendiente]** Todo lo que depende del dispositivo (T-007-23/24): cámara y selector reales, giro, pellizco, TalkBack, pantalla encendida y rendimiento en el Xiaomi.
 

@@ -36,9 +36,10 @@ fvm flutter build apk --release
 ../tools/check-android-permissions.sh release   # sin permisos; <provider> no exportado
 ```
 
-- [ ] El Kotlin compila sin errores (`ImageImport.kt`, `ImageSanitizer.kt`).
-- [ ] Declarar `androidx.core` en `android/app/build.gradle.kts` con versión fijada, la misma que llega hoy de forma transitiva (`./gradlew app:dependencies | grep androidx.core`). Justificarlo en la PR (threat-model §5, hallazgo B4).
-- [ ] `check-android-permissions.sh release` en verde.
+- [x] El Kotlin compila sin errores (`ImageImport.kt`, `ImageSanitizer.kt`). **[Hecho 2026-09-27]** `build apk --debug` y `--release` en verde, sin avisos del compilador de Kotlin.
+- [x] Declarar `androidx.core` en `android/app/build.gradle.kts` con versión fijada, la misma que llega hoy de forma transitiva (`./gradlew app:dependencies | grep androidx.core`). Justificarlo en la PR (threat-model §5, hallazgo B4).
+  **[Hecho 2026-09-27]** Llegaba como `androidx.core:core:1.13.1` (resuelta desde 1.0.0, 1.3.2 y 1.8.0 de los plugins); declarada `implementation("androidx.core:core:1.13.1")`. Sin cambios en el árbol resuelto.
+- [x] `check-android-permissions.sh release` en verde. **[Hecho 2026-09-27]**
 
 ## 2. Tests de integración en el emulador (T-007-23)
 
@@ -47,11 +48,15 @@ fvm flutter test integration_test/image_import_test.dart -d emulator-5554
 fvm flutter test integration_test/image_flow_test.dart -d emulator-5554
 ```
 
-- [ ] `image_import_test`: sin metadatos, orientación, sRGB, 24 MP, teselas, límites, malformados, cancelar.
-- [ ] `image_flow_test`:
+- [x] `image_import_test`: sin metadatos, orientación, sRGB, 24 MP, teselas, límites, malformados, cancelar. **[Hecho 2026-09-27]** 13/13 en el Pixel 6a (API 36).
+- [x] `image_flow_test`:
   - foto → tarea actual → visor (doble toque) → cerrar;
   - restaurada sin archivos → "Adjunto no disponible" → eliminar;
   - captura de 1080 × 20 000 en 5 franjas, con desplazamiento vertical.
+
+  **[Hecho 2026-09-27]** 2/2 tras dos correcciones (plan §8):
+  - **Fallo de la app:** con una foto vertical, "Guardar" quedaba fuera de la pantalla (y = 1070 en una pantalla de 914). Corregido en `AttachmentPreview`, con test de regresión en `editor_image_test.dart`.
+  - **Fallo del test:** la captura larga terminaba con el visor abierto y `_shutdown` no encontraba la pantalla principal.
 
 ## 3. Rendimiento en el Xiaomi (T-007-23, con permiso)
 

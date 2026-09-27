@@ -161,6 +161,37 @@ void main() {
       expect(find.bySemanticsLabel('Remove attachment'), findsOneWidget);
     });
 
+    testWidgets('la vista previa llena el hueco sin crecer con la imagen: '
+        '"Guardar" sigue en pantalla', (tester) async {
+      await pumpEditor(tester);
+      await pick(tester, 'Hacer foto');
+      // Decodificada de verdad: solo así cuenta su proporción (1 × 1).
+      final image = find.descendant(
+        of: find.byType(AttachmentPreview),
+        matching: find.byType(Image),
+      );
+      await tester.runAsync(
+        () => precacheImage(
+          tester.widget<Image>(image).image,
+          tester.element(image),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // SliverFillRemaining mide la columna por su altura intrínseca: si la
+      // imagen contara, una foto vertical empujaría los botones fuera.
+      final preview = tester.renderObject<RenderBox>(
+        find.byType(AttachmentPreview),
+      );
+      expect(
+        preview.getMaxIntrinsicHeight(preview.size.width),
+        UnaSizes.removeAttachment + 2 * (UnaSpace.s - UnaSpace.xxs),
+      );
+      final screen = tester.getRect(find.byType(TaskEditorScreen));
+      final save = tester.getRect(find.text('Guardar'));
+      expect(save.bottom, lessThanOrEqualTo(screen.bottom));
+    });
+
     testWidgets('con imagen se guarda sin texto', (tester) async {
       await pumpEditor(tester);
       await pick(tester, 'Hacer foto');

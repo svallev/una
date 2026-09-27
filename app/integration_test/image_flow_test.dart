@@ -233,6 +233,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(translation().dy, lessThan(-1000));
     expect(translation().dx, 0);
+    // Con el visor abierto, la pantalla principal queda fuera de escena.
+    await tester.tap(find.bySemanticsLabel(_l10n(tester).viewerClose));
+    await tester.pumpAndSettle();
     await _shutdown(tester);
   });
 }
