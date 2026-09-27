@@ -174,6 +174,23 @@ void main() {
       );
     });
 
+    test('T-3: file() solo da archivos de attachments/<id>/', () {
+      expect(
+        store.file('attachments/a1/screen.jpg').path,
+        '${tmp.path}/files/attachments/a1/screen.jpg',
+      );
+      for (final bad in [
+        '../una.sqlite',
+        'attachments/../../x.jpg',
+        'attachments/a1/../../x.jpg',
+        '/etc/passwd',
+        'attachments/a1/screen.png',
+        'app_flutter/una.sqlite',
+      ]) {
+        expect(() => store.file(bad), throwsArgumentError, reason: bad);
+      }
+    });
+
     test(
       'CA-007-16: la preparación lista y borra también archivos sueltos',
       () async {

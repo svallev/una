@@ -6,7 +6,9 @@ import 'package:app/domain/entities/task.dart';
 import 'package:app/features/attachments/image_viewer_screen.dart';
 import 'package:app/features/attachments/keep_screen_on_controller.dart';
 import 'package:app/features/attachments/task_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/app_harness.dart';
@@ -86,6 +88,41 @@ void main() {
     await tester.pump();
     expect(awake.on, isTrue);
     await tester.pump(const Duration(minutes: 10));
+  });
+
+  testWidgets('CA-007-12: con TalkBack, explorar tocando (hover táctil) '
+      'reinicia los 10 minutos; un ratón, no', (tester) async {
+    await repo.insert(await imageTask());
+    await pump(tester);
+    await tester.pump(const Duration(minutes: 9));
+    final touch = TestPointer(1, PointerDeviceKind.touch);
+    tester.binding.handlePointerEvent(touch.hover(const Offset(200, 400)));
+    await tester.pump(const Duration(minutes: 9));
+    expect(awake.on, isTrue);
+    final mouse = TestPointer(2, PointerDeviceKind.mouse);
+    tester.binding.handlePointerEvent(mouse.hover(const Offset(200, 400)));
+    await tester.pump(const Duration(minutes: 1));
+    expect(awake.on, isFalse);
+  });
+
+  testWidgets('CA-007-12: las acciones del lector en el visor reinician los '
+      '10 minutos', (tester) async {
+    final handle = tester.ensureSemantics();
+    await repo.insert(await imageTask());
+    await pump(tester);
+    await tester.tap(find.byType(TaskImage));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(minutes: 9));
+    tester.semantics.customAction(
+      find.semantics.byLabel('Foto'),
+      const CustomSemanticsAction(label: 'Ampliar'),
+    );
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(minutes: 9));
+    expect(awake.on, isTrue);
+    await tester.pump(const Duration(minutes: 1));
+    expect(awake.on, isFalse);
+    handle.dispose();
   });
 
   testWidgets('CA-007-12: en el visor también', (tester) async {

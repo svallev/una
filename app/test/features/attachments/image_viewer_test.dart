@@ -174,7 +174,15 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Cerrar'));
       await tester.pumpAndSettle();
       expect(find.byType(ImageViewerScreen), findsNothing);
-      expect(Focus.of(tester.element(find.byType(TaskImage))).hasFocus, isTrue);
+      // El foco principal está en la tarea (un antecesor de la imagen).
+      final primary = FocusManager.instance.primaryFocus!.context!;
+      expect(
+        find.descendant(
+          of: find.byWidget(primary.widget),
+          matching: find.byType(TaskImage),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('el gesto atrás también cierra', (tester) async {

@@ -46,6 +46,14 @@ void main() {
       expect(_sniff(_ftyp('avis', ['msf1'])), isNull);
     });
 
+    test('rechaza la caja ftyp que no cabe entera en la cabecera (podría ser '
+        'AVIF más allá) o que es demasiado corta', () {
+      final long = _ftyp('mif1', [for (var i = 0; i < 14; i++) 'miaf', 'avif']);
+      expect(long.length, greaterThan(ImageLimits.headBytes));
+      expect(_sniff(long.sublist(0, ImageLimits.headBytes)), isNull);
+      expect(_sniff([0, 0, 0, 8, ...ascii.encode('ftypheic')]), isNull);
+    });
+
     test('rechaza HEIC en Android 8', () {
       expect(_sniff(_ftyp('heic', ['mif1']), heic: false), isNull);
     });

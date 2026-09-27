@@ -15,6 +15,20 @@ class _BrokenStore extends MemoryAttachmentStore {
   Future<void> deleteStaging(String id) async => throw StateError('E/S');
 }
 
+/// Almacén en el que una importación empieza mientras el barrido lista la
+/// preparación.
+class _ImportDuringSweep extends MemoryAttachmentStore {
+  _ImportDuringSweep(this.registry);
+  final ImportRegistry registry;
+
+  @override
+  Future<Set<String>> stagingIds() async {
+    registry.add('late');
+    putStaging('late', 'source', tinyImage);
+    return super.stagingIds();
+  }
+}
+
 void main() {
   late InMemoryTaskRepository repo;
   late MemoryAttachmentStore store;
@@ -83,6 +97,13 @@ void main() {
       await j.sweep();
     },
   );
+
+  test('CA-007-16: una importación que empieza durante el barrido tampoco se '
+      'barre', () async {
+    final s = _ImportDuringSweep(registry);
+    await janitorFor(repo, s, registry).sweep();
+    expect(await s.stagingIds(), contains('late'));
+  });
 
   test('CA-007-16: discardStaging deja de proteger la importación', () async {
     registry.add('a');

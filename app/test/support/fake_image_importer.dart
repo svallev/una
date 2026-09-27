@@ -113,9 +113,14 @@ class FakeImageImporter implements ImageImporter {
       ..putStored(attachment.id, 'thumb.jpg', tinyImage);
   }
 
+  /// Simula un proveedor colgado: cancelar no responde nunca (M1 de la
+  /// revisión de seguridad de T-007-25).
+  bool cancelHangs = false;
+
   @override
   Future<void> cancel(String id) async {
     cancelled.add(id);
+    if (cancelHangs) return Completer<void>().future;
     final c = _waits[id];
     if (c != null && !c.isCompleted) {
       c.completeError(const ImageImportCancelled());

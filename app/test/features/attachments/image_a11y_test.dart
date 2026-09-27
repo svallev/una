@@ -3,6 +3,7 @@ import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/task.dart';
+import 'package:app/domain/ports/image_importer.dart';
 import 'package:app/features/attachments/attach_sheet.dart';
 import 'package:app/features/attachments/attachment_preview.dart';
 import 'package:app/features/attachments/image_viewer_screen.dart';
@@ -12,8 +13,12 @@ import 'package:app/features/attachments/task_thumbnail.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
+import 'package:app/ui/brutal_button.dart';
+import 'package:app/ui/focus_ring.dart';
+import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -283,6 +288,179 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(TaskThumbnail), findsWidgets);
       await _meetsGuidelines(tester);
+      handle.dispose();
+    });
+  });
+
+  group('Revisión de accesibilidad (T-007-25)', () {
+    /// ¿Se ve el anillo de foco de [of] (por encima o por debajo)?
+    bool ringVisible(WidgetTester tester, Finder of) => [
+      ...tester.widgetList<FocusRing>(
+        find.ancestor(of: of, matching: find.byType(FocusRing)),
+      ),
+      ...tester.widgetList<FocusRing>(
+        find.descendant(of: of, matching: find.byType(FocusRing)),
+      ),
+    ].any((r) => r.visible);
+
+    testWidgets('CA-007-21 / WCAG 2.1.1: con teclado, Tab llega a la imagen, '
+        'se ve el anillo e Intro abre el visor', (tester) async {
+      await repo.insert(await imageTask('t1', text: 'Horario'));
+      await pumpUnaApp(tester, repo: repo, overrides: overrides());
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      expect(ringVisible(tester, find.byType(TaskImage)), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.byType(ImageViewerScreen), findsOneWidget);
+    });
+
+    testWidgets('visor: el anillo se ve en la imagen con teclado; tras pasar '
+        'a "Cerrar" con Tab, + sigue ampliando; Esc cierra', (tester) async {
+      await repo.insert(await imageTask('t1', text: 'Horario'));
+      await pumpUnaApp(tester, repo: repo, overrides: overrides());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TaskImage));
+      await tester.pumpAndSettle();
+      // Modo teclado.
+      await tester.sendKeyEvent(LogicalKeyboardKey.shift);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widgetList<FocusRing>(
+              find.descendant(
+                of: find.byType(ImageViewerScreen),
+                matching: find.byType(FocusRing),
+              ),
+            )
+            .first
+            .visible,
+        isTrue,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      expect(ringVisible(tester, find.byType(UnaIcon).last), isTrue);
+      final viewer = find.byType(InteractiveViewer);
+      double scale() => tester
+          .widget<InteractiveViewer>(viewer)
+          .transformationController!
+          .value
+          .getMaxScaleOnAxis();
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await tester.pumpAndSettle();
+      expect(scale(), greaterThan(1));
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(ImageViewerScreen), findsNothing);
+    });
+
+    testWidgets('visor: el lector lee la imagen antes que "Cerrar"', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await repo.insert(await imageTask('t1', text: 'Horario'));
+      await pumpUnaApp(tester, repo: repo, overrides: overrides());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TaskImage));
+      await tester.pumpAndSettle();
+      expect(
+        tester.semantics.simulatedAccessibilityTraversal(
+          startNode: find.semantics.byLabel('Foto'),
+          endNode: find.semantics.byLabel('Cerrar'),
+        ),
+        isNotEmpty,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('"Quitar adjunto" recibe el foco con Tab y muestra el anillo', (
+      tester,
+    ) async {
+      await pumpWithApp(
+        tester,
+        TaskEditorScreen(
+          mode: EditorMode.edit,
+          task: await imageTask('t1', text: 'Horario'),
+        ),
+        repo: repo,
+        overrides: overrides(),
+      );
+      await tester.pumpAndSettle();
+      final remove = find.bySemanticsLabel('Quitar adjunto');
+      for (var i = 0; i < 6 && !ringVisible(tester, remove); i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+      }
+      expect(ringVisible(tester, remove), isTrue);
+    });
+
+    testWidgets('CA-007-22: cerrar la hoja sin elegir devuelve el foco a (+)', (
+      tester,
+    ) async {
+      await pumpWithApp(
+        tester,
+        const TaskEditorScreen(mode: EditorMode.first),
+        repo: repo,
+        overrides: overrides(),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(_plus);
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Cerrar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AttachSheet), findsNothing);
+      final plus = tester.widget<BrutalButton>(
+        find.byWidgetPredicate(
+          (w) =>
+              w is BrutalButton && w.label == 'Añadir foto, imagen o archivo',
+        ),
+      );
+      expect(plus.focusNode!.hasFocus, isTrue);
+    });
+
+    testWidgets('WCAG 2.4.11: al 200 %, el aviso de error no tapa el (+)', (
+      tester,
+    ) async {
+      importer.copyError = const ImageImportFailure(
+        ImageImportError.unsupportedType,
+      );
+      await pumpEditorBig(tester);
+      await tester.ensureVisible(_plus);
+      await tester.pumpAndSettle();
+      await tester.tap(_plus);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Subir imagen'));
+      await tester.pumpAndSettle();
+      // La tarjeta visible (el SnackBar incluye su margen transparente).
+      final snack = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(SnackBar),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(snack.overlaps(tester.getRect(_plus)), isFalse);
+      expect(snack.top, greaterThanOrEqualTo(0));
+    });
+
+    testWidgets('mientras se prepara otra, el lector no lee la imagen tapada', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpEditorBig(tester, task: await imageTask('t1', text: 'Horario'));
+      importer.sanitizeDelay = const Duration(seconds: 5);
+      await tester.ensureVisible(_plus);
+      await tester.pumpAndSettle();
+      await tester.tap(_plus);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Subir imagen'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Preparando imagen…'), findsOneWidget);
+      expect(find.bySemanticsLabel('Foto'), findsNothing);
+      await tester.pump(const Duration(seconds: 5));
       handle.dispose();
     });
   });

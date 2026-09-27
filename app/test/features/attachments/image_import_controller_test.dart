@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/app/providers.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
@@ -155,6 +157,38 @@ void main() {
     expect(state().preparing, isFalse);
     expect(await staging(), isEmpty);
     expect(registry.active, isEmpty);
+  });
+
+  testWidgets('CA-007-14: aunque cancelar se cuelgue (proveedor sin red), a '
+      'los 20 s se avisa y no queda nada', (tester) async {
+    importer
+      ..sanitizeDelay = const Duration(seconds: 60)
+      ..cancelHangs = true;
+    final done = ctrl().pick(AttachmentOrigin.gallery);
+    await tester.pump(const Duration(seconds: 20));
+    await done;
+    expect(state().error, ImageImportError.unreadable);
+    expect(state().preparing, isFalse);
+    expect(await staging(), isEmpty);
+    await tester.pump(const Duration(seconds: 60));
+  });
+
+  testWidgets('CA-007-15: aunque cancelar se cuelgue, "Cancelar" termina en '
+      '2 s como mucho y no queda nada', (tester) async {
+    importer
+      ..sanitizeDelay = const Duration(seconds: 60)
+      ..cancelHangs = true;
+    unawaited(ctrl().pick(AttachmentOrigin.gallery));
+    await tester.pump(const Duration(seconds: 1));
+    expect(state().preparing, isTrue);
+    var cancelled = false;
+    unawaited(ctrl().cancel().then((_) => cancelled = true));
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(cancelled, isTrue);
+    expect(state().preparing, isFalse);
+    expect(await staging(), isEmpty);
+    await tester.pump(const Duration(seconds: 60));
   });
 
   testWidgets('CA-007-02/03: sin cámara se avisa; cancelar el selector no '
