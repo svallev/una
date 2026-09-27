@@ -4,19 +4,22 @@ import 'dart:typed_data';
 import 'package:app/data/attachments/file_attachment_store.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/domain/entities/attachment.dart';
+import 'package:app/domain/entities/pdf_position.dart';
+import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/domain/ports/image_importer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _bytes = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9]);
 
-StagedImage _staged(String id, {int width = 4000, int height = 3000}) => (
-  id: id,
-  origin: AttachmentOrigin.camera,
-  width: width,
-  height: height,
-  byteSize: 4,
-);
+StagedImage _staged(String id, {int width = 4000, int height = 3000}) =>
+    StagedImage(
+      id: id,
+      origin: AttachmentOrigin.camera,
+      width: width,
+      height: height,
+      byteSize: 4,
+    );
 
 List<String> _names(StagedImage s) {
   final tiles = ImageTiles(s.width, s.height);
@@ -103,6 +106,78 @@ void _contract(
       },
     );
 
+    StagedPdf pdf(String id) => StagedPdf(
+      id: id,
+      byteSize: 2400000,
+      pageCount: 3,
+      width: 595,
+      height: 842,
+      originalName: 'Programa.pdf',
+    );
+
+    test('CA-008-07: commit de un PDF guarda nombre, páginas y tipo', () async {
+      stage('p1', 'document.pdf');
+      stage('p1', 'screen.jpg');
+      final at = DateTime.utc(2026, 9, 27);
+      final a = await store.commit(pdf('p1'), at);
+      expect(a.kind, AttachmentKind.pdf);
+      expect(a.origin, AttachmentOrigin.file);
+      expect(a.mime, 'application/pdf');
+      expect(
+        (a.byteSize, a.pageCount, a.width, a.height),
+        (2400000, 3, 595, 842),
+      );
+      expect(a.originalName, 'Programa.pdf');
+      expect(a.createdAt, at);
+      expect(exists('p1', 'document.pdf'), isTrue);
+      expect(await store.stagingIds(), isEmpty);
+      expect(await store.check(a), AttachmentFiles.ok);
+    });
+
+    test('CA-008-18: sin la versión de pantalla se regenera; sin el PDF, no disponible', () async {
+      stage('p1', 'document.pdf');
+      stage('p1', 'screen.jpg');
+      final a = await store.commit(pdf('p1'), DateTime.utc(2026));
+      remove('p1', 'screen.jpg');
+      expect(await store.check(a), AttachmentFiles.derivedMissing);
+      remove('p1', 'document.pdf');
+      expect(await store.check(a), AttachmentFiles.missing);
+    });
+
+    test(
+      'CA-008-09: la última posición se guarda y se lee; sin ella, null',
+      () async {
+        stage('p1', 'document.pdf');
+        stage('p1', 'screen.jpg');
+        await store.commit(pdf('p1'), DateTime.utc(2026));
+        expect(await store.readPosition('p1'), isNull);
+        await store.writePosition(
+          'p1',
+          const PdfPosition(page: 3, offset: 0.4),
+        );
+        expect(
+          await store.readPosition('p1'),
+          const PdfPosition(page: 3, offset: 0.4),
+        );
+        await store.writePosition('p1', const PdfPosition(page: 2, offset: 0));
+        expect(
+          await store.readPosition('p1'),
+          const PdfPosition(page: 2, offset: 0),
+        );
+      },
+    );
+
+    test('CA-008-16: la posición se borra con el adjunto y no se escribe si ya no existe', () async {
+      stage('p1', 'document.pdf');
+      stage('p1', 'screen.jpg');
+      await store.commit(pdf('p1'), DateTime.utc(2026));
+      await store.writePosition('p1', const PdfPosition(page: 2, offset: 0.5));
+      await store.delete('p1');
+      await store.writePosition('p1', const PdfPosition(page: 2, offset: 0.5));
+      expect(await store.storedIds(), isEmpty);
+      expect(await store.readPosition('p1'), isNull);
+    });
+
     test('CA-007-19: estado de los archivos', () async {
       final s = _staged('t', width: 1080, height: 20000);
       stageAll(s);
@@ -179,12 +254,18 @@ void main() {
         store.file('attachments/a1/screen.jpg').path,
         '${tmp.path}/files/attachments/a1/screen.jpg',
       );
+      // Spec 008: el PDF y su posición.
+      store
+        ..file('attachments/a1/document.pdf')
+        ..file('attachments/a1/position.json');
       for (final bad in [
         '../una.sqlite',
         'attachments/../../x.jpg',
         'attachments/a1/../../x.jpg',
         '/etc/passwd',
         'attachments/a1/screen.png',
+        'attachments/a1/document.exe',
+        'attachments/a1/../../x.pdf',
         'app_flutter/una.sqlite',
       ]) {
         expect(() => store.file(bad), throwsArgumentError, reason: bad);

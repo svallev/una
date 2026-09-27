@@ -216,7 +216,7 @@ class WebImageImporter implements ImageImporter {
         store
           ..putStaging(id, 'screen.jpg', screenJpeg)
           ..putStaging(id, 'thumb.jpg', thumbJpeg);
-        return (
+        return StagedImage(
           id: id,
           origin: origin,
           width: stored.width,

@@ -1,5 +1,8 @@
 import '../entities/attachment.dart';
 import '../entities/image_type.dart';
+import '../entities/staged_attachment.dart';
+
+export '../entities/staged_attachment.dart';
 
 /// Imagen elegida en el selector o hecha con la cámara, aún sin copiar.
 /// [token] es opaco: solo lo entiende el importador que lo creó.
@@ -8,16 +11,6 @@ typedef PickedImage = ({String token, AttachmentOrigin origin});
 /// Archivo copiado a la zona de preparación: tamaño y primeros bytes, para
 /// decidir el tipo por el contenido.
 typedef CopiedImage = ({int byteSize, List<int> head});
-
-/// Imagen ya limpia en la zona de preparación (versión completa en teselas,
-/// versión de pantalla y miniatura), lista para guardarse con la tarea.
-typedef StagedImage = ({
-  String id,
-  AttachmentOrigin origin,
-  int width,
-  int height,
-  int byteSize,
-});
 
 /// Por qué no se ha podido importar (spec 007 §5).
 enum ImageImportError {

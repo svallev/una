@@ -29,16 +29,18 @@ class CreateTask {
   final IdGenerator ids;
   final ColorPicker colors;
 
-  /// Si falla al guardar, la [image] vuelve a la preparación para poder
+  /// Si falla al guardar, el [attachment] vuelve a la preparación para poder
   /// reintentar; la preparación la descarta el editor al cancelar.
   Future<Task> call(
     String rawText, {
     QueuePosition position = QueuePosition.top,
     int? colorKey,
-    StagedImage? image,
+    StagedAttachment? attachment,
   }) async {
-    final text = validateTaskContent(rawText, hasAttachment: image != null);
-    if (image != null) position = QueuePosition.top;
+    final staged = attachment;
+    final text = validateTaskContent(rawText, hasAttachment: staged != null);
+    // Los adjuntos van siempre arriba (R5, CA-007-05, CA-008-05).
+    if (staged != null) position = QueuePosition.top;
     final current = await repository.currentTask();
     Future<String> rankFor() async => switch (position) {
       QueuePosition.top => Rank.before(await repository.firstPendingRank()),
@@ -51,11 +53,11 @@ class CreateTask {
       await repository.renumberPending(now);
       rank = await rankFor();
     }
-    final attachment = image == null ? null : await store.commit(image, now);
+    final saved = staged == null ? null : await store.commit(staged, now);
     final task = Task(
       id: ids.newId(),
       text: text,
-      attachment: attachment,
+      attachment: saved,
       status: TaskStatus.pending,
       rank: rank,
       colorKey: colorKey ?? colors.pick(currentColorKey: current?.colorKey),
@@ -65,10 +67,10 @@ class CreateTask {
     try {
       await repository.insert(task);
     } on Object {
-      if (attachment != null) await janitor.restage(attachment.id);
+      if (saved != null) await janitor.restage(saved.id);
       rethrow;
     }
-    if (attachment != null) janitor.release(attachment.id);
+    if (saved != null) janitor.release(saved.id);
     return task;
   }
 }

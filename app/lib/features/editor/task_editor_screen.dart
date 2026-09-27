@@ -299,7 +299,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         if (await _write(
           () => ref
               .read(createTaskProvider)
-              .call(_controller.text, colorKey: _colorKey, image: image),
+              .call(_controller.text, colorKey: _colorKey, attachment: image),
         )) {
           _created();
         }
@@ -308,7 +308,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         if (await _write(
           () => ref
               .read(createTaskProvider)
-              .call(_controller.text, colorKey: _colorKey, image: image),
+              .call(_controller.text, colorKey: _colorKey, attachment: image),
         )) {
           _created();
         }

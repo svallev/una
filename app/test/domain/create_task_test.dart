@@ -125,7 +125,7 @@ void main() {
         final t = await create(
           '   ',
           position: QueuePosition.end,
-          image: staged,
+          attachment: staged,
         );
         expect(t.text, isNull);
         expect(t.attachment!.id, 'img');
@@ -140,7 +140,7 @@ void main() {
     test('CA-007-04: con imagen, el texto se guarda recortado', () async {
       final t = await create(
         '  Horario  ',
-        image: stageImage(store, 'img', origin: AttachmentOrigin.gallery),
+        attachment: stageImage(store, 'img', origin: AttachmentOrigin.gallery),
       );
       expect(t.text, 'Horario');
       expect(
@@ -163,7 +163,10 @@ void main() {
         );
         registry.add('img');
         final staged = stageImage(store, 'img');
-        await expectLater(c('x', image: staged), throwsA(isA<StateError>()));
+        await expectLater(
+          c('x', attachment: staged),
+          throwsA(isA<StateError>()),
+        );
         expect(await store.storedIds(), isEmpty);
         expect(await store.stagingIds(), {'img'});
         expect(registry.active, {'img'});

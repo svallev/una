@@ -47,6 +47,19 @@ Attachment _image(
   createdAt: DateTime.utc(2026, 9, 26),
 );
 
+Attachment _pdf(String id, {String? name = 'Programa.pdf'}) => Attachment(
+  id: id,
+  kind: AttachmentKind.pdf,
+  origin: AttachmentOrigin.file,
+  mime: 'application/pdf',
+  byteSize: 2400000,
+  width: 595,
+  height: 842,
+  createdAt: DateTime.utc(2026, 9, 27),
+  originalName: name,
+  pageCount: 12,
+);
+
 /// Misma batería para todas las implementaciones del puerto (docs/testing.md).
 void _contract(
   String name,
@@ -251,6 +264,28 @@ void _contract(
       expect((await repo.watchCurrentTask().first)!.attachment!.id, 'img-a');
       expect(await repo.attachmentIds(), {'img-a', 'img-c'});
     });
+
+    test(
+      'CA-008-07/19: una tarea con PDF vuelve con su nombre y sus páginas',
+      () async {
+        await repo.insert(_task('a', 'C', attachment: _pdf('pdf-a')));
+        await repo.insert(
+          _task(
+            'b',
+            'M',
+            text: 'Congreso',
+            attachment: _pdf('pdf-b', name: null),
+          ),
+        );
+        final current = (await repo.currentTask())!;
+        expect(current.attachment, _pdf('pdf-a'));
+        expect(current.attachment!.isPdf, isTrue);
+        final b = (await repo.findById('b'))!.attachment!;
+        expect(b.originalName, isNull);
+        expect(b.pageCount, 12);
+        expect(await repo.attachmentIds(), {'pdf-a', 'pdf-b'});
+      },
+    );
 
     test('CA-007-06: añadir, sustituir y quitar la imagen conserva posición y color', () async {
       await repo.insert(_task('a', 'C', color: 3));

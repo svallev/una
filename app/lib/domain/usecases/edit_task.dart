@@ -19,8 +19,8 @@ final class RemoveAttachment extends AttachmentEdit {
 }
 
 final class ReplaceAttachment extends AttachmentEdit {
-  const ReplaceAttachment(this.image);
-  final StagedImage image;
+  const ReplaceAttachment(this.staged);
+  final StagedAttachment staged;
 }
 
 /// Edita el texto y el adjunto de una tarea (R11, specs 005 y 007). Conserva su
@@ -65,7 +65,7 @@ class EditTask {
     final next = switch (attachment) {
       KeepAttachment() => old,
       RemoveAttachment() => null,
-      ReplaceAttachment(:final image) => await store.commit(image, at),
+      ReplaceAttachment(:final staged) => await store.commit(staged, at),
     };
     final isNew = attachment is ReplaceAttachment;
     final bool saved;
