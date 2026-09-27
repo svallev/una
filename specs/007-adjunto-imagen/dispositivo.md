@@ -60,7 +60,7 @@ fvm flutter test integration_test/image_flow_test.dart -d emulator-5554
 
 ## 3. Rendimiento en el Xiaomi (T-007-23, con permiso)
 
-**Memoria y fluidez del visor.** Presupuesto: < 250 MB.
+**Memoria y fluidez del visor.** Presupuesto: ampliar a ×8 añade < 200 MB sobre la tarea actual (redefinido el 2026-09-27, `docs/architecture.md` §7).
 
 ```bash
 fvm flutter drive --profile --no-dds --keep-app-running \
@@ -70,8 +70,10 @@ fvm flutter drive --profile --no-dds --keep-app-running \
 
 Resultados en `build/viewer_zoom_frames.json` y `build/viewer_memory_mb.json`. Se copian a `docs/perf/baseline.md`.
 
-- [ ] RSS máxima < 250 MB.
-- [ ] Fotogramas del zoom dentro del presupuesto de 120 Hz.
+La medida que manda es `dumpsys meminfo` con la app *profile* normal (`flutter build apk --profile` + `adb install -r`), en un proceso nuevo y con la tarea ya guardada. El test es solo un aviso: arrastra la importación y no ve toda la memoria de la GPU.
+
+- [x] Memoria: el visor a ×8 añade +150 MB de PSS (`dumpsys`) y +89 MB de RSS en el test. **[Hecho 2026-09-27]** Detalle en `docs/perf/baseline.md`. El presupuesto anterior (< 250 MB en total) no se podía cumplir: la app ya ocupa ~350 MB de RSS en la pantalla principal.
+- [x] Fotogramas del zoom dentro del presupuesto de 120 Hz. **[Hecho 2026-09-27]** Peor fotograma: 2,6 ms; ninguno fuera de presupuesto.
 
 **Arranque en frío con imagen** (CA-007-08: p50 < 1 s, con la imagen ya visible).
 

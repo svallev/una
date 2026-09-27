@@ -59,6 +59,35 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 
 - **[Hecho]** Muy por debajo del objetivo, incluso para 120 Hz. Mover solo la fila levantada (sin reconstruir la lista en cada movimiento) redujo a la mitad el coste del arrastre en el emulador.
 
+## Visor de imágenes (spec 007, T-007-23)
+
+- **Fecha:** 2026-09-27 · **Dispositivo:** Xiaomi 15T Pro (120 Hz, 1280 × 2772)
+- **Imagen:** PNG de 50 MP (`px50.png`), guardada reducida a 24 MP con teselas de 4096 px.
+- **Presupuesto** (`docs/architecture.md` §7, redefinido por el propietario el 2026-09-27): ampliar a ×8 añade < 200 MB sobre la tarea actual. El anterior, < 250 MB en total, era inalcanzable: la app ya ocupa ~350 MB de RSS en la pantalla principal.
+
+**Memoria (la medida que manda).** App *profile* normal (`flutter build apk --profile` + `adb install -r`), proceso nuevo, con la tarea de 24 MP ya guardada; `adb shell dumpsys meminfo invalid.pending.app.profile` en cada paso (doble toque con `adb shell input tap`).
+
+| Momento | PSS total | RSS total | Texturas GPU (GL mtrack) |
+|---|---|---|---|
+| Tarea actual con imagen | 235 MB | 350 MB | 41 MB |
+| Visor ×1 | 241 MB | 359 MB | 61 MB |
+| Visor ×2,5 | 273 MB | 392 MB | 94 MB |
+| Visor ×8 | 385 MB | 503 MB | 206 MB |
+| Visor ×8 tras desplazar | 358 MB | 476 MB | 178 MB |
+
+- **[Hecho]** El visor a ×8 añade **+150 MB de PSS** (+153 MB de RSS): dentro del presupuesto. Casi todo son texturas: a ×8 cada tesela visible se decodifica entera (4096² × 4 B ≈ 64 MB).
+- **[Hecho]** `viewer_perf_test` (aviso automático, RSS del proceso): +89 MB, pico de 625 MB de toda la ejecución. Ese pico es la **importación** de 50 MP, que se decodifica en el mismo proceso. La RSS del proceso no cuenta toda la memoria de la GPU, por eso da menos que `dumpsys`.
+- **[Pendiente]** En gama media (R-02), y sobre todo en Android 8 con 2–3 GB, el pico de la importación (~620 MB) es el riesgo, más que el visor. Si hace falta, teselas más pequeñas reducirían el visor a unos 4–16 MB de texturas.
+
+**Fluidez del zoom** (`flutter drive --profile … --target=integration_test/viewer_perf_test.dart`: doble toque a ×2,5 y ×8, con desplazamientos).
+
+| Ejecución | Fotogramas | Build medio / p90 / peor | Raster medio / p90 / p99 / peor | Fuera de presupuesto |
+|---|---|---|---|---|
+| 1 | 115 | 0,5 / 0,9 / 2,6 ms | 1,1 / 1,7 / 2,1 / 2,2 ms | 0 |
+| 2 | 117 | 0,6 / 0,9 / 2,4 ms | 1,0 / 1,6 / 2,0 / 2,4 ms | 0 |
+
+- **[Hecho]** Muy por debajo del presupuesto de 120 Hz (8,3 ms).
+
 ## Cómo repetir la medición
 
 ```bash

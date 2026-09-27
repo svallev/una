@@ -227,7 +227,7 @@ Regla: nada detrás de un flag llega a producción sin su spec aprobada.
 | Animaciones | 60 fps, 0 fotogramas > 32 ms en el primer uso | DevTools / `FrameTiming` en un test de rendimiento |
 | Abrir PDF (primera página) | < 500 ms | spike S3 |
 | Tamaño de descarga | Android < 25 MB (por ABI, AAB); iOS < 40 MB | `flutter build --analyze-size` en CI (aviso si crece > 5 %) |
-| Memoria | < 250 MB con el visor abierto en la imagen más grande que se guarda (24 MP) | DevTools |
+| Memoria del visor | Ampliar a ×8 la imagen más grande que se guarda (24 MP) añade < 200 MB sobre la tarea actual (antes: < 250 MB en total, inalcanzable: la app ya ocupa ~350 MB de RSS en la pantalla principal del Xiaomi; decisión del propietario, 2026-09-27) | `dumpsys meminfo` (PSS y RSS totales, con la GPU) en un proceso nuevo; aviso automático en `viewer_perf_test` |
 
 ## 8. Internacionalización
 

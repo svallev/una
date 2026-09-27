@@ -1,6 +1,9 @@
 // Memoria y fluidez del visor con la imagen más grande que se guarda (spec 007,
-// T-007-23; presupuesto: < 250 MB, docs/architecture.md §7). En el móvil, en
-// modo profile y con permiso del propietario:
+// T-007-23). Presupuesto (docs/architecture.md §7): el visor a ×8 añade
+// < 200 MB sobre la tarea actual. Aquí es solo un aviso: la RSS del proceso
+// no cuenta toda la memoria de la GPU y arrastra la importación de 50 MP. La
+// medida que manda es `dumpsys meminfo` en un proceso nuevo (dispositivo.md §3).
+// En el móvil, en modo profile y con permiso del propietario:
 //   flutter drive --profile --no-dds --keep-app-running \
 //     --driver=test_driver/perf_driver.dart \
 //     --target=integration_test/viewer_perf_test.dart -d <serial>
@@ -96,14 +99,19 @@ void main() {
     // Deja que se decodifiquen las teselas a ×8 y mide.
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
+    final rssAtX8 = ProcessInfo.currentRss;
     binding.reportData = {
       ...?binding.reportData,
       'viewer_memory_mb': {
         'rss_before_viewer': _mb(rssBefore),
-        'rss_at_x8': _mb(ProcessInfo.currentRss),
+        'rss_at_x8': _mb(rssAtX8),
+        'viewer_added': _mb(rssAtX8 - rssBefore),
+        // Pico de todo el proceso, importación incluida: solo informativo.
         'max_rss': _mb(ProcessInfo.maxRss),
       },
     };
-    expect(_mb(ProcessInfo.maxRss), lessThan(250));
+    // Si falla, el driver no escribe el informe: las cifras quedan en el log.
+    debugPrint('viewer_memory_mb: ${binding.reportData!['viewer_memory_mb']}');
+    expect(_mb(rssAtX8 - rssBefore), lessThan(200));
   });
 }
