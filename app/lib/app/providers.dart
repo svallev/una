@@ -5,12 +5,14 @@ import 'package:uuid/uuid.dart';
 
 import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
+import '../data/links/native_link_opener.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/attachment_store.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
 import '../domain/ports/image_importer.dart';
+import '../domain/ports/link_opener.dart';
 import '../domain/ports/pdf_importer.dart';
 import '../domain/ports/task_repository.dart';
 import '../domain/services/attachment_janitor.dart';
@@ -85,6 +87,12 @@ final importPdfProvider = Provider<ImportPdf>(
     janitor: ref.watch(attachmentJanitorProvider),
     ids: ref.watch(idGeneratorProvider),
   ),
+);
+
+/// Abre los enlaces de un PDF (spec 008): el canal nativo; en los tests, uno
+/// falso.
+final linkOpenerProvider = Provider<LinkOpener>(
+  (ref) => const NativeLinkOpener(),
 );
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".

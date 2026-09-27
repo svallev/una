@@ -16,6 +16,8 @@ class MainActivity : FlutterActivity() {
         images = ImageImport(this).also {
             MethodChannel(messenger, ImageImport.CHANNEL).setMethodCallHandler(it)
         }
+        // Enlaces de un PDF (spec 008).
+        MethodChannel(messenger, LinkOpener.CHANNEL).setMethodCallHandler(LinkOpener(this))
         val imageRotation = ImageRotation(this).also { rotation = it }
         // Pantalla encendida mientras se ve un adjunto (spec 007, CA-007-12) y
         // giro de la tarea actual con imagen (CA-007-11).

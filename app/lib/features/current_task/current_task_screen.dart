@@ -10,6 +10,7 @@ import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../data/platform/image_rotation.dart';
+import '../../domain/entities/link_target.dart';
 import '../../domain/entities/pdf_position.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/edit_task.dart';
@@ -22,6 +23,7 @@ import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../attachments/attachment_health.dart';
 import '../attachments/keep_screen_on_controller.dart';
+import '../attachments/link_confirm_sheet.dart';
 import '../attachments/missing_attachment_card.dart';
 import '../attachments/pdf_labels.dart';
 import '../attachments/pdf_position_controller.dart';
@@ -400,6 +402,7 @@ class CurrentTaskScreen extends ConsumerWidget {
           UnaPalettes.classic[task.colorKey % UnaPalettes.classic.length],
       initialPosition: ref.read(position).position,
       onPosition: ref.read(position.notifier).update,
+      onLink: (target) => unawaited(_openLink(context, ref, target)),
       onLeave: (left) {
         unawaited(
           persistPdfPosition(
@@ -711,5 +714,21 @@ class _Order extends StatelessWidget {
     container: true,
     sortKey: OrdinalSortKey(order),
     child: FocusTraversalOrder(order: NumericFocusOrder(order), child: child),
+  );
+}
+
+/// Enlace de un PDF (CA-008-12): se confirma y, si se acepta, se abre fuera;
+/// si no hay app, el aviso. El foco vuelve a la tarea.
+Future<void> _openLink(
+  BuildContext context,
+  WidgetRef ref,
+  LinkTarget target,
+) async {
+  final open = await showLinkConfirmSheet(context, target);
+  if (open != true || !context.mounted) return;
+  final opened = await ref.read(linkOpenerProvider).open(target);
+  if (opened || !context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(AppLocalizations.of(context).errNoAppForLink)),
   );
 }
