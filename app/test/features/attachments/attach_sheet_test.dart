@@ -70,7 +70,7 @@ void main() {
         for (final (title, hint) in [
           ('Hacer foto', 'Con la cámara · va arriba del todo'),
           ('Subir imagen', 'Desde tu galería · va arriba del todo'),
-          ('Subir archivo', 'PDF, Word, Excel… · va arriba del todo'),
+          ('Subir archivo', 'PDF · va arriba del todo'),
           ('Cargar URL', 'Una página web · va arriba del todo'),
         ]) {
           expect(find.text(title), findsOneWidget);
@@ -98,7 +98,7 @@ void main() {
     for (final label in [
       'Hacer foto. Con la cámara, va arriba del todo',
       'Subir imagen. Desde tu galería, va arriba del todo',
-      'Subir archivo. PDF, Word, Excel…, va arriba del todo',
+      'Subir archivo. PDF, va arriba del todo',
       'Cargar URL. Una página web, va arriba del todo',
     ]) {
       expect(

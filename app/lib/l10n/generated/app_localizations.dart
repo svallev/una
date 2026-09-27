@@ -578,16 +578,16 @@ abstract class AppLocalizations {
   /// **'Desde tu galería · va arriba del todo'**
   String get attachPickImageHint;
 
-  /// Fila de la hoja "Añadir"; sin efecto hasta la spec 008 (DEV-18)
+  /// Fila de la hoja "Añadir": sube un PDF (spec 008)
   ///
   /// In es, this message translates to:
   /// **'Subir archivo'**
   String get attachPickFile;
 
-  /// Segunda línea de "Subir archivo" (DEV-02)
+  /// Segunda línea de "Subir archivo": solo PDF en la v1 (DEV-02, ADR-0014)
   ///
   /// In es, this message translates to:
-  /// **'PDF, Word, Excel… · va arriba del todo'**
+  /// **'PDF · va arriba del todo'**
   String get attachPickFileHint;
 
   /// Fila de la hoja "Añadir"; sin efecto hasta la spec 009 (DEV-18)
@@ -709,6 +709,186 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{text}. Adjunto no disponible'**
   String a11yAttachmentMissing(String text);
+
+  /// Insignia del listado y lectura de una tarea con PDF. Spec 008 §7
+  ///
+  /// In es, this message translates to:
+  /// **'PDF'**
+  String get attachmentPdf;
+
+  /// Tamaño del PDF en la franja y en las lecturas; `size` con un decimal y el separador del idioma. Spec 008 §7
+  ///
+  /// In es, this message translates to:
+  /// **'{size} MB'**
+  String docSizeMb(String size);
+
+  /// Tamaño del PDF por debajo de 1 MB (entero), como el prototipo. Spec 008 §7
+  ///
+  /// In es, this message translates to:
+  /// **'{size} KB'**
+  String docSizeKb(String size);
+
+  /// Importación de un PDF que tarda más de 400 ms. CA-008-15
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando PDF…'**
+  String get pdfPreparing;
+
+  /// Cancela la importación del PDF. CA-008-15
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get pdfPreparingCancel;
+
+  /// Solo lector de pantalla: lectura y anuncio de una página del PDF (no hay indicador visible). CA-008-20/21
+  ///
+  /// In es, this message translates to:
+  /// **'Página {page} de {total}'**
+  String pdfPageA11y(int page, int total);
+
+  /// Acción del lector en el PDF. CA-008-20
+  ///
+  /// In es, this message translates to:
+  /// **'Página siguiente'**
+  String get pdfNextPage;
+
+  /// Acción del lector en el PDF. CA-008-20
+  ///
+  /// In es, this message translates to:
+  /// **'Página anterior'**
+  String get pdfPrevPage;
+
+  /// Acción del lector en el PDF. CA-008-10
+  ///
+  /// In es, this message translates to:
+  /// **'Ampliar'**
+  String get pdfZoomIn;
+
+  /// Acción del lector en el PDF. CA-008-10
+  ///
+  /// In es, this message translates to:
+  /// **'Reducir'**
+  String get pdfZoomOut;
+
+  /// Acción del lector en el PDF: vuelve a ×1. CA-008-10
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustar al ancho'**
+  String get pdfZoomFit;
+
+  /// Botón de la tarea con imagen o PDF en horizontal. CA-008-11
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a vertical'**
+  String get backToPortrait;
+
+  /// Lectura de la tarea actual con PDF y texto. CA-008-20
+  ///
+  /// In es, this message translates to:
+  /// **'{text}. Con PDF, {name}, {size}'**
+  String a11yWithPdf(String text, String name, String size);
+
+  /// Lectura de la tarea actual con PDF sin texto. CA-008-20
+  ///
+  /// In es, this message translates to:
+  /// **'{name}. PDF, {size}'**
+  String a11yPdfOnly(String name, String size);
+
+  /// Lectura de la fila del listado con PDF; sin texto, `text` es el nombre del archivo. CA-008-20
+  ///
+  /// In es, this message translates to:
+  /// **'{text}. Con PDF'**
+  String a11yRowWithPdf(String text);
+
+  /// Anuncio tras una acción de zoom del PDF. CA-008-10/21
+  ///
+  /// In es, this message translates to:
+  /// **'Zoom {percent} %'**
+  String a11yZoomLevel(int percent);
+
+  /// Etiqueta de un enlace web del PDF. CA-008-12
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace a {host}'**
+  String pdfLinkWeb(String host);
+
+  /// Etiqueta de un enlace interno del PDF. CA-008-12
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace a la página {page}'**
+  String pdfLinkPage(int page);
+
+  /// Etiqueta de un enlace de correo o teléfono del PDF. CA-008-12
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace a {target}'**
+  String pdfLinkApp(String target);
+
+  /// Anuncio al volver del selector con un PDF. CA-008-21
+  ///
+  /// In es, this message translates to:
+  /// **'PDF añadido'**
+  String get a11yPdfAdded;
+
+  /// Error de importación: el contenido no es un PDF. Spec 008 §5
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se pueden subir archivos PDF.'**
+  String get errPdfType;
+
+  /// Error de importación. Spec 008 §5
+  ///
+  /// In es, this message translates to:
+  /// **'El PDF es demasiado grande (máx. {max} MB).'**
+  String errPdfTooBig(int max);
+
+  /// Error de importación. Spec 008 §5
+  ///
+  /// In es, this message translates to:
+  /// **'El PDF tiene demasiadas páginas (máx. {max}).'**
+  String errPdfTooManyPages(int max);
+
+  /// Error de importación: pide contraseña para abrirse. CL-008-1
+  ///
+  /// In es, this message translates to:
+  /// **'Este PDF está protegido con contraseña.'**
+  String get errPdfProtected;
+
+  /// Error de importación (ilegible, sin páginas o tiempo agotado). Spec 008 §5
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido leer este PDF.'**
+  String get errPdfUnreadable;
+
+  /// Enlace del PDF sin navegador ni app que lo abra. CA-008-12
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ninguna app para abrir este enlace.'**
+  String get errNoAppForLink;
+
+  /// Confirmación de un enlace web (PDF, spec 008; también la 009)
+  ///
+  /// In es, this message translates to:
+  /// **'¿Abrir {host} en el navegador?'**
+  String openInBrowserConfirm(String host);
+
+  /// Confirmación de un enlace mailto: o tel: del PDF. CA-008-12
+  ///
+  /// In es, this message translates to:
+  /// **'¿Abrir {target} con otra app?'**
+  String openInAppConfirm(String target);
+
+  /// Botón de la confirmación de un enlace. CA-008-12
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir'**
+  String get linkConfirmOpen;
+
+  /// Botón de la confirmación de un enlace. CA-008-12
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get linkConfirmCancel;
 }
 
 class _AppLocalizationsDelegate

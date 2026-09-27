@@ -41,3 +41,4 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | Tareas | Estado | Commit |
 |---|---|---|
 | T-008-01 | **Hecha.** `pdfrx` 2.6.5 fijada. PDFium (`chromium/7811`, sin V8) fijado por sha256 en `tools/pdfium.lock` y comprobado en CI (`tools/check-pdfium.sh`; propietario, 2026-09-27, opción 1). Release sin permisos; `url_launcher` transitivo con una actividad no exportada; licencias correctas; web con el WASM local (la CSP de la web de pruebas se revisa en T-008-21). El tamaño de CI pasa a medirse comprimido (arm64: 27 MB en disco, ~12,7 MB comprimido) | (este) |
+| T-008-02, 03 | **Hecha.** Tokens del PDF (zoom ×1,5/×2,5/×4 y su duración, "Volver a vertical" 48, separación de la franja); textos ES/EN de la §7 y `attachPickFileHint` = "PDF · va arriba del todo". Los *goldens* de la hoja "Añadir" se regeneran en T-008-24 | (este) |

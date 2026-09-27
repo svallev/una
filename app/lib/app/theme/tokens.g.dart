@@ -231,6 +231,8 @@ abstract final class UnaSizes {
   static const double attachTextField = 96.0;
   static const double attachPreviewTop = 14.0;
   static const double removeAttachment = 48.0;
+  static const double backToPortrait = 48.0;
+  static const double pdfStripGap = 10.0;
   static const double removeAttachmentIcon = 14.0;
   static const double removeAttachmentStroke = 3.4;
 }
@@ -381,6 +383,9 @@ abstract final class UnaMotion {
 
   /// Vuelta al 100 % al soltar el pellizco en la tarea con imagen (CA-007-10); con reducir movimiento, salta
   static const Duration imageZoomBack = Duration(milliseconds: 250);
+
+  /// Cambio de zoom del PDF por doble toque, acción o tecla (CA-008-10); con reducir movimiento, salta
+  static const Duration pdfZoom = Duration(milliseconds: 200);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);
@@ -393,4 +398,7 @@ abstract final class UnaMotion {
   static const double dragThreshold = 6.0;
   static const double dragTilt = -1.5;
   static const double imageZoomMax = 8.0;
+  static const double pdfZoomMax = 4.0;
+  static const double pdfZoomStep = 1.5;
+  static const double pdfZoomDoubleTap = 2.5;
 }
