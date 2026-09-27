@@ -25,10 +25,12 @@ class TaskThumbnail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final health = ref.watch(attachmentHealthProvider(attachment));
     final badge = _Badge(kindLabel);
+    final thumb = attachment.thumbPath;
     return ExcludeSemantics(
       child: SizedBox.square(
         dimension: UnaSizes.listThumb,
-        child: health.health == AttachmentHealth.missing
+        // Sin miniatura (un PDF, CA-008-19) o si falta: la insignia.
+        child: thumb == null || health.health == AttachmentHealth.missing
             ? badge
             : DecoratedBox(
                 position: DecorationPosition.foreground,
@@ -42,9 +44,7 @@ class TaskThumbnail extends ConsumerWidget {
                 ),
                 child: Image(
                   key: ValueKey(health.generation),
-                  image: ref
-                      .watch(attachmentImagesProvider)
-                      .stored(attachment.thumbPath),
+                  image: ref.watch(attachmentImagesProvider).stored(thumb),
                   fit: BoxFit.cover,
                   gaplessPlayback: true,
                   errorBuilder: (context, _, _) {

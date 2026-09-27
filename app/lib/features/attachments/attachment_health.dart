@@ -86,7 +86,8 @@ class AttachmentHealthController extends Notifier<AttachmentHealthState> {
       _repaired = true;
       // Que se vuelvan a leer del disco, no de la caché.
       await images.stored(attachment.screenPath).evict();
-      await images.stored(attachment.thumbPath).evict();
+      final thumb = attachment.thumbPath;
+      if (thumb != null) await images.stored(thumb).evict();
       if (!ref.mounted) return;
       state = AttachmentHealthState(
         AttachmentHealth.ok,

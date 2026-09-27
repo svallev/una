@@ -143,8 +143,9 @@ class FileAttachmentStore implements AttachmentStore {
         }
       }
     }
+    final thumb = attachment.thumbPath;
     if (!await present(attachment.screenPath) ||
-        !await present(attachment.thumbPath)) {
+        (thumb != null && !await present(thumb))) {
       return AttachmentFiles.derivedMissing;
     }
     return AttachmentFiles.ok;
