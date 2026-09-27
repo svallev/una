@@ -19,6 +19,7 @@ class TaskPdfArgs {
     required this.captionColor,
     required this.initialPosition,
     required this.onPosition,
+    this.onLeave,
     this.caption,
   });
 
@@ -36,8 +37,12 @@ class TaskPdfArgs {
   /// Dónde se dejó de ver (CA-008-09); null mientras se lee del disco.
   final PdfPosition? initialPosition;
 
-  /// Cada vez que cambia la posición visible (la pantalla la guarda al salir).
+  /// Cada vez que cambia la posición visible.
   final ValueChanged<PdfPosition> onPosition;
+
+  /// Se deja de ver el PDF (segundo plano, otra pantalla encima o se quita):
+  /// la pantalla guarda [PdfPosition] en el disco (CA-008-09).
+  final ValueChanged<PdfPosition>? onLeave;
 }
 
 /// El visor del PDF de la tarea actual. Se sustituye en los tests de widgets:
@@ -248,30 +253,55 @@ class TaskPdfView extends StatefulWidget {
 
 class _TaskPdfViewState extends State<TaskPdfView> {
   final _controller = PdfViewerController();
+  late final AppLifecycleListener _lifecycle;
   var _ready = false;
   var _restored = false;
   double _width = 0;
   double _bandPx = 0;
+  PdfPosition? _visible;
+  PdfPosition? _left;
+  bool _covered = false;
 
   @override
   void initState() {
     super.initState();
+    _visible = widget.args.initialPosition;
     _controller.addListener(_onMatrix);
+    _lifecycle = AppLifecycleListener(onHide: _leave);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Otra pantalla encima (menú, editor, listado): se guarda al taparse.
+    final covered = !(ModalRoute.isCurrentOf(context) ?? true);
+    if (covered && !_covered) _leave();
+    _covered = covered;
   }
 
   @override
   void dispose() {
+    _leave();
+    _lifecycle.dispose();
     _controller.removeListener(_onMatrix);
     super.dispose();
+  }
+
+  /// Guarda la posición si ha cambiado desde la última vez.
+  void _leave() {
+    final visible = _visible;
+    if (visible == null || visible == _left) return;
+    _left = visible;
+    widget.args.onLeave?.call(visible);
   }
 
   String get _caption => widget.args.caption ?? '';
 
   void _onMatrix() {
     if (!_controller.isReady || !_restored) return;
-    widget.args.onPosition(
-      positionIn(_controller.layout, _controller.visibleRect),
-    );
+    final position = positionIn(_controller.layout, _controller.visibleRect);
+    _visible = position;
+    widget.args.onPosition(position);
   }
 
   /// Hueco arriba (en unidades del documento) para la banda del texto.

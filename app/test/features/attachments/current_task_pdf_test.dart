@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart' show PdfPageLayout;
 
 import '../../support/attachments.dart';
+import '../../support/fake_pdf_importer.dart';
 import '../../support/fake_pdf_view.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
@@ -24,9 +25,11 @@ void main() {
   setUpAll(loadAppFonts);
 
   late MemoryAttachmentStore store;
+  late FakePdfImporter pdfs;
 
   setUp(() {
     store = MemoryAttachmentStore();
+    pdfs = FakePdfImporter(store);
     taskPdfCalls.clear();
   });
 
@@ -62,6 +65,7 @@ void main() {
       CurrentTaskScreen(task: task),
       overrides: [
         attachmentStoreProvider.overrideWithValue(store),
+        pdfImporterProvider.overrideWithValue(pdfs),
         ...fakePdfViews,
       ],
     );
@@ -191,4 +195,41 @@ void main() {
       );
     },
   );
+
+  group('CA-008-09 / CA-008-08: al dejar de verlo se guarda la posición', () {
+    testWidgets(
+      'en otra página: posición y versión de pantalla de esa página',
+      (tester) async {
+        await pumpScreen(tester, await pdfTask());
+        const left = PdfPosition(page: 5, offset: 0.5);
+        taskPdfCalls.last.onLeave!(left);
+        await tester.pumpAndSettle();
+        expect(await store.readPosition('p1'), left);
+        expect(pdfs.rendered, [('p1', left)]);
+      },
+    );
+
+    testWidgets('en la misma página: solo la posición', (tester) async {
+      await pumpScreen(tester, await pdfTask());
+      taskPdfCalls.last.onLeave!(const PdfPosition(page: 1, offset: 0.3));
+      await tester.pumpAndSettle();
+      expect(
+        await store.readPosition('p1'),
+        const PdfPosition(page: 1, offset: 0.3),
+      );
+      expect(pdfs.rendered, isEmpty);
+    });
+
+    testWidgets(
+      'si la tarea ya no tiene el PDF, no se escribe nada (CA-008-16)',
+      (tester) async {
+        await pumpScreen(tester, await pdfTask());
+        final onLeave = taskPdfCalls.last.onLeave!;
+        await store.delete('p1');
+        onLeave(const PdfPosition(page: 3, offset: 0));
+        await tester.pumpAndSettle();
+        expect(await store.storedIds(), isEmpty);
+      },
+    );
+  });
 }

@@ -87,6 +87,8 @@ class FakePdfImporter implements PdfImporter {
 
   @override
   Future<void> renderScreen(Attachment attachment, PdfPosition position) async {
+    // Como el real: si el PDF ya no existe, no hace nada.
+    if (store.bytes(attachment.documentPath) == null) return;
     rendered.add((attachment.id, position));
     store.putStored(attachment.id, 'screen.jpg', tinyImage);
   }

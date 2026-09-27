@@ -10,6 +10,7 @@ import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../data/platform/image_rotation.dart';
+import '../../domain/entities/pdf_position.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -386,6 +387,11 @@ class CurrentTaskScreen extends ConsumerWidget {
     final position = pdfPositionProvider(attachment.id);
     // Solo reconstruye al terminar de leer la posición, no al desplazarse.
     final loaded = ref.watch(position.select((s) => s.loaded));
+    // Sin `ref` al salir: el almacén y el importador se capturan ahora.
+    final store = ref.read(attachmentStoreProvider);
+    final importer = ref.read(pdfImporterProvider);
+    // La página de la versión de pantalla que hay ahora en el disco.
+    var shownPage = (ref.read(position).position ?? PdfPosition.start).page;
     final args = TaskPdfArgs(
       source: images.storedPdf(attachment.documentPath),
       screen: images.stored(attachment.screenPath),
@@ -394,6 +400,18 @@ class CurrentTaskScreen extends ConsumerWidget {
           UnaPalettes.classic[task.colorKey % UnaPalettes.classic.length],
       initialPosition: ref.read(position).position,
       onPosition: ref.read(position.notifier).update,
+      onLeave: (left) {
+        unawaited(
+          persistPdfPosition(
+            store: store,
+            importer: importer,
+            attachment: attachment,
+            position: left,
+            shownPage: shownPage,
+          ),
+        );
+        shownPage = left.page;
+      },
     );
     final Widget pages = chromeOnly
         ? const SizedBox.expand()
