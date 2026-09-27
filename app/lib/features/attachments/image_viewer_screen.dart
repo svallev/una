@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/theme/tokens.g.dart';
+import '../../data/platform/viewer_rotation.dart';
 import '../../domain/entities/attachment.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/boxed_icon_button.dart';
@@ -85,6 +86,7 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
         DeviceOrientation.landscapeRight,
       ]),
     );
+    unawaited(ViewerRotation.follow(true));
     _transform.addListener(_onTransform);
     _screenFocus.addListener(_updateRing);
     FocusManager.instance.addHighlightModeListener(_onHighlightMode);
@@ -109,6 +111,7 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
   @override
   void dispose() {
     _afterFrame(() => fullWidthRequests.value--);
+    unawaited(ViewerRotation.follow(false));
     unawaited(
       SystemChrome.setPreferredOrientations(const [
         DeviceOrientation.portraitUp,
@@ -333,8 +336,18 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
                         final rotated =
                             _viewport != Size.zero &&
                             size.width != _viewport.width;
+                        // De horizontal a vertical, vuelve a la tarea sin
+                        // tener que pulsar "Cerrar" (CA-007-11).
+                        final backToPortrait =
+                            rotated &&
+                            _viewport.width > _viewport.height &&
+                            size.height > size.width;
                         _viewport = size;
-                        if (rotated) {
+                        if (backToPortrait) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) _close();
+                          });
+                        } else if (rotated) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (!mounted) return;
                             _animation.stop();

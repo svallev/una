@@ -8,6 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var images: ImageImport? = null
+    private var rotation: ViewerRotation? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -15,9 +16,15 @@ class MainActivity : FlutterActivity() {
         images = ImageImport(this).also {
             MethodChannel(messenger, ImageImport.CHANNEL).setMethodCallHandler(it)
         }
-        // Pantalla encendida mientras se ve un adjunto (spec 007, CA-007-12).
+        val viewerRotation = ViewerRotation(this).also { rotation = it }
+        // Pantalla encendida mientras se ve un adjunto (spec 007, CA-007-12) y
+        // giro del visor (CA-007-11).
         MethodChannel(messenger, "una/screen").setMethodCallHandler { call, result ->
             when (call.method) {
+                "viewerRotation" -> {
+                    viewerRotation.follow(call.arguments == true)
+                    result.success(null)
+                }
                 "keepOn" -> {
                     if (call.arguments == true) {
                         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -31,6 +38,16 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onPause() {
+        rotation?.pause()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        rotation?.resume()
+    }
+
     @Deprecated("startActivityForResult: sin androidx.activity (sin dependencias nuevas)")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (images?.onActivityResult(requestCode, resultCode, data) != true) {
@@ -42,6 +59,8 @@ class MainActivity : FlutterActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         images?.dispose()
         images = null
+        rotation?.follow(false)
+        rotation = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

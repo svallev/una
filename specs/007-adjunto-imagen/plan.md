@@ -229,6 +229,9 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
 
   - **Pruebas a mano (§4 de dispositivo.md):** giro correcto en el Xiaomi y en el emulador. El propietario confirma que a ×1 la imagen va **siempre al ancho, con desplazamiento vertical**, también en horizontal (CA-007-09 sin cambios). **[Pendiente]** El pellizco en el Xiaomi (según el propietario, no funciona; en los tests sí) y el selector que a veces no vuelve a la app tras elegir una foto.
 
+  - **Giro del visor en el Xiaomi, corregido:** con `SCREEN_ORIENTATION_USER` el visor solo giraba tras tocar la pantalla. El sensor de orientación del sistema (`dev_orient`, MTK) no emitía hasta el siguiente toque, mientras que la Galería, que lee el acelerómetro, giraba sola. Ahora, mientras el visor está abierto, `ViewerRotation.kt` (`OrientationEventListener`, sin permisos) fija `PORTRAIT`, `LANDSCAPE` o `REVERSE_LANDSCAPE`, con márgenes para no oscilar. Con el bloqueo de rotación activo, se queda en vertical, y no lee el sensor en segundo plano. `SystemChrome` sigue pidiendo las orientaciones (iOS, tests). Comprobado en el emulador con el acelerómetro simulado.
+  - **Cambio de CA-007-11 pedido por el propietario:** al volver a vertical, el visor se cierra solo. "Cerrar" en horizontal sigue funcionando. Tests en `image_viewer_test.dart`.
+
 ### Pendiente de verificar
 
 - **[Hecho 2026-09-27]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`) en el Mac.

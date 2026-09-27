@@ -266,8 +266,8 @@ void main() {
     });
   });
 
-  testWidgets('CA-007-11: el visor gira y al girar vuelve a ×1; al cerrar, '
-      'solo en vertical', (tester) async {
+  testWidgets('CA-007-11: el visor gira y al girar vuelve a ×1; al volver a '
+      'vertical se cierra solo', (tester) async {
     await openViewer(tester);
     expect(orientations.last, [
       'DeviceOrientation.portraitUp',
@@ -286,9 +286,23 @@ void main() {
     );
     expect(tester.getRect(image).width, 844);
 
+    // Sin pulsar "Cerrar": de vuelta en la tarea actual, solo en vertical.
     tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    expect(find.byType(ImageViewerScreen), findsNothing);
+    expect(find.byType(TaskImage), findsOneWidget);
+    expect(orientations.last, ['DeviceOrientation.portraitUp']);
+  });
+
+  testWidgets('CA-007-11: "Cerrar" en horizontal vuelve a la tarea, en '
+      'vertical', (tester) async {
+    await openViewer(tester);
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pumpAndSettle();
+    expect(find.byType(ImageViewerScreen), findsOneWidget);
     await tester.tap(find.bySemanticsLabel('Cerrar'));
     await tester.pumpAndSettle();
+    expect(find.byType(ImageViewerScreen), findsNothing);
     expect(orientations.last, ['DeviceOrientation.portraitUp']);
   });
 
