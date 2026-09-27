@@ -2,7 +2,7 @@
 
 App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y deja un único elemento (foto, PDF, web) a pantalla completa nada más abrirla. Sin servidor, sin cuentas y sin analítica. Nombre provisional: "Una." (nunca literal en el código: `AppIdentity` / clave l10n `appName`).
 
-**Fase actual:** F0 (preparación), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). **No hay código de la app.** No crees `app/` ni hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
+**Fase actual:** F4 (adjuntos), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). El código de la app está en `app/`: las specs 001–006 están en `main`, y la 007 está implementada en la rama `feat/007-adjunto-imagen-c2zgoo`, pendiente solo de las pruebas en el dispositivo (`specs/007-adjunto-imagen/dispositivo.md`). Después viene el ADR-0012 (`specs/adr-0012-sin-historico/`). No hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
 
 ## Lee primero
 

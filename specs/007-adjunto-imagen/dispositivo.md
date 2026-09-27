@@ -5,6 +5,25 @@ Guía para la sesión en local. Todo lo que se pudo hacer sin dispositivo está 
 - **Emulador:** tests automáticos y pruebas a mano.
 - **Xiaomi:** solo con permiso del propietario, con la app de pruebas (`.debug`/`.profile`) y desinstalándola después (`docs/testing.md`).
 
+## 0. Punto de partida (2026-09-27, al pasar de la nube a local)
+
+- **Rama:** `feat/007-adjunto-imagen-c2zgoo`, sincronizada con `origin`. En local: `git fetch origin && git switch feat/007-adjunto-imagen-c2zgoo && git pull`.
+- **Verificado en la nube sobre el último commit** (Linux, Flutter 3.47.5, la versión de `.fvmrc`):
+  - formato sin cambios;
+  - `flutter analyze --fatal-infos` limpio;
+  - **536 tests en verde**, incluidos los 38 goldens;
+  - `gen-l10n` sin diferencias;
+  - `validate-tokens` ✅.
+- **Hecho:** T-007-01 a 22 y T-007-25 (`tasks.md`, estado). Decisiones y cambios, en el plan §8. No queda ninguna decisión pendiente del propietario.
+- **Sin probar todavía** (la nube no puede descargar el SDK de Android):
+  - el Kotlin de T-007-16 y de las correcciones de T-007-25 **no se ha compilado nunca**; es lo primero (§1);
+  - `integration_test/image_flow_test.dart` y `viewer_perf_test.dart` compilan, pero no se han ejecutado.
+- **Recordatorios:**
+  - en el Mac, los goldens se omiten (se generan y comparan en Linux, `docs/testing.md`); si alguno cambia, no se suben imágenes del Mac;
+  - los tests que miden anchos o texto grande cargan las fuentes reales (`CLAUDE.md`, Convenciones);
+  - la PR de esta rama lleva también, solo como documentación, el plan aprobado del ADR-0012 (`specs/adr-0012-sin-historico/`).
+- **Después de esta spec:** fusionar en `main` y crear `feat/adr-0012-sin-historico` desde `main` (tareas en `specs/adr-0012-sin-historico/tasks.md`, empezando por el test de migración).
+
 Se marca cada casilla y se anota el resultado. Lo que falle se registra en el plan §8 antes de cerrar la spec.
 
 ## 1. Compilar y comprobaciones rápidas (Mac)
