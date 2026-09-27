@@ -1,10 +1,17 @@
 import 'package:drift/drift.dart';
 
+import 'app_database.steps.dart';
+
 part 'app_database.g.dart';
 
-/// Esquema v1 completo (docs/architecture.md §3, ADR-0002). Incluye ya los campos
+/// Esquema completo (docs/architecture.md §3, ADR-0002). Incluye ya los campos
 /// de la hoja de ruta (fechas, subtareas, importación, adjuntos) para no necesitar
 /// migraciones en las specs 002–010. Fechas: epoch en ms UTC.
+///
+/// - v1: inicial.
+/// - v2 (ADR-0012, sin histórico): mismas tablas; la migración borra una vez las
+///   completadas y las marcas de borrado, y activa `hasEverHadTasks`.
+///   `status`, `completedAt` y `deletedAt` se quedan sin uso.
 ///
 /// Cualquier cambio: subir [AppDatabase.schemaVersion], `dart run drift_dev make-migrations`
 /// y completar el test de migración generado (checklist de seguridad).
@@ -21,7 +28,7 @@ class Tasks extends Table {
   IntColumn get updatedAt => integer()();
   IntColumn get completedAt => integer().nullable()();
   IntColumn get deletedAt =>
-      integer().nullable()(); // marca de borrado (ADR-0011)
+      integer().nullable()(); // sin uso desde v2 (ADR-0012)
   IntColumn get dueDate => integer().nullable()(); // Bloque 1
   TextColumn get parentId =>
       text().nullable().references(Tasks, #id)(); // Bloque 2
@@ -78,11 +85,33 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
+    // Drift ejecuta la migración en una transacción: si falla, no cambia nada
+    // y la app muestra el error de almacenamiento (spec 001).
+    onUpgrade: stepByStep(
+      from1To2: (m, schema) async {
+        // Sin histórico (ADR-0012). Primero el ajuste, que necesita ver las
+        // filas; después los adjuntos (clave foránea) y las tareas. Los
+        // archivos de los adjuntos borrados los recoge el barrido.
+        await customStatement(
+          'INSERT OR REPLACE INTO settings (key, value, updated_at) '
+          "SELECT 'hasEverHadTasks', 'true', ? "
+          'WHERE EXISTS (SELECT 1 FROM tasks)',
+          [DateTime.now().millisecondsSinceEpoch],
+        );
+        await customStatement(
+          'DELETE FROM attachments WHERE task_id IN (SELECT id FROM tasks '
+          "WHERE status <> 'pending' OR deleted_at IS NOT NULL)",
+        );
+        await customStatement(
+          "DELETE FROM tasks WHERE status <> 'pending' OR deleted_at IS NOT NULL",
+        );
+      },
+    ),
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
