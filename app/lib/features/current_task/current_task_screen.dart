@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
+import '../../data/platform/viewer_rotation.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -413,8 +414,12 @@ class _MissingAttachment extends ConsumerWidget {
 /// Visor de la imagen (CA-007-09); al cerrarlo, el foco vuelve a la tarea.
 Future<void> _openViewer(BuildContext context, WidgetRef ref, Task task) async {
   final attachment = task.attachment;
-  // Nunca durante completar o eliminar (CA-003-09, CA-004-05).
+  // Nunca durante completar o eliminar (CA-003-09, CA-004-05), ni con otra
+  // pantalla encima: un toque o un giro más no abre un segundo visor.
+  // `isCurrent` se consulta al navegador en el momento, no en la última
+  // construcción.
   if (attachment == null ||
+      !(ModalRoute.of(context)?.isCurrent ?? true) ||
       ref.read(completionProvider).busy ||
       ref.read(deletionProvider).busy) {
     return;
@@ -427,7 +432,8 @@ Future<void> _openViewer(BuildContext context, WidgetRef ref, Task task) async {
 
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
 /// pantalla y teclado), aunque el menú esté arriba en pantalla.
-/// La imagen de la tarea actual: tocarla abre el visor (CA-007-09). Con
+/// La imagen de la tarea actual: tocarla, o poner el móvil en horizontal
+/// mientras se ve, abre el visor (CA-007-09 y CA-007-11). Con
 /// teclado o interruptores se llega con Tab y se abre con Intro o Espacio, con
 /// el anillo por dentro del borde (WCAG 2.1.1 y 2.4.7). La lectura y las
 /// acciones del lector son las del nodo de la tarea, sin añadir nada.
@@ -443,6 +449,41 @@ class _ImageLayer extends StatefulWidget {
 
 class _ImageLayerState extends State<_ImageLayer> {
   bool _focused = false;
+  bool? _watching;
+  late final StreamSubscription<void> _landscape = ViewerRotation.landscape
+      .listen((_) {
+        if (mounted && _watching == true) widget.onOpen?.call();
+      });
+
+  /// Solo se vigila el giro con la tarea a la vista (no bajo el editor, el
+  /// menú o el visor).
+  void _updateWatch() {
+    final on =
+        widget.onOpen != null && (ModalRoute.isCurrentOf(context) ?? true);
+    if (on == _watching) return;
+    _watching = on;
+    unawaited(ViewerRotation.watchLandscape(on));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _landscape; // Se suscribe al montarse.
+    _updateWatch();
+  }
+
+  @override
+  void didUpdateWidget(_ImageLayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _updateWatch();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_landscape.cancel());
+    if (_watching == true) unawaited(ViewerRotation.watchLandscape(false));
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

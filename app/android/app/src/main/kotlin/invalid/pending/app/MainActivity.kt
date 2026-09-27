@@ -16,11 +16,18 @@ class MainActivity : FlutterActivity() {
         images = ImageImport(this).also {
             MethodChannel(messenger, ImageImport.CHANNEL).setMethodCallHandler(it)
         }
-        val viewerRotation = ViewerRotation(this).also { rotation = it }
+        val screen = MethodChannel(messenger, "una/screen")
+        val viewerRotation = ViewerRotation(this) {
+            screen.invokeMethod("landscape", null)
+        }.also { rotation = it }
         // Pantalla encendida mientras se ve un adjunto (spec 007, CA-007-12) y
         // giro del visor (CA-007-11).
-        MethodChannel(messenger, "una/screen").setMethodCallHandler { call, result ->
+        screen.setMethodCallHandler { call, result ->
             when (call.method) {
+                "watchLandscape" -> {
+                    viewerRotation.watch(call.arguments == true)
+                    result.success(null)
+                }
                 "viewerRotation" -> {
                     viewerRotation.follow(call.arguments == true)
                     result.success(null)
@@ -59,6 +66,7 @@ class MainActivity : FlutterActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         images?.dispose()
         images = null
+        rotation?.watch(false)
         rotation?.follow(false)
         rotation = null
         super.cleanUpFlutterEngine(flutterEngine)

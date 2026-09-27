@@ -185,6 +185,34 @@ void main() {
       );
     });
 
+    testWidgets('dos toques seguidos en la foto abren un solo visor', (
+      tester,
+    ) async {
+      listen(tester);
+      final repo = InMemoryTaskRepository();
+      await repo.insert(await imageTask());
+      await pumpUnaApp(
+        tester,
+        repo: repo,
+        overrides: [attachmentStoreProvider.overrideWithValue(store)],
+      );
+      final photo = tester.getCenter(find.byType(TaskImage));
+      await tester.tapAt(photo);
+      await tester.pump(const Duration(milliseconds: 80));
+      await tester.tapAt(photo);
+      await tester.pumpAndSettle();
+      expect(find.byType(ImageViewerScreen), findsOneWidget);
+      expect(find.bySemanticsLabel('Cerrar'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Cerrar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ImageViewerScreen), findsNothing);
+      // Cerrado, se vuelve a abrir con normalidad.
+      await tester.tap(find.byType(TaskImage));
+      await tester.pumpAndSettle();
+      expect(find.byType(ImageViewerScreen), findsOneWidget);
+    });
+
     testWidgets('el gesto atrás también cierra', (tester) async {
       await openViewer(tester);
       await tester.binding.handlePopRoute();
@@ -292,6 +320,83 @@ void main() {
     expect(find.byType(ImageViewerScreen), findsNothing);
     expect(find.byType(TaskImage), findsOneWidget);
     expect(orientations.last, ['DeviceOrientation.portraitUp']);
+  });
+
+  group('CA-007-11: girar la tarea actual con imagen abre el visor', () {
+    late List<bool> watching;
+
+    void listenScreen(WidgetTester tester) {
+      watching = [];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('una/screen'),
+        (call) async {
+          if (call.method == 'watchLandscape') {
+            watching.add(call.arguments as bool);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          const MethodChannel('una/screen'),
+          null,
+        ),
+      );
+    }
+
+    /// La parte nativa avisa de que el móvil está en horizontal.
+    Future<void> turnToLandscape(WidgetTester tester) async {
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        'una/screen',
+        const StandardMethodCodec().encodeMethodCall(
+          const MethodCall('landscape'),
+        ),
+        (_) {},
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> pumpTask(WidgetTester tester) async {
+      listen(tester);
+      listenScreen(tester);
+      final repo = InMemoryTaskRepository();
+      await repo.insert(await imageTask());
+      await pumpUnaApp(
+        tester,
+        repo: repo,
+        overrides: [attachmentStoreProvider.overrideWithValue(store)],
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('sin tocar la pantalla; solo con la tarea a la vista', (
+      tester,
+    ) async {
+      await pumpTask(tester);
+      expect(watching.last, isTrue);
+
+      await turnToLandscape(tester);
+      expect(find.byType(ImageViewerScreen), findsOneWidget);
+      expect(watching.last, isFalse);
+
+      // Con el visor abierto, otro aviso no abre un segundo visor.
+      await turnToLandscape(tester);
+      expect(find.byType(ImageViewerScreen), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Cerrar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ImageViewerScreen), findsNothing);
+      expect(watching.last, isTrue);
+    });
+
+    testWidgets('con el menú abierto no abre el visor', (tester) async {
+      await pumpTask(tester);
+      await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+      await tester.pumpAndSettle();
+      expect(watching.last, isFalse);
+      await turnToLandscape(tester);
+      expect(find.byType(ImageViewerScreen), findsNothing);
+    });
   });
 
   testWidgets('CA-007-11: "Cerrar" en horizontal vuelve a la tarea, en '

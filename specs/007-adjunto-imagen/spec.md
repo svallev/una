@@ -102,6 +102,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Cuando** gira el móvil a horizontal
   - **Entonces** el visor gira y la imagen vuelve al ancho completo (×1).
   - El resto de la app sigue solo en vertical; al cerrar el visor en horizontal, la tarea actual se ve en vertical.
+  - Con la tarea actual con imagen a la vista, poner el móvil en horizontal abre el visor ya girado, sin tocar la pantalla (propietario, 2026-09-27). No lo abre con otra pantalla encima (editor, menú, listado) ni con el bloqueo de rotación activo. Cerrado con "Cerrar" en horizontal, no se reabre hasta volver a vertical y girar otra vez.
   - Al volver el móvil a vertical, el visor se cierra solo y se ve la tarea actual, sin pulsar "Cerrar" (propietario, 2026-09-27). Abierto en vertical, sigue abierto hasta que se cierre.
   - Gira solo, sin tocar la pantalla, y respeta el bloqueo de rotación del sistema. A ×1 la imagen va siempre al ancho, con desplazamiento vertical, también en horizontal (propietario, 2026-09-27).
 - **CA-007-12 Pantalla encendida, con límite (D10)**

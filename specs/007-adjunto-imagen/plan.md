@@ -231,6 +231,8 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
 
   - **Giro del visor en el Xiaomi, corregido:** con `SCREEN_ORIENTATION_USER` el visor solo giraba tras tocar la pantalla. El sensor de orientación del sistema (`dev_orient`, MTK) no emitía hasta el siguiente toque, mientras que la Galería, que lee el acelerómetro, giraba sola. Ahora, mientras el visor está abierto, `ViewerRotation.kt` (`OrientationEventListener`, sin permisos) fija `PORTRAIT`, `LANDSCAPE` o `REVERSE_LANDSCAPE`, con márgenes para no oscilar. Con el bloqueo de rotación activo, se queda en vertical, y no lee el sensor en segundo plano. `SystemChrome` sigue pidiendo las orientaciones (iOS, tests). Comprobado en el emulador con el acelerómetro simulado.
   - **Cambio de CA-007-11 pedido por el propietario:** al volver a vertical, el visor se cierra solo. "Cerrar" en horizontal sigue funcionando. Tests en `image_viewer_test.dart`.
+  - **Segundo cambio de CA-007-11 pedido por el propietario:** en el Xiaomi seguía "haciendo falta tocar". El registro mostró que el visor ya giraba solo, pero la tarea actual (siempre en vertical) no abría el visor al girar. Ahora, con la tarea con imagen a la vista y como pantalla de arriba, `ViewerRotation.kt` vigila el acelerómetro y avisa a Dart (`landscape`) para abrir el visor. No abre un segundo visor: `_openViewer` comprueba `ModalRoute.isCurrent` en el momento. El propietario vio dos visores apilados ("dos X"). Comprobado en el emulador.
+  - **[Pendiente]** El pellizco en el Xiaomi: sin registros de Flutter en *release*, falta saber qué gestos llegan.
 
 ### Pendiente de verificar
 
