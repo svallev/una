@@ -153,7 +153,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 - **CA-007-18 Copia de seguridad (ADR-0004, R-10)**
   - **Dado** tareas con imágenes que ocupan más de 25 MB en total
   - **Cuando** Android hace la copia de seguridad en la nube
-  - **Entonces** la copia incluye **siempre** las tareas y los ajustes. En esta spec las imágenes **no** entran en la copia en la nube; sí van en la transferencia directa entre dispositivos.
+  - **Entonces** la copia incluye **siempre** las tareas y los ajustes. En esta spec las imágenes **no** entran en la copia en la nube; sí van en la transferencia directa entre dispositivos **en Android 12 o posterior**. En Android 9–11 la plataforma no separa la nube de la transferencia, así que tampoco se transfieren (ADR-0004, revisión de la spec 007; aclaración de T-007-25).
   - **[Pendiente, tarea antes de la v1.0]** Copia de las imágenes por prioridad, hasta 20 MB y solo cifrada de extremo a extremo (ADR-0004).
 - **CA-007-19 Adjunto no disponible nunca cierra la app**
   - **Dado** que falta, está vacío o está corrupto un archivo de la imagen (p. ej., tras restaurar una copia sin imágenes)
@@ -200,6 +200,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     |---|---|---|
     | Abrir la hoja "Añadir" | Título "Añadir a la tarea" (encabezado) | El nombre de la hoja |
     | Vuelve de la cámara o del selector con imagen | La vista previa | "Foto añadida" o "Imagen añadida" |
+    | Cierra la hoja "Añadir" sin elegir (X, atrás o fuera) | El botón (+) | Ninguno (añadida en T-007-25) |
     | Cancela la cámara o el selector | El botón (+) | Ninguno |
     | "Preparando imagen…" | "Cancelar" | "Preparando imagen…" |
     | Quitar adjunto | El botón (+) | "Adjunto quitado" |

@@ -41,7 +41,7 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 
 ## Si toca integración nativa (T-8)
 
-- [ ] Ningún componente exportado nuevo; FileProvider con permisos puntuales y solo de lectura.
+- [ ] Ningún componente exportado nuevo; FileProvider con permisos puntuales y solo de lectura (única excepción: la salida de la cámara, escritura sobre un solo archivo de `cache/import/` y revocada al volver, spec 007).
 - [ ] Sin esquemas de URL ni *deep links* nuevos sin su ADR.
 
 ## Si toca CI, workflows o la web (T-9, T-11)

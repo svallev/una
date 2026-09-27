@@ -187,6 +187,34 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
   - `pumpWithApp` quita la cinta "DEBUG" (`debugShowCheckedModeBanner: false`, como la app). Los goldens anteriores no cambian: capturan solo la pantalla, sin la cinta.
   - **Fallo encontrado y corregido:** con el texto al 200 %, el logotipo "una." se cortaba por abajo en el editor, en "Todo hecho." y en la bienvenida (cabecera de alto fijo 48; el logotipo mide ~74). Ahora la cabecera mide **al menos** 48 y crece. "Cancelar" del editor se queda en 48 dp (antes los heredaba de la altura fija). Test: `test/ui/wordmark_test.dart`. A ×1 no cambia nada (los goldens ×1 son idénticos).
 
+- **Revisiones** (T-007-25, 2026-09-27): `a11y-reviewer`, `security-reviewer`, `/security-check`, `/i18n-check` y `/tokens-validate`.
+  - `/i18n-check`: sin problemas. Las 29 claves de la §7 coinciden con las ARB en ES y EN, con los mismos marcadores y sin textos incrustados.
+  - `/tokens-validate`: sin problemas. `tokens.g.dart` está sincronizado y no hay valores sueltos. Las tres duraciones nuevas (barrido, tiempo máximo y espera del selector web) son de comportamiento, no de animación.
+  - `/security-check`: sin secretos, sin archivos de firma, sin permisos nuevos y sin dependencias Dart nuevas. El `FileProvider` no está exportado. El modelo de amenazas (T-8) y la lista de seguridad decían "solo de lectura"; se añade la excepción ya aprobada en este plan: la cámara escribe un solo archivo, con permiso que se revoca al volver.
+  - **Accesibilidad, corregido (con tests que fallan sin la corrección):**
+    - el anillo de foco es negro con borde blanco por fuera (§6, WCAG 1.4.11); también cambió el golden de `BrutalButton` con foco;
+    - con teclado, Tab llega a la imagen de la tarea actual e Intro o Espacio abre el visor (WCAG 2.1.1);
+    - "Quitar adjunto" y "Cerrar" del visor tienen foco de teclado y anillo propios (`BoxedIconButton`);
+    - en el visor, los atajos funcionan en toda la pantalla (también con el foco en "Cerrar"), Esc cierra, la imagen muestra el anillo con teclado y el lector lee la imagen antes que "Cerrar";
+    - cerrar la hoja "Añadir" sin elegir devuelve el foco a (+) (fila nueva de CA-007-22);
+    - el aviso de error flota encima de los botones y no tapa el (+) cuando este recibe el foco (WCAG 2.4.11);
+    - mientras se prepara otra imagen, el lector no lee la imagen tapada;
+    - pantalla encendida: explorar tocando con TalkBack (llega como *hover* táctil) y las acciones del lector en el visor cuentan como toques (CA-007-12). El teclado sigue sin contar, como decidió el propietario.
+  - **Seguridad, corregido:**
+    - **M1:** cancelar no espera en la cola de la copia. Cierra el flujo abierto (desbloquea un `read()` colgado de un proveedor sin red) y borra en un hilo propio. En Dart, al agotarse los 20 s el aviso sale sin esperar a la cancelación nativa, y "Cancelar" termina en 2 s como mucho.
+    - **B1:** se rechazan las URIs con usuario en la autoridad (`0@…`) y las de cualquier proveedor de la propia app.
+    - **B2:** si se cancela mientras termina la limpieza, se borra lo escrito y se devuelve "cancelado".
+    - **Menores:** la caja `ftyp` que no cabe entera en la cabecera se rechaza (podría ser AVIF); el barrido protege también las importaciones que empiezan mientras barre; `FileAttachmentStore.file` solo acepta `attachments/<id>/<nombre>.jpg`; `debugCopyFile` compara la carpeta con separador.
+  - **Registrado sin cambio de código:** B3, el original con metadatos puede quedar en la caché si el proceso muere a mitad (residual en T-7). CA-007-18 aclara que la transferencia entre móviles lleva las imágenes solo en Android 12 o posterior (ya estaba en ADR-0004).
+  - **Aceptado:** la insignia "FOTO"/"IMAGEN" del listado no crece con el texto. Es decorativa: la fila ya se lee "… Con foto".
+  - **[Pendiente, para la sesión en local]:**
+    - compilar el Kotlin nuevo (T-007-16 y estas correcciones);
+    - declarar `androidx.core` en Gradle con versión fijada (B4: hoy llega de forma transitiva con Flutter);
+    - comprobar en el dispositivo: TalkBack (anuncios completos tras cada cambio de foco, desplazamiento horizontal ampliado, pantalla encendida solo con gestos del lector), Switch Access y teclado físico (anillo sobre foto clara y oscura).
+  - **[Pendiente, decisión del propietario]:**
+    - leer el nivel de zoom como "Ampliación 2,5 veces" en lugar de "×2,5";
+    - que "Subir archivo" y "Cargar URL" digan al lector "Próximamente" (DEV-18).
+
 ### Pendiente de verificar
 
 - **[Pendiente]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`): el entorno en la nube no puede descargar el SDK de Android. Se compila en el Mac con `fvm flutter build apk --debug`.
