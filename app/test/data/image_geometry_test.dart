@@ -127,13 +127,27 @@ void main() {
     });
   });
 
-  group('versión de pantalla y miniatura: recorte centrado sin ampliar', () {
-    test('foto apaisada en pantalla vertical', () {
-      final c = coverCrop(4000, 3000, 1080, 2400);
-      expect(c.crop, (left: 1325, top: 0, width: 1350, height: 3000));
+  group('versión de pantalla: al ancho, sin perder los lados', () {
+    test('foto apaisada: entera, más baja que la pantalla', () {
+      final c = fitWidthCrop(4000, 3000, 1080, 2400);
+      expect(c.crop, (left: 0, top: 0, width: 4000, height: 3000));
+      expect((c.width, c.height), (1080, 810));
+    });
+
+    test('captura larga: todo el ancho y solo la parte de arriba', () {
+      final c = fitWidthCrop(1080, 20000, 1080, 2400);
+      expect(c.crop, (left: 0, top: 0, width: 1080, height: 2400));
       expect((c.width, c.height), (1080, 2400));
     });
 
+    test('imagen estrecha: no se amplía', () {
+      final c = fitWidthCrop(500, 400, 1080, 2400);
+      expect(c.crop, (left: 0, top: 0, width: 500, height: 400));
+      expect((c.width, c.height), (500, 400));
+    });
+  });
+
+  group('miniatura: recorte centrado sin ampliar', () {
     test('miniatura cuadrada de 176 px', () {
       final c = coverCrop(4000, 3000, 176, 176);
       expect(c.crop, (left: 500, top: 0, width: 3000, height: 3000));

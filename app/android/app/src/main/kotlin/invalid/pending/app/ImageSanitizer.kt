@@ -36,7 +36,9 @@ data class SanitizedImage(val width: Int, val height: Int, val byteSize: Long)
  *
  * - `full-<fila>-<col>.jpg`: la versión completa en teselas de ≤ 4096 px
  *   (reducida solo si pasa de [storedMaxPixels], sin límite de lado);
- * - `screen.jpg`: recortada para llenar la pantalla en vertical (I-2);
+ * - `screen.jpg`: al ancho de la pantalla en vertical, sin perder los lados; si
+ *   es más alta que la pantalla, solo la parte de arriba (I-2, propietario
+ *   2026-09-27: el resto se ve en el visor);
  * - `thumb.jpg`: cuadrada, de [THUMB] px, recortada.
  */
 class ImageSanitizer(
@@ -81,20 +83,25 @@ class ImageSanitizer(
      * Lanza si falta o no se puede leer alguna tesela necesaria.
      */
     fun regenerateDerived(dir: File, width: Int, height: Int) {
-        writeDerived(dir, width, height, screenWidth, screenHeight, "screen.jpg", SCREEN_QUALITY)
+        writeDerived(dir, width, height, screenWidth, screenHeight, "screen.jpg", SCREEN_QUALITY, fitWidth = true)
         writeDerived(dir, width, height, THUMB, THUMB, "thumb.jpg", THUMB_QUALITY)
     }
 
     private fun writeDerived(
         dir: File, width: Int, height: Int,
         targetW: Int, targetH: Int, name: String, quality: Int,
+        fitWidth: Boolean = false,
     ) {
-        // Mismo recorte que [cover], sobre la imagen completa.
-        val scale = max(targetW.toDouble() / width, targetH.toDouble() / height)
-        val cropW = min(width, (targetW / scale).roundToInt().coerceAtLeast(1))
-        val cropH = min(height, (targetH / scale).roundToInt().coerceAtLeast(1))
-        val x0 = (width - cropW) / 2
-        val y0 = (height - cropH) / 2
+        // Mismo recorte que [fitWidthTop] o [cover], sobre la imagen completa.
+        val (scale, crop) = if (fitWidth) {
+            fitWidthCrop(width, height, targetW, targetH)
+        } else {
+            coverCrop(width, height, targetW, targetH)
+        }
+        val cropW = crop.width()
+        val cropH = crop.height()
+        val x0 = crop.left
+        val y0 = crop.top
         val s = min(1.0, scale)
         val outW = (cropW * s).roundToInt().coerceAtLeast(1)
         val outH = (cropH * s).roundToInt().coerceAtLeast(1)
@@ -104,7 +111,6 @@ class ImageSanitizer(
         try {
             val canvas = Canvas(out)
             canvas.drawColor(Color.WHITE)
-            val crop = Rect(x0, y0, x0 + cropW, y0 + cropH)
             val rows = (height + TILE - 1) / TILE
             val cols = (width + TILE - 1) / TILE
             for (r in 0 until rows) {
@@ -310,21 +316,42 @@ class ImageSanitizer(
         return bytes
     }
 
-    /** Recorta al centro para llenar [targetW]×[targetH], sin ampliar nunca. */
-    private fun cover(bitmap: Bitmap, targetW: Int, targetH: Int): Bitmap {
-        val scale = max(targetW.toDouble() / bitmap.width, targetH.toDouble() / bitmap.height)
-        val cropW = min(bitmap.width, (targetW / scale).roundToInt().coerceAtLeast(1))
-        val cropH = min(bitmap.height, (targetH / scale).roundToInt().coerceAtLeast(1))
-        val x = (bitmap.width - cropW) / 2
-        val y = (bitmap.height - cropH) / 2
+    /** Escala y zona centrada que llenan [targetW]×[targetH] (miniatura). */
+    private fun coverCrop(width: Int, height: Int, targetW: Int, targetH: Int): Pair<Double, Rect> {
+        val scale = max(targetW.toDouble() / width, targetH.toDouble() / height)
+        val cropW = min(width, (targetW / scale).roundToInt().coerceAtLeast(1))
+        val cropH = min(height, (targetH / scale).roundToInt().coerceAtLeast(1))
+        val x = (width - cropW) / 2
+        val y = (height - cropH) / 2
+        return scale to Rect(x, y, x + cropW, y + cropH)
+    }
+
+    /**
+     * Escala y zona al ancho de [targetW]: todo el ancho y, si al ancho es más
+     * alta que [targetH], solo la parte de arriba (versión de pantalla).
+     */
+    private fun fitWidthCrop(width: Int, height: Int, targetW: Int, targetH: Int): Pair<Double, Rect> {
+        val scale = targetW.toDouble() / width
+        val cropH = min(height, (targetH / scale).roundToInt().coerceAtLeast(1))
+        return scale to Rect(0, 0, width, cropH)
+    }
+
+    /** Recorta [crop] y reduce a [scale], sin ampliar nunca. */
+    private fun cut(bitmap: Bitmap, scale: Double, crop: Rect): Bitmap {
         val m = Matrix()
         val s = min(1.0, scale).toFloat()
         m.setScale(s, s)
-        return Bitmap.createBitmap(bitmap, x, y, cropW, cropH, m, true)
+        return Bitmap.createBitmap(bitmap, crop.left, crop.top, crop.width(), crop.height(), m, true)
+    }
+
+    private fun cover(bitmap: Bitmap, targetW: Int, targetH: Int): Bitmap {
+        val (scale, crop) = coverCrop(bitmap.width, bitmap.height, targetW, targetH)
+        return cut(bitmap, scale, crop)
     }
 
     private fun writeScreen(bitmap: Bitmap, file: File) {
-        val out = cover(bitmap, screenWidth, screenHeight)
+        val (scale, crop) = fitWidthCrop(bitmap.width, bitmap.height, screenWidth, screenHeight)
+        val out = cut(bitmap, scale, crop)
         try {
             writeJpeg(out, file, SCREEN_QUALITY)
         } finally {

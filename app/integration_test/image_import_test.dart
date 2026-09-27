@@ -156,8 +156,13 @@ void main() {
       ]);
       final thumb = await _decode(File('${dir.path}/thumb.jpg'));
       expect((thumb.width, thumb.height), (176, 176));
+      // Versión de pantalla al ancho, sin perder los lados (DEV-41): la misma
+      // proporción que la foto entera.
       final screen = await _decode(File('${dir.path}/screen.jpg'));
-      expect(screen.height, greaterThan(screen.width));
+      expect(
+        screen.width / screen.height,
+        closeTo(full.width / full.height, 0.01),
+      );
       expect(s.byteSize, File('${dir.path}/full-0-0.jpg').lengthSync());
     },
   );

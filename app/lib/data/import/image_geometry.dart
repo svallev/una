@@ -88,8 +88,7 @@ typedef PixelRect = ({int left, int top, int width, int height});
 }
 
 /// Recorte centrado que llena [targetWidth] × [targetHeight] sin ampliar
-/// nunca (versión de pantalla y miniatura), como `ImageSanitizer.cover` en
-/// Android: [crop] en píxeles de la imagen y el tamaño de salida.
+/// nunca (miniatura), como `ImageSanitizer.coverCrop` en Android: [crop] en píxeles de la imagen y el tamaño de salida.
 ({PixelRect crop, int width, int height}) coverCrop(
   int width,
   int height,
@@ -108,6 +107,26 @@ typedef PixelRect = ({int left, int top, int width, int height});
       height: cropH,
     ),
     width: math.max(1, (cropW * s).round()),
+    height: math.max(1, (cropH * s).round()),
+  );
+}
+
+/// Versión de pantalla (I-2): todo el ancho, reducido a [targetWidth] sin
+/// ampliar nunca; si al ancho es más alta que [targetHeight], solo la parte de
+/// arriba (el resto se ve en el visor). Como `ImageSanitizer.fitWidthCrop` en
+/// Android.
+({PixelRect crop, int width, int height}) fitWidthCrop(
+  int width,
+  int height,
+  int targetWidth,
+  int targetHeight,
+) {
+  final scale = targetWidth / width;
+  final cropH = math.min(height, math.max(1, (targetHeight / scale).round()));
+  final s = math.min(1.0, scale);
+  return (
+    crop: (left: 0, top: 0, width: width, height: cropH),
+    width: math.max(1, (width * s).round()),
     height: math.max(1, (cropH * s).round()),
   );
 }

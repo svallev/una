@@ -77,7 +77,8 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 - **CA-007-08 Visible al abrir (propuesta 2, R8)**
   - **Dado** que la tarea actual tiene una imagen
   - **Cuando** se abre la app en frío
-  - **Entonces**, como en el prototipo, la imagen llena la pantalla **recortada** (a sangre, detrás del logotipo, el menú y el botón de completar) y aparece en el tiempo de CA-001-09 (< 1 s p50, dispositivo de referencia, *release*), sin ningún toque.
+  - **Entonces** la imagen ocupa **todo el ancho** de la pantalla, sin perder nada por los lados (detrás del logotipo, el menú y el botón de completar), y aparece en el tiempo de CA-001-09 (< 1 s p50, dispositivo de referencia, *release*), sin ningún toque.
+  - Si es más baja que la pantalla, queda el color de la nota arriba y abajo; si es más alta, se ve la parte de arriba y el resto en el visor (DEV-41; propietario, 2026-09-27; antes, recortada para llenar la pantalla, como en el prototipo).
   - El logotipo y el menú llevan fondo blanco sobre la imagen.
   - Si hay texto, se ve como pie sobre la imagen: recuadro negro con texto blanco (22 px, peso 800), 146 px por encima del borde inferior. Máximo 3 líneas con "…"; el lector lee el texto completo.
 - **CA-007-09 Visor a pantalla completa (D10, DEV-35, DEV-37)**

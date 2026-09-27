@@ -167,8 +167,18 @@ class WebImageImporter implements ImageImporter {
             byteSize += jpeg.length;
           }
         }
-        Future<Uint8List> derived(int w, int h, double quality) {
-          final out = coverCrop(stored.width, stored.height, w, h);
+        Future<Uint8List> derived(
+          int w,
+          int h,
+          double quality, {
+          bool fitWidth = false,
+        }) {
+          final out = (fitWidth ? fitWidthCrop : coverCrop)(
+            stored.width,
+            stored.height,
+            w,
+            h,
+          );
           final crop = out.crop;
           return _guard(
             () => _encode(
@@ -195,6 +205,7 @@ class WebImageImporter implements ImageImporter {
           screen.width,
           screen.height,
           _screenQuality,
+          fitWidth: true,
         );
         final thumbJpeg = await derived(
           ImageLimits.thumbShortSide,
@@ -238,8 +249,18 @@ class WebImageImporter implements ImageImporter {
           decoded.add((tiles.rect(r, c), bitmap));
         }
       }
-      Future<Uint8List> derived(int w, int h, double quality) {
-        final out = coverCrop(tiles.width, tiles.height, w, h);
+      Future<Uint8List> derived(
+        int w,
+        int h,
+        double quality, {
+        bool fitWidth = false,
+      }) {
+        final out = (fitWidth ? fitWidthCrop : coverCrop)(
+          tiles.width,
+          tiles.height,
+          w,
+          h,
+        );
         final crop = out.crop;
         final s = out.width / crop.width;
         return _guard(
@@ -266,6 +287,7 @@ class WebImageImporter implements ImageImporter {
         screen.width,
         screen.height,
         _screenQuality,
+        fitWidth: true,
       );
       final thumbJpeg = await derived(
         ImageLimits.thumbShortSide,

@@ -54,12 +54,12 @@ void main() {
       find.descendant(of: find.byType(TaskImage), matching: find.byType(Image));
 
   group('CA-007-08: la imagen llena la pantalla', () {
-    testWidgets('a sangre y recortada, detrás del logotipo, el menú y el '
-        'botón', (tester) async {
+    testWidgets('a todo el ancho, sin perder los lados (DEV-41), detrás del '
+        'logotipo, el menú y el botón', (tester) async {
       await pumpScreen(tester, await imageTask());
 
       final image = tester.widget<Image>(imageOf());
-      expect(image.fit, BoxFit.cover);
+      expect(image.fit, BoxFit.fitWidth);
       expect(tester.getRect(imageOf()), const Rect.fromLTWH(0, 0, 390, 844));
       // Detrás: el logotipo, el menú y el botón se pintan encima.
       final stack = tester.widget<Stack>(
