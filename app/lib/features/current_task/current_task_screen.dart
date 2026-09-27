@@ -433,7 +433,8 @@ Future<void> _openViewer(BuildContext context, WidgetRef ref, Task task) async {
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
 /// pantalla y teclado), aunque el menú esté arriba en pantalla.
 /// La imagen de la tarea actual: tocarla, o poner el móvil en horizontal
-/// mientras se ve, abre el visor (CA-007-09 y CA-007-11). Con
+/// mientras se ve, abre el visor (CA-007-09 y CA-007-11); pellizcarla la amplía
+/// ahí mismo y, al soltar, vuelve al 100 % (CA-007-10). Con
 /// teclado o interruptores se llega con Tab y se abre con Intro o Espacio, con
 /// el anillo por dentro del borde (WCAG 2.1.1 y 2.4.7). La lectura y las
 /// acciones del lector son las del nodo de la tarea, sin añadir nada.
@@ -447,9 +448,52 @@ class _ImageLayer extends StatefulWidget {
   State<_ImageLayer> createState() => _ImageLayerState();
 }
 
-class _ImageLayerState extends State<_ImageLayer> {
+class _ImageLayerState extends State<_ImageLayer>
+    with SingleTickerProviderStateMixin {
   bool _focused = false;
   bool? _watching;
+
+  /// Zoom de vistazo (CA-007-10): la imagen sigue a los dedos mientras se
+  /// pellizca y, al soltar, vuelve al 100 %. Sin visor ni "Cerrar".
+  final _zoom = ValueNotifier<Matrix4>(Matrix4.identity());
+  Offset? _pinchStart;
+  late final _back = AnimationController(
+    vsync: this,
+    duration: UnaMotion.viewerZoom,
+  );
+  Animation<Matrix4>? _backTween;
+
+  void _onScaleStart(ScaleStartDetails d) {
+    _back.stop();
+    _pinchStart = d.pointerCount >= 2 ? d.localFocalPoint : null;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    if (widget.onOpen == null || d.pointerCount < 2) return;
+    // El segundo dedo puede llegar después del primero.
+    final start = _pinchStart ??= d.localFocalPoint;
+    final scale = d.scale.clamp(1.0, UnaMotion.viewerZoomMax);
+    // El punto que estaba bajo los dedos sigue bajo ellos.
+    _zoom.value = Matrix4.identity()
+      ..translateByDouble(d.localFocalPoint.dx, d.localFocalPoint.dy, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1)
+      ..translateByDouble(-start.dx, -start.dy, 0, 1);
+  }
+
+  void _onScaleEnd(ScaleEndDetails _) {
+    _pinchStart = null;
+    if (_zoom.value.isIdentity()) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _zoom.value = Matrix4.identity();
+      return;
+    }
+    _backTween = Matrix4Tween(
+      begin: _zoom.value,
+      end: Matrix4.identity(),
+    ).animate(CurvedAnimation(parent: _back, curve: UnaMotion.standardCurve));
+    unawaited(_back.forward(from: 0));
+  }
+
   late final StreamSubscription<void> _landscape = ViewerRotation.landscape
       .listen((_) {
         if (mounted && _watching == true) widget.onOpen?.call();
@@ -479,7 +523,18 @@ class _ImageLayerState extends State<_ImageLayer> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _back.addListener(() {
+      final tween = _backTween;
+      if (tween != null) _zoom.value = tween.value;
+    });
+  }
+
+  @override
   void dispose() {
+    _back.dispose();
+    _zoom.dispose();
     unawaited(_landscape.cancel());
     if (_watching == true) unawaited(ViewerRotation.watchLandscape(false));
     super.dispose();
@@ -507,7 +562,15 @@ class _ImageLayerState extends State<_ImageLayer> {
           // Toda la imagen, cargada o no.
           behavior: HitTestBehavior.opaque,
           onTap: onOpen,
-          child: widget.child,
+          onScaleStart: _onScaleStart,
+          onScaleUpdate: _onScaleUpdate,
+          onScaleEnd: _onScaleEnd,
+          child: ValueListenableBuilder<Matrix4>(
+            valueListenable: _zoom,
+            builder: (_, zoom, child) =>
+                Transform(transform: zoom, child: child),
+            child: widget.child,
+          ),
         ),
       ),
     );

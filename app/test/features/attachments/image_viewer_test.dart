@@ -280,6 +280,82 @@ void main() {
       expect(scale(tester), lessThanOrEqualTo(UnaMotion.viewerZoomMax));
     });
 
+    group('en la tarea actual: zoom de vistazo', () {
+      Future<void> pumpTask(WidgetTester tester, {bool reduced = false}) async {
+        listen(tester);
+        final repo = InMemoryTaskRepository();
+        await repo.insert(await imageTask());
+        await pumpUnaApp(
+          tester,
+          repo: repo,
+          reduced: reduced,
+          overrides: [attachmentStoreProvider.overrideWithValue(store)],
+        );
+      }
+
+      double taskZoom(WidgetTester tester) => tester
+          .widget<Transform>(
+            find
+                .ancestor(
+                  of: find.byType(TaskImage),
+                  matching: find.byType(Transform),
+                )
+                .first,
+          )
+          .transform
+          .getMaxScaleOnAxis();
+
+      /// Separa dos dedos sobre la foto; devuelve los gestos sin soltar.
+      Future<(TestGesture, TestGesture)> pinch(WidgetTester tester) async {
+        final center = tester.getCenter(find.byType(TaskImage));
+        final a = await tester.startGesture(center - const Offset(20, 0));
+        final b = await tester.startGesture(
+          center + const Offset(20, 0),
+          pointer: 2,
+        );
+        for (var i = 1; i <= 10; i++) {
+          await a.moveBy(const Offset(-6, 0));
+          await b.moveBy(const Offset(6, 0));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        return (a, b);
+      }
+
+      testWidgets('pellizcar amplía ahí mismo, sin visor ni "Cerrar"; al '
+          'soltar vuelve al 100 %', (tester) async {
+        await pumpTask(tester);
+        final (a, b) = await pinch(tester);
+        expect(taskZoom(tester), greaterThan(1.5));
+        expect(find.byType(ImageViewerScreen), findsNothing);
+        expect(find.bySemanticsLabel('Cerrar'), findsNothing);
+
+        await a.up();
+        await b.up();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(taskZoom(tester), greaterThan(1)); // Vuelve con animación.
+        await tester.pumpAndSettle();
+        expect(taskZoom(tester), 1);
+        expect(find.byType(ImageViewerScreen), findsNothing);
+
+        // Un toque sigue abriendo el visor, a ×1.
+        await tester.tap(find.byType(TaskImage));
+        await tester.pumpAndSettle();
+        expect(scale(tester), 1);
+      });
+
+      testWidgets('CA-007-23: con reducir movimiento vuelve al instante', (
+        tester,
+      ) async {
+        await pumpTask(tester, reduced: true);
+        final (a, b) = await pinch(tester);
+        expect(taskZoom(tester), greaterThan(1.5));
+        await a.up();
+        await b.up();
+        await tester.pump();
+        expect(taskZoom(tester), 1);
+      });
+    });
+
     testWidgets('CA-007-23: con reducir movimiento el zoom salta', (
       tester,
     ) async {
