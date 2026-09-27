@@ -36,13 +36,21 @@ class _PreviewPages extends StatelessWidget {
     final path = source.path;
     final bytes = source.bytes;
     if (path != null) {
-      return PdfViewer.file(path, key: ValueKey(source.key), params: _params);
+      return PdfViewer.file(
+        path,
+        key: ValueKey(source.key),
+        // Con 20 páginas como máximo, todas de una vez (CA-008-03).
+        useProgressiveLoading: false,
+        params: _params,
+      );
     }
     if (bytes != null) {
       return PdfViewer.data(
         bytes,
         sourceName: source.key,
         key: ValueKey(source.key),
+        // Con 20 páginas como máximo, todas de una vez (CA-008-03).
+        useProgressiveLoading: false,
         params: _params,
       );
     }

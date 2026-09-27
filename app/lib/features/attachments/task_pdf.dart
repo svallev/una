@@ -10,8 +10,10 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../app/theme/tokens.g.dart';
 import '../../data/attachments/attachment_images.dart';
+import '../../domain/entities/link_target.dart';
 import '../../domain/entities/pdf_position.dart';
 import '../../l10n/generated/app_localizations.dart';
+import 'pdf_semantics.dart';
 
 /// Lo que la pantalla principal le da al visor del PDF (CA-008-08/09).
 @immutable
@@ -25,6 +27,7 @@ class TaskPdfArgs {
     this.onLeave,
     this.caption,
     this.actions = const {},
+    this.onLink,
   });
 
   final PdfSource source;
@@ -51,6 +54,11 @@ class TaskPdfArgs {
   /// Acciones de la tarea (completar, eliminar) que también lleva el PDF para
   /// el lector, antes que las suyas (CA-008-20).
   final Map<CustomSemanticsAction, VoidCallback> actions;
+
+  /// Un enlace externo del PDF (web, correo, teléfono), ya clasificado: la
+  /// pantalla pide confirmación (CA-008-12). Los internos los resuelve el
+  /// visor y los bloqueados no llegan.
+  final ValueChanged<LinkTarget>? onLink;
 }
 
 /// El visor del PDF de la tarea actual. Se sustituye en los tests de widgets:
@@ -297,6 +305,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
   PdfPosition? _left;
   bool _covered = false;
   final _focus = FocusNode(debugLabel: 'pdf');
+  Map<int, PdfPageContent> _content = const {};
 
   @override
   void initState() {
@@ -333,6 +342,23 @@ class _TaskPdfViewState extends State<TaskPdfView> {
   }
 
   String get _caption => widget.args.caption ?? '';
+
+  Future<void> _loadContent(PdfDocument document) async {
+    final content = await loadPdfContent(document);
+    if (mounted) setState(() => _content = content);
+  }
+
+  /// Un enlace tocado o activado con el lector o el teclado (CA-008-12).
+  void _onLink(PdfLink link) {
+    switch (linkTargetOf(link)) {
+      case InternalLink(:final page):
+        _goToPage(page);
+      case BlockedLink():
+        break; // No hace nada.
+      case final target:
+        widget.args.onLink?.call(target);
+    }
+  }
 
   // --- Zoom y desplazamiento sin gestos (CA-008-10, CA-008-22) --------------
 
@@ -603,7 +629,11 @@ class _TaskPdfViewState extends State<TaskPdfView> {
           enableKeyboardNavigation: false,
           onGeneralTap: _onGeneralTap,
           pagePaintCallbacks: [_paintSeparator],
-          onViewerReady: (_, controller) => unawaited(_restore(controller)),
+          onViewerReady: (document, controller) {
+            unawaited(_restore(controller));
+            unawaited(_loadContent(document));
+          },
+          linkHandlerParams: PdfLinkHandlerParams(onLinkTap: _onLink),
           viewerOverlayBuilder: _caption.isEmpty
               ? null
               : (context, size, _) => [
@@ -622,6 +652,8 @@ class _TaskPdfViewState extends State<TaskPdfView> {
             ? PdfViewer.file(
                 path,
                 key: ValueKey(source.key),
+                // Con 20 páginas como máximo, todas de una vez (CA-008-03).
+                useProgressiveLoading: false,
                 controller: _controller,
                 params: params,
               )
@@ -630,6 +662,8 @@ class _TaskPdfViewState extends State<TaskPdfView> {
                 bytes,
                 sourceName: source.key,
                 key: ValueKey(source.key),
+                // Con 20 páginas como máximo, todas de una vez (CA-008-03).
+                useProgressiveLoading: false,
                 controller: _controller,
                 params: params,
               )
@@ -638,7 +672,20 @@ class _TaskPdfViewState extends State<TaskPdfView> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _accessible(viewer),
+              _accessible(
+                Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Su semántica dice "Page N" en inglés: se usa la nuestra.
+                    ExcludeSemantics(child: viewer),
+                    PdfSemanticsLayer(
+                      controller: _controller,
+                      content: _content,
+                      onLink: _onLink,
+                    ),
+                  ],
+                ),
+              ),
               if (!_ready) TaskPdfFace(args: args),
             ],
           ),
