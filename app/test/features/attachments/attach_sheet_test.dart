@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_image_importer.dart';
+import '../../support/fake_pdf_importer.dart';
+import '../../support/fake_pdf_view.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
@@ -21,10 +23,12 @@ void main() {
 
   late MemoryAttachmentStore store;
   late FakeImageImporter importer;
+  late FakePdfImporter pdfs;
 
   setUp(() {
     store = MemoryAttachmentStore();
     importer = FakeImageImporter(store);
+    pdfs = FakePdfImporter(store);
   });
 
   Future<void> pumpEditor(
@@ -44,6 +48,8 @@ void main() {
       overrides: [
         attachmentStoreProvider.overrideWithValue(store),
         imageImporterProvider.overrideWithValue(importer),
+        pdfImporterProvider.overrideWithValue(pdfs),
+        ...fakePdfViews,
       ],
     );
     await tester.pumpAndSettle();
@@ -174,20 +180,33 @@ void main() {
   });
 
   testWidgets(
-    'CA-007-01 / DEV-18: "Subir archivo" y "Cargar URL" se ven activas pero '
-    'no hacen nada',
+    'CA-007-01 / DEV-18: "Cargar URL" se ve activa pero no hace nada hasta '
+    'la 009',
     (tester) async {
       await pumpEditor(tester);
       await openSheet(tester);
-      await tester.tap(find.text('Subir archivo'));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('Cargar URL'));
       await tester.pumpAndSettle();
       expect(find.byType(AttachSheet), findsOneWidget);
       expect(importer.picks, isEmpty);
+      expect(pdfs.picks, isEmpty);
       for (final row in tester.widgetList<SheetRow>(find.byType(SheetRow))) {
         expect(row.enabled, isTrue);
       }
+    },
+  );
+
+  testWidgets(
+    'CA-008-01: "Subir archivo" cierra la hoja y abre el selector de PDF',
+    (tester) async {
+      await pumpEditor(tester, mode: EditorMode.create);
+      await openSheet(tester);
+      await tester.tap(find.text('Subir archivo'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AttachSheet), findsNothing);
+      expect(pdfs.picks, hasLength(1));
+      expect(importer.picks, isEmpty);
+      expect(containerOf(tester).read(attachmentImportProvider).pdf, isNotNull);
     },
   );
 
