@@ -3,13 +3,13 @@
 - **Alcance:** app móvil iOS/Android v1 sin backend, más la web de pruebas en Vercel y la cadena de desarrollo (repo, CI, dependencias y firma).
 - **Referencias:** OWASP MASVS v2 (STORAGE, CRYPTO, AUTH, NETWORK, PLATFORM, CODE, RESILIENCE, PRIVACY) y MASTG para las pruebas.
 - **Método:** STRIDE simplificado por superficie. Revisión en cada spec que toque una superficie y antes de cada versión.
-- **Fecha:** 2026-09-24 · Versión 1.0
+- **Fecha:** 2026-09-27 · Versión 1.1 (ADR-0012: sin histórico). Versión 1.0: 2026-09-24
 
 ## 1. Activos
 
 | ID | Activo | Sensibilidad | Dónde vive |
 |---|---|---|---|
-| A-1 | Tareas (texto) e histórico | Media: puede contener datos personales | SQLite en el sandbox |
+| A-1 | Tareas pendientes (texto; completar y eliminar las borran, ADR-0012) | Media: puede contener datos personales | SQLite en el sandbox |
 | A-2 | Adjuntos: fotos, PDF, documentos, capturas web | **Alta**: DNI, entradas, recetas, documentos privados | `attachments/` en el sandbox |
 | A-3 | Metadatos de las fotos (EXIF/GPS) | **Alta**: ubicación del usuario | Se eliminan al importar (no deben persistir) |
 | A-4 | URL visitadas | Media | BD + WebView (sesión no persistente) |
@@ -41,7 +41,7 @@
 | T-4 | WebView de tareas URL | Ejecución o escalada: puente JS, `file://`, cookies persistentes | `javaScriptBridgeEnabled:false`; sin acceso a archivos ni contenido; almacén no persistente; sin permisos; sin descargas; `isInspectable` solo en debug; **certificado inválido siempre cancelado y HTTP ≥ 400 = captura fallida (I-5)**; `webview_flutter` oficial en lugar de un plugin sin mantenimiento (ADR-0007). Verificado en S4 | PLATFORM-2 |
 | T-5 | URL introducida | Suplantación: esquemas peligrosos, homógrafos IDN, credenciales en la URL | Solo `http(s)`; bloqueo de `javascript:`, `data:`, `file:`, `content:`, `intent:`…; se rechaza `user:pass@`; se muestra el dominio real (punycode si mezcla alfabetos); navegación fuera del dominio → navegador del sistema tras avisar | NETWORK-1, PLATFORM-2 |
 | T-6 | Red | Manipulación (MITM) | ATS y `cleartextTrafficPermitted=false`; sin excepciones; sin *pinning* (no hay backend propio) | NETWORK-1 |
-| T-7 | Copias de seguridad | Divulgación vía iCloud/Google | Incluidas por decisión (ADR-0004); explicado en "Acerca de"; los temporales y cachés se excluyen. **Residual (specs 003 y 004, ADR-0012):** una copia anterior a completar o eliminar una tarea la conserva y, al restaurarla, vuelve como pendiente; una copia v1 con completadas o marcas se limpia al abrirla (migración a v2). **Residual (spec 007):** si el proceso muere a mitad de una importación, el original (con sus metadatos) queda en `cache/import/` hasta el barrido del siguiente arranque; la caché nunca entra en las copias | STORAGE-2 |
+| T-7 | Copias de seguridad | Divulgación vía iCloud/Google | Incluidas por decisión (ADR-0004); explicado en "Acerca de"; los temporales y cachés se excluyen. **Residual (specs 003 y 004, ADR-0012):** una copia anterior a completar o eliminar una tarea la conserva y, al restaurarla, vuelve como pendiente; una copia v1 con completadas o marcas se limpia al abrirla (migración a v2). **Residual (ADR-0012):** el borrado es lógico fuera del archivo de la BD: `secure_delete` sobrescribe sus páginas libres, pero no el diario ya desvinculado ni los bloques de la memoria flash (recuperable solo con extracción física en Android 8–9 sin cifrado por archivo). Las imágenes de una tarea completada o eliminada viven hasta el barrido si la app muere antes de borrarlas, o tras la migración a v2; no entran en la copia en la nube, pero sí en la transferencia entre móviles (y el barrido del móvil nuevo las borra). **Residual (spec 007):** si el proceso muere a mitad de una importación, el original (con sus metadatos) queda en `cache/import/` hasta el barrido del siguiente arranque; la caché nunca entra en las copias | STORAGE-2 |
 | T-8 | Componentes exportados (Android) / esquemas de URL | Suplantación por intents de otras apps | Solo la `MainActivity` exportada; FileProvider no exportado con `grantUriPermissions` puntual y solo de lectura, salvo la salida de la cámara (spec 007): escritura sobre **un único archivo** de `cache/import/`, que se revoca al volver; las URIs elegidas se rechazan si su proveedor es de la propia app o su autoridad lleva usuario (`0@…`); sin *deep links* en la v1 | PLATFORM-1 |
 | T-9 | Web de pruebas (Vercel) | XSS o *clickjacking* | CSP estricta, `frame-ancestors 'none'`, HSTS, nosniff, `Referrer-Policy: no-referrer`, `Permissions-Policy`; sin scripts de terceros; previews protegidas; `noindex` (ADR-0010) | — |
 | T-10 | Dependencias | Manipulación en la cadena de suministro | `pubspec.lock` versionado; versiones fijadas; Dependabot; OSV-Scanner en CI; dependency-review en las PR; acciones fijadas por SHA; criterios de aceptación de dependencias (§5) | CODE-3 |

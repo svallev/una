@@ -109,5 +109,45 @@ void main() {
       expect(await setting(db, 'hasEverHadTasks'), 'true');
       await db.close();
     });
+
+    test('si falla a mitad, no cambia nada y se repite en el siguiente '
+        'arranque (transacción explícita)', () async {
+      final schema = await verifier.schemaAt(1);
+      [
+        firstRunDone,
+        task('p1'),
+        task('c1', status: 'completed', completedAt: t0 + 1),
+        image('a-c1', 'c1'),
+        // El último paso (borrar las tareas) falla.
+        'CREATE TRIGGER boom BEFORE DELETE ON tasks '
+            "BEGIN SELECT RAISE(ABORT, 'disco lleno'); END",
+      ].forEach(schema.rawDatabase.execute);
+
+      final failing = AppDatabase(schema.newConnection());
+      await expectLater(
+        failing.customSelect('SELECT 1').get(),
+        throwsA(anything),
+      );
+      await failing.close();
+
+      final raw = schema.rawDatabase;
+      int count(String sql) => raw.select(sql).first.values.first! as int;
+      // Nada a medias: siguen el adjunto, la completada y la versión 1.
+      expect(count('SELECT COUNT(*) FROM attachments'), 1);
+      expect(count('SELECT COUNT(*) FROM tasks'), 2);
+      expect(
+        count("SELECT COUNT(*) FROM settings WHERE key = 'hasEverHadTasks'"),
+        0,
+      );
+      expect(raw.userVersion, 1);
+
+      raw.execute('DROP TRIGGER boom');
+      final db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 2);
+      expect(await ids(db, 'tasks'), ['p1']);
+      expect(await ids(db, 'attachments'), isEmpty);
+      expect(await setting(db, 'hasEverHadTasks'), 'true');
+      await db.close();
+    });
   });
 }

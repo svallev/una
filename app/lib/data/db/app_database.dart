@@ -90,27 +90,31 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
-    // Drift ejecuta la migración en una transacción: si falla, no cambia nada
-    // y la app muestra el error de almacenamiento (spec 001).
-    onUpgrade: stepByStep(
-      from1To2: (m, schema) async {
-        // Sin histórico (ADR-0012). Primero el ajuste, que necesita ver las
-        // filas; después los adjuntos (clave foránea) y las tareas. Los
-        // archivos de los adjuntos borrados los recoge el barrido.
-        await customStatement(
-          'INSERT OR REPLACE INTO settings (key, value, updated_at) '
-          "SELECT 'hasEverHadTasks', 'true', ? "
-          'WHERE EXISTS (SELECT 1 FROM tasks)',
-          [DateTime.now().millisecondsSinceEpoch],
-        );
-        await customStatement(
-          'DELETE FROM attachments WHERE task_id IN (SELECT id FROM tasks '
-          "WHERE status <> 'pending' OR deleted_at IS NOT NULL)",
-        );
-        await customStatement(
-          "DELETE FROM tasks WHERE status <> 'pending' OR deleted_at IS NOT NULL",
-        );
-      },
+    // Drift no abre una transacción para migrar: se abre aquí, para que un
+    // fallo a mitad no deje nada cambiado ni `user_version` subido; la app
+    // muestra el error de almacenamiento (spec 001) y la migración se repite
+    // en el siguiente arranque.
+    onUpgrade: (m, from, to) => transaction(
+      () => stepByStep(
+        from1To2: (m, schema) async {
+          // Sin histórico (ADR-0012). Primero el ajuste, que necesita ver las
+          // filas; después los adjuntos (clave foránea) y las tareas. Los
+          // archivos de los adjuntos borrados los recoge el barrido.
+          await customStatement(
+            'INSERT OR REPLACE INTO settings (key, value, updated_at) '
+            "SELECT 'hasEverHadTasks', 'true', ? "
+            'WHERE EXISTS (SELECT 1 FROM tasks)',
+            [DateTime.now().millisecondsSinceEpoch],
+          );
+          await customStatement(
+            'DELETE FROM attachments WHERE task_id IN (SELECT id FROM tasks '
+            "WHERE status <> 'pending' OR deleted_at IS NOT NULL)",
+          );
+          await customStatement(
+            "DELETE FROM tasks WHERE status <> 'pending' OR deleted_at IS NOT NULL",
+          );
+        },
+      )(m, from, to),
     ),
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

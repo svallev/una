@@ -26,11 +26,11 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-0012-03 a 07 | **Hechas** (contrato, repositorios, casos de uso, arranque, barrido; ver el plan §9) | `8a72099` |
 | T-0012-08, 09 | **Hechas** en el emulador (integración y actualización real desde v1) | este cambio |
 | T-0012-10 | **Hecha** (documentos) | este cambio |
-| T-0012-11 | Pendiente: `security-reviewer` y `/security-check` | — |
+| T-0012-11 | **Hecha**: `/security-check` sin acciones; `security-reviewer`: H-1 corregido (transacción explícita en la migración, con test), H-2 a H-4 registrados o corregidos, H-5 y H-6 pendientes (plan §9) | este cambio |
 
 ## Cierre
 
 - [x] Tests de migración, contrato, dominio, widgets y goldens en verde (los goldens no cambian).
 - [x] Integración y actualización desde v1 comprobadas en el emulador.
-- [ ] Definition of Done (`specs/constitution.md`) completa (falta T-0012-11 y CI).
+- [x] Definition of Done (`specs/constitution.md`) completa (a falta de CI en la PR).
 - [x] Enmiendas del ADR-0012 en las specs 001, 003, 004 y 007 marcadas como **implementadas**.
