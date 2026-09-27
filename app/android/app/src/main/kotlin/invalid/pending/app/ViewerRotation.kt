@@ -20,7 +20,10 @@ class ViewerRotation(
 ) {
     private var watching = false
     private var following = false
-    private var wasLandscape = false
+    private var landscape = false
+
+    /** Tras avisar, o al cerrar el visor en horizontal, hasta volver a vertical. */
+    private var blocked = false
 
     private val listener = object : OrientationEventListener(activity) {
         override fun onOrientationChanged(degrees: Int) {
@@ -36,13 +39,15 @@ class ViewerRotation(
                     else -> return // Boca abajo o entre zonas: sin cambios.
                 }
             }
-            val landscape = target != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            landscape = target != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            if (!landscape) blocked = false
             if (following) {
                 if (activity.requestedOrientation != target) activity.requestedOrientation = target
-            } else if (watching && landscape && !wasLandscape) {
+            } else if (watching && landscape && !blocked) {
+                // También al abrir la app, o volver a ella, ya en horizontal.
+                blocked = true
                 onLandscape()
             }
-            wasLandscape = landscape
         }
     }
 
@@ -51,9 +56,6 @@ class ViewerRotation(
 
     /** La tarea actual con imagen se ve ([on] = true) o deja de verse. */
     fun watch(on: Boolean) {
-        // [wasLandscape] guarda la última lectura, también con el visor
-        // abierto: cerrado con "Cerrar" en horizontal, no se reabre hasta
-        // volver a vertical y girar otra vez.
         watching = on
         update()
     }
@@ -61,6 +63,9 @@ class ViewerRotation(
     /** El visor se abre ([on] = true) o se cierra. */
     fun follow(on: Boolean) {
         following = on
+        // Cerrado con "Cerrar" en horizontal: no se reabre hasta volver a
+        // vertical y girar otra vez.
+        if (!on && landscape) blocked = true
         if (!on) activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         update()
     }
