@@ -223,7 +223,7 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
     - **M1, corregido:** ADR-0013 y la spec §6 nombran WCAG 2.5.1, marcan como [Suposición] que la lupa baste (Android 8–11 exige dos dedos) y corrigen "el menú tiene sus acciones". Criterio de revisión y auditoría de F5 en `docs/PLAN.md`.
     - **M4, corregido:** tests de horizontal (lectura y acciones, guías de tamaño, etiquetas y contraste, también con el texto al 200 %) y `view.reset` en los tests que cambian el tamaño.
     - **[Pendiente, tarea posterior]** M2: al girar con el foco en el menú o en completar, el foco se pierde (llevarlo a la tarea). M3: en horizontal no se ve el texto de la tarea (decisión del propietario). B1: nada indica que una imagen alta se puede desplazar. B2: eliminar desde horizontal gira a vertical en mitad de la confirmación; comprobarlo en el dispositivo. B3: repetir la prueba de foco de TalkBack con cada versión de Flutter y de TalkBack.
-    - Sugerencia de la revisión, **sin aplicar** (la constitución es del propietario): una nota bajo P6 que remita a ADR-0013.
+    - Nota bajo P6 en la constitución (v1.1) que remite a ADR-0013, aprobada por el propietario (2026-09-27).
 
 ### Pendiente de verificar
 

@@ -109,12 +109,12 @@ tools/measure-cold-start.sh <serial> 20
 
 ## 6. Switch Access y teclado físico (T-007-24)
 
-- [ ] **Switch Access:** en la tarea con imagen, llegar a Completar tarea y al menú.
-- [ ] **Teclado en el editor:** Tab llega a "Quitar adjunto" y se ve su anillo.
-- [ ] **Texto al 200 %:** con un error de importación, el aviso queda encima de los botones y no tapa el (+).
+- [ ] **Switch Access:** en la tarea con imagen, llegar a Completar tarea y al menú. **[Pasado a la auditoría de F5]** junto con Switch Access en horizontal y la lupa (ADR-0013, `docs/PLAN.md`).
+- [x] **Teclado en el editor:** Tab llega a "Quitar adjunto" y se ve su anillo. **[Hecho 2026-09-27]** En el emulador, Tab recorre el editor con imagen (el foco llega al campo). El anillo no se ve con las teclas que inyecta `adb`, porque Flutter las trata como teclado virtual (flutter/flutter#180746); lo cubre `image_a11y_test` ("Quitar adjunto recibe el foco con Tab y muestra el anillo"). Con un teclado físico real, en la auditoría de F5.
+- [x] **Texto al 200 %:** con un error de importación, el aviso queda encima de los botones y no tapa el (+). **[Hecho]** `image_a11y_test` ("WCAG 2.4.11: al 200 %, el aviso de error no tapa el (+)").
 
 ## 7. Cierre
 
-- [ ] Resultados anotados en el plan §8 y en `docs/perf/baseline.md`.
-- [ ] `tasks.md`: T-007-23 y T-007-24 hechas; lista de cierre (todos los CA con test en verde, DoD) y spec marcada como **Implementada**.
-- [ ] PR de la rama `feat/007-adjunto-imagen-c2zgoo` con el antes y el después de los goldens.
+- [x] Resultados anotados en el plan §8 y en `docs/perf/baseline.md`.
+- [x] `tasks.md`: T-007-23 y T-007-24 hechas; lista de cierre (todos los CA con test en verde, DoD) y spec marcada como **Implementada**.
+- [x] PR de la rama `feat/007-adjunto-imagen-c2zgoo` con el antes y el después de los goldens: svallev/una#11.

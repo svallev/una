@@ -30,7 +30,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-24 | TalkBack y teclado en el emulador (hoja, vuelta de la cámara, tarea actual con imagen) | 20 | Lista de la revisión de accesibilidad | CA-007-21/22 |
 | T-007-25 | Revisiones: `a11y-reviewer`, `security-reviewer`, `/security-check`, `/i18n-check`, `/tokens-validate` | 22–24 | Hallazgos resueltos o registrados | DoD |
 
-## Estado (2026-09-26)
+## Estado (2026-09-27)
 
 | Tareas | Estado | Commit |
 |---|---|---|
@@ -55,12 +55,12 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-007-21 | **Hecha** (sin desviaciones nuevas del prototipo) | `fe8fe7a` |
 | T-007-22 | **Hecha** (generados en Linux con la versión de CI; corrige el logotipo cortado a 200 %) | `cce6c9f`, `a32e11b` |
 | T-007-25 | **Hecha** (hallazgos corregidos; Kotlin y comprobaciones en el dispositivo, en local) | `86581b8`, `91b5045`, `33abc03` |
-| T-007-23, 24 | Pendientes (en local: emulador y Xiaomi). Tests y guía preparados: `dispositivo.md` | `bf2834f` (preparación) |
+| T-007-23, 24 | **Hechas** en el emulador y el Xiaomi (`dispositivo.md`). Switch Access, teclado físico real y la lupa del sistema pasan a la auditoría de F5; la limitación de foco de TalkBack se acepta (CA-007-22) | `bf2834f` … PR svallev/una#11 |
 
 Las decisiones y cambios respecto al plan están en `plan.md` §8.
 
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde.
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada**.
+- [x] Todos los CA de la spec tienen test en verde (491 tests; goldens en Linux).
+- [x] Definition of Done (`specs/constitution.md`) completa, con las excepciones del propietario a P6 (ADR-0013). CI en la PR svallev/una#11.
+- [x] Spec marcada como **Implementada**.
