@@ -227,6 +227,8 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
   - `image_flow_test`: además, la captura larga cierra el visor antes de desmontar la app.
   - **Presupuesto de memoria redefinido por el propietario (§3 de dispositivo.md):** "< 250 MB con el visor abierto" era inalcanzable, porque la app ya ocupa ~350 MB de RSS en la pantalla principal del Xiaomi. Ahora: ampliar a ×8 añade < 200 MB sobre la tarea actual, medido con `dumpsys meminfo` en un proceso nuevo (`docs/architecture.md` §7). Medido: +150 MB de PSS. `viewer_perf_test` ya no usa `maxRss`, que incluía el pico de la importación de 50 MP (~620 MB): comprueba el aumento de la RSS al abrir el visor como aviso. **[Pendiente, R-02]** El pico de la importación en gama media.
 
+  - **Pruebas a mano (§4 de dispositivo.md):** giro correcto en el Xiaomi y en el emulador. El propietario confirma que a ×1 la imagen va **siempre al ancho, con desplazamiento vertical**, también en horizontal (CA-007-09 sin cambios). **[Pendiente]** El pellizco en el Xiaomi (según el propietario, no funciona; en los tests sí) y el selector que a veces no vuelve a la app tras elegir una foto.
+
 ### Pendiente de verificar
 
 - **[Hecho 2026-09-27]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`) en el Mac.

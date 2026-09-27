@@ -90,18 +90,23 @@ tools/measure-cold-start.sh <serial> 20
 
 ## 4. A mano: cámara, selector y ciclo de vida
 
-- [ ] **"Hacer foto"** abre la cámara del sistema sin pedir ningún permiso (CA-007-02). La foto vuelve a la vista previa con el foco en ella.
-- [ ] **"Subir imagen"** abre el selector de fotos del sistema, sin permisos (CA-007-03).
+- [x] **"Hacer foto"** abre la cámara del sistema sin pedir ningún permiso (CA-007-02). La foto vuelve a la vista previa con el foco en ella.
+  **[Hecho 2026-09-27, Xiaomi, propietario]** Sin permisos; la foto vuelve a la vista previa con "Guardar" visible. El foco se comprueba en el §5.
+- [x] **"Subir imagen"** abre el selector de fotos del sistema, sin permisos (CA-007-03). **[Hecho 2026-09-27, Xiaomi, propietario]**
+  **[Pendiente, fallo]** El propietario informa de que, tras elegir una foto, a veces se queda en la galería y deja cambiar de foto en lugar de volver a la app. Sin reproducir todavía (hace falta la app `.debug` en el Xiaomi).
 - [ ] **Cancelar la cámara o el selector:** el editor queda como estaba y el foco vuelve a (+).
   **[Hecho 2026-09-27, emulador]** Con el gesto atrás en la cámara (`camera2`) y en el selector del sistema (`photopicker`), el editor queda igual. **[Pendiente]** El foco en (+) se comprueba con TalkBack (§5): `uiautomator` no ve el foco de Flutter.
 - [x] **CL-007-1:** sin app de cámara (emulador sin cámara), se ve el aviso "No hay ninguna app de cámara disponible."
   **[Hecho 2026-09-27, emulador]** Con `pm disable-user com.android.camera2` sale "There's no camera app available." encima de los botones, sin tapar el (+). Cámara reactivada después.
-- [ ] **CL-007-6:** una imagen de Google Fotos que solo está en la nube, sin conexión, da "No hemos podido leer esta imagen." en 20 s como mucho. "Cancelar" responde en 2 s aunque el proveedor esté colgado (hallazgo M1).
+- [ ] **CL-007-6:** **[No probado: el propietario decide no probarlo, 2026-09-27; cubierto por los tests de M1]** una imagen de Google Fotos que solo está en la nube, sin conexión, da "No hemos podido leer esta imagen." en 20 s como mucho. "Cancelar" responde en 2 s aunque el proveedor esté colgado (hallazgo M1).
 - [x] **CL-007-7:** con la cámara abierta, `adb shell am kill invalid.pending.app.debug`. Al volver se ve el editor sin imagen (o la tarea actual si pasaron 10 min) y no queda nada en `cache/import/` tras el barrido.
   **[Hecho 2026-09-27, emulador]** Proceso muerto, foto hecha y "Done": la app se reabre en el editor sin imagen; `cache/import/` vacía y sin `attachments/`.
-- [ ] **CA-007-11:** el visor gira; al volver a la tarea, la pantalla está en vertical; el resto de la app no gira.
+- [x] **CA-007-11:** el visor gira; al volver a la tarea, la pantalla está en vertical; el resto de la app no gira.
+  **[Hecho 2026-09-27]** Xiaomi: el sistema gira a `ROTATION_90` con el visor (`SCREEN_ORIENTATION_USER`); la tarea actual pide `PORTRAIT`. Emulador: en horizontal, la foto al ancho con desplazamiento vertical y solo "Cerrar"; al volver a vertical sigue el visor; "Cerrar" vuelve a la tarea en vertical.
+  **Decidido por el propietario (2026-09-27):** a ×1 la imagen va **siempre al ancho, con desplazamiento vertical**, también en horizontal (sin cambios: CA-007-09). Girar no cierra el visor.
 - [ ] **Pellizco** hasta ×8; al soltar cerca de ×1, vuelve al ancho completo.
-- [ ] **CA-007-12:** con la imagen visible, la pantalla no se apaga mientras se toca; tras 10 minutos sin tocarla, sí. Para probarlo rápido, se puede acortar el tiempo en una compilación de depuración.
+  **[Pendiente]** El propietario informa de que no funciona. Los tests de widgets pellizcan bien (dos dedos a la vez y con el segundo 120 ms después; fotos horizontales y verticales). Falta confirmar que la prueba se hizo en el visor y no en la tarea actual, que no amplía.
+- [ ] **CA-007-12:** **[No probado: el propietario decide no probarlo, 2026-09-27; cubierto por `keep_screen_on_test.dart`]** con la imagen visible, la pantalla no se apaga mientras se toca; tras 10 minutos sin tocarla, sí. Para probarlo rápido, se puede acortar el tiempo en una compilación de depuración.
 
 ## 5. TalkBack (T-007-24)
 
