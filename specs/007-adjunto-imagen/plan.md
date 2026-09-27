@@ -217,6 +217,14 @@ Registro de lo que se decidió o cambió al implementar, respecto a lo escrito a
 
   - **TalkBack en el emulador (T-007-24), fallos de foco en el editor:** al abrir la hoja "Añadir", el foco va a la X y no al título; al cerrarla con atrás, va a "Cancelar" y no a (+) (CA-007-22). Ya estaban antes de retirar el visor. Se intentó: título enfocable, repetir el aviso de foco tras asentarse la ventana y poner el foco de entrada en los nodos con nombre. TalkBack no sigue ni `FocusSemanticEvent` ni el foco de entrada: al cambiar de ventana enfoca el primer elemento que se puede pulsar. Cambios deshechos. **Decidido por el propietario (2026-09-27):** se acepta como limitación de TalkBack, anotada en CA-007-22.
 
+  - **Revisión de `a11y-reviewer` sin visor (2026-09-27):**
+    - **A2, corregido:** una imagen alta no se podía desplazar con Switch Access ni con teclado (el desplazable queda dentro del nodo único de la tarea). `_RotatesWithImage` es ahora la dueña del `ScrollController`: el nodo de la tarea ofrece desplazar arriba y abajo (solo lo que se puede hacer, en pasos del 80 % de la pantalla, sin animar con reducir movimiento), y Av Pág / Re Pág hacen lo mismo con teclado. Tests en `current_task_image_test.dart`.
+    - **A1, decidido por el propietario:** el horizontal es solo para ver la imagen más grande; se registra la excepción a WCAG 1.3.4 y 2.1.1 en ADR-0013.
+    - **M1, corregido:** ADR-0013 y la spec §6 nombran WCAG 2.5.1, marcan como [Suposición] que la lupa baste (Android 8–11 exige dos dedos) y corrigen "el menú tiene sus acciones". Criterio de revisión y auditoría de F5 en `docs/PLAN.md`.
+    - **M4, corregido:** tests de horizontal (lectura y acciones, guías de tamaño, etiquetas y contraste, también con el texto al 200 %) y `view.reset` en los tests que cambian el tamaño.
+    - **[Pendiente, tarea posterior]** M2: al girar con el foco en el menú o en completar, el foco se pierde (llevarlo a la tarea). M3: en horizontal no se ve el texto de la tarea (decisión del propietario). B1: nada indica que una imagen alta se puede desplazar. B2: eliminar desde horizontal gira a vertical en mitad de la confirmación; comprobarlo en el dispositivo. B3: repetir la prueba de foco de TalkBack con cada versión de Flutter y de TalkBack.
+    - Sugerencia de la revisión, **sin aplicar** (la constitución es del propietario): una nota bajo P6 que remita a ADR-0013.
+
 ### Pendiente de verificar
 
 - **[Hecho 2026-09-27]** Compilar el Kotlin nuevo de T-007-16 (`regenerate` en `ImageImport.kt` y `ImageSanitizer.regenerateDerived`) en el Mac.

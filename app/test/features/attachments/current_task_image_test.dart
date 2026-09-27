@@ -209,6 +209,8 @@ void main() {
         isSemantics(
           label: 'Tarea actual: Horario del festival. Con foto',
           isImage: true,
+          hasFocusAction: true,
+          isFocusable: true,
           customActions: [
             const CustomSemanticsAction(label: 'Completar tarea'),
             const CustomSemanticsAction(label: 'Eliminar tarea'),
@@ -415,6 +417,7 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester);
+      addTearDown(tester.view.reset);
       tester.view.physicalSize = const Size(844, 390);
       await tester.pumpAndSettle();
       expect(find.byType(Wordmark), findsOneWidget);
@@ -428,6 +431,152 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(HoldToCompleteButton), findsOneWidget);
       expect(find.text('Horario del festival'), findsOneWidget);
+    });
+
+    testWidgets('CA-007-11 / CA-007-21: en horizontal la tarea conserva su '
+        'lectura y las acciones Completar y Eliminar (excepción ADR-0013)', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpApp(tester);
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = const Size(844, 390);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.byType(TaskImage)),
+        matchesSemantics(
+          label: 'Tarea actual: Horario del festival. Con foto',
+          isImage: true,
+          hasFocusAction: true,
+          isFocusable: true,
+          customActions: const [
+            CustomSemanticsAction(label: 'Completar tarea'),
+            CustomSemanticsAction(label: 'Eliminar tarea'),
+          ],
+        ),
+      );
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      handle.dispose();
+    });
+
+    testWidgets(
+      'CA-007-23: en horizontal con el texto al 200 %, nada se corta',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpApp(tester);
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+        tester.view.physicalSize = const Size(844, 390);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byType(Wordmark), findsOneWidget);
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        handle.dispose();
+      },
+    );
+
+    group('CA-007-09 / WCAG 2.1.1: una imagen alta se desplaza sin gestos', () {
+      Finder scrollable() => find.descendant(
+        of: find.byType(TaskImage),
+        matching: find.byType(Scrollable),
+      );
+      double offset(WidgetTester tester) =>
+          tester.state<ScrollableState>(scrollable()).position.pixels;
+
+      testWidgets('acciones del lector: solo las que se pueden hacer', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await pumpApp(
+          tester,
+          task: await imageTask(width: 1080, height: 20000),
+        );
+        final node = find.byType(TaskImage);
+        expect(
+          tester.getSemantics(node),
+          matchesSemantics(
+            label: 'Tarea actual: Horario del festival. Con foto',
+            isImage: true,
+            hasFocusAction: true,
+            isFocusable: true,
+            hasScrollUpAction: true,
+            customActions: const [
+              CustomSemanticsAction(label: 'Completar tarea'),
+              CustomSemanticsAction(label: 'Eliminar tarea'),
+            ],
+          ),
+        );
+        tester.semantics.scrollUp(
+          scrollable: find.semantics.byLabel(RegExp('Tarea actual')),
+        );
+        await tester.pumpAndSettle();
+        // Un paso: el 80 % de la pantalla.
+        expect(offset(tester), closeTo(844 * 0.8, 0.5));
+        expect(
+          tester.getSemantics(node),
+          matchesSemantics(
+            label: 'Tarea actual: Horario del festival. Con foto',
+            isImage: true,
+            hasFocusAction: true,
+            isFocusable: true,
+            hasScrollUpAction: true,
+            hasScrollDownAction: true,
+            customActions: const [
+              CustomSemanticsAction(label: 'Completar tarea'),
+              CustomSemanticsAction(label: 'Eliminar tarea'),
+            ],
+          ),
+        );
+        tester.semantics.scrollDown(
+          scrollable: find.semantics.byLabel(RegExp('Tarea actual')),
+        );
+        await tester.pumpAndSettle();
+        expect(offset(tester), 0);
+        handle.dispose();
+      });
+
+      testWidgets('una imagen que cabe no tiene acciones de desplazamiento', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await pumpApp(tester);
+        final data = tester
+            .getSemantics(find.byType(TaskImage))
+            .getSemanticsData();
+        expect(data.hasAction(SemanticsAction.scrollUp), isFalse);
+        expect(data.hasAction(SemanticsAction.scrollDown), isFalse);
+        handle.dispose();
+      });
+
+      testWidgets('teclado: Av Pág y Re Pág', (tester) async {
+        await pumpApp(
+          tester,
+          task: await imageTask(width: 1080, height: 20000),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+        await tester.pumpAndSettle();
+        expect(offset(tester), closeTo(844 * 0.8, 0.5));
+        await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
+        await tester.pumpAndSettle();
+        expect(offset(tester), 0);
+      });
+
+      testWidgets('CA-007-23: con reducir movimiento, salta sin animar', (
+        tester,
+      ) async {
+        await pumpApp(
+          tester,
+          task: await imageTask(width: 1080, height: 20000),
+          reduced: true,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+        await tester.pump();
+        expect(offset(tester), closeTo(844 * 0.8, 0.5));
+      });
     });
   });
 }

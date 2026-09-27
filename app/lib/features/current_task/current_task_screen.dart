@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -129,9 +130,13 @@ class CurrentTaskScreen extends ConsumerWidget {
 
     /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
     /// y sin decir "imagen" dos veces (CA-007-21).
-    Widget taskNode(Widget child) => FocusOnSignal(
+    Widget taskNode(Widget child, {_ImageScroll? scroll}) => FocusOnSignal(
       signal: focusSignal,
       child: Semantics(
+        // Una imagen más alta que la pantalla se desplaza también con las
+        // acciones del lector y de Switch Access (CA-007-09, WCAG 2.1.1).
+        onScrollUp: scroll?.canForward ?? false ? scroll!.forward : null,
+        onScrollDown: scroll?.canBack ?? false ? scroll!.back : null,
         label: l10n.currentTaskSemantics(switch (attachment) {
           null => text,
           _ when missing => l10n.a11yAttachmentMissing(
@@ -289,14 +294,16 @@ class CurrentTaskScreen extends ConsumerWidget {
                         children: [
                           _Order(
                             0,
-                            child: taskNode(
-                              _RotatesWithImage(
-                                enabled: !faceOnly,
-                                fullWidth: landscape,
-                                child: TaskImage(
+                            child: _RotatesWithImage(
+                              enabled: !faceOnly,
+                              fullWidth: landscape,
+                              builder: (scroll) => taskNode(
+                                TaskImage(
                                   attachment: attachment,
                                   caption: landscape ? null : text,
+                                  scroll: scroll.controller,
                                 ),
+                                scroll: scroll,
                               ),
                             ),
                           ),
@@ -419,20 +426,66 @@ class _MissingAttachment extends ConsumerWidget {
 
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
 /// pantalla y teclado), aunque el menú esté arriba en pantalla.
+/// Desplazamiento de la imagen de la tarea actual: por pasos del 80 % de la
+/// pantalla, sin animar con reducir movimiento.
+class _ImageScroll {
+  _ImageScroll(this.controller, this._reduced);
+
+  final ScrollController controller;
+  final bool Function() _reduced;
+
+  ScrollPosition? get _position =>
+      controller.hasClients ? controller.position : null;
+  bool get canForward {
+    final p = _position;
+    return p != null && p.pixels < p.maxScrollExtent - 0.5;
+  }
+
+  bool get canBack {
+    final p = _position;
+    return p != null && p.pixels > p.minScrollExtent + 0.5;
+  }
+
+  void forward() => _by(1);
+  void back() => _by(-1);
+
+  void _by(int direction) {
+    final p = _position;
+    if (p == null) return;
+    final to = (p.pixels + direction * p.viewportDimension * 0.8).clamp(
+      p.minScrollExtent,
+      p.maxScrollExtent,
+    );
+    if (_reduced()) {
+      p.jumpTo(to);
+    } else {
+      unawaited(
+        p.animateTo(
+          to,
+          duration: UnaMotion.imageZoomBack,
+          curve: UnaMotion.standardCurve,
+        ),
+      );
+    }
+  }
+}
+
 /// Mientras se ve la tarea actual con imagen (y es la pantalla de arriba, no
 /// bajo el menú, el editor o el listado), la app gira con el móvil
 /// (CA-007-11); si no, solo en vertical. En horizontal pide todo el ancho
-/// aunque el marco de la app lo limite en tablets (CL-001-7).
+/// aunque el marco de la app lo limite en tablets (CL-001-7). También es la
+/// dueña del desplazamiento de la imagen: acciones del lector y Av Pág / Re Pág
+/// con teclado (CA-007-09, WCAG 2.1.1).
 class _RotatesWithImage extends StatefulWidget {
   const _RotatesWithImage({
     required this.enabled,
     required this.fullWidth,
-    required this.child,
+    required this.builder,
   });
 
   final bool enabled;
   final bool fullWidth;
-  final Widget child;
+  final Widget Function(_ImageScroll scroll) builder;
 
   @override
   State<_RotatesWithImage> createState() => _RotatesWithImageState();
@@ -441,6 +494,40 @@ class _RotatesWithImage extends StatefulWidget {
 class _RotatesWithImageState extends State<_RotatesWithImage> {
   bool? _rotating;
   bool _fullWidth = false;
+  final _controller = ScrollController();
+  late final _scroll = _ImageScroll(
+    _controller,
+    () => mounted && MediaQuery.disableAnimationsOf(context),
+  );
+  (bool, bool)? _can;
+
+  /// Las acciones del lector cambian al llegar arriba o abajo del todo.
+  void _onScroll() {
+    final can = (_scroll.canForward, _scroll.canBack);
+    if (can != _can && mounted) setState(() => _can = can);
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent || !(_rotating ?? false)) return false;
+    if (event.logicalKey == LogicalKeyboardKey.pageDown && _scroll.canForward) {
+      _scroll.forward();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.pageUp && _scroll.canBack) {
+      _scroll.back();
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onScroll);
+    HardwareKeyboard.instance.addHandler(_onKey);
+    // Cuánto se puede desplazar solo se sabe tras la primera medida.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+  }
 
   void _update() {
     final on = widget.enabled && (ModalRoute.isCurrentOf(context) ?? true);
@@ -462,6 +549,8 @@ class _RotatesWithImageState extends State<_RotatesWithImage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _update();
+    // Al girar cambia la altura de la imagen.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
   }
 
   @override
@@ -472,6 +561,8 @@ class _RotatesWithImageState extends State<_RotatesWithImage> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    _controller.dispose();
     if (_rotating ?? false) unawaited(ImageRotation.follow(false));
     if (_fullWidth) {
       WidgetsBinding.instance.addPostFrameCallback(
@@ -482,7 +573,7 @@ class _RotatesWithImageState extends State<_RotatesWithImage> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) => widget.builder(_scroll);
 }
 
 class _Order extends StatelessWidget {

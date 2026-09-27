@@ -18,10 +18,19 @@ import 'attachment_health.dart';
 /// Es decorativa para el lector: la pantalla principal pone la imagen y el pie
 /// en un único nodo (CA-007-21).
 class TaskImage extends ConsumerStatefulWidget {
-  const TaskImage({super.key, required this.attachment, this.caption});
+  const TaskImage({
+    super.key,
+    required this.attachment,
+    this.caption,
+    this.scroll,
+  });
 
   final Attachment attachment;
   final String? caption;
+
+  /// Desplazamiento de la imagen alta, para moverla también con las acciones
+  /// del lector y con el teclado (CA-007-09, WCAG 2.1.1).
+  final ScrollController? scroll;
 
   @override
   ConsumerState<TaskImage> createState() => _TaskImageState();
@@ -133,6 +142,7 @@ class _TaskImageState extends ConsumerState<TaskImage>
                 final height =
                     width * attachment.height / math.max(1, attachment.width);
                 return SingleChildScrollView(
+                  controller: widget.scroll,
                   physics: _pinching
                       ? const NeverScrollableScrollPhysics()
                       : const ClampingScrollPhysics(),

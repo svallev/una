@@ -97,7 +97,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Dado** la tarea actual con imagen a la vista (sin el menú, el editor ni el listado encima)
   - **Cuando** gira el móvil a horizontal
   - **Entonces** la pantalla gira sola, sin tocar nada, y en horizontal solo se ven **la imagen, a todo el ancho y con desplazamiento vertical, y el logotipo**: sin menú, sin botón de completar y sin el pie de texto. Al volver a vertical, vuelve todo.
-  - En horizontal se sigue pudiendo completar o eliminar con las acciones del lector (CA-003-07, CA-004-10).
+  - En horizontal se sigue pudiendo completar o eliminar con las acciones del lector (CA-003-07, CA-004-10). Es un modo solo para ver la imagen más grande (excepción a WCAG 1.3.4 y 2.1.1, §6).
   - Respeta el bloqueo de rotación del sistema. El resto de la app (y la tarea sin imagen) queda solo en vertical.
   - En tablets y plegables, en horizontal usa todo el ancho de la pantalla aunque el resto de la app esté limitado a 600 px (CL-001-7).
 - **CA-007-12 Pantalla encendida, con límite (D10)**
@@ -249,13 +249,14 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 ## 6. Accesibilidad
 
 - Lectura, foco y anuncios: CA-007-21 y CA-007-22. La miniatura del listado es decorativa.
-- **Excepción a P6 (propietario, 2026-09-27, ADR-0013):** el pellizco de la tarea actual es un zoom de vistazo que vuelve al soltar y no tiene alternativa en la app para lector, teclado o switch. Para ampliar sin gestos se usa la lupa del sistema (ampliación de accesibilidad de Android), que funciona en toda la app. Nada depende del zoom: completar, eliminar y el menú tienen sus acciones.
+- **Excepción a P6 (propietario, 2026-09-27, ADR-0013):** el pellizco de la tarea actual es un zoom de vistazo que vuelve al soltar y no tiene alternativa en la app para lector, teclado o switch. Incumple WCAG 2.5.1 (gesto de dos dedos sin alternativa). Para ampliar sin gestos se usa la lupa del sistema (ampliación de accesibilidad de Android). **[Suposición]** Que la lupa baste se comprueba en la auditoría de F5; en Android 8–11, moverse por lo ampliado exige dos dedos. Nada esencial depende del zoom: completar y eliminar tienen sus acciones, y el menú está en vertical.
+- Desplazamiento de una imagen alta sin gestos (WCAG 2.1.1): acciones de desplazamiento del lector y de Switch Access en el nodo de la tarea (solo las que se pueden hacer), y Av Pág / Re Pág con teclado; con reducir movimiento, sin animar.
 - Contraste:
   - logotipo y menú con fondo blanco sobre la imagen (como el prototipo);
   - pie blanco sobre negro (18,9:1);
   - el anillo de foco del teclado lleva borde blanco y negro para verse sobre cualquier foto.
 - Objetivos táctiles ≥ 48 dp: "Quitar adjunto" (40 en el prototipo, DEV-36), X de la hoja, "Cancelar", "Quitar adjunto" y "Eliminar tarea".
-- Orientación (WCAG 1.3.4): la tarea actual con imagen gira (CA-007-11); el resto de la app queda en vertical, como excepción registrada (D10).
+- Orientación (WCAG 1.3.4): la tarea actual con imagen gira (CA-007-11); el resto de la app queda en vertical, como excepción registrada (D10). **Excepción a WCAG 1.3.4 y 2.1.1 en horizontal** (propietario, 2026-09-27, ADR-0013): el horizontal es solo para ver la imagen más grande, sin menú, botón de completar ni pie. Todo está en vertical; el bloqueo de rotación mantiene el vertical; en horizontal, completar y eliminar siguen como acciones del lector, y con teclado sin lector no queda nada que enfocar.
 - **[Pendiente P-5, v1.1]** Descripción de la imagen escrita por el usuario.
 
 ## 7. Textos (ES / EN)
