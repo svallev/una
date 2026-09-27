@@ -3,12 +3,15 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../app/theme/tokens.g.dart';
 import '../../data/attachments/attachment_images.dart';
 import '../../domain/entities/pdf_position.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 /// Lo que la pantalla principal le da al visor del PDF (CA-008-08/09).
 @immutable
@@ -21,6 +24,7 @@ class TaskPdfArgs {
     required this.onPosition,
     this.onLeave,
     this.caption,
+    this.actions = const {},
   });
 
   final PdfSource source;
@@ -43,6 +47,10 @@ class TaskPdfArgs {
   /// Se deja de ver el PDF (segundo plano, otra pantalla encima o se quita):
   /// la pantalla guarda [PdfPosition] en el disco (CA-008-09).
   final ValueChanged<PdfPosition>? onLeave;
+
+  /// Acciones de la tarea (completar, eliminar) que también lleva el PDF para
+  /// el lector, antes que las suyas (CA-008-20).
+  final Map<CustomSemanticsAction, VoidCallback> actions;
 }
 
 /// El visor del PDF de la tarea actual. Se sustituye en los tests de widgets:
@@ -218,6 +226,33 @@ class _FitWidthDelegate implements PdfViewerSizeDelegate {
   );
 }
 
+/// Niveles de zoom sobre el ancho para "Ampliar" y "Reducir" (acción o tecla,
+/// CA-008-10): ×1 → ×1,5 → ×2,5 → ×4.
+const pdfZoomLevels = [
+  1.0,
+  UnaMotion.pdfZoomStep,
+  UnaMotion.pdfZoomDoubleTap,
+  UnaMotion.pdfZoomMax,
+];
+
+const _zoomEpsilon = 0.01;
+
+/// El nivel siguiente a [relative] (zoom sobre el ancho), o null en ×4.
+double? zoomInStep(double relative) {
+  for (final l in pdfZoomLevels) {
+    if (l > relative + _zoomEpsilon) return l;
+  }
+  return null;
+}
+
+/// El nivel anterior a [relative], o null en ×1.
+double? zoomOutStep(double relative) {
+  for (final l in pdfZoomLevels.reversed) {
+    if (l < relative - _zoomEpsilon) return l;
+  }
+  return null;
+}
+
 /// Posición de la parte de arriba de [visible] en [layout] (CA-008-09): la
 /// página que la ocupa y cuánto se ha desplazado dentro de ella. Por encima de
 /// la primera página (la banda), el principio.
@@ -261,6 +296,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
   PdfPosition? _visible;
   PdfPosition? _left;
   bool _covered = false;
+  final _focus = FocusNode(debugLabel: 'pdf');
 
   @override
   void initState() {
@@ -284,6 +320,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
     _leave();
     _lifecycle.dispose();
     _controller.removeListener(_onMatrix);
+    _focus.dispose();
     super.dispose();
   }
 
@@ -296,6 +333,204 @@ class _TaskPdfViewState extends State<TaskPdfView> {
   }
 
   String get _caption => widget.args.caption ?? '';
+
+  // --- Zoom y desplazamiento sin gestos (CA-008-10, CA-008-22) --------------
+
+  Duration get _duration => MediaQuery.disableAnimationsOf(context)
+      ? Duration.zero
+      : UnaMotion.pdfZoom;
+
+  double get _fit => _controller.minScale;
+
+  /// Zoom actual sobre el ancho (×1 … ×4).
+  double get _relative =>
+      _controller.isReady && _fit > 0 ? _controller.currentZoom / _fit : 1;
+
+  Future<void> _zoomTo(double relative, {Offset? around}) async {
+    if (!_controller.isReady) return;
+    await _controller.setZoom(
+      around ?? _controller.centerPosition,
+      _fit * relative,
+      duration: _duration,
+    );
+    _announceZoom(relative);
+  }
+
+  void _announceZoom(double relative) {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        l10n.a11yZoomLevel((relative * 100).round()),
+        Directionality.of(context),
+      ),
+    );
+  }
+
+  void _zoomIn() {
+    final next = zoomInStep(_relative);
+    if (next != null) unawaited(_zoomTo(next));
+  }
+
+  void _zoomOut() {
+    final next = zoomOutStep(_relative);
+    if (next != null) unawaited(_zoomTo(next));
+  }
+
+  void _zoomFit() {
+    if (_relative > 1 + _zoomEpsilon) unawaited(_zoomTo(1));
+  }
+
+  /// Doble toque: alterna ×1 y ×2,5 alrededor del punto tocado.
+  bool _onGeneralTap(
+    BuildContext context,
+    PdfViewerController controller,
+    PdfViewerGeneralTapHandlerDetails details,
+  ) {
+    if (details.type != PdfViewerGeneralTapType.doubleTap) return false;
+    unawaited(
+      _zoomTo(
+        _relative > 1 + _zoomEpsilon ? 1 : UnaMotion.pdfZoomDoubleTap,
+        around: details.documentPosition,
+      ),
+    );
+    return true;
+  }
+
+  /// Desplaza lo que se ve [dx], [dy] píxeles de la vista (positivo: hacia
+  /// abajo y a la derecha del documento), sin salir de él.
+  void _scrollBy(double dx, double dy) {
+    if (!_controller.isReady) return;
+    final m = _controller.value.clone();
+    final t = m.getTranslation();
+    m.setTranslationRaw(t.x - dx, t.y - dy, t.z);
+    unawaited(
+      _controller.goTo(
+        _controller.makeMatrixInSafeRange(m, forceClamp: true),
+        duration: _duration,
+      ),
+    );
+  }
+
+  Size get _view => _controller.viewSize;
+
+  bool _canScroll(double dx, double dy) {
+    if (!_controller.isReady) return false;
+    final r = _controller.visibleRect;
+    final doc = _controller.documentSize;
+    const e = 0.5;
+    if (dy > 0) return r.bottom < doc.height - e;
+    if (dy < 0) return r.top > e;
+    if (dx > 0) return r.right < doc.width - e;
+    if (dx < 0) return r.left > e;
+    return false;
+  }
+
+  int get _page => _visible?.page ?? 1;
+
+  void _goToPage(int page) {
+    if (!_controller.isReady) return;
+    if (page < 1 || page > _controller.pageCount) return;
+    unawaited(
+      _controller.goToPage(
+        pageNumber: page,
+        anchor: PdfPageAnchor.top,
+        duration: _duration,
+      ),
+    );
+    final l10n = AppLocalizations.of(context);
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        l10n.pdfPageA11y(page, _controller.pageCount),
+        Directionality.of(context),
+      ),
+    );
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    final view = _controller.isReady ? _view : Size.zero;
+    if (key == LogicalKeyboardKey.equal ||
+        key == LogicalKeyboardKey.add ||
+        key == LogicalKeyboardKey.numpadAdd) {
+      _zoomIn();
+    } else if (key == LogicalKeyboardKey.minus ||
+        key == LogicalKeyboardKey.numpadSubtract) {
+      _zoomOut();
+    } else if (key == LogicalKeyboardKey.digit0 ||
+        key == LogicalKeyboardKey.numpad0) {
+      _zoomFit();
+    } else if (key == LogicalKeyboardKey.pageDown) {
+      _scrollBy(0, view.height * 0.8);
+    } else if (key == LogicalKeyboardKey.pageUp) {
+      _scrollBy(0, -view.height * 0.8);
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      _scrollBy(0, view.height * 0.1);
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      _scrollBy(0, -view.height * 0.1);
+    } else if (key == LogicalKeyboardKey.arrowRight) {
+      _scrollBy(view.width * 0.1, 0);
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      _scrollBy(-view.width * 0.1, 0);
+    } else {
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled;
+  }
+
+  /// Acciones del lector y de Switch Access sobre el PDF: solo las que se
+  /// pueden hacer ahora (CA-008-10, CA-008-20).
+  Widget _accessible(Widget child) => ListenableBuilder(
+    // Solo escucha: leer `value` antes de que el visor esté listo falla.
+    listenable: _controller,
+    builder: (context, child) {
+      final l10n = AppLocalizations.of(context);
+      final ready = _controller.isReady && _ready;
+      final r = _relative;
+      final page = _page;
+      final pages = ready ? _controller.pageCount : 0;
+      final view = ready ? _view : Size.zero;
+      return Semantics(
+        container: true,
+        onScrollUp: ready && _canScroll(0, 1)
+            ? () => _scrollBy(0, view.height * 0.8)
+            : null,
+        onScrollDown: ready && _canScroll(0, -1)
+            ? () => _scrollBy(0, -view.height * 0.8)
+            : null,
+        onScrollLeft: ready && _canScroll(1, 0)
+            ? () => _scrollBy(view.width * 0.8, 0)
+            : null,
+        onScrollRight: ready && _canScroll(-1, 0)
+            ? () => _scrollBy(-view.width * 0.8, 0)
+            : null,
+        customSemanticsActions: !ready
+            ? null
+            : {
+                ...widget.args.actions,
+                if (page < pages)
+                  CustomSemanticsAction(label: l10n.pdfNextPage): () =>
+                      _goToPage(page + 1),
+                if (page > 1)
+                  CustomSemanticsAction(label: l10n.pdfPrevPage): () =>
+                      _goToPage(page - 1),
+                if (zoomInStep(r) != null)
+                  CustomSemanticsAction(label: l10n.pdfZoomIn): _zoomIn,
+                if (zoomOutStep(r) != null)
+                  CustomSemanticsAction(label: l10n.pdfZoomOut): _zoomOut,
+                if (r > 1 + _zoomEpsilon)
+                  CustomSemanticsAction(label: l10n.pdfZoomFit): _zoomFit,
+              },
+        child: child,
+      );
+    },
+    child: Focus(focusNode: _focus, onKeyEvent: _onKey, child: child),
+  );
 
   void _onMatrix() {
     if (!_controller.isReady || !_restored) return;
@@ -364,6 +599,9 @@ class _TaskPdfViewState extends State<TaskPdfView> {
           sizeDelegateProvider: const FitWidthSizing(),
           layoutPages: _layout,
           textSelectionParams: const PdfTextSelectionParams(enabled: false),
+          // Las teclas las lleva la app (pasos de zoom propios, CA-008-10).
+          enableKeyboardNavigation: false,
+          onGeneralTap: _onGeneralTap,
           pagePaintCallbacks: [_paintSeparator],
           onViewerReady: (_, controller) => unawaited(_restore(controller)),
           viewerOverlayBuilder: _caption.isEmpty
@@ -400,7 +638,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              viewer,
+              _accessible(viewer),
               if (!_ready) TaskPdfFace(args: args),
             ],
           ),
