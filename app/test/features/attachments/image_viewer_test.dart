@@ -280,40 +280,6 @@ void main() {
       expect(scale(tester), lessThanOrEqualTo(UnaMotion.viewerZoomMax));
     });
 
-    testWidgets('pellizcar la foto de la tarea actual abre el visor ya '
-        'ampliado (×2,5); un toque, a ×1', (tester) async {
-      listen(tester);
-      final repo = InMemoryTaskRepository();
-      await repo.insert(await imageTask());
-      await pumpUnaApp(
-        tester,
-        repo: repo,
-        overrides: [attachmentStoreProvider.overrideWithValue(store)],
-      );
-      final center = tester.getCenter(find.byType(TaskImage));
-      final a = await tester.startGesture(center - const Offset(20, 0));
-      final b = await tester.startGesture(
-        center + const Offset(20, 0),
-        pointer: 2,
-      );
-      for (var i = 1; i <= 10; i++) {
-        await a.moveBy(const Offset(-6, 0));
-        await b.moveBy(const Offset(6, 0));
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-      await a.up();
-      await b.up();
-      await tester.pumpAndSettle();
-      expect(find.byType(ImageViewerScreen), findsOneWidget);
-      expect(scale(tester), closeTo(UnaMotion.viewerZoomStep, 0.001));
-
-      await tester.tap(find.bySemanticsLabel('Cerrar'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(TaskImage));
-      await tester.pumpAndSettle();
-      expect(scale(tester), 1);
-    });
-
     testWidgets('CA-007-23: con reducir movimiento el zoom salta', (
       tester,
     ) async {

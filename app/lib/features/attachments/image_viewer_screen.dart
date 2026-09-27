@@ -21,20 +21,12 @@ import 'keep_screen_on_controller.dart';
 /// la pantalla sobre papel, desplazamiento vertical, zoom opcional hasta ×8 y
 /// "Cerrar". Es la única pantalla que gira.
 class ImageViewerScreen extends ConsumerStatefulWidget {
-  const ImageViewerScreen({super.key, required this.attachment, this.zoomAt});
+  const ImageViewerScreen({super.key, required this.attachment});
 
   final Attachment attachment;
 
-  /// Pellizco en la tarea actual: se abre ya ampliado (×2,5) en este punto de
-  /// la pantalla.
-  final Offset? zoomAt;
-
   /// Fundido de entrada (con reducir movimiento, el de 400 ms, CA-007-23).
-  static Route<void> route(
-    BuildContext context,
-    Attachment attachment, {
-    Offset? zoomAt,
-  }) {
+  static Route<void> route(BuildContext context, Attachment attachment) {
     final reduced = MediaQuery.disableAnimationsOf(context);
     final duration = reduced ? UnaMotion.reducedMotionFade : UnaMotion.sheetIn;
     return PageRouteBuilder<void>(
@@ -42,8 +34,7 @@ class ImageViewerScreen extends ConsumerStatefulWidget {
       reverseTransitionDuration: reduced
           ? UnaMotion.reducedMotionFade
           : UnaMotion.sheetOut,
-      pageBuilder: (_, _, _) =>
-          ImageViewerScreen(attachment: attachment, zoomAt: zoomAt),
+      pageBuilder: (_, _, _) => ImageViewerScreen(attachment: attachment),
       transitionsBuilder: (_, animation, _, child) => FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: UnaMotion.easeCurve),
         child: child,
@@ -111,8 +102,6 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
     // Foco del lector en la imagen al abrir (CA-007-22).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final zoomAt = widget.zoomAt;
-      if (zoomAt != null) _zoomTo(UnaMotion.viewerZoomStep, focus: zoomAt);
       _imageSemantics.currentContext?.findRenderObject()?.sendSemanticsEvent(
         const FocusSemanticEvent(),
       );

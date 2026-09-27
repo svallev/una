@@ -76,8 +76,6 @@ class CurrentTaskScreen extends ConsumerWidget {
     Future<void> openMenu() => _openMenu(context, ref);
     Future<void> delete() => confirmAndDeleteTask(context, ref, task);
     Future<void> openViewer() => _openViewer(context, ref, task);
-    Future<void> openZoomed(Offset at) =>
-        _openViewer(context, ref, task, zoomAt: at);
     Widget hidden(Widget child) => Visibility(
       visible: false,
       maintainSize: true,
@@ -289,7 +287,6 @@ class CurrentTaskScreen extends ConsumerWidget {
                             child: taskNode(
                               _ImageLayer(
                                 onOpen: faceOnly ? null : openViewer,
-                                onPinch: faceOnly ? null : openZoomed,
                                 child: TaskImage(
                                   attachment: attachment,
                                   caption: text,
@@ -415,12 +412,7 @@ class _MissingAttachment extends ConsumerWidget {
 }
 
 /// Visor de la imagen (CA-007-09); al cerrarlo, el foco vuelve a la tarea.
-Future<void> _openViewer(
-  BuildContext context,
-  WidgetRef ref,
-  Task task, {
-  Offset? zoomAt,
-}) async {
+Future<void> _openViewer(BuildContext context, WidgetRef ref, Task task) async {
   final attachment = task.attachment;
   // Nunca durante completar o eliminar (CA-003-09, CA-004-05), ni con otra
   // pantalla encima: un toque o un giro más no abre un segundo visor.
@@ -433,7 +425,7 @@ Future<void> _openViewer(
     return;
   }
   await Navigator.of(context)
-      .push(ImageViewerScreen.route(context, attachment, zoomAt: zoomAt));
+      .push(ImageViewerScreen.route(context, attachment));
   if (!context.mounted) return;
   ref.read(screenFocusProvider.notifier).signal();
 }
@@ -441,23 +433,14 @@ Future<void> _openViewer(
 /// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
 /// pantalla y teclado), aunque el menú esté arriba en pantalla.
 /// La imagen de la tarea actual: tocarla, o poner el móvil en horizontal
-/// mientras se ve, abre el visor (CA-007-09 y CA-007-11); pellizcarla lo abre
-/// ya ampliado en ese punto (CA-007-10). Con
+/// mientras se ve, abre el visor (CA-007-09 y CA-007-11). Con
 /// teclado o interruptores se llega con Tab y se abre con Intro o Espacio, con
 /// el anillo por dentro del borde (WCAG 2.1.1 y 2.4.7). La lectura y las
 /// acciones del lector son las del nodo de la tarea, sin añadir nada.
-/// Separación de los dedos (respecto al inicio) que abre el visor ampliado.
-const _pinchToOpen = 1.15;
-
 class _ImageLayer extends StatefulWidget {
-  const _ImageLayer({
-    required this.onOpen,
-    required this.onPinch,
-    required this.child,
-  });
+  const _ImageLayer({required this.onOpen, required this.child});
 
   final VoidCallback? onOpen;
-  final ValueChanged<Offset>? onPinch;
   final Widget child;
 
   @override
@@ -467,9 +450,6 @@ class _ImageLayer extends StatefulWidget {
 class _ImageLayerState extends State<_ImageLayer> {
   bool _focused = false;
   bool? _watching;
-
-  /// Este pellizco ya abrió el visor.
-  bool _pinched = false;
   late final StreamSubscription<void> _landscape = ViewerRotation.landscape
       .listen((_) {
         if (mounted && _watching == true) widget.onOpen?.call();
@@ -527,17 +507,6 @@ class _ImageLayerState extends State<_ImageLayer> {
           // Toda la imagen, cargada o no.
           behavior: HitTestBehavior.opaque,
           onTap: onOpen,
-          // Dos dedos que se separan: el visor, ya ampliado (una vez por
-          // pellizco).
-          onScaleStart: (_) => _pinched = false,
-          onScaleUpdate: (d) {
-            final onPinch = widget.onPinch;
-            if (onPinch == null || _pinched) return;
-            if (d.pointerCount >= 2 && d.scale > _pinchToOpen) {
-              _pinched = true;
-              onPinch(d.focalPoint);
-            }
-          },
           child: widget.child,
         ),
       ),
