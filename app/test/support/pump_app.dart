@@ -53,6 +53,8 @@ Future<InMemoryTaskRepository> pumpWithApp(
           textScaler: TextScaler.linear(textScale),
         ),
         child: MaterialApp(
+          // Como la app: sin la cinta "DEBUG" (goldens de toda la app).
+          debugShowCheckedModeBanner: false,
           theme: UnaTheme.light(),
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
