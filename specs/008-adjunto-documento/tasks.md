@@ -1,0 +1,37 @@
+# Tareas — Spec 008: Tareas con PDF
+
+Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se marca `[P]` si puede hacerse en paralelo con la anterior. Una PR puede agrupar varias tareas consecutivas.
+
+| ID | Tarea | Depende de | Verificación | CA |
+|---|---|---|---|---|
+| T-008-01 | Dependencia `pdfrx`: añadirla fijada; comprobar la licencia en CI, la descarga de PDFium (origen y sha256), sin `INTERNET` en *release*, el WASM local en web y el tamaño del APK; registrarla en `threat-model.md §5` | — | `check_licenses.dart`, `check-android-permissions.sh release`, `--analyze-size`; nota en §5 | §4 del plan |
+| T-008-02 [P] | Tokens (franja, banda, insignia, "Volver a vertical", zoom); regenerar `tokens.g.dart` | — | `node tools/validate-tokens.mjs`, analyze | CA-008-08/10/11/19 |
+| T-008-03 [P] | Textos ES/EN de la §7 (`/strings-add`), con el cambio de `attachPickFileHint` | — | `gen-l10n`, `/i18n-check` | §7 |
+| T-008-04 [P] | Ficheros de prueba: `tools/fixtures/gen_pdf_fixtures.py` y los PDF en `app/integration_test/fixtures/` (+ uno pequeño en `app/test/fixtures/`) | — | Script reproducible; cada fichero es lo que dice su nombre | CA-008-02/12/14, CL-008-1/2/3/4/10 |
+| T-008-05 | Dominio: `AttachmentKind.pdf`, `AttachmentOrigin.file`, `Attachment` con nombre y páginas, `PdfPosition`, `sanitizeFileName`, `PdfSniffer`, `taskLabel` | — | Unitarios | CA-008-02/07/09/19 |
+| T-008-06 [P] | Dominio: `LinkPolicy` y `LinkTarget` | — | `link_policy_test` (todos los esquemas y casos de saneado) | CA-008-12 |
+| T-008-07 | Datos: repositorios (drift y memoria) con PDF; `FileAttachmentStore`/`MemoryAttachmentStore` (`commit`, `check` y borrado de PDF, `position.json`) | 05 | Tests de contrato y del almacén | CA-008-06/16/18 |
+| T-008-08 | Nativo: selector de PDF (origen `file`) sobre el canal de la 007 y `encodeJpeg` en `ImageSanitizer` | 01 | Integración en el emulador: selector sin permisos, copia acotada, JPEG correcto | CA-008-01/03/14 |
+| T-008-09 | `PdfrxPdfImporter` + `ImportPdf`: sniffer, contraseña, páginas, primera página → `screen.jpg`, 20 s, cancelar, errores tipados; regenerar la versión de pantalla | 07, 08 | `pdf_import_test` (integración con los ficheros de prueba); unitarios con importador falso | CA-008-02/03/14, CL-008-1/2/3/7/8 (incluido el límite de 20 páginas) |
+| T-008-10 | `AttachmentImportController` (generaliza el de la 007): "Preparando PDF…" a los 400 ms, cancelar, errores, registro de importaciones; tests de la 007 en verde | 09 | `attachment_import_controller_test` | CA-008-15 |
+| T-008-11 | Hoja "Añadir": "Subir archivo" activo; editor con PDF (vista previa desplazable, quitar, sustituir por imagen o PDF, texto opcional, siempre arriba, editar sin mover, foco y anuncios) | 03, 10 | `editor_pdf_test` | CA-008-01/04/05/06/21, CL-008-9 |
+| T-008-12 | Tarea actual con PDF: franja fija, banda del texto que se desplaza con las páginas, páginas al ancho con pdfrx tras el primer fotograma (con `screen.jpg` de base); semántica de la tarea | 07, 09 | `current_task_pdf_test` | CA-008-08/20, CL-008-10 |
+| T-008-13 | Última posición: guardar al salir o pasar a segundo plano (y la página de esa posición como `screen.jpg`), restaurar, reglas de los 10 minutos | 12 | `current_task_pdf_test` (posición restaurada, página intermedia) | CA-008-08/09 |
+| T-008-14 | Zoom: ×1–×4 que se queda, doble toque ×1/×2,5, pasos, acciones del lector y de Switch Access, teclas, desplazamiento a los lados, anuncio del nivel, reducir movimiento | 12 | `task_pdf_zoom_test` | CA-008-10/22 |
+| T-008-15 | Semántica por página (texto bajo demanda, "Página n de total"), enlaces enfocables con Tab/Enter y su etiqueta, acciones de página | 12 | `pdf_a11y_test` | CA-008-20/21/22 |
+| T-008-16 | Enlaces: `LinkOpener.kt` (`<queries>`, `resolveActivity`, `ACTION_VIEW`/`SENDTO`/`DIAL`), `NativeLinkOpener`, hoja de confirmación, errores, foco | 06, 15 | `link_confirm_test`; prueba a mano en el emulador con el PDF de enlaces | CA-008-12/21 |
+| T-008-17 | Giro igual con imagen y con PDF: `AttachmentRotation.kt` con `backToPortrait`, `_RotatesWithAttachment`, botón "Volver a vertical" en los dos tipos (enmienda CA-007-11), casos de completar/eliminar/confirmación | 12 | `landscape_test`; prueba a mano en el emulador y el Xiaomi | CA-008-11 |
+| T-008-18 | Pantalla encendida con PDF (vertical y horizontal) | 12 | `keep_screen_on_test` | CA-008-13 |
+| T-008-19 | "Adjunto no disponible" con PDF (icono de documento, no gira) y regeneración de `screen.jpg` | 07, 12 | `missing_attachment_test` | CA-008-18 |
+| T-008-20 | Resto de la app: insignia "PDF" en el listado, nombre como etiqueta sin texto (listado, eliminar, anuncios), cara con PDF en completar y eliminar | 05, 12 | Tests del listado, completar y eliminar | CA-008-19/20 |
+| T-008-21 | Copia de seguridad (los PDF fuera de la nube) y web de pruebas (`WebPdfImporter`, memoria, sin giro) | 07, 09 | `backup_rules_test`; build web y prueba a mano | CA-008-17, CL-008-12 |
+| T-008-22 | Integración en el emulador (flujo completo, malformados sin cierre) y rendimiento en el Xiaomi (arranque con PDF en la última posición, memoria con 20 páginas escaneadas, tamaño del APK); con tu permiso y `--keep-app-running` | 09–20 | `integration_test`; `docs/perf/baseline.md` | CA-008-08, CL-008-4/5 |
+| T-008-23 | Accesibilidad global: texto al 200 % en 360 dp, `meetsGuideline`, tabla de foco y anuncios; TalkBack y teclado en el emulador | 11–20 | `pdf_a11y_test`; lista de la revisión | CA-008-20/21/22 |
+| T-008-24 | *Goldens* (editor con PDF, tarea con PDF con y sin texto, horizontal, fila con insignia, confirmación) en Linux con la etiqueta `actualizar-goldens` | 11–20 | CI | Aspecto |
+| T-008-25 | Documentos (arquitectura: canal de importación y PDF; glosario; desviaciones que aparezcan) y revisiones: `a11y-reviewer`, `security-reviewer`, `/security-check`, `/i18n-check`, `/tokens-validate` | 22–24 | Hallazgos resueltos o registrados | DoD |
+
+## Cierre
+
+- [ ] Todos los CA de la spec tienen test en verde.
+- [ ] Definition of Done (`specs/constitution.md`) completa.
+- [ ] Spec marcada como **Implementada**.
