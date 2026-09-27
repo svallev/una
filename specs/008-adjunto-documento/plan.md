@@ -77,7 +77,7 @@ La última posición **no** va en la BD (§1): va en `position.json` junto al PD
 | CL-008-12 | Build web y prueba a mano | — |
 | Aspecto | *Goldens* (editor con PDF, tarea con PDF con y sin texto, horizontal, fila con insignia, confirmación de enlace) | `test/goldens/pdf_golden_test.dart` |
 
-En los tests de widget, pdfrx se sustituye por un visor falso detrás de una interfaz (`PdfView`), porque PDFium no carga en `flutter test` sin el binario de escritorio. **[Suposición]** Si carga (pdfrx tiene binarios para macOS y Linux), algunos tests usan el real con un PDF pequeño de `test/fixtures/`.
+En los tests de widget, pdfrx se sustituye por un visor falso detrás de una interfaz (`PdfView`) para no depender del motor en los tests de interfaz. **[Hecho, T-008-04]** PDFium sí carga en `flutter test` (macOS y Linux, con `Pdfrx.getCacheDirectory` apuntando a un temporal): el importador y los tests de texto y enlaces usan el real con los ficheros de prueba.
 
 Ficheros de prueba: `tools/fixtures/gen_pdf_fixtures.py` escribe PDF a mano, sin dependencias (válido, truncado, referencias cíclicas, bomba de compresión, 0 páginas, 21 páginas, 10 000 páginas, con JavaScript y formulario, con enlaces de todos los esquemas, con páginas de tamaños distintos, `.pdf` que es HTML o ZIP). El protegido con contraseña se cifra con `qpdf` si está instalado. **[Pendiente]** Si no lo está, se genera una vez y se versiona el binario con su procedencia.
 
