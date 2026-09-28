@@ -1,6 +1,7 @@
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
+import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/domain/services/attachment_janitor.dart';
@@ -179,5 +180,74 @@ void main() {
         expect(await store.storedIds(), isEmpty);
       },
     );
+  });
+
+  group('Web (spec 009)', () {
+    const url = 'https://congreso.example.org/programa';
+    const other = 'https://otra.example.com/';
+
+    Future<Task> withWeb(String id) async {
+      final a = await store.commit(
+        StagedWeb(id: 'web-$id', url: url),
+        DateTime.utc(2026),
+      );
+      final t = sampleTask(
+        id: id,
+        colorKey: 3,
+        rank: 'C',
+      ).withContent(null, a, DateTime.utc(2026));
+      await repo.insert(t);
+      return t;
+    }
+
+    test('CA-009-05: sustituir la dirección conserva posición y color, y '
+        'sigue sin texto', () async {
+      final task = await withWeb('a');
+      await repo.insert(sampleTask(id: 'b', rank: 'M'));
+      final t = await edit(
+        task,
+        'texto que no se guarda',
+        attachment: const ReplaceAttachment(StagedWeb(id: 'w2', url: other)),
+      );
+      final stored = (await repo.findById('a'))!;
+      expect((stored.text, stored.attachment?.id), (null, 'w2'));
+      expect(stored.attachment!.url, other);
+      expect((stored.rank, stored.colorKey), ('C', 3));
+      expect(t, stored);
+      expect((await repo.currentTask())!.id, 'a');
+      expect(await store.storedIds(), isEmpty);
+    });
+
+    test('CA-009-05: la misma dirección no cambia nada', () async {
+      final task = await withWeb('a');
+      final same = await edit(
+        task,
+        '',
+        attachment: const ReplaceAttachment(StagedWeb(id: 'w2', url: url)),
+      );
+      expect(same, task);
+      final stored = (await repo.findById('a'))!;
+      expect(stored.attachment!.id, 'web-a');
+      expect(stored.updatedAt, task.updatedAt);
+    });
+
+    test('CA-009-05: si falla al guardar, la tarea sigue como estaba y no '
+        'queda nada', () async {
+      final task = await withWeb('a');
+      final failing = _FailingUpdateRepository();
+      await failing.insert(task);
+      await expectLater(
+        editFor(failing)(
+          task,
+          '',
+          attachment: const ReplaceAttachment(StagedWeb(id: 'w2', url: other)),
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect((await failing.findById('a'))!.attachment!.url, url);
+      expect(await store.storedIds(), isEmpty);
+      expect(await store.stagingIds(), isEmpty);
+      await failing.dispose();
+    });
   });
 }

@@ -178,6 +178,40 @@ void _contract(
       expect(await store.readPosition('p1'), isNull);
     });
 
+    const webUrl = 'https://congreso.example.org/programa';
+
+    test('CA-009-03/04: commit de una web no necesita preparación ni deja '
+        'archivos; su estado es siempre ok', () async {
+      final at = DateTime.utc(2026, 9, 28);
+      final a = await store.commit(const StagedWeb(id: 'w1', url: webUrl), at);
+      expect(
+        (a.id, a.kind, a.origin, a.url),
+        ('w1', AttachmentKind.web, AttachmentOrigin.url, webUrl),
+      );
+      expect((a.mime, a.byteSize, a.width, a.height), ('text/html', 0, 0, 0));
+      expect(a.createdAt, at);
+      expect(await store.storedIds(), isEmpty);
+      expect(await store.stagingIds(), isEmpty);
+      expect(await store.check(a), AttachmentFiles.ok);
+    });
+
+    test(
+      'CA-009-04: borrar una web no toca los archivos de otros adjuntos',
+      () async {
+        final s = _staged('img');
+        stageAll(s);
+        await store.commit(s, DateTime.utc(2026));
+        final a = await store.commit(
+          const StagedWeb(id: 'w1', url: webUrl),
+          DateTime.utc(2026),
+        );
+        await store.delete(a.id);
+        expect(await store.check(a), AttachmentFiles.ok);
+        expect(await store.storedIds(), {'img'});
+        expect(exists('img', 'full-0-0.jpg'), isTrue);
+      },
+    );
+
     test('CA-007-19: estado de los archivos', () async {
       final s = _staged('t', width: 1080, height: 20000);
       stageAll(s);

@@ -20,7 +20,8 @@ enum AttachmentFiles {
 /// guardados (`attachments/<id>`) pertenecen a una tarea.
 abstract interface class AttachmentStore {
   /// Mueve la preparación [staged] a su sitio definitivo, de forma atómica, y
-  /// devuelve el adjunto (aún sin guardar en la BD).
+  /// devuelve el adjunto (aún sin guardar en la BD). Una página web
+  /// ([StagedWeb]) no tiene archivos: no mueve nada (ADR-0016).
   Future<Attachment> commit(StagedAttachment staged, DateTime at);
 
   /// Deshace [commit]: devuelve el adjunto [id] a la preparación (si falla la
@@ -39,6 +40,8 @@ abstract interface class AttachmentStore {
   /// Ids de las preparaciones en disco.
   Future<Set<String>> stagingIds();
 
+  /// Estado de los archivos de [attachment]; una página web, siempre
+  /// [AttachmentFiles.ok] (no tiene archivos que puedan faltar).
   Future<AttachmentFiles> check(Attachment attachment);
 
   /// Última posición vista del PDF [id] (CA-008-09), o null si no hay o no se

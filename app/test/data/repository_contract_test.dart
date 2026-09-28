@@ -60,6 +60,20 @@ Attachment _pdf(String id, {String? name = 'Programa.pdf'}) => Attachment(
   pageCount: 12,
 );
 
+const _webUrl = 'https://congreso.example.org/programa?dia=2';
+
+Attachment _web(String id, {String url = _webUrl}) => Attachment(
+  id: id,
+  kind: AttachmentKind.web,
+  origin: AttachmentOrigin.url,
+  mime: 'text/html',
+  byteSize: 0,
+  width: 0,
+  height: 0,
+  createdAt: DateTime.utc(2026, 9, 28),
+  url: url,
+);
+
 /// Misma batería para todas las implementaciones del puerto (docs/testing.md).
 void _contract(
   String name,
@@ -287,6 +301,46 @@ void _contract(
       },
     );
 
+    test('CA-009-04: una tarea web vuelve sin texto, con su tipo, su origen y '
+        'solo su dirección', () async {
+      await repo.insert(_task('a', 'C', attachment: _web('web-a')));
+      await repo.insert(_task('b', 'M'));
+      final current = (await repo.currentTask())!;
+      expect(current.text, isNull);
+      expect(current.attachment, _web('web-a'));
+      final a = current.attachment!;
+      expect(
+        (a.isWeb, a.kind, a.origin),
+        (true, AttachmentKind.web, AttachmentOrigin.url),
+      );
+      expect((a.url, a.mime, a.byteSize), (_webUrl, 'text/html', 0));
+      expect((await repo.findById('a'))!.attachment!.url, _webUrl);
+      expect((await repo.pendingTasks()).first.attachment!.url, _webUrl);
+      expect((await repo.watchCurrentTask().first)!.attachment!.url, _webUrl);
+      expect(await repo.attachmentIds(), {'web-a'});
+    });
+
+    test(
+      'CA-009-05: sustituir la dirección conserva posición y color',
+      () async {
+        await repo.insert(_task('a', 'C', color: 3, attachment: _web('w1')));
+        await repo.insert(_task('b', 'M'));
+        const other = 'https://otra.example.com/';
+        final at = DateTime.utc(2026, 9, 28, 12);
+        expect(
+          await repo.updateContent('a', null, _web('w2', url: other), at),
+          isTrue,
+        );
+        final t = (await repo.findById('a'))!;
+        expect(
+          (t.text, t.attachment?.id, t.attachment?.url, t.rank, t.colorKey),
+          (null, 'w2', other, 'C', 3),
+        );
+        expect(await repo.attachmentIds(), {'w2'});
+        expect((await repo.currentTask())!.id, 'a');
+      },
+    );
+
     test('CA-007-06: añadir, sustituir y quitar la imagen conserva posición y color', () async {
       await repo.insert(_task('a', 'C', color: 3));
       await repo.insert(_task('b', 'M'));
@@ -371,6 +425,42 @@ void main() {
       await db.close();
     },
   );
+
+  test('CA-009-04 (plan §3): la fila de una tarea web guarda solo la '
+      'dirección, sin archivos ni medidas, en el esquema actual', () async {
+    final db = openInMemoryDatabase();
+    final repo = DriftTaskRepository(db);
+    expect(db.schemaVersion, 2);
+    await repo.insert(_task('a', 'C', attachment: _web('web-a')));
+
+    final row = await db.select(db.attachments).getSingle();
+    expect(
+      (row.id, row.taskId, row.kind, row.origin),
+      ('web-a', 'a', 'web', 'url'),
+    );
+    expect((row.mime, row.byteSize, row.relPath), ('text/html', 0, ''));
+    expect(row.sourceUrl, _webUrl);
+    expect([
+      row.displayRelPath,
+      row.thumbRelPath,
+      row.originalName,
+      row.sourceHost,
+      row.snapshotRelPath,
+      row.snapshotAt,
+      row.width,
+      row.height,
+      row.pageCount,
+      row.sha256,
+    ], everyElement(isNull));
+    await db.close();
+  });
+
+  test('CA-009-04: la dirección no aparece en el toString del adjunto ni de '
+      'la tarea (CL-009-9)', () {
+    final task = _task('a', 'C', attachment: _web('web-a'));
+    expect(task.attachment.toString(), isNot(contains('congreso')));
+    expect(task.toString(), isNot(contains('congreso')));
+  });
 
   test(
     'ADR-0012: secure_delete activo para no dejar texto en páginas libres',
