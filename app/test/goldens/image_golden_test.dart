@@ -11,6 +11,7 @@ import 'package:app/app/providers.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
+import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
@@ -96,13 +97,16 @@ void main() {
     for (final name in [ImageTiles.fileName(0, 0), 'screen.jpg', 'thumb.jpg']) {
       store.putStaging('a-$id', name, photo);
     }
-    final attachment = await store.commit((
-      id: 'a-$id',
-      origin: origin,
-      width: _w,
-      height: _h,
-      byteSize: photo.length,
-    ), DateTime.utc(2026, 9, 20));
+    final attachment = await store.commit(
+      StagedImage(
+        id: 'a-$id',
+        origin: origin,
+        width: _w,
+        height: _h,
+        byteSize: photo.length,
+      ),
+      DateTime.utc(2026, 9, 20),
+    );
     final base = sampleTask(
       id: id,
       text: text ?? 'x',

@@ -24,8 +24,8 @@ Todos los artboards son `Main.dc.html` arrancado en un estado (`start=…`). For
 ## Elementos sin pantalla en el prototipo (pendientes de diseño)
 
 - Configuración (idioma, pantalla encendida, Acerca de, licencias): spec 010.
-- Visor a pantalla completa con zoom (PDF, captura): specs 008, 009. La imagen no tiene visor: se ve y se amplía en la tarea actual (spec 007, ADR-0013).
-- Tarjeta de documento no PDF con "Abrir": spec 008.
+- Visor a pantalla completa con zoom (captura): spec 009. El PDF no tiene visor aparte: se ve, se amplía y gira en la propia tarea (spec 008, ADR-0014). La imagen no tiene visor: se ve y se amplía en la tarea actual (spec 007, ADR-0013).
+- ~~Tarjeta de documento no PDF con "Abrir": spec 008.~~ No en la v1: solo PDF (ADR-0014).
 - Aviso de captura sin conexión "Copia del dd/mm" y "Actualizar": spec 009.
 - Errores de importación (tipo no admitido, demasiado grande, sin espacio): specs 007, 008.
 

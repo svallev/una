@@ -7,7 +7,7 @@ import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
 
 /// Lo que se eligió en "Añadir a la tarea".
-enum AttachChoice { camera, gallery }
+enum AttachChoice { camera, gallery, file }
 
 /// Abre la hoja "Añadir a la tarea" (CA-007-01). Devuelve la opción elegida,
 /// o null si se cierra.
@@ -17,21 +17,24 @@ Future<AttachChoice?> showAttachSheet(BuildContext context) =>
       builder: (sheet) => AttachSheet(
         onTakePhoto: () => Navigator.of(sheet).pop(AttachChoice.camera),
         onPickImage: () => Navigator.of(sheet).pop(AttachChoice.gallery),
+        onPickFile: () => Navigator.of(sheet).pop(AttachChoice.file),
       ),
     );
 
 /// Hoja "Añadir a la tarea" (prototipo "HOJA: añadir foto, imagen o
-/// archivo"): cuatro filas de dos líneas. "Subir archivo" y "Cargar URL" se
-/// ven activas pero no hacen nada hasta las specs 008 y 009 (DEV-18).
+/// archivo"): cuatro filas de dos líneas. "Subir archivo" sube un PDF (spec
+/// 008); "Cargar URL" se ve activa pero no hace nada hasta la 009 (DEV-18).
 class AttachSheet extends StatelessWidget {
   const AttachSheet({
     super.key,
     required this.onTakePhoto,
     required this.onPickImage,
+    required this.onPickFile,
   });
 
   final VoidCallback onTakePhoto;
   final VoidCallback onPickImage;
+  final VoidCallback onPickFile;
 
   static void _notYet() {}
 
@@ -76,7 +79,7 @@ class AttachSheet extends StatelessWidget {
               label: l10n.attachPickFile,
               subtitle: l10n.attachPickFileHint,
               divider: true,
-              onTap: _notYet,
+              onTap: onPickFile,
             ),
             SheetRow(
               icon: UnaIcons.link,

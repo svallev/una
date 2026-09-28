@@ -7,6 +7,7 @@ environment:
   sdk: ^3.13.4
 
 dependencies:
+  characters: ^1.4.1
   drift: ^2.35.0
   flutter:
     sdk: flutter
@@ -15,6 +16,7 @@ dependencies:
   flutter_riverpod: ^3.4.3
   intl: ^0.20.3
   path_provider: ^2.1.6
+  pdfrx: 2.6.5
   uuid: ^4.6.0
 
 dev_dependencies:

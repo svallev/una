@@ -25,22 +25,23 @@ flowchart TB
     E[Entidades: Task · Attachment · Rank · QueuePosition · Settings]
     RP[[TaskRepository]]
     AS[[AttachmentStore]]
-    PF[[Platform ports: SystemViewer · WebSnapshotter · ImageSanitizer · Clock · IdGenerator]]
+    PF[[Platform ports: ImageImporter · PdfImporter · LinkOpener · WebSnapshotter · Clock · IdGenerator]]
   end
   subgraph DATA["Datos e infraestructura"]
     DR[DriftTaskRepository → SQLite]
     FS[FileAttachmentStore → sandbox]
     IMP[ImportPipeline: bytes mágicos · límites · ImageSanitizer nativo sin EXIF · miniaturas]
     WV[WebView en vivo: webview_flutter endurecida · WebSnapshotter nativo Kotlin/Swift]
-    PDF[pdfrx]
-    NV[Canal nativo: QuickLook · FileProvider/ACTION_VIEW]
+    PDF[pdfrx/PDFium: PdfEngine · NativePdfImporter · visor TaskPdfView]
+    LNK[Canal nativo una/links: LinkOpener.kt, ACTION_VIEW/SENDTO/DIAL]
+    NV[Canal nativo: QuickLook · FileProvider/ACTION_VIEW — no en la v1, ADR-0014]
   end
   UI --> STATE --> UC
   UC --> E
   UC --> RP & AS & PF
   RP -.implementa.- DR
   AS -.implementa.- FS
-  PF -.implementa.- IMP & WV & NV
+  PF -.implementa.- IMP & WV & NV & PDF & LNK
   V --> PDF
   classDef ui fill:#FFE55C,stroke:#111,color:#111
 ```
@@ -83,7 +84,7 @@ sequenceDiagram
 
 - Fuentes empaquetadas (ya en el primer fotograma) y *shaders* precompilados.
 - Imagen: se muestra primero la **versión de pantalla** pregenerada al importar, **JPEG al ancho físico exacto de la pantalla** (I-2; ~20 % más rápido que PNG en S1); el original se carga al hacer zoom.
-- PDF: miniatura de la primera página pregenerada; pdfrx se inicializa tras el primer fotograma.
+- PDF (spec 008): antes de `runApp`, y solo si la tarea actual tiene PDF (tope de 1 s), se leen `position.json` y se decodifica `screen.jpg`, que es **lo que se ve desde la última posición**; el primer fotograma la pinta y pdfrx abre el documento debajo, sin quitarla hasta que ha dibujado las páginas visibles (detalle en §4, «PDF»).
 - Web: captura mostrada al instante; la WebView en vivo se inicializa detrás.
 - Bienvenida (R1) **solo** en el primer uso; nunca retrasa R8.
 - Migraciones: las de esquema se ejecutan al abrir la BD (rápidas); las de datos pesadas se trocean en segundo plano.
@@ -157,21 +158,21 @@ erDiagram
 
 ```mermaid
 flowchart LR
-  A[Selector del sistema / cámara / URL] --> B{Tipo por bytes mágicos}
-  B -- no admitido --> X[Error: tipo no admitido]
-  B -- admitido --> C{¿Tamaño ≤ límite?}
+  A[Selector del sistema / cámara / URL] --> C{¿Tamaño ≤ límite? contado al copiar}
   C -- no --> Y[Error: demasiado grande]
   C -- sí --> D[Copiar a tmp del sandbox]
-  D --> E{kind}
+  D --> B{Tipo por el contenido}
+  B -- no admitido --> X[Error: tipo no admitido]
+  B -- admitido --> E{kind}
   E -- image --> F[ImageSanitizer nativo: dimensiones por la cabecera ≤ 64 MP → decodificar con orientación → JPEG sin metadatos ≤ 24 MP en teselas de 4096 px + pantalla + miniatura]
-  E -- pdf --> G[Abrir con pdfrx en modo solo lectura → miniatura p.1 → pageCount]
-  E -- document --> H[Guardar tal cual → icono por tipo]
+  E -- pdf --> G[PDFium vía pdfrx, sin contraseña → 1–20 páginas → dibujar la p.1 → screen.jpg con el JPEG nativo]
+  E -- document --> H[Guardar tal cual → icono por tipo — no en la v1, ADR-0014]
   E -- web --> I[WebSnapshotter nativo → recorrer la página → captura completa ≤ 16 000 px → miniatura; SSL/HTTP ≥ 400 = fallo]
-  F & G & H & I --> J[Mover de forma atómica a attachments/uuid/ + sha256 salvo imágenes]
+  F & G & H & I --> J[Mover de forma atómica a attachments/uuid/]
   J --> K[Insertar Task + Attachment en una transacción]
 ```
 
-Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D18), documento 25 MB, captura web 20 000 px de alto. La importación no bloquea la UI (las imágenes, en un hilo nativo; el resto, en un *isolate*) y cancelar limpia los temporales. Detalle de seguridad en `docs/security/threat-model.md`.
+Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D18; en la v1 el único documento, ADR-0014), captura web 20 000 px de alto. La importación no bloquea la UI (las imágenes y el JPEG del PDF, en un hilo nativo; PDFium, en el *isolate* de trabajo de pdfrx) y cancelar limpia los temporales. **[Hecho]** El `sha256` de la tabla no se calcula todavía (ni imágenes ni PDF): queda nulo. Detalle de seguridad en `docs/security/threat-model.md`.
 
 ### Imágenes (spec 007)
 
@@ -188,6 +189,18 @@ Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D1
 - **Borrado:** un solo servicio, `AttachmentJanitor`. El barrido (2 s después del primer fotograma) borra los adjuntos sin tarea y las preparaciones abandonadas; `ImportRegistry` protege las importaciones en curso.
 - **Web de pruebas:** `WebImageImporter` hace lo mismo con el selector del navegador y un `canvas`, todo en memoria (`MemoryAttachmentStore`); HEIC no se admite.
 
+### PDF (spec 008, ADR-0014)
+
+- **Canal de importación:** el mismo de las imágenes (`una/images`, `ImageImport.kt`) con el origen `file`: `ACTION_OPEN_DOCUMENT` con `application/pdf` (sin permisos), el nombre visible (`OpenableColumns`, solo para mostrarlo), la copia acotada a **10 MB** contada al copiar y los primeros 1024 bytes para el tipo. Después, en Dart (`ImportPdf` + `NativePdfImporter`): el tipo por el contenido (`isPdf`: `%PDF-` en los primeros 1024 bytes y nada de marcado delante), abrir con PDFium **sin contraseña** (si la pide → `protected`), **1–20 páginas** (`tooManyPages`), dibujar la página 1 y codificarla como `screen.jpg` con `encodeJpeg` nativo (en Dart es 15 veces más lento). Cualquier error del motor = ilegible. 20 s como máximo. El nombre se sanea (`sanitizeFileName`: sin rutas, controles ni marcas bidi, 120 caracteres) y nunca se registra.
+- **Rutas:** `files/attachments/<id>/` con `document.pdf` (el archivo tal cual, con nombre generado), `screen.jpg` (versión de pantalla) y `position.json` (última posición: página + fracción, escrita de forma atómica). Sin miniatura: el listado muestra la insignia "PDF". Sin cambio de esquema: `kind = pdf`, `origin = file`, `originalName` y `pageCount` en columnas que ya existían; `relPath` → `document.pdf`, `displayRelPath` → `screen.jpg`.
+- **Motor:** `pdfrx` (PDFium de `chromium/7811`, sin V8: no ejecuta JavaScript ni rellena formularios), fijado por sha256 en `tools/pdfium.lock` y comprobado en CI (`threat-model.md §5`). Solo se abren archivos ya copiados (`openFile`/`openData`), nunca URL. En la web de pruebas, PDFium va como WASM de los assets del paquete (`MemoryPdfImporter`/`WebPdfImporter`, en memoria).
+- **Tarea actual con PDF** (`TaskPdfView`): páginas al ancho con `FitWidthSizing`, zoom ×1–×4 que se queda (pasos ×1,5/×2,5/×4 por acciones y teclas), la banda del texto como capa que sigue a la matriz del visor en un hueco sobre la página 1 y la franja fija fuera del visor. La semántica propia de pdfrx se excluye y la sustituye `PdfSemanticsLayer` (un nodo por página visible con su texto y sus acciones, y un nodo enfocable por enlace).
+- **Arranque (CA-008-08):** `pdf_boot.dart` lee `position.json` y decodifica `screen.jpg` antes de `runApp`; `TaskPdfFace` la pinta encima del visor hasta que pdfrx avisa de que ha dibujado (`onDocumentLoadFinished`), al primer toque o a los 10 s. Al salir de la tarea o pasar a segundo plano se guarda la posición y, si cambió, se redibuja `screen.jpg` con lo que se ve desde ella (`PdfEngine.renderView`).
+- **Enlaces (CA-008-12):** `classifyLink` (dominio) decide: página interna, `http(s)` (sin `usuario@`, dominio en punycode si mezcla alfabetos), `mailto:` rehecho solo con destinatarios y asunto, `tel:` solo el número; el resto se bloquea. Tras la confirmación, el canal `una/links` (`LinkOpener.kt`) lanza `ACTION_VIEW` + `BROWSABLE`, `ACTION_SENDTO` o `ACTION_DIAL` solo si `resolveActivity` encuentra app (I-7; `<queries>` para esos tres).
+- **Giro:** `AttachmentRotation` (Kotlin y Dart) sirve para imagen y PDF; sin "Volver a vertical" (ADR-0015).
+- **Archivos que faltan (CA-008-18):** si falta `screen.jpg`, se redibuja desde el PDF en la última posición (`PdfImporter.renderScreen`); si falta o no se abre `document.pdf`, "Adjunto no disponible".
+- **Completar y eliminar:** la cara de la rotura y del arrugado es una imagen fija de lo que se ve (`PdfFaceCapture`), no `screen.jpg`. El borrado es el mismo de la 007 (`AttachmentJanitor`: el directorio entero).
+
 ### Decisiones de implementación de los spikes (F1)
 
 | ID | Decisión | Evidencia |
@@ -198,7 +211,7 @@ Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D1
 | I-4 | **`ImageSanitizer` nativo** (Android `ImageDecoder` + `Bitmap.compress`; iOS ImageIO) | S5: 12 MP en 0,77 s frente a 12 s en Dart puro |
 | I-5 | Captura web: SSL inválido (siempre cancelado) y HTTP ≥ 400 del marco principal = fallo | S4: sin esto se guardaba una página en blanco |
 | I-6 | Captura web: recorrer la página por pasos antes de capturar | S4: huecos en webs que animan al hacer *scroll* |
-| I-7 | Visor del sistema: comprobar si hay app antes de lanzar el intent y mostrar nuestro mensaje | S3: selector del sistema vacío y en inglés |
+| I-7 | Visor del sistema: comprobar si hay app antes de lanzar el intent y mostrar nuestro mensaje (no se usa en la v1, ADR-0014; aplica a los enlaces `mailto:`/`tel:` del PDF) | S3: selector del sistema vacío y en inglés |
 
 ## 5. Plataforma e integración nativa
 
@@ -206,7 +219,7 @@ Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D1
 |---|---|---|
 | Fotos y archivos sin permisos amplios | PHPicker, UIDocumentPicker | Photo Picker, SAF (`ACTION_OPEN_DOCUMENT`) |
 | Cámara | Permiso de cámara **al pulsar "Hacer foto"** | Ídem (o intent de cámara del sistema, que no necesita permiso) |
-| Visor del sistema | QLPreviewController | `ACTION_VIEW` + FileProvider |
+| Visor del sistema (no en la v1, ADR-0014) | QLPreviewController | `ACTION_VIEW` + FileProvider |
 | Pantalla encendida | `isIdleTimerDisabled` mientras hay un adjunto visible | `FLAG_KEEP_SCREEN_ON` |
 | Red | ATS por defecto (sin excepciones) | `network_security_config`: `cleartextTrafficPermitted=false` |
 | Backup | Application Support incluido, Caches excluido | `dataExtractionRules` / `fullBackupContent` (ADR-0004) |
@@ -226,7 +239,7 @@ Regla: nada detrás de un flag llega a producción sin su spec aprobada.
 | Arranque en caliente | < 300 ms | ídem |
 | Animaciones | 60 fps, 0 fotogramas > 32 ms en el primer uso | DevTools / `FrameTiming` en un test de rendimiento |
 | Abrir PDF (primera página) | < 500 ms | spike S3 |
-| Tamaño de descarga | Android < 25 MB (por ABI, AAB); iOS < 40 MB | `flutter build --analyze-size` en CI (aviso si crece > 5 %) |
+| Tamaño de descarga | Android < 25 MB (por ABI, AAB); iOS < 40 MB | CI: cada APK de release por ABI, comprimido con `gzip -9` (las librerías nativas van sin comprimir en el APK; con PDFium, spec 008: 27 MB en disco y ~12,7 MB comprimido en arm64) |
 | Memoria con imagen | La tarea actual con la imagen más grande que se guarda (24 MP) añade < 200 MB sobre la misma tarea con texto (decisión del propietario, 2026-09-27; el anterior, < 250 MB en total, era inalcanzable: la app ya ocupa ~350 MB de RSS en la pantalla principal del Xiaomi) | `dumpsys meminfo` (PSS y RSS totales, con la GPU) en un proceso nuevo |
 
 ## 8. Internacionalización

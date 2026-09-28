@@ -1,16 +1,20 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
+import '../data/links/native_link_opener.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/attachment_store.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
 import '../domain/ports/image_importer.dart';
+import '../domain/ports/link_opener.dart';
+import '../domain/ports/pdf_importer.dart';
 import '../domain/ports/task_repository.dart';
 import '../domain/services/attachment_janitor.dart';
 import '../domain/usecases/complete_current_task.dart';
@@ -19,6 +23,7 @@ import '../domain/usecases/delete_current_task.dart';
 import '../domain/usecases/delete_pending_task.dart';
 import '../domain/usecases/edit_task.dart';
 import '../domain/usecases/import_image.dart';
+import '../domain/usecases/import_pdf.dart';
 import '../domain/usecases/reorder_task.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
@@ -70,6 +75,30 @@ final importImageProvider = Provider<ImportImage>(
     ids: ref.watch(idGeneratorProvider),
   ),
 );
+
+/// Selector y comprobación de PDF (spec 008). En `main` se sobrescribe con el
+/// canal nativo y PDFium; en los tests, con uno falso.
+final pdfImporterProvider = Provider<PdfImporter>(
+  (ref) => throw UnimplementedError(),
+);
+
+final importPdfProvider = Provider<ImportPdf>(
+  (ref) => ImportPdf(
+    importer: ref.watch(pdfImporterProvider),
+    janitor: ref.watch(attachmentJanitorProvider),
+    ids: ref.watch(idGeneratorProvider),
+  ),
+);
+
+/// Abre los enlaces de un PDF (spec 008): el canal nativo; en los tests, uno
+/// falso.
+final linkOpenerProvider = Provider<LinkOpener>(
+  (ref) => const NativeLinkOpener(),
+);
+
+/// Si la tarea con imagen o PDF gira a horizontal (CA-008-11). La web de
+/// pruebas no gira (CL-008-12): con la ventana apaisada se ve como en vertical.
+final attachmentRotatesProvider = Provider<bool>((ref) => !kIsWeb);
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".
 final bootStateProvider = Provider<BootState>(

@@ -14,4 +14,15 @@ class FileAttachmentImages implements AttachmentImages {
 
   @override
   ImageProvider stored(String relPath) => FileImage(store.file(relPath));
+
+  @override
+  PdfSource stagedPdf(String id) => (
+    path: store.stagingFile(id, 'document.pdf').path,
+    bytes: null,
+    key: 'staged:$id',
+  );
+
+  @override
+  PdfSource storedPdf(String relPath) =>
+      (path: store.file(relPath).path, bytes: null, key: relPath);
 }

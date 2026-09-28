@@ -3,8 +3,9 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../../domain/entities/attachment.dart';
+import '../../domain/entities/pdf_position.dart';
+import '../../domain/entities/staged_attachment.dart';
 import '../../domain/ports/attachment_store.dart';
-import '../../domain/ports/image_importer.dart';
 
 /// Adjuntos en el almacenamiento privado de la app (spec 007, plan §1):
 ///
@@ -44,7 +45,7 @@ class FileAttachmentStore implements AttachmentStore {
       Directory('${stagingRoot.path}/${_checked(id)}');
 
   /// Archivo de un adjunto guardado ([relPath] de [Attachment]). Solo
-  /// `attachments/<id>/<nombre>.jpg`: nunca sale de su carpeta.
+  /// `attachments/<id>/<nombre>.jpg|pdf|json`: nunca sale de su carpeta.
   File file(String relPath) {
     if (!_validRelPath.hasMatch(relPath)) {
       throw ArgumentError.value(relPath, 'relPath');
@@ -53,7 +54,7 @@ class FileAttachmentStore implements AttachmentStore {
   }
 
   static final _validRelPath = RegExp(
-    r'^attachments/[A-Za-z0-9_-]{1,64}/[a-z0-9-]{1,32}\.jpg$',
+    r'^attachments/[A-Za-z0-9_-]{1,64}/[a-z0-9-]{1,32}\.(jpg|pdf|json)$',
   );
 
   /// Archivo de una preparación (vista previa en el editor antes de guardar).
@@ -61,23 +62,14 @@ class FileAttachmentStore implements AttachmentStore {
       File('${_staging(id).path}/$name');
 
   @override
-  Future<Attachment> commit(StagedImage staged, DateTime at) async {
+  Future<Attachment> commit(StagedAttachment staged, DateTime at) async {
     final from = _staging(staged.id);
     final to = _stored(staged.id);
     await _attachmentsDir.create(recursive: true);
     if (to.existsSync()) await to.delete(recursive: true);
     // Mismo sistema de archivos (datos privados de la app): rename es atómico.
     await from.rename(to.path);
-    return Attachment(
-      id: staged.id,
-      kind: AttachmentKind.image,
-      origin: staged.origin,
-      mime: 'image/jpeg',
-      byteSize: staged.byteSize,
-      width: staged.width,
-      height: staged.height,
-      createdAt: at,
-    );
+    return attachmentFrom(staged, at);
   }
 
   @override
@@ -134,6 +126,14 @@ class FileAttachmentStore implements AttachmentStore {
       return f.existsSync() && f.lengthSync() > 0;
     }
 
+    if (attachment.isPdf) {
+      if (!await present(attachment.documentPath)) {
+        return AttachmentFiles.missing;
+      }
+      return await present(attachment.screenPath)
+          ? AttachmentFiles.ok
+          : AttachmentFiles.derivedMissing;
+    }
     final tiles = attachment.tiles;
     if (tiles.rows == 0 || tiles.columns == 0) return AttachmentFiles.missing;
     for (var r = 0; r < tiles.rows; r++) {
@@ -143,10 +143,36 @@ class FileAttachmentStore implements AttachmentStore {
         }
       }
     }
+    final thumb = attachment.thumbPath;
     if (!await present(attachment.screenPath) ||
-        !await present(attachment.thumbPath)) {
+        (thumb != null && !await present(thumb))) {
       return AttachmentFiles.derivedMissing;
     }
     return AttachmentFiles.ok;
+  }
+
+  @override
+  Future<PdfPosition?> readPosition(String id) async {
+    final f = file('attachments/${_checked(id)}/position.json');
+    try {
+      return PdfPosition.fromJson(await f.readAsString());
+    } on FileSystemException {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> writePosition(String id, PdfPosition position) async {
+    final dir = _stored(id);
+    if (!dir.existsSync()) return;
+    // Primero a un temporal y luego rename: nunca queda a medias.
+    final tmp = File('${dir.path}/position.tmp');
+    try {
+      await tmp.writeAsString(position.toJson(), flush: true);
+      await tmp.rename('${dir.path}/position.json');
+    } on FileSystemException {
+      // Se completó o eliminó mientras tanto: no pasa nada.
+      if (tmp.existsSync()) await tmp.delete();
+    }
   }
 }

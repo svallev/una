@@ -6,14 +6,15 @@ import android.provider.Settings
 import android.view.OrientationEventListener
 
 /**
- * Giro de la tarea actual con imagen (spec 007, CA-007-11): es la única
- * pantalla que gira. Pedir `SCREEN_ORIENTATION_USER` no basta en HyperOS: su
- * sensor de orientación del sistema no avisa hasta el siguiente toque. Mientras
- * se ve, se lee el acelerómetro, como hacen las galerías, y se fija la
- * orientación. Con el bloqueo de rotación del sistema activo, se queda en
- * vertical. Sin permisos.
+ * Giro de la tarea actual con imagen o con PDF (specs 007 y 008, CA-008-11):
+ * son las únicas pantallas que giran. Pedir `SCREEN_ORIENTATION_USER` no basta
+ * en HyperOS: su sensor de orientación del sistema no avisa hasta el siguiente
+ * toque. Mientras se ve, se lee el acelerómetro, como hacen las galerías, y se
+ * fija la orientación. Con el bloqueo de rotación del sistema activo, se queda
+ * en vertical. Sin permisos. Se vuelve a vertical solo girando el móvil (sin
+ * botón "Volver a vertical": propietario, 2026-09-28).
  */
-class ImageRotation(private val activity: Activity) {
+class AttachmentRotation(private val activity: Activity) {
     private var active = false
 
     private val listener = object : OrientationEventListener(activity) {
@@ -37,7 +38,7 @@ class ImageRotation(private val activity: Activity) {
     private fun autoRotate(): Boolean =
         Settings.System.getInt(activity.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
 
-    /** La tarea actual con imagen se ve ([on] = true) o deja de verse. */
+    /** La tarea actual con imagen o PDF se ve ([on] = true) o deja de verse. */
     fun follow(on: Boolean) {
         active = on
         if (!on) activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT

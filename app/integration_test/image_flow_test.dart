@@ -57,7 +57,12 @@ Future<void> _wipe() async {
 Future<ImageServices> _openImages() async {
   final real = await openImageServices();
   _importer = FixtureImporter(real.importer as NativeImageImporter, _cache);
-  return (store: real.store, images: real.images, importer: _importer);
+  return (
+    store: real.store,
+    images: real.images,
+    importer: _importer,
+    pdfImporter: real.pdfImporter,
+  );
 }
 
 AppLocalizations _l10n(WidgetTester tester) =>

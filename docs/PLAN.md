@@ -16,11 +16,11 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D3 | Repo **público, todos los derechos reservados** |
 | D4 | Web en Vercel **solo para pruebas** |
 | D5 | Los documentos van **siempre arriba** (manda R5, no el prototipo) |
-| D6 | **PDF dentro** de la tarea; el resto, con el visor del sistema |
+| D6 | **PDF dentro** de la tarea; el resto, con el visor del sistema — **Enmendada por el ADR-0014 (2026-09-27): en la v1 solo se adjuntan PDF**; los demás formatos quedan fuera de alcance |
 | D7 | Eliminar es **definitivo**: sin deshacer y sin "Nada pendiente."; ~~queda una marca de borrado sin contenido~~ **no queda nada: la tarea se borra del todo** (propietario, 2026-09-26; ADR-0011 sustituye a ADR-0006; ADR-0012 sustituye a ADR-0011) |
 | D8 | Las completadas **conservan el adjunto** — **Sustituida por el ADR-0012 (2026-09-26): no hay histórico; completar y eliminar borran la tarea del todo** |
 | D9 | URL: **captura de página completa** para verla sin conexión |
-| D10 | Imagen: **pantalla encendida** (hasta 10 min sin tocar); sin brillo máximo. **Sin visor** (ADR-0013): la imagen al ancho con desplazamiento vertical en la tarea y pellizco que vuelve al soltar; **solo gira la tarea actual con imagen**, que en horizontal muestra solo la imagen y el logotipo (enmiendas del propietario, 2026-09-26 y 2026-09-27, spec 007) |
+| D10 | Imagen: **pantalla encendida** (hasta 10 min sin tocar); sin brillo máximo. **Sin visor** (ADR-0013): la imagen al ancho con desplazamiento vertical en la tarea y pellizco que vuelve al soltar; **solo gira la tarea actual con imagen**, que en horizontal muestra solo la imagen y el logotipo (enmiendas del propietario, 2026-09-26 y 2026-09-27, spec 007). **También gira la tarea actual con PDF, exactamente igual**: en horizontal, el adjunto y el logotipo (~~y el botón "Volver a vertical"~~: quitado por el propietario el 2026-09-28, ADR-0015); el zoom del PDF se queda puesto (ADR-0014, spec 008). Pantalla encendida también con PDF |
 | D11 | Sin biometría en la v1 |
 | D12 | Mínimos: **iOS 16 / Android 8 (API 26)** |
 | D13 | Menú: **"Configuración"** mínima, sin perfil |
@@ -28,8 +28,8 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D15 | Bundle ID con un dominio neutro que se comprará → **[Pendiente]** |
 | D16 | Código en inglés; documentación en español |
 | D17 | **Android primero** (2026-09-24): se desarrolla y valida todo en Android (emulador + web de pruebas) sin instalar Xcode. iOS se aborda al final, en la fase **F-iOS**, y solo si el propietario decide seguir (PD-7). La arquitectura sigue siendo multiplataforma; CI compila iOS sin firmar desde F2 |
-| D18 | **PDF de 10 MB como máximo** (2026-09-24). El resto de documentos, 25 MB; las imágenes, 30 MB y **64 MP**, guardadas como mucho a 24 MP y sin límite de lado (spec 007, 2026-09-26) |
-| D19 | **TXT, CSV y MD se muestran dentro de la app** como texto plano, sin interpretar marcado (2026-09-24, resuelve PD-8). Word, Excel, PowerPoint, ODF, RTF e iWork siguen con el visor del sistema |
+| D18 | **PDF de 10 MB como máximo** (2026-09-24) **y 20 páginas** (2026-09-27, spec 008: consulta rápida). ~~El resto de documentos, 25 MB~~ (sin otros documentos en la v1, ADR-0014); las imágenes, 30 MB y **64 MP**, guardadas como mucho a 24 MP y sin límite de lado (spec 007, 2026-09-26) |
+| D19 | ~~**TXT, CSV y MD se muestran dentro de la app** como texto plano, sin interpretar marcado (2026-09-24, resuelve PD-8). Word, Excel, PowerPoint, ODF, RTF e iWork siguen con el visor del sistema~~ **Aplazada por el ADR-0014 (2026-09-27): en la v1 solo se adjuntan PDF** |
 | — | Skills, plugins y MCP **solo a nivel de proyecto**, revisados antes de instalar y nunca con `-g`/`-y` |
 
 ## 3. Fases e hitos
@@ -56,7 +56,7 @@ flowchart LR
 | **F1 Spikes (Android + web)** | S1 arranque (Android) · S2 animaciones · S3 PDF y visor del sistema (Android: intent) · S4 captura web (Android) · S5 importación y backup (Android) · S6 web + Vercel. Las partes iOS de S1, S3, S4 y S5 pasan a F-iOS (D17). Código **desechable** en `spikes/` (rama propia, no se fusiona). **Requiere aprobación.** | M | F0 | Criterios de ADR-0001 cumplidos en Android → ADR-0001 **Aceptado para Android**, provisional para iOS; si no → ADR de cambio a Expo |
 | **F2 Esqueleto + 001** *(✅ completada el 2026-09-25, PR #3)* | `app/` + identidad + l10n + tokens + BD v1 + repositorio + CI + web + la spec 001 completa | L | F1 | CA-001 en verde; arranque p50 < 1 s medido; preview en Vercel por PR |
 | **F3 Núcleo** ✅ *(002, 003 y 005 el 2026-09-25; 004 y 006 el 2026-09-26)* | 002 crear y posición → 003 completar → 004 eliminar → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
-| **F4 Adjuntos** *(en curso: 007 y ADR-0012 fusionadas en `main`, PR svallev/una#11 y #12, 2026-09-27; siguiente: 008)* | 007 imagen (canal de importación; sin visor, ADR-0013) → 008 documento → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
+| **F4 Adjuntos** *(en curso: 007 y ADR-0012 fusionadas en `main`, PR svallev/una#11 y #12, 2026-09-27; 008 implementada, PR svallev/una#14, 2026-09-28; siguiente: 009)* | 007 imagen (canal de importación; sin visor, ADR-0013) → 008 PDF (solo PDF en la v1, ADR-0014) → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; S4 en producción en ambas plataformas |
 | **010** | Idioma y Configuración (tras diseñar la pantalla) | S | F3 (se puede hacer en paralelo con F4) | CA-010 en verde |
 | **F5 Endurecimiento** | Auditoría de accesibilidad (VoiceOver, TalkBack, Switch, texto grande; incluye las excepciones de ADR-0013: lupa del sistema en Android 8–11 y 12+, con teclado y conmutadores, y Switch Access en horizontal; y la limitación de foco de TalkBack de CA-007-22), pruebas MASTG, presupuesto de rendimiento y tamaño, política de privacidad, fichas de tienda, capturas, manifiesto de privacidad y Data Safety, iconos | M | F4, 010 | Checklist de publicación completa; 0 hallazgos altos |
 | **F6 Beta Android y v1.0** | Play: Internal testing y prueba cerrada con **12 testers durante 14 días** (cuenta personal nueva), corrección de errores, v1.0 en Google Play | M + 14 días | F5 + cuenta de Play | Aprobación en Google Play; feedback de los testers (sin telemetría: formulario o correo) |
@@ -89,7 +89,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R-08 | Bundle ID sin dominio definitivo | Media | Alta (permanente) | Comprar el dominio en F0; marcador solo en desarrollo; prohibido subir a una tienda con el marcador | F0 |
 | R-09 | Curva de aprendizaje de Dart y Flutter del propietario | Alta | Media | CLAUDE.md, specs en español, subagentes revisores, explicaciones en cada PR | Continuo |
 | R-10 | **Confirmado (S5):** superar los 25 MB de backup de Android hace que se descarte **toda** la copia | Alta | Alta | `BackupAgent` con presupuesto de 20 MB y prioridades (ADR-0004 revisado); la app tolera adjuntos ausentes | F4 |
-| R-11 | Documentos no PDF sin app para abrirlos en Android | Media | Baja | Mensaje claro; D6 revisable | F4 |
+| R-11 | ~~Documentos no PDF sin app para abrirlos en Android~~ **Evitado en la v1 (ADR-0014): solo PDF, sin abrir con otras apps** | — | — | Se retoma si se admiten otros formatos | — |
 | R-12 | Rechazo en App Store (p. ej. por la guideline 4.2 de funcionalidad mínima o por la WebView) | Baja | Media | Funcionalidad nativa clara; la WebView es secundaria; notas de revisión | F6 |
 | R-13 | Clones de la app (repo público) | Media | Baja | "Todos los derechos reservados"; marca; se puede hacer privado en cualquier momento (la historia ya publicada queda expuesta) | Continuo |
 | R-14 | Dependencia o acción de CI comprometida | Baja | Alta | Lockfiles, SHA fijados, OSV, dependency-review, permisos mínimos | CI |
@@ -107,10 +107,10 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R2 nada hasta la primera tarea | 001 | CA-001-02, 03, 04 |
 | R3 crear con texto / foto / imagen / documento / URL | 002, 007, 008, 009 | CA-002-01; CA-007-02/03; CA-008-01; CA-009-01/03 |
 | R4 ¿dónde va? (texto) | 002 | CA-002-02 a 06 |
-| R5 adjuntos siempre arriba | 002, 007, 008, 009 | CA-002-09, CA-007-05, CA-008-03, CA-009-03 |
+| R5 adjuntos siempre arriba | 002, 007, 008, 009 | CA-002-09, CA-007-05, CA-008-05, CA-009-03 |
 | R6 solo una tarea | 001 | CA-001-06 |
 | R7 listado en ≥ 2 interacciones | 005, 006 | CA-005-01/03, CA-006-01 |
-| R8 abrir → tarea actual rápido | 001, 007, 008, 009 | CA-001-09, CA-007-07, CA-008-04, CA-009-05/06 |
+| R8 abrir → tarea actual rápido | 001, 007, 008, 009 | CA-001-09, CA-007-07, CA-008-08, CA-009-05/06 |
 | R9 completar manteniendo pulsado + refuerzo | 003 | CA-003-01 a 04, 07, 08 |
 | R10 eliminar con confirmación y arrugado | 004 | CA-004-01 a 06 |
 | R11 editar, crear y menú | 005 | CA-005-01 a 09 |
@@ -127,7 +127,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | PD-2 | Dominio neutro → bundle ID y package name | Propietario | F0 | `com.<estudio>.<identificador-neutro>`, sin "una" |
 | PD-3 | Cuentas de Apple Developer y Google Play | Propietario | Antes de F5 (Play, antes de F2 por R-07) | Crear la de Play pronto |
 | PD-4 | ~~Aprobación de los spikes S1–S6~~ **Aprobados y ejecutados (2026-09-24).** S1–S5 ✅ en Android (S1/S2 en Xiaomi 15T Pro); S6 ✅ en local, falta conectar Vercel | Propietario | — | — |
-| PD-8 | ~~¿TXT, CSV y MD dentro de la app?~~ **Resuelto: sí (D19)** | — | — | — |
+| PD-8 | ~~¿TXT, CSV y MD dentro de la app?~~ **Resuelto: sí (D19)**; aplazado por el ADR-0014 (v1: solo PDF) | — | — | — |
 | PD-7 | ¿Se hace la versión de iOS? (D17) | Propietario | Al terminar F6 (o antes si se quiere adelantar) | Decidir con la beta de Android en la mano |
 | PD-5 | Diseño de las pantallas que faltan (R-17) | Propietario + Claude Design | Antes de F3 | — |
 | P-1 | ~~¿Guardar el borrador del editor?~~ **Resuelto: no en la v1** | — | — | — |

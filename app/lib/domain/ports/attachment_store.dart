@@ -1,5 +1,6 @@
 import '../entities/attachment.dart';
-import 'image_importer.dart';
+import '../entities/pdf_position.dart';
+import '../entities/staged_attachment.dart';
 
 /// Estado de los archivos de un adjunto (CA-007-19).
 enum AttachmentFiles {
@@ -9,7 +10,8 @@ enum AttachmentFiles {
   /// Falta la versión de pantalla o la miniatura: se regeneran sin avisar.
   derivedMissing,
 
-  /// Falta (o está vacía) la versión completa: "Adjunto no disponible".
+  /// Falta (o está vacía) la versión completa de la imagen o el PDF:
+  /// "Adjunto no disponible" (CA-007-19, CA-008-18).
   missing,
 }
 
@@ -19,7 +21,7 @@ enum AttachmentFiles {
 abstract interface class AttachmentStore {
   /// Mueve la preparación [staged] a su sitio definitivo, de forma atómica, y
   /// devuelve el adjunto (aún sin guardar en la BD).
-  Future<Attachment> commit(StagedImage staged, DateTime at);
+  Future<Attachment> commit(StagedAttachment staged, DateTime at);
 
   /// Deshace [commit]: devuelve el adjunto [id] a la preparación (si falla la
   /// escritura en la BD, para reintentar).
@@ -38,4 +40,39 @@ abstract interface class AttachmentStore {
   Future<Set<String>> stagingIds();
 
   Future<AttachmentFiles> check(Attachment attachment);
+
+  /// Última posición vista del PDF [id] (CA-008-09), o null si no hay o no se
+  /// puede leer. Va en su carpeta: se borra con el adjunto (CA-008-16).
+  Future<PdfPosition?> readPosition(String id);
+
+  /// Guarda la última posición del PDF [id]. Si el adjunto ya no existe (se
+  /// completó o eliminó mientras tanto), no hace nada.
+  Future<void> writePosition(String id, PdfPosition position);
 }
+
+/// El adjunto que corresponde a [staged], ya guardado en [at].
+Attachment attachmentFrom(StagedAttachment staged, DateTime at) =>
+    switch (staged) {
+      StagedImage() => Attachment(
+        id: staged.id,
+        kind: AttachmentKind.image,
+        origin: staged.origin,
+        mime: 'image/jpeg',
+        byteSize: staged.byteSize,
+        width: staged.width,
+        height: staged.height,
+        createdAt: at,
+      ),
+      StagedPdf() => Attachment(
+        id: staged.id,
+        kind: AttachmentKind.pdf,
+        origin: AttachmentOrigin.file,
+        mime: 'application/pdf',
+        byteSize: staged.byteSize,
+        width: staged.width,
+        height: staged.height,
+        createdAt: at,
+        originalName: staged.originalName,
+        pageCount: staged.pageCount,
+      ),
+    };

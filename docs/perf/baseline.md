@@ -86,6 +86,77 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 - **[Hecho]** La foto se ve en el primer fotograma (captura justo al volver `am start -W`), sin fondo vacío previo.
 - **Repetido sin visor** (2026-09-27, imagen al ancho con teselas encima de la versión de pantalla): n = 20, mín 212, **p50 245 ms**, p90 262, máx 278 ms. Sigue en el 25 % del presupuesto.
 
+## Tarea actual con PDF (spec 008, T-008-22)
+
+- **Fecha:** 2026-09-28 · **Rama:** `feat/008-pdf`
+- **Fichero:** `tools/fixtures/out/scanned_20p.pdf` (20 páginas escaneadas, JPEG de ruido, 8,5 MB: el caso más pesado admitido, CL-008-5), generado con `tools/fixtures/gen_pdf_fixtures.py`.
+- **Método:** `integration_test/pdf_perf_test.dart` en modo *profile* crea en la app `.profile` una tarea con texto (referencia) y la misma tarea con el PDF; mide la memoria del proceso (`/proc/self/smaps_rollup`, sin la GPU) con la tarea de texto, con el PDF en la página 1, el pico mientras se desplaza de la 1 a la 20 con el dedo y al final; guarda la posición en una página intermedia. Después se instala la app normal `.profile` (misma BD) y se mide el arranque en frío (`am start -W -S`) y `dumpsys meminfo` en un proceso nuevo. Con `--dart-define=PDF_PERF_TEXT_ONLY=true` deja solo la tarea con texto (la referencia del arranque y de `dumpsys`).
+
+### Tamaño del APK
+
+| Compilación | En disco | Comprimido (`gzip -9`, como CI) | Nota |
+|---|---|---|---|
+| `flutter build apk --release --split-per-abi --target-platform android-arm64` | 28,2 MB | 12,6 MB | 20,7 MB en disco en la 007: +7,5 MB, casi todo `libpdfium.so` (6,4 MB); pdfrx y sus paquetes Dart, ~0,4 MB |
+
+- **[Hecho]** Dentro del presupuesto (< 25 MB por ABI, comprimido). `--analyze-size`: `lib/arm64-v8a` 26 MB (libflutter 11,7, libapp 7,4, libpdfium 6,4, libsqlite3 1,7 MB).
+
+### Emulador (Pixel 6a, *profile*, sin GPU)
+
+| Medida | Solo texto | Con el PDF escaneado | Diferencia |
+|---|---|---|---|
+| PSS del proceso en el test (smaps) | 115 MB | página 1: 136 MB · pico al desplazar de la 1 a la 20: 181 MB · en la 20: 137 MB | pico +66 MB |
+| `dumpsys meminfo`, proceso nuevo (PSS total) | 113 MB | 130 MB (en la página 7 guardada) | +17 MB |
+| Desplazar de la 1 a la 20 (703 fotogramas) | — | build medio / p90: 3,3 / 7,5 ms; raster medio 177 ms | sin GPU: el raster del emulador no cuenta |
+
+- **[Hecho]** CL-008-5 en el emulador: se desplaza de la 1 a la 20 sin cerrarse y la tarea añade como mucho ~66 MB (pico) sobre la misma tarea con texto, muy por debajo de 200 MB.
+- **[Hecho]** El arranque en frío vuelve a la página guardada (la 7) sin ningún toque.
+- **[Hecho, emulador, antes del arreglo]** Justo al volver `am start -W` (primer fotograma), la zona de las páginas se veía **en blanco**; unos segundos después, la página. En este emulador el arranque en frío tarda 4,5–6 s también con solo texto (5–8 s), así que el tiempo no dice nada del móvil.
+- **[Hecho, emulador, tras el arreglo de CA-008-08 (abajo)]** 4 arranques en frío (`am start -S`, capturas seguidas, *profile*, página 7 a 0,95 guardada): la primera captura con la app ya muestra las páginas (0 filas en blanco en la zona del PDF) y ninguna posterior las muestra en blanco. Trazas temporales (quitadas): leer `position.json` y decodificar `screen.jpg` (1080 × 2400) antes de `runApp` cuesta ~230 ms; el visor está listo 0,25–0,8 s después del primer fotograma y pdfrx avisa de que ha dibujado las páginas visibles 1,8–2,8 s después de estar listo.
+
+### Xiaomi 15T Pro
+
+Medido el 2026-09-28 (Xiaomi 15T Pro, 120 Hz, app `.profile` aparte; la app real no se tocó).
+
+| Medida | Solo texto | Con el PDF escaneado | Diferencia |
+|---|---|---|---|
+| PSS del proceso en el test (smaps, sin GPU) | 157 MB | página 1: 174 MB · pico al desplazar de la 1 a la 20: 198 MB · en la 20: 197 MB | pico +41 MB |
+| `dumpsys meminfo`, proceso nuevo (PSS total / Graphics) | 245 / 87 MB | 329 / 157 MB (en la página 7 guardada) | +84 MB (+70 MB de GPU) |
+| Arranque en frío (`am start -W -S`, 20 veces; primer fotograma) | p50 399 ms · p90 443 ms | p50 410 ms · p90 461 ms (máx. 672) | +11 ms |
+| Desplazar de la 1 a la 20 (3211 fotogramas) | — | build medio / p99 / peor: 0,7 / 1,7 / 2,7 ms; raster medio / p99 / peor: 1,3 / 2,1 / 4,5 ms; 0 fotogramas perdidos | — |
+
+- **[Hecho]** CL-008-5 en el móvil: pico +41 MB sin GPU y +84 MB con ella en un proceso nuevo; muy por debajo de 200 MB. Desplazamiento sin ningún fotograma perdido a 120 Hz.
+- **[Hecho]** El primer fotograma con el PDF llega en p50 410 ms (< 1 s).
+- **[Hecho, antes del arreglo] La página no se veía en < 1 s.** En una captura a ~0,84 s del lanzamiento (arranque en frío, página 7 guardada) ya estaban la cabecera, la franja ("PDF scanned_20p.pdf 8,5 MB"), el botón y los bordes de las páginas, pero **el contenido de la página en blanco** (las páginas del fichero son ruido gris), como en el emulador.
+- **[Hecho] Causa y arreglo (2026-09-28).** Tres causas: (1) `screen.jpg` no estaba decodificada en el primer fotograma; (2) la cara se quitaba en cuanto el visor pdfrx estaba listo, antes de que dibujara las páginas, y el visor la tapaba en blanco; (3) la cara era solo la página guardada, desplazada, con blanco debajo. Ahora: `position.json` y `screen.jpg` se leen y se decodifican antes de `runApp` (solo con un PDF en la tarea actual, tope 1 s: el arranque sin PDF no cambia); `screen.jpg` es lo que se ve desde la posición (la página desde su fracción y las de debajo, con el borde, hasta el alto de la pantalla); la cara se queda encima hasta que pdfrx avisa de que ha dibujado la última página visible (o el primer toque, o 10 s). Coste: una decodificación de JPEG de pantalla completa antes del primer fotograma, solo con PDF (~230 ms en el emulador sin GPU).
+- **Xiaomi tras el arreglo (2026-09-28, app `.profile` aparte, quitada después):** arranque en frío con el PDF en la página 7 guardada p50 481 ms · p90 531 ms (antes del arreglo 410 ms: +71 ms por decodificar `screen.jpg` antes de `runApp`). Capturas seguidas tras `am start -n` (cada `screencap` tarda ~0,47 s): a ~0,72 s aún la ventana de arranque del sistema (sin el primer fotograma); la siguiente, a ≤ 1,2 s, ya con las páginas (3,45 MB, el mismo tamaño que la de ~2,1 s, que se ve con las páginas; una página en blanco comprime a una fracción; no se pudo copiar por el USB); a ~2,1 s, las páginas. **[Hecho]** ya no hay blanco: la primera captura con la app muestra la página. **[Suposición]** que se vea en < 1 s exactos: la captura cae entre 0,72 y 1,2 s. Para instalar en HyperOS hace falta "Instalar vía USB" activado y aceptar el aviso en el móvil.
+- **[Pendiente]** Giro en HyperOS: necesita la mano del propietario (pasos en la fila de T-008-22 de `tasks.md`).
+
+Pasos (con el permiso del propietario; nunca sin `--keep-app-running`, y siempre con el binario ya compilado para que flutter no deduzca el paquete base, que es la app real). **Ojo:** el APK partido por ABI tiene `versionCode` 2001 y el del test 1: si la app `.profile` del paso 1 sigue instalada, `flutter drive` del paso 2 no puede instalar (`INSTALL_FAILED_VERSION_DOWNGRADE`) y corre la app vieja. Antes del paso 2: `adb uninstall invalid.pending.app.profile`, `adb install /tmp/perf-pdf.apk`, `adb shell mkdir -p` de la carpeta y después el `push`.
+
+```bash
+cd app
+S=<serial>
+flutter build apk --profile --target=integration_test/pdf_perf_test.dart && cp build/app/outputs/flutter-apk/app-profile.apk /tmp/perf-pdf.apk
+flutter build apk --profile --target=integration_test/pdf_perf_test.dart --dart-define=PDF_PERF_TEXT_ONLY=true && cp build/app/outputs/flutter-apk/app-profile.apk /tmp/perf-text.apk
+flutter build apk --profile --split-per-abi --target-platform android-arm64 && cp build/app/outputs/flutter-apk/app-arm64-v8a-profile.apk /tmp/app-profile.apk
+# 1) Referencia con texto
+flutter drive --profile --no-dds --keep-app-running --use-application-binary=/tmp/perf-text.apk \
+  --driver=test_driver/perf_driver.dart --target=integration_test/pdf_perf_test.dart -d $S
+adb -s $S install -r /tmp/app-profile.apk
+../tools/measure-cold-start.sh $S 20 invalid.pending.app.profile   # ver la nota del nombre de la actividad
+adb -s $S shell dumpsys meminfo invalid.pending.app.profile | grep -E "TOTAL PSS|Graphics"
+# 2) Con el PDF escaneado
+adb -s $S push ../tools/fixtures/out/scanned_20p.pdf /sdcard/Android/data/invalid.pending.app.profile/files/scanned_20p.pdf
+flutter drive --profile --no-dds --keep-app-running --use-application-binary=/tmp/perf-pdf.apk \
+  --driver=test_driver/perf_driver.dart --target=integration_test/pdf_perf_test.dart -d $S
+cat build/pdf_memory.json build/pdf_scroll_frames.json
+adb -s $S install -r /tmp/app-profile.apk
+# (arranque y dumpsys como en 1)
+```
+
+- `measure-cold-start.sh` lanza `$PKG/.MainActivity`; con `.profile` la actividad es `invalid.pending.app.MainActivity`: `am start -W -S -n invalid.pending.app.profile/invalid.pending.app.MainActivity`.
+- La app `.profile` queda instalada al terminar; se quita a mano (`adb uninstall invalid.pending.app.profile`, **solo** ese paquete).
+
 ## Cómo repetir la medición
 
 ```bash

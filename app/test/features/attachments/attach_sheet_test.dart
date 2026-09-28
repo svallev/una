@@ -3,7 +3,7 @@ import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/features/attachments/attach_sheet.dart';
-import 'package:app/features/attachments/image_import_controller.dart';
+import 'package:app/features/attachments/attachment_import_controller.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/ui/sheet_row.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_image_importer.dart';
+import '../../support/fake_pdf_importer.dart';
+import '../../support/fake_pdf_view.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
@@ -21,10 +23,12 @@ void main() {
 
   late MemoryAttachmentStore store;
   late FakeImageImporter importer;
+  late FakePdfImporter pdfs;
 
   setUp(() {
     store = MemoryAttachmentStore();
     importer = FakeImageImporter(store);
+    pdfs = FakePdfImporter(store);
   });
 
   Future<void> pumpEditor(
@@ -44,6 +48,8 @@ void main() {
       overrides: [
         attachmentStoreProvider.overrideWithValue(store),
         imageImporterProvider.overrideWithValue(importer),
+        pdfImporterProvider.overrideWithValue(pdfs),
+        ...fakePdfViews,
       ],
     );
     await tester.pumpAndSettle();
@@ -70,7 +76,7 @@ void main() {
         for (final (title, hint) in [
           ('Hacer foto', 'Con la cámara · va arriba del todo'),
           ('Subir imagen', 'Desde tu galería · va arriba del todo'),
-          ('Subir archivo', 'PDF, Word, Excel… · va arriba del todo'),
+          ('Subir archivo', 'PDF · va arriba del todo'),
           ('Cargar URL', 'Una página web · va arriba del todo'),
         ]) {
           expect(find.text(title), findsOneWidget);
@@ -98,7 +104,7 @@ void main() {
     for (final label in [
       'Hacer foto. Con la cámara, va arriba del todo',
       'Subir imagen. Desde tu galería, va arriba del todo',
-      'Subir archivo. PDF, Word, Excel…, va arriba del todo',
+      'Subir archivo. PDF, va arriba del todo',
       'Cargar URL. Una página web, va arriba del todo',
     ]) {
       expect(
@@ -174,20 +180,33 @@ void main() {
   });
 
   testWidgets(
-    'CA-007-01 / DEV-18: "Subir archivo" y "Cargar URL" se ven activas pero '
-    'no hacen nada',
+    'CA-007-01 / DEV-18: "Cargar URL" se ve activa pero no hace nada hasta '
+    'la 009',
     (tester) async {
       await pumpEditor(tester);
       await openSheet(tester);
-      await tester.tap(find.text('Subir archivo'));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('Cargar URL'));
       await tester.pumpAndSettle();
       expect(find.byType(AttachSheet), findsOneWidget);
       expect(importer.picks, isEmpty);
+      expect(pdfs.picks, isEmpty);
       for (final row in tester.widgetList<SheetRow>(find.byType(SheetRow))) {
         expect(row.enabled, isTrue);
       }
+    },
+  );
+
+  testWidgets(
+    'CA-008-01: "Subir archivo" cierra la hoja y abre el selector de PDF',
+    (tester) async {
+      await pumpEditor(tester, mode: EditorMode.create);
+      await openSheet(tester);
+      await tester.tap(find.text('Subir archivo'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AttachSheet), findsNothing);
+      expect(pdfs.picks, hasLength(1));
+      expect(importer.picks, isEmpty);
+      expect(containerOf(tester).read(attachmentImportProvider).pdf, isNotNull);
     },
   );
 
@@ -205,7 +224,10 @@ void main() {
 
         expect(find.byType(AttachSheet), findsNothing);
         expect(importer.origins, [origin]);
-        expect(containerOf(tester).read(imageImportProvider).image, isNotNull);
+        expect(
+          containerOf(tester).read(attachmentImportProvider).image,
+          isNotNull,
+        );
       },
     );
   }
@@ -220,7 +242,10 @@ void main() {
       await tester.tap(find.text('Subir imagen'));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(containerOf(tester).read(imageImportProvider).preparing, isTrue);
+      expect(
+        containerOf(tester).read(attachmentImportProvider).preparing,
+        isTrue,
+      );
 
       await tester.tap(_plus);
       await tester.pump(const Duration(milliseconds: 100));
@@ -235,7 +260,10 @@ void main() {
 
       await tester.pump(const Duration(seconds: 5));
       await tester.pump(const Duration(seconds: 1));
-      expect(containerOf(tester).read(imageImportProvider).image, isNotNull);
+      expect(
+        containerOf(tester).read(attachmentImportProvider).image,
+        isNotNull,
+      );
     },
   );
 

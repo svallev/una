@@ -8,7 +8,8 @@ import 'attachment_health.dart';
 
 /// Miniatura de 44 px del listado, recortada y con borde de 2 px (prototipo
 /// `item.isImg`, CA-007-20). Si falta o no se puede leer, la insignia
-/// "FOTO"/"IMAGEN" (CA-007-19). Decorativa para el lector.
+/// "FOTO"/"IMAGEN" (CA-007-19). Un PDF lleva siempre la insignia "PDF", esté
+/// o no disponible (CA-008-19). Decorativa para el lector.
 class TaskThumbnail extends ConsumerWidget {
   const TaskThumbnail({
     super.key,
@@ -18,17 +19,19 @@ class TaskThumbnail extends ConsumerWidget {
 
   final Attachment attachment;
 
-  /// "Foto" o "Imagen" (la insignia va en mayúsculas).
+  /// "Foto", "Imagen" o "PDF" (la insignia va en mayúsculas).
   final String kindLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final health = ref.watch(attachmentHealthProvider(attachment));
     final badge = _Badge(kindLabel);
+    final thumb = attachment.thumbPath;
     return ExcludeSemantics(
       child: SizedBox.square(
         dimension: UnaSizes.listThumb,
-        child: health.health == AttachmentHealth.missing
+        // Sin miniatura (un PDF, CA-008-19) o si falta: la insignia.
+        child: thumb == null || health.health == AttachmentHealth.missing
             ? badge
             : DecoratedBox(
                 position: DecorationPosition.foreground,
@@ -42,9 +45,7 @@ class TaskThumbnail extends ConsumerWidget {
                 ),
                 child: Image(
                   key: ValueKey(health.generation),
-                  image: ref
-                      .watch(attachmentImagesProvider)
-                      .stored(attachment.thumbPath),
+                  image: ref.watch(attachmentImagesProvider).stored(thumb),
                   fit: BoxFit.cover,
                   gaplessPlayback: true,
                   errorBuilder: (context, _, _) {

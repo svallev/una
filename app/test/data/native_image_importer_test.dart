@@ -61,13 +61,16 @@ void main() {
       maxPixels: ImageLimits.maxPixels,
       storedMaxPixels: ImageLimits.storedMaxPixels,
     );
-    expect(staged, (
-      id: 'id-1',
-      origin: AttachmentOrigin.camera,
-      width: 4000,
-      height: 3000,
-      byteSize: 999,
-    ));
+    expect(
+      staged,
+      const StagedImage(
+        id: 'id-1',
+        origin: AttachmentOrigin.camera,
+        width: 4000,
+        height: 3000,
+        byteSize: 999,
+      ),
+    );
 
     expect(calls.map((c) => c.method), ['pick', 'copy', 'sanitize']);
     expect(calls[0].arguments, {'origin': 'camera', 'id': 'id-1'});

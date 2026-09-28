@@ -85,7 +85,7 @@ class NativeImageImporter implements ImageImporter {
       'maxPixels': maxPixels,
       'storedMaxPixels': storedMaxPixels,
     }))!;
-    return (
+    return StagedImage(
       id: id,
       origin: origin,
       width: (r['width']! as num).toInt(),

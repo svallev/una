@@ -48,7 +48,7 @@ Convertir una página web (el horario de un festival, una receta, un mapa) en la
 - **CA-009-08 Navegación contenida**
   - **Dado** la página en vivo
   - **Cuando** el usuario sigue un enlace a **otro dominio**, uno que abre ventana nueva o un esquema no web (`tel:`, `mailto:`, `intent:`…)
-  - **Entonces** no navega dentro de la tarea: pregunta "¿Abrir {dominio} en el navegador?" y, si acepta, lo abre en el navegador del sistema (los esquemas no web se bloquean o se delegan al sistema tras confirmar).
+  - **Entonces** no navega dentro de la tarea: pregunta "¿Abrir {dominio} en el navegador?" (`openInBrowserConfirm`) y, si acepta, lo abre en el navegador del sistema. Los esquemas no web siguen la regla de los enlaces del PDF (CA-008-12): `mailto:` y `tel:` con `openInAppConfirm`; el resto se bloquea.
 - **CA-009-09 Aislamiento**
   - **Dado** la vista web
   - **Cuando** carga cualquier página
@@ -82,7 +82,7 @@ Convertir una página web (el horario de un festival, una receta, un mapa) en la
 | CL-009-1 | Página enorme (> 20 000 px) | La captura se corta a 20 000 px con la nota "Copia parcial" |
 | CL-009-2 | Página con banner de cookies o muro de registro | Se captura tal cual (no se manipula el contenido de terceros) |
 | CL-009-3 | Redirecciones a otro dominio al cargar | Se permiten durante la carga inicial; el dominio mostrado es el final; se avisa si difiere del escrito |
-| CL-009-4 | La URL devuelve un PDF | Se ofrece guardarlo como tarea de documento (spec 008) **[Pendiente P-6]** |
+| CL-009-4 | La URL devuelve un PDF | Se ofrece guardarlo como tarea con PDF (spec 008) **[Pendiente P-6]** |
 | CL-009-5 | Web de pruebas (navegador) | Sin vista web: tarjeta con el dominio y "Abrir página ↗" (como el prototipo) |
 
 ## 5. Estados de error
@@ -121,7 +121,7 @@ Convertir una página web (el horario de un festival, una receta, un mapa) en la
 | `urlNeedsConnection` | Necesitas conexión para ver esta página por primera vez. | You need a connection to view this page for the first time. |
 | `urlInsecure` | Esta página no usa conexión segura. Ábrela en el navegador. | This page doesn't use a secure connection. Open it in the browser. |
 | `urlOpenInBrowser` | Abrir en el navegador | Open in browser |
-| `urlLeaveConfirm` | ¿Abrir {host} en el navegador? | Open {host} in the browser? |
+| `openInBrowserConfirm` | ¿Abrir {host} en el navegador? | Open {host} in the browser? |
 | `urlA11yBar` | Página web de {host} | Web page from {host} |
 | `urlOpenPageWeb` | Abrir página ↗ | Open page ↗ |
 | `urlLoadFailed` | No se ha podido cargar la página ({reason}). | Couldn't load the page ({reason}). |

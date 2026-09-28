@@ -115,7 +115,8 @@ class TaskListRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final attachment = task.attachment;
     final text = Text(
-      // Sin texto, "Foto"/"Imagen" (CA-007-20).
+      // Sin texto, "Foto"/"Imagen" (CA-007-20) o el nombre del PDF
+      // (CA-008-19).
       taskLabel(l10n, task),
       maxLines: 3,
       overflow: TextOverflow.ellipsis,
@@ -155,8 +156,9 @@ class TaskListRow extends StatelessWidget {
               child: const _Grip(),
             ),
           if (!first) const SizedBox(width: _gap),
-          // Miniatura entre el asa y el texto (CA-007-20); en la primera,
-          // con 8 px a la izquierda, como el prototipo.
+          // Miniatura (o insignia "PDF", CA-008-19) entre el asa y el texto
+          // (CA-007-20); en la primera, con 8 px a la izquierda, como el
+          // prototipo.
           if (attachment != null) ...[
             if (first) const SizedBox(width: UnaSpace.s),
             TaskThumbnail(

@@ -8,7 +8,8 @@ import '../../ui/una_icons.dart';
 
 /// "Adjunto no disponible" (CA-007-19, DEV-40): recuadro blanco con el texto
 /// de la tarea (si lo tiene), el aviso y una sola acción: "Quitar adjunto"
-/// (con texto) o "Eliminar tarea" (sin texto). Nunca cierra la app.
+/// (con texto) o "Eliminar tarea" (sin texto). Nunca cierra la app. Con PDF,
+/// el icono de documento (CA-008-18).
 class MissingAttachmentCard extends StatelessWidget {
   const MissingAttachmentCard({
     super.key,
@@ -16,6 +17,7 @@ class MissingAttachmentCard extends StatelessWidget {
     required this.header,
     required this.onRemove,
     required this.onDelete,
+    this.isPdf = false,
   });
 
   /// Texto de la tarea, o vacío.
@@ -26,6 +28,9 @@ class MissingAttachmentCard extends StatelessWidget {
   final Widget Function(Widget child) header;
   final VoidCallback onRemove;
   final VoidCallback onDelete;
+
+  /// El adjunto que falta es un PDF: icono de documento en vez del de imagen.
+  final bool isPdf;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +71,10 @@ class MissingAttachmentCard extends StatelessWidget {
                   ],
                   Row(
                     children: [
-                      const UnaIcon(UnaIcons.image, color: UnaColors.error),
+                      UnaIcon(
+                        isPdf ? UnaIcons.document : UnaIcons.image,
+                        color: UnaColors.error,
+                      ),
                       const SizedBox(width: UnaSpace.s),
                       Expanded(
                         child: Text(

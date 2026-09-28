@@ -100,6 +100,49 @@ void main() {
     expect(_copies(transfer, 'file', 'attachments/a1/full-0-0.jpg'), isTrue);
   });
 
+  group('CA-008-17: los PDF siguen la regla de las imágenes', () {
+    // El PDF, su versión de pantalla y la última posición (plan §1).
+    const pdf = [
+      'attachments/p1/document.pdf',
+      'attachments/p1/screen.jpg',
+      'attachments/p1/position.json',
+    ];
+
+    test('fuera de la copia en la nube (Android 12+ y 9–11), que sigue '
+        'llevando las tareas', () {
+      final cloud = _rules(
+        _read('xml/data_extraction_rules.xml'),
+        'cloud-backup',
+      );
+      final v28 = _rules(_read('xml-v28/backup_rules.xml'));
+      for (final rules in [cloud, v28]) {
+        expect(_copies(rules, 'root', 'app_flutter/una.sqlite'), isTrue);
+        for (final path in pdf) {
+          expect(_copies(rules, 'file', path), isFalse, reason: path);
+        }
+        // Ni la preparación de un PDF a medias.
+        expect(_copies(rules, 'root', 'cache/import/p1/source'), isFalse);
+      }
+    });
+
+    test('Android 8: tampoco (no se copia nada)', () {
+      final rules = _rules(_read('xml/backup_rules.xml'));
+      for (final path in pdf) {
+        expect(_copies(rules, 'file', path), isFalse, reason: path);
+      }
+    });
+
+    test('en la transferencia entre dispositivos (Android 12+), sí', () {
+      final transfer = _rules(
+        _read('xml/data_extraction_rules.xml'),
+        'device-transfer',
+      );
+      for (final path in pdf) {
+        expect(_copies(transfer, 'file', path), isTrue, reason: path);
+      }
+    });
+  });
+
   test('el manifiesto usa estas reglas', () {
     final manifest = File('android/app/src/main/AndroidManifest.xml')
         .readAsStringSync();

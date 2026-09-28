@@ -8,28 +8,39 @@ import '../../ui/focus_on_signal.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
 
-/// Vista previa del adjunto en el editor (CA-007-04, prototipo `hasDraftAtt`):
-/// recuadro blanco con borde y sombra dura, la imagen recortada para llenarlo
-/// y "Quitar adjunto" arriba a la derecha (48 dp, DEV-36). Mientras se
-/// prepara otra imagen, encima "Preparando imagen…" con "Cancelar"
-/// (CA-007-15).
+/// Vista previa del adjunto en el editor (CA-007-04, CA-008-04, prototipo
+/// `hasDraftAtt`): recuadro blanco con borde y sombra dura, la imagen recortada
+/// para llenarlo o el PDF ([document]: franja y páginas desplazables), y
+/// "Quitar adjunto" arriba a la derecha (48 dp, DEV-36). Mientras se prepara
+/// otro adjunto, encima "Preparando imagen…" / "Preparando PDF…" con
+/// "Cancelar" (CA-007-15, CA-008-15).
 class AttachmentPreview extends StatelessWidget {
   const AttachmentPreview({
     super.key,
     required this.image,
+    this.document,
     required this.semanticLabel,
     required this.onRemove,
     required this.preparing,
     required this.onCancelPreparing,
     required this.focusSignal,
     required this.cancelFocusSignal,
+    required this.preparingLabel,
+    required this.cancelLabel,
   });
 
   /// La versión de pantalla, o null si aún no hay imagen (solo "Preparando").
   final ImageProvider? image;
 
-  /// "Foto" o "Imagen".
+  /// El PDF (franja y páginas), en lugar de [image].
+  final Widget? document;
+
+  /// "Foto", "Imagen" o "{nombre}. PDF, {tamaño}".
   final String semanticLabel;
+
+  /// "Preparando imagen…" o "Preparando PDF…", y su "Cancelar".
+  final String preparingLabel;
+  final String cancelLabel;
   final VoidCallback onRemove;
   final bool preparing;
   final VoidCallback onCancelPreparing;
@@ -44,6 +55,8 @@ class AttachmentPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final image = this.image;
+    final document = this.document;
+    final hasContent = image != null || document != null;
     // Llena el hueco que le deja el editor, sin crecer con la imagen: la
     // imagen va posicionada, así que no cuenta en la altura intrínseca con la
     // que SliverFillRemaining mide la columna (una foto vertical empujaba los
@@ -64,6 +77,20 @@ class AttachmentPreview extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
+              if (document != null)
+                Positioned.fill(
+                  child: FocusOnSignal(
+                    signal: focusSignal,
+                    child: ExcludeSemantics(
+                      excluding: preparing,
+                      child: Semantics(
+                        label: semanticLabel,
+                        excludeSemantics: true,
+                        child: document,
+                      ),
+                    ),
+                  ),
+                ),
               if (image != null)
                 Positioned.fill(
                   child: FocusOnSignal(
@@ -87,7 +114,7 @@ class AttachmentPreview extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (image != null && !preparing)
+              if (hasContent && !preparing)
                 Positioned(
                   top: UnaSpace.s - UnaSpace.xxs,
                   right: UnaSpace.s - UnaSpace.xxs,
@@ -102,8 +129,8 @@ class AttachmentPreview extends StatelessWidget {
                 ),
               if (preparing)
                 _Preparing(
-                  label: l10n.imagePreparing,
-                  cancelLabel: l10n.imagePreparingCancel,
+                  label: preparingLabel,
+                  cancelLabel: cancelLabel,
                   onCancel: onCancelPreparing,
                   cancelFocusSignal: cancelFocusSignal,
                 ),

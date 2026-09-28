@@ -35,7 +35,7 @@ flowchart LR
 ## Tamaño del texto de la tarea
 
 Longitud del texto → token: `< 40` → `noteXL 50` · `< 90` → `noteL 40` · `< 160` → `noteM 31` · resto → `noteS 26`.
-Se multiplica por el `textScaler` del sistema con un **límite de ×1,6** para las notas (el texto sigue cupiendo con desplazamiento vertical). El resto de textos escala sin límite, con la maquetación preparada para ello.
+Se multiplica por el `textScaler` del sistema con un **límite de ×1,6** para las notas (el texto sigue cupiendo con desplazamiento vertical). El resto de textos escala sin límite, con la maquetación preparada para ello, salvo el texto de la tarea sobre un adjunto, que usa el mismo límite (`imageCaptionMaxTextScale`): el pie de la imagen (spec 007, CA-007-23) y la banda del texto del PDF (spec 008, CA-008-22; decisión del propietario, 2026-09-28).
 
 ## Contraste (WCAG 2.2 AA), calculado el 2026-09-24
 

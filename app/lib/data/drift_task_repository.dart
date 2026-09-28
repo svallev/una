@@ -312,6 +312,8 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
     width: r.width ?? 0,
     height: r.height ?? 0,
     createdAt: _date(r.createdAt),
+    originalName: r.originalName,
+    pageCount: r.pageCount,
   );
 
   static AttachmentsCompanion _toAttachmentRow(String taskId, Attachment a) =>
@@ -322,9 +324,11 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
         origin: a.origin.name,
         mime: a.mime,
         byteSize: a.byteSize,
-        relPath: a.fullPrefix,
+        relPath: a.mainPath,
         displayRelPath: Value(a.screenPath),
         thumbRelPath: Value(a.thumbPath),
+        originalName: Value(a.originalName),
+        pageCount: Value(a.pageCount),
         width: Value(a.width),
         height: Value(a.height),
         createdAt: a.createdAt.millisecondsSinceEpoch,

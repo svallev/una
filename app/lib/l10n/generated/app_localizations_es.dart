@@ -302,7 +302,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get attachPickFile => 'Subir archivo';
 
   @override
-  String get attachPickFileHint => 'PDF, Word, Excel… · va arriba del todo';
+  String get attachPickFileHint => 'PDF · va arriba del todo';
 
   @override
   String get attachUrl => 'Cargar URL';
@@ -375,4 +375,124 @@ class AppLocalizationsEs extends AppLocalizations {
   String a11yAttachmentMissing(String text) {
     return '$text. Adjunto no disponible';
   }
+
+  @override
+  String get attachmentPdf => 'PDF';
+
+  @override
+  String docSizeMb(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String docSizeKb(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String get pdfPreparing => 'Preparando PDF…';
+
+  @override
+  String get pdfPreparingCancel => 'Cancelar';
+
+  @override
+  String pdfPageA11y(int page, int total) {
+    return 'Página $page de $total';
+  }
+
+  @override
+  String get pdfNextPage => 'Página siguiente';
+
+  @override
+  String get pdfPrevPage => 'Página anterior';
+
+  @override
+  String get pdfZoomIn => 'Ampliar';
+
+  @override
+  String get pdfZoomOut => 'Reducir';
+
+  @override
+  String get pdfZoomFit => 'Ajustar al ancho';
+
+  @override
+  String a11yWithPdf(String text, String name, String size) {
+    return '$text. Con PDF, $name, $size';
+  }
+
+  @override
+  String a11yPdfOnly(String name, String size) {
+    return '$name. PDF, $size';
+  }
+
+  @override
+  String a11yRowWithPdf(String text) {
+    return '$text. Con PDF';
+  }
+
+  @override
+  String a11yRowPdfOnly(String name) {
+    return '$name. PDF';
+  }
+
+  @override
+  String a11yZoomLevel(int percent) {
+    return 'Zoom $percent %';
+  }
+
+  @override
+  String pdfLinkWeb(String host) {
+    return 'Enlace a $host';
+  }
+
+  @override
+  String pdfLinkPage(int page) {
+    return 'Enlace a la página $page';
+  }
+
+  @override
+  String pdfLinkApp(String target) {
+    return 'Enlace a $target';
+  }
+
+  @override
+  String get a11yPdfAdded => 'PDF añadido';
+
+  @override
+  String get errPdfType => 'Solo se pueden subir archivos PDF.';
+
+  @override
+  String errPdfTooBig(int max) {
+    return 'El PDF es demasiado grande (máx. $max MB).';
+  }
+
+  @override
+  String errPdfTooManyPages(int max) {
+    return 'El PDF tiene demasiadas páginas (máx. $max).';
+  }
+
+  @override
+  String get errPdfProtected => 'Este PDF está protegido con contraseña.';
+
+  @override
+  String get errPdfUnreadable => 'No hemos podido leer este PDF.';
+
+  @override
+  String get errNoAppForLink => 'No hay ninguna app para abrir este enlace.';
+
+  @override
+  String openInBrowserConfirm(String host) {
+    return '¿Abrir $host en el navegador?';
+  }
+
+  @override
+  String openInAppConfirm(String target) {
+    return '¿Abrir $target con otra app?';
+  }
+
+  @override
+  String get linkConfirmOpen => 'Abrir';
+
+  @override
+  String get linkConfirmCancel => 'Cancelar';
 }

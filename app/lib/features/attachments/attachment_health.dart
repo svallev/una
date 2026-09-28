@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../domain/entities/attachment.dart';
+import '../../domain/entities/pdf_position.dart';
 import '../../domain/ports/attachment_store.dart';
+import 'pdf_position_controller.dart' show pdfPageGapOfScreen;
 
 /// Estado de los archivos de un adjunto que se muestra (CA-007-19).
 enum AttachmentHealth {
@@ -13,8 +15,8 @@ enum AttachmentHealth {
   checking,
   ok,
 
-  /// Falta, está vacía o no se puede leer la versión completa: "Adjunto no
-  /// disponible".
+  /// Falta, está vacía o no se puede leer la versión completa (o el PDF, que
+  /// tampoco se puede abrir): "Adjunto no disponible".
   missing,
 }
 
@@ -30,7 +32,9 @@ class AttachmentHealthState {
 
 /// Comprueba los archivos del adjunto al mostrarlo; si solo faltan (o están
 /// estropeadas) la versión de pantalla o la miniatura, las regenera en
-/// segundo plano desde la completa, sin avisar.
+/// segundo plano desde la completa, sin avisar. Con PDF, la versión de
+/// pantalla se dibuja desde el PDF con la página de la última posición
+/// (CA-008-18).
 final attachmentHealthProvider = NotifierProvider.autoDispose
     .family<AttachmentHealthController, AttachmentHealthState, Attachment>(
       AttachmentHealthController.new,
@@ -77,16 +81,24 @@ class AttachmentHealthController extends Notifier<AttachmentHealthState> {
     unawaited(_repair());
   }
 
+  /// El PDF existe pero el motor no lo puede abrir (CA-008-18).
+  void reportUnreadable() => _set(AttachmentHealth.missing);
+
   Future<void> _repair() async {
     _repairing = true;
     final images = ref.read(attachmentImagesProvider);
     try {
-      await ref.read(imageImporterProvider).regenerateDerived(attachment);
+      if (attachment.isPdf) {
+        await _renderPdfScreen();
+      } else {
+        await ref.read(imageImporterProvider).regenerateDerived(attachment);
+      }
       if (!ref.mounted) return;
       _repaired = true;
       // Que se vuelvan a leer del disco, no de la caché.
       await images.stored(attachment.screenPath).evict();
-      await images.stored(attachment.thumbPath).evict();
+      final thumb = attachment.thumbPath;
+      if (thumb != null) await images.stored(thumb).evict();
       if (!ref.mounted) return;
       state = AttachmentHealthState(
         AttachmentHealth.ok,
@@ -97,6 +109,26 @@ class AttachmentHealthController extends Notifier<AttachmentHealthState> {
     } finally {
       _repairing = false;
     }
+  }
+
+  /// La versión de pantalla del PDF es lo que se ve desde la última
+  /// posición, lo que se pinta en el primer fotograma (CA-008-08); sin
+  /// posición legible, desde el principio. Si el PDF no se puede dibujar,
+  /// lanza.
+  Future<void> _renderPdfScreen() async {
+    final store = ref.read(attachmentStoreProvider);
+    final importer = ref.read(pdfImporterProvider);
+    PdfPosition? saved;
+    try {
+      saved = await store.readPosition(attachment.id);
+    } on Object {
+      saved = null;
+    }
+    await importer.renderScreen(
+      attachment,
+      saved ?? PdfPosition.start,
+      gap: pdfPageGapOfScreen(),
+    );
   }
 
   void _set(AttachmentHealth health) {

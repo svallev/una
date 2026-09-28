@@ -6,27 +6,32 @@ import android.content.ClipData
 import android.content.ContentResolver
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ext.SdkExtensions
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.Closeable
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Canal `una/images` (spec 007): cámara y selector del sistema **sin permisos**,
- * copia acotada y limpieza de la imagen. Todo lo que escribe va a
+ * copia acotada y limpieza de la imagen. Desde la spec 008, también el selector
+ * de PDF (origen `file`) y `encodeJpeg` (la versión de pantalla de una página). Todo lo que escribe va a
  * `cache/import/` (la misma ruta que `FileAttachmentStore` en Dart); nunca a la
  * galería ni al almacenamiento compartido.
  *
@@ -38,6 +43,10 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         const val REQUEST_CAMERA = 7001
         const val REQUEST_PICK = 7002
         private const val HEAD_BYTES = 64
+        /** Cabecera máxima que se devuelve (el PDF busca `%PDF-` en 1024, spec 008). */
+        private const val MAX_HEAD_BYTES = 1024
+        /** Nombre visible más largo que se lee del proveedor (Dart lo recorta a 120). */
+        private const val MAX_NAME = 1024
         private const val BUFFER = 64 * 1024
         private val ID = Regex("^[A-Za-z0-9_-]{1,64}$")
         private val PICKER_MIME = arrayOf(
@@ -60,6 +69,7 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
     /** Llamada de Dart que espera el resultado de la cámara o del selector. */
     private var pending: MethodChannel.Result? = null
     private var pendingCameraId: String? = null
+    private var pendingIsFile = false
 
     private val importRoot: File get() = File(activity.cacheDir, "import")
     private val authority: String get() = "${activity.packageName}.imports"
@@ -71,9 +81,10 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         when (call.method) {
             "capabilities" -> result.success(mapOf("heic" to (Build.VERSION.SDK_INT >= 28)))
             "pick" -> pick(call.argument<String>("origin")!!, id(call), result)
-            "copy" -> copy(call.argument<String>("token")!!, id(call), maxBytes(call), result)
+            "copy" -> copy(call.argument<String>("token")!!, id(call), maxBytes(call), headBytes(call), result)
             "sanitize" -> sanitize(call, result)
             "cancel" -> cancel(id(call), result)
+            "encodeJpeg" -> encodeJpeg(call, result)
             "regenerate" -> regenerate(call, result)
             "debugCopyFile" -> debugCopyFile(call, result)
             else -> result.notImplemented()
@@ -87,6 +98,9 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
     }
 
     private fun maxBytes(call: MethodCall): Long = call.argument<Number>("maxBytes")!!.toLong()
+
+    private fun headBytes(call: MethodCall): Int =
+        (call.argument<Number>("headBytes")?.toInt() ?: HEAD_BYTES).coerceIn(1, MAX_HEAD_BYTES)
 
     // --- Elegir ---------------------------------------------------------------
 
@@ -110,6 +124,16 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                 pending = result
                 pendingCameraId = id
                 activity.startActivityForResult(intent, REQUEST_CAMERA)
+            } else if (origin == "file") {
+                // Selector de documentos del sistema, solo PDF (spec 008): sin
+                // permisos de almacenamiento (CA-008-01).
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/pdf"
+                }
+                pending = result
+                pendingIsFile = true
+                activity.startActivityForResult(intent, REQUEST_PICK)
             } else {
                 val intent = if (photoPickerAvailable()) {
                     Intent(MediaStore.ACTION_PICK_IMAGES).setType("image/*")
@@ -126,6 +150,7 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         } catch (e: ActivityNotFoundException) {
             pending = null
             pendingCameraId = null
+            pendingIsFile = false
             File(importRoot, "$id.camera").delete()
             result.error(if (origin == "camera") "noCamera" else "unreadable", null, null)
         }
@@ -140,8 +165,10 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         if (requestCode != REQUEST_CAMERA && requestCode != REQUEST_PICK) return false
         val result = pending
         val cameraId = pendingCameraId
+        val isFile = pendingIsFile
         pending = null
         pendingCameraId = null
+        pendingIsFile = false
         // Sin llamada pendiente, Android mató la app con la cámara abierta
         // (CL-007-7): se ignora; el barrido borra la foto del siguiente arranque.
         if (result == null) return true
@@ -160,7 +187,10 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         } else {
             val uri = data?.data
             if (resultCode == Activity.RESULT_OK && uri != null) {
-                result.success(mapOf("token" to uri.toString()))
+                // El nombre visible solo se pide para un PDF (CA-008-07); nunca
+                // se registra (CL-008-11) y Dart lo sanea.
+                val name = if (isFile && isForeignContent(uri)) displayName(uri) else null
+                result.success(mapOf("token" to uri.toString(), "name" to name))
             } else {
                 result.success(null)
             }
@@ -168,9 +198,17 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         return true
     }
 
+    /** `OpenableColumns.DISPLAY_NAME` del documento, o null. */
+    private fun displayName(uri: Uri): String? = try {
+        activity.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getString(0)?.take(MAX_NAME) else null }
+    } catch (e: Exception) {
+        null
+    }
+
     // --- Copiar ---------------------------------------------------------------
 
-    private fun copy(token: String, id: String, maxBytes: Long, result: MethodChannel.Result) {
+    private fun copy(token: String, id: String, maxBytes: Long, headBytes: Int, result: MethodChannel.Result) {
         val flag = AtomicBoolean(false)
         cancelled[id] = flag
         background(result, id) {
@@ -179,7 +217,7 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                 require(ID.matches(cameraId)) { "id" }
                 val file = File(importRoot, "$cameraId.camera")
                 try {
-                    FileInputStream(file).use { tracked(id, it) { boundedCopy(it, id, maxBytes, flag) } }
+                    FileInputStream(file).use { tracked(id, it) { boundedCopy(it, id, maxBytes, headBytes, flag) } }
                 } finally {
                     file.delete() // Ninguna otra copia de lo que escribió la cámara.
                 }
@@ -190,7 +228,7 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                 if (!isForeignContent(uri)) throw ImportException("unreadable")
                 val input = activity.contentResolver.openInputStream(uri)
                     ?: throw ImportException("unreadable")
-                input.use { tracked(id, it) { boundedCopy(it, id, maxBytes, flag) } }
+                input.use { tracked(id, it) { boundedCopy(it, id, maxBytes, headBytes, flag) } }
             }
         }
     }
@@ -235,16 +273,22 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                     File(activity.cacheDir, "fixtures").canonicalPath + File.separator,
                 )
             if (!allowed) throw ImportException("unreadable")
-            FileInputStream(path).use { tracked(id, it) { boundedCopy(it, id, maxBytes(call), flag) } }
+            FileInputStream(path).use { tracked(id, it) { boundedCopy(it, id, maxBytes(call), headBytes(call), flag) } }
         }
     }
 
     /** Copia contando bytes y aborta al pasar de [maxBytes] (CA-007-14). */
-    private fun boundedCopy(input: InputStream, id: String, maxBytes: Long, flag: AtomicBoolean): Map<String, Any> {
+    private fun boundedCopy(
+        input: InputStream,
+        id: String,
+        maxBytes: Long,
+        headBytes: Int,
+        flag: AtomicBoolean,
+    ): Map<String, Any> {
         val dir = File(importRoot, id)
         dir.mkdirs()
         val target = File(dir, "source")
-        val head = ByteArray(HEAD_BYTES)
+        val head = ByteArray(headBytes)
         var headLen = 0
         var total = 0L
         try {
@@ -262,8 +306,8 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                     if (n < 0) break
                     total += n
                     if (total > maxBytes) throw ImportException("tooLarge")
-                    if (headLen < HEAD_BYTES) {
-                        val take = minOf(n, HEAD_BYTES - headLen)
+                    if (headLen < headBytes) {
+                        val take = minOf(n, headBytes - headLen)
                         System.arraycopy(buf, 0, head, headLen, take)
                         headLen += take
                     }
@@ -335,6 +379,72 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
                     cancelled = AtomicBoolean(false),
                 ).regenerateDerived(dir, width, height)
                 Result.success(null)
+            } catch (e: IOException) {
+                Result.failure(ImportException(if (isNoSpace(e)) "noSpace" else "unreadable"))
+            } catch (e: OutOfMemoryError) {
+                Result.failure(ImportException("unreadable"))
+            } catch (e: Exception) {
+                Result.failure(e as? ImportException ?: ImportException("unreadable"))
+            }
+            main.post {
+                outcome.fold(
+                    { result.success(null) },
+                    { result.error((it as ImportException).code, null, null) },
+                )
+            }
+        }
+    }
+
+    /**
+     * Escribe `screen.jpg` desde píxeles RGBA o BGRA (spec 008: la página de un
+     * PDF, dibujada en Dart por pdfrx). En la preparación (`cache/import/<id>/`)
+     * o en el adjunto guardado (`files/attachments/<id>/`, al cambiar la última
+     * posición, CA-008-08). Primero a un temporal y luego rename: nunca a medias.
+     * Si el adjunto guardado ya no existe (se completó mientras tanto), nada.
+     */
+    private fun encodeJpeg(call: MethodCall, result: MethodChannel.Result) {
+        val id = id(call)
+        val stored = call.argument<String>("target") == "stored"
+        val width = call.argument<Number>("width")!!.toInt()
+        val height = call.argument<Number>("height")!!.toInt()
+        val bgra = call.argument<Boolean>("bgra") == true
+        val pixels = call.argument<ByteArray>("pixels")!!
+        executor.execute {
+            val outcome: Result<Any?> = try {
+                require(width in 1..8192 && height in 1..16384) { "size" }
+                require(pixels.size.toLong() == width.toLong() * height * 4) { "pixels" }
+                val dir = if (stored) File(File(activity.filesDir, "attachments"), id) else File(importRoot, id)
+                if (!dir.isDirectory) {
+                    Result.success(null)
+                } else {
+                    if (bgra) {
+                        var i = 0
+                        while (i < pixels.size) {
+                            val b = pixels[i]
+                            pixels[i] = pixels[i + 2]
+                            pixels[i + 2] = b
+                            i += 4
+                        }
+                    }
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    try {
+                        bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(pixels))
+                        val tmp = File(dir, "screen.tmp")
+                        FileOutputStream(tmp).use { out ->
+                            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, ImageSanitizer.SCREEN_QUALITY, out)) {
+                                throw ImportException("unreadable")
+                            }
+                            out.fd.sync()
+                        }
+                        if (!tmp.renameTo(File(dir, "screen.jpg"))) {
+                            tmp.delete()
+                            throw ImportException("unreadable")
+                        }
+                    } finally {
+                        bitmap.recycle()
+                    }
+                    Result.success(null)
+                }
             } catch (e: IOException) {
                 Result.failure(ImportException(if (isNoSpace(e)) "noSpace" else "unreadable"))
             } catch (e: OutOfMemoryError) {

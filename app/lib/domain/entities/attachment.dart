@@ -1,15 +1,16 @@
 import 'package:flutter/foundation.dart';
 
-/// Tipo de adjunto (docs/architecture.md §3). En la spec 007, solo imagen; PDF,
-/// documento y web llegan con las specs 008 y 009.
-enum AttachmentKind { image }
+/// Tipo de adjunto (docs/architecture.md §3): imagen (spec 007) y PDF (spec
+/// 008). En la v1 no hay otros documentos (ADR-0014); la web llega con la 009.
+enum AttachmentKind { image, pdf }
 
-/// De dónde vino: decide si se lee "Foto" o "Imagen" (CA-007-20).
-enum AttachmentOrigin { camera, gallery }
+/// De dónde vino: la cámara o la galería deciden si se lee "Foto" o "Imagen"
+/// (CA-007-20); `file` es el selector de archivos (PDF, spec 008).
+enum AttachmentOrigin { camera, gallery, file }
 
 /// Adjunto de una tarea (v1: 0..1 por tarea). Inmutable. Las rutas son
-/// relativas al directorio de adjuntos de la app; nunca se guarda el nombre
-/// original del archivo (CA-007-07).
+/// relativas al directorio de adjuntos de la app. De una imagen nunca se guarda
+/// el nombre original (CA-007-07); de un PDF, sí, saneado (CA-008-07).
 @immutable
 class Attachment {
   const Attachment({
@@ -21,6 +22,8 @@ class Attachment {
     required this.width,
     required this.height,
     required this.createdAt,
+    this.originalName,
+    this.pageCount,
   });
 
   final String id;
@@ -33,10 +36,19 @@ class Attachment {
   /// Bytes de la versión completa (todas sus teselas).
   final int byteSize;
 
-  /// Dimensiones de la versión completa, ya orientada.
+  /// Imagen: dimensiones de la versión completa, ya orientada. PDF: tamaño de
+  /// la primera página en puntos.
   final int width;
   final int height;
   final DateTime createdAt;
+
+  /// Nombre del PDF, saneado (CA-008-07); null en las imágenes o si quedó vacío.
+  final String? originalName;
+
+  /// Páginas del PDF (1..20, CA-008-03); null en las imágenes.
+  final int? pageCount;
+
+  bool get isPdf => kind == AttachmentKind.pdf;
 
   /// Directorio del adjunto, relativo al contenedor de adjuntos.
   String get dir => 'attachments/$id';
@@ -44,11 +56,21 @@ class Attachment {
   /// Prefijo de las teselas de la versión completa (columna `relPath`).
   String get fullPrefix => '$dir/full';
 
-  /// Versión de pantalla, recortada al tamaño de la pantalla (I-2).
+  /// El PDF tal cual (spec 008).
+  String get documentPath => '$dir/document.pdf';
+
+  /// Lo que no puede faltar: la versión completa de la imagen o el PDF.
+  String get mainPath => isPdf ? documentPath : fullPrefix;
+
+  /// Versión de pantalla (I-2): la imagen al ancho o, en un PDF, la página de
+  /// la última posición (CA-008-08).
   String get screenPath => '$dir/screen.jpg';
 
-  /// Miniatura del listado.
-  String get thumbPath => '$dir/thumb.jpg';
+  /// Miniatura del listado; un PDF no tiene (insignia "PDF", CA-008-19).
+  String? get thumbPath => isPdf ? null : '$dir/thumb.jpg';
+
+  /// Última posición vista de un PDF (CA-008-09).
+  String get positionPath => '$dir/position.json';
 
   /// Teselas de la versión completa.
   ImageTiles get tiles => ImageTiles(width, height);
@@ -65,7 +87,9 @@ class Attachment {
       other.byteSize == byteSize &&
       other.width == width &&
       other.height == height &&
-      other.createdAt == createdAt;
+      other.createdAt == createdAt &&
+      other.originalName == originalName &&
+      other.pageCount == pageCount;
 
   @override
   int get hashCode => Object.hash(id, origin, width, height);

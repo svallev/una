@@ -295,7 +295,7 @@ void main() {
         ..setMockMethodCallHandler(const MethodChannel('una/screen'), (
           call,
         ) async {
-          if (call.method == 'rotateWithImage') {
+          if (call.method == 'rotateWithAttachment') {
             rotating.add(call.arguments as bool);
           }
           return null;

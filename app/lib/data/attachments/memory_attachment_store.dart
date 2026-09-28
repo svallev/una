@@ -1,11 +1,13 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import '../../domain/entities/attachment.dart';
+import '../../domain/entities/pdf_position.dart';
+import '../../domain/entities/staged_attachment.dart';
 import '../../domain/ports/attachment_store.dart';
-import '../../domain/ports/image_importer.dart';
 
-/// Adjuntos en memoria: web de pruebas (CL-007-12, ADR-0010) y tests. Se
-/// pierden al recargar, como las tareas.
+/// Adjuntos en memoria: web de pruebas (CL-007-12, CL-008-12, ADR-0010) y
+/// tests. Se pierden al recargar, como las tareas.
 class MemoryAttachmentStore implements AttachmentStore {
   final Map<String, Map<String, Uint8List>> _stored = {};
   final Map<String, Map<String, Uint8List>> _staging = {};
@@ -35,20 +37,11 @@ class MemoryAttachmentStore implements AttachmentStore {
   void removeFile(String id, String name) => _stored[id]?.remove(name);
 
   @override
-  Future<Attachment> commit(StagedImage staged, DateTime at) async {
+  Future<Attachment> commit(StagedAttachment staged, DateTime at) async {
     final files = _staging.remove(staged.id);
     if (files == null) throw StateError('No hay preparación ${staged.id}');
     _stored[staged.id] = files;
-    return Attachment(
-      id: staged.id,
-      kind: AttachmentKind.image,
-      origin: staged.origin,
-      mime: 'image/jpeg',
-      byteSize: staged.byteSize,
-      width: staged.width,
-      height: staged.height,
-      createdAt: at,
-    );
+    return attachmentFrom(staged, at);
   }
 
   @override
@@ -74,6 +67,12 @@ class MemoryAttachmentStore implements AttachmentStore {
   Future<AttachmentFiles> check(Attachment attachment) async {
     final files = _stored[attachment.id];
     bool present(String name) => (files?[name]?.length ?? 0) > 0;
+    if (attachment.isPdf) {
+      if (!present('document.pdf')) return AttachmentFiles.missing;
+      return present('screen.jpg')
+          ? AttachmentFiles.ok
+          : AttachmentFiles.derivedMissing;
+    }
     final tiles = attachment.tiles;
     for (var r = 0; r < tiles.rows; r++) {
       for (var c = 0; c < tiles.columns; c++) {
@@ -84,5 +83,18 @@ class MemoryAttachmentStore implements AttachmentStore {
     return present('screen.jpg') && present('thumb.jpg')
         ? AttachmentFiles.ok
         : AttachmentFiles.derivedMissing;
+  }
+
+  @override
+  Future<PdfPosition?> readPosition(String id) async {
+    final bytes = _stored[id]?['position.json'];
+    return bytes == null ? null : PdfPosition.fromJson(utf8.decode(bytes));
+  }
+
+  @override
+  Future<void> writePosition(String id, PdfPosition position) async {
+    final files = _stored[id];
+    if (files == null) return;
+    files['position.json'] = Uint8List.fromList(utf8.encode(position.toJson()));
   }
 }

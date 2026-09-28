@@ -9,7 +9,9 @@ import '../../app/providers.dart';
 import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
-import '../../data/platform/image_rotation.dart';
+import '../../data/platform/attachment_rotation.dart';
+import '../../domain/entities/link_target.dart';
+import '../../domain/entities/pdf_position.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -21,8 +23,14 @@ import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../attachments/attachment_health.dart';
 import '../attachments/keep_screen_on_controller.dart';
+import '../attachments/link_confirm_sheet.dart';
 import '../attachments/missing_attachment_card.dart';
+import '../attachments/pdf_labels.dart';
+import '../attachments/pdf_position_controller.dart';
+import '../attachments/pdf_strip.dart';
 import '../attachments/task_image.dart';
+import '../attachments/task_labels.dart';
+import '../attachments/task_pdf.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/completion_controller.dart';
 import '../complete/hold_to_complete_button.dart';
@@ -31,6 +39,7 @@ import '../delete/deletion_controller.dart';
 import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
 import '../task_list/task_list_screen.dart';
+import 'pdf_face_snapshot.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
 class CurrentTaskScreen extends ConsumerWidget {
@@ -116,21 +125,35 @@ class CurrentTaskScreen extends ConsumerWidget {
     final leaving = ref.watch(
       completionProvider.select((c) => c.busy && c.task?.id == task.id),
     );
-    final missing =
-        attachment != null &&
-        !faceOnly &&
-        !chromeOnly &&
-        !leaving &&
-        ref.watch(attachmentHealthProvider(attachment)).health ==
-            AttachmentHealth.missing;
-    final showImage = attachment != null && !missing;
-    // En horizontal (solo gira la tarea con imagen), solo la imagen y el
-    // logotipo: sin menú, botón ni pie (CA-007-11, propietario 2026-09-27).
+    final health = attachment != null && !faceOnly && !chromeOnly && !leaving
+        ? ref.watch(attachmentHealthProvider(attachment)).health
+        : null;
+    final missing = health == AttachmentHealth.missing;
+    // No gira hasta saber que el adjunto está: con "Adjunto no disponible" no
+    // gira nunca, ni un momento (CA-008-18, CA-007-19).
+    final canRotate = !faceOnly && health != AttachmentHealth.checking;
+    final isPdf = attachment?.isPdf ?? false;
+    final showImage = attachment != null && !isPdf && !missing;
+    // Con PDF: franja, banda del texto y páginas entre la cabecera y el botón
+    // (CA-008-08).
+    final showPdf = isPdf && !missing;
+    final withAttachment = showImage || showPdf;
+    final pdfTitle = pdfName(l10n, attachment?.originalName);
+    final pdfBytes = pdfSize(l10n, attachment?.byteSize ?? 0);
+    // En horizontal (solo gira la tarea con imagen o PDF), lo mismo con los
+    // dos: el adjunto a todo el ancho y el logotipo; sin menú, botón, franja
+    // ni texto (CA-008-11). Se vuelve a vertical girando el móvil (sin botón:
+    // propietario, 2026-09-28). La web de pruebas no gira (CL-008-12).
     final landscape =
-        showImage &&
+        ref.watch(attachmentRotatesProvider) &&
+        withAttachment &&
         !faceOnly &&
         !chromeOnly &&
         mq.orientation == Orientation.landscape;
+    // Con PDF, en horizontal el visor ocupa toda la pantalla y el logotipo va
+    // encima, como con la imagen.
+    final pdfLandscape = showPdf && landscape;
+
     final kind = isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage;
 
     /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
@@ -145,10 +168,25 @@ class CurrentTaskScreen extends ConsumerWidget {
         label: l10n.currentTaskSemantics(switch (attachment) {
           null => text,
           _ when missing => l10n.a11yAttachmentMissing(
-            text.isEmpty ? kind : text,
+            text.isNotEmpty
+                ? readingText(text)
+                : isPdf
+                ? pdfTitle
+                : kind,
+          ),
+          // Con PDF (CA-008-20): "{texto}. Con PDF, {nombre}, {tamaño}" o
+          // "{nombre}. PDF, {tamaño}".
+          _ when isPdf && text.isEmpty => l10n.a11yPdfOnly(pdfTitle, pdfBytes),
+          _ when isPdf => l10n.a11yWithPdf(
+            readingText(text),
+            pdfTitle,
+            pdfBytes,
           ),
           _ when text.isEmpty => kind,
-          _ => isPhoto ? l10n.a11yWithPhoto(text) : l10n.a11yWithImage(text),
+          _ =>
+            isPhoto
+                ? l10n.a11yWithPhoto(readingText(text))
+                : l10n.a11yWithImage(readingText(text)),
         }),
         // Papel de imagen, salvo si la lectura ya acaba en "imagen".
         image: isPhoto && showImage,
@@ -190,7 +228,7 @@ class CurrentTaskScreen extends ConsumerWidget {
     // Con imagen, logotipo y menú llevan fondo blanco (CA-007-08, prototipo
     // `chromeBg`); el logotipo, con 8 px a cada lado sin moverse.
     const logoPad = UnaSpace.s;
-    final Widget wordmark = !showImage
+    final Widget wordmark = !withAttachment
         ? const Wordmark()
         : Transform.translate(
             offset: const Offset(-logoPad, 0),
@@ -203,80 +241,132 @@ class CurrentTaskScreen extends ConsumerWidget {
             ),
           );
 
-    final content = SafeArea(
-      child: Padding(
-        // Abajo, el margen del prototipo (~38).
-        padding: const EdgeInsets.fromLTRB(
-          UnaSpace.l,
-          UnaSpace.l,
-          UnaSpace.l,
-          UnaSpace.xxl,
+    // Márgenes laterales por fila: el PDF ocupa todo el ancho (prototipo:
+    // `left: 0; right: 0`), la cabecera y el botón no.
+    Widget side(Widget child) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: UnaSpace.l),
+      child: child,
+    );
+    final headerRow = header(
+      side(
+        Row(
+          children: [
+            wordmark,
+            const Spacer(),
+            if (!landscape)
+              _Order(
+                1,
+                child: SquareIconButton(
+                  icon: UnaIcons.menu,
+                  label: l10n.menuButton,
+                  fill: withAttachment
+                      ? UnaColors.surface
+                      : UnaPalettes.classic[task.colorKey %
+                            UnaPalettes.classic.length],
+                  onPressed: openMenu,
+                ),
+              ),
+          ],
         ),
+      ),
+    );
+    // Arriba, el margen del prototipo; abajo, ~38.
+    const contentPadding = EdgeInsets.only(
+      top: UnaSpace.l,
+      bottom: UnaSpace.xxl,
+    );
+    final content = SafeArea(
+      // Con PDF en horizontal, el visor llega a los bordes.
+      left: !pdfLandscape,
+      top: !pdfLandscape,
+      right: !pdfLandscape,
+      bottom: !pdfLandscape,
+      child: Padding(
+        padding: pdfLandscape ? EdgeInsets.zero : contentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            header(
-              Row(
-                children: [
-                  wordmark,
-                  const Spacer(),
-                  if (!landscape)
-                    _Order(
-                      1,
-                      child: SquareIconButton(
-                        icon: UnaIcons.menu,
-                        label: l10n.menuButton,
-                        fill: showImage
-                            ? UnaColors.surface
-                            : UnaPalettes.classic[task.colorKey %
-                                  UnaPalettes.classic.length],
-                        onPressed: openMenu,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            if (!pdfLandscape) headerRow,
             Expanded(
+              // Con clave: la cabecera va y viene al girar y el visor del PDF
+              // no se vuelve a crear (se conservan la posición y el zoom).
+              key: const ValueKey('task-body'),
               // Con imagen, la tarea está detrás, a sangre.
               child: showImage
                   ? const SizedBox.shrink()
-                  : missing
-                  ? _Order(
-                      0,
-                      child: Center(
-                        child: SingleChildScrollView(
-                          child: chromeOnly
-                              ? const SizedBox.shrink()
-                              : _MissingAttachment(
-                                  task: task,
-                                  header: faceOnly
-                                      ? (c) => c
-                                      : (c) => taskNode(c),
-                                  interactive: !faceOnly,
-                                ),
+                  : showPdf
+                  ? _pdfZone(
+                      context,
+                      ref,
+                      landscape: landscape,
+                      taskActions: faceOnly
+                          ? const {}
+                          : {
+                              CustomSemanticsAction(
+                                label: l10n.completeA11yAction,
+                              ): () =>
+                                  unawaited(complete()),
+                              CustomSemanticsAction(
+                                label: l10n.deleteA11yAction,
+                              ): () =>
+                                  unawaited(delete()),
+                            },
+                      taskLabel: l10n.currentTaskSemantics(
+                        text.isNotEmpty ? text : pdfTitle,
+                      ),
+                      strip: taskNode(
+                        PdfStrip(
+                          type: l10n.attachmentPdf,
+                          name: pdfTitle,
+                          size: pdfBytes,
                         ),
                       ),
                     )
-                  // La zona desplazable es su propio nodo: el orden va aquí.
-                  : _Order(
-                      0,
-                      child: Center(
-                        child: SingleChildScrollView(
-                          child: chromeOnly ? hidden(noteText) : noteText,
-                        ),
-                      ),
+                  : side(
+                      missing
+                          ? _Order(
+                              0,
+                              child: Center(
+                                child: SingleChildScrollView(
+                                  child: chromeOnly
+                                      ? const SizedBox.shrink()
+                                      : _MissingAttachment(
+                                          task: task,
+                                          header: faceOnly
+                                              ? (c) => c
+                                              : (c) => taskNode(c),
+                                          interactive: !faceOnly,
+                                        ),
+                                ),
+                              ),
+                            )
+                          // La zona desplazable es su propio nodo: el orden va aquí.
+                          : _Order(
+                              0,
+                              child: Center(
+                                child: SingleChildScrollView(
+                                  child: chromeOnly
+                                      ? hidden(noteText)
+                                      : noteText,
+                                ),
+                              ),
+                            ),
                     ),
             ),
+            // Separación entre el PDF y el botón (prototipo: ~18 px).
+            if (showPdf && !landscape) const SizedBox(height: UnaSpace.m),
             // En horizontal se completa con la acción del lector (CA-003-07).
             if (!landscape)
               cta(
-                _Order(
-                  2,
-                  child: HoldToCompleteButton(
-                    label: l10n.completeButton,
-                    a11yAction: l10n.completeA11yAction,
-                    a11yHint: l10n.completeA11yHint,
-                    onComplete: complete,
+                side(
+                  _Order(
+                    2,
+                    child: HoldToCompleteButton(
+                      label: l10n.completeButton,
+                      a11yAction: l10n.completeA11yAction,
+                      a11yHint: l10n.completeA11yHint,
+                      onComplete: complete,
+                    ),
                   ),
                 ),
               ),
@@ -292,15 +382,45 @@ class CurrentTaskScreen extends ConsumerWidget {
             ? content
             : StickyNote(
                 colorKey: task.colorKey,
-                child: !showImage
+                child: showPdf
+                    // Con PDF la nota es blanca; su color queda en la banda
+                    // del texto (prototipo `isDoc`).
+                    ? _RotatesWithAttachment(
+                        enabled: canRotate,
+                        fullWidth: landscape,
+                        builder: (_) => ColoredBox(
+                          color: UnaColors.surface,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              content,
+                              // En horizontal, el logotipo encima de las
+                              // páginas.
+                              if (pdfLandscape)
+                                SafeArea(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: UnaSpace.l,
+                                    ),
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: headerRow,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : !showImage
                     ? content
                     : Stack(
                         fit: StackFit.expand,
                         children: [
                           _Order(
                             0,
-                            child: _RotatesWithImage(
-                              enabled: !faceOnly,
+                            child: _RotatesWithAttachment(
+                              enabled: canRotate,
                               fullWidth: landscape,
                               builder: (scroll) => taskNode(
                                 TaskImage(
@@ -319,8 +439,119 @@ class CurrentTaskScreen extends ConsumerWidget {
       ),
     );
     if (faceOnly || chromeOnly) return ExcludeSemantics(child: screen);
-    // Con imagen, la pantalla no se apaga mientras se usa (CA-007-12).
-    return KeepScreenOnWhileVisible(enabled: showImage, child: screen);
+    // Con imagen o PDF, en vertical y en horizontal, la pantalla no se apaga
+    // mientras se usa (CA-007-12, CA-008-13).
+    return KeepScreenOnWhileVisible(
+      enabled: showImage || showPdf,
+      child: screen,
+    );
+  }
+
+  /// La zona del PDF (CA-008-08): borde negro arriba y abajo, la franja fija
+  /// ([strip], que es el nodo de la tarea para el lector) y debajo las
+  /// páginas, con la banda del texto. Al completar o eliminar, una imagen
+  /// fija de lo que se ve.
+  Widget _pdfZone(
+    BuildContext context,
+    WidgetRef ref, {
+    required Widget strip,
+    required bool landscape,
+    required Map<CustomSemanticsAction, VoidCallback> taskActions,
+    required String taskLabel,
+  }) {
+    final attachment = task.attachment!;
+    final images = ref.watch(attachmentImagesProvider);
+    final position = pdfPositionProvider(attachment.id);
+    // Solo reconstruye al terminar de leer la posición, no al desplazarse.
+    final loaded = ref.watch(position.select((s) => s.loaded));
+    // Sin `ref` al salir: el almacén y el importador se capturan ahora.
+    final store = ref.read(attachmentStoreProvider);
+    final importer = ref.read(pdfImporterProvider);
+    // La posición de la versión de pantalla que hay ahora en el disco.
+    var shown = ref.read(position).position ?? PdfPosition.start;
+    final gap = pdfPageGap(MediaQuery.devicePixelRatioOf(context));
+    final screen = images.stored(attachment.screenPath);
+    final args = TaskPdfArgs(
+      source: images.storedPdf(attachment.documentPath),
+      screen: screen,
+      // En horizontal, sin la banda del texto (CA-008-11).
+      caption: landscape ? null : task.text,
+      captionColor:
+          UnaPalettes.classic[task.colorKey % UnaPalettes.classic.length],
+      initialPosition: ref.read(position).position,
+      onPosition: ref.read(position.notifier).update,
+      onLink: (target) => unawaited(_openLink(context, ref, target)),
+      // El PDF también lleva completar y eliminar, en las dos orientaciones;
+      // en horizontal es lo único que hay (CA-008-11, CA-008-20).
+      actions: taskActions,
+      taskLabel: landscape ? taskLabel : null,
+      // El motor no lo puede abrir: "Adjunto no disponible" (CA-008-18).
+      onUnreadable: () => ref
+          .read(attachmentHealthProvider(attachment).notifier)
+          .reportUnreadable(),
+      onLeave: (left) {
+        unawaited(
+          persistPdfPosition(
+            store: store,
+            importer: importer,
+            attachment: attachment,
+            position: left,
+            shown: shown,
+            gap: gap,
+            screen: screen,
+          ),
+        );
+        shown = left;
+      },
+    );
+    final Widget pages = chromeOnly
+        ? const SizedBox.expand()
+        : faceOnly
+        ? TaskPdfFace(
+            args: args,
+            // Lo que se veía al empezar a completar o eliminar (CA-008-19).
+            snapshot: ref.watch(
+              pdfFaceSnapshotProvider.select(
+                (s) => s?.attachmentId == attachment.id ? s!.image : null,
+              ),
+            ),
+          )
+        : !loaded
+        ? const ColoredBox(color: UnaColors.surface)
+        : PdfFaceCapture(
+            taskId: task.id,
+            attachmentId: attachment.id,
+            child: ref.watch(taskPdfBuilderProvider)(args),
+          );
+    // En horizontal, a sangre: sin bordes ni franja (CA-008-11).
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: landscape
+          ? const BoxDecoration()
+          : const BoxDecoration(
+              border: Border.symmetric(
+                horizontal: BorderSide(
+                  color: UnaColors.ink,
+                  width: UnaBorders.strongWidth,
+                ),
+              ),
+            ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          vertical: landscape ? 0 : UnaBorders.strongWidth,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Order(
+              0,
+              child: chromeOnly || landscape ? const SizedBox.shrink() : strip,
+            ),
+            Expanded(child: pages),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -370,6 +601,7 @@ class _MissingAttachment extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MissingAttachmentCard(
       text: task.text ?? '',
+      isPdf: task.attachment?.isPdf ?? false,
       header: header,
       onRemove: interactive ? () => _remove(context, ref) : () {},
       onDelete: interactive
@@ -475,14 +707,15 @@ class _ImageScroll {
   }
 }
 
-/// Mientras se ve la tarea actual con imagen (y es la pantalla de arriba, no
-/// bajo el menú, el editor o el listado), la app gira con el móvil
-/// (CA-007-11); si no, solo en vertical. En horizontal pide todo el ancho
-/// aunque el marco de la app lo limite en tablets (CL-001-7). También es la
-/// dueña del desplazamiento de la imagen: acciones del lector y Av Pág / Re Pág
-/// con teclado (CA-007-09, WCAG 2.1.1).
-class _RotatesWithImage extends StatefulWidget {
-  const _RotatesWithImage({
+/// Mientras se ve la tarea actual con imagen o con PDF (y es la pantalla de
+/// arriba, no bajo el menú, el editor o el listado; la confirmación de un
+/// enlace sí la deja girar), la app gira con el móvil (CA-008-11); si no,
+/// solo en vertical. En horizontal pide todo el ancho aunque el marco de la
+/// app lo limite en tablets (CL-001-7). Con imagen, también es la dueña del
+/// desplazamiento: acciones del lector y Av Pág / Re Pág con teclado
+/// (CA-007-09, WCAG 2.1.1); el PDF lleva el suyo.
+class _RotatesWithAttachment extends StatefulWidget {
+  const _RotatesWithAttachment({
     required this.enabled,
     required this.fullWidth,
     required this.builder,
@@ -493,10 +726,10 @@ class _RotatesWithImage extends StatefulWidget {
   final Widget Function(_ImageScroll scroll) builder;
 
   @override
-  State<_RotatesWithImage> createState() => _RotatesWithImageState();
+  State<_RotatesWithAttachment> createState() => _RotatesWithAttachmentState();
 }
 
-class _RotatesWithImageState extends State<_RotatesWithImage> {
+class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
   bool? _rotating;
   bool _fullWidth = false;
   final _controller = ScrollController();
@@ -530,16 +763,17 @@ class _RotatesWithImageState extends State<_RotatesWithImage> {
     super.initState();
     _controller.addListener(_onScroll);
     HardwareKeyboard.instance.addHandler(_onKey);
+    linkConfirmOpen.addListener(_update);
     // Cuánto se puede desplazar solo se sabe tras la primera medida.
     WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
   }
 
   void _update() {
-    final on = widget.enabled && (ModalRoute.isCurrentOf(context) ?? true);
-    if (on != _rotating) {
-      _rotating = on;
-      unawaited(ImageRotation.follow(on));
-    }
+    final on =
+        widget.enabled &&
+        ((ModalRoute.isCurrentOf(context) ?? true) || linkConfirmOpen.value);
+    if (on != (_rotating ?? false)) AttachmentRotation.request(on: on);
+    _rotating = on;
     final fullWidth = on && widget.fullWidth;
     if (fullWidth != _fullWidth) {
       _fullWidth = fullWidth;
@@ -559,7 +793,7 @@ class _RotatesWithImageState extends State<_RotatesWithImage> {
   }
 
   @override
-  void didUpdateWidget(_RotatesWithImage oldWidget) {
+  void didUpdateWidget(_RotatesWithAttachment oldWidget) {
     super.didUpdateWidget(oldWidget);
     _update();
   }
@@ -568,7 +802,8 @@ class _RotatesWithImageState extends State<_RotatesWithImage> {
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKey);
     _controller.dispose();
-    if (_rotating ?? false) unawaited(ImageRotation.follow(false));
+    linkConfirmOpen.removeListener(_update);
+    if (_rotating ?? false) AttachmentRotation.request(on: false);
     if (_fullWidth) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => fullWidthRequests.value--,
@@ -591,5 +826,21 @@ class _Order extends StatelessWidget {
     container: true,
     sortKey: OrdinalSortKey(order),
     child: FocusTraversalOrder(order: NumericFocusOrder(order), child: child),
+  );
+}
+
+/// Enlace de un PDF (CA-008-12): se confirma y, si se acepta, se abre fuera;
+/// si no hay app, el aviso. El foco vuelve a la tarea.
+Future<void> _openLink(
+  BuildContext context,
+  WidgetRef ref,
+  LinkTarget target,
+) async {
+  final open = await showLinkConfirmSheet(context, target);
+  if (open != true || !context.mounted) return;
+  final opened = await ref.read(linkOpenerProvider).open(target);
+  if (opened || !context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(AppLocalizations.of(context).errNoAppForLink)),
   );
 }

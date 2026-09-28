@@ -34,7 +34,7 @@ StagedImage stageImage(
   store
     ..putStaging(id, 'screen.jpg', tinyImage)
     ..putStaging(id, 'thumb.jpg', tinyImage);
-  return (
+  return StagedImage(
     id: id,
     origin: origin,
     width: width,
