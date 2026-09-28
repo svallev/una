@@ -215,7 +215,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - **Entonces**:
     - con reducir movimiento: el zoom, el paso de página y "Preparando PDF…" no se animan;
     - con teclado: Av Pág / Re Pág pasan de pantalla, las flechas desplazan, Tab recorre los enlaces y `+`, `-` y `0` hacen zoom (CA-008-10);
-    - con el texto al 200 % en un móvil de 360 dp: la franja (nombre con "…"), "Preparando PDF…", los errores, la confirmación del enlace ~~y "Volver a vertical"~~ se ven enteros; nada se corta y todos los botones miden ≥ 48 dp. El texto del PDF no cambia con la escala del sistema (para eso está el zoom).
+    - con el texto al 200 % en un móvil de 360 dp: la franja (nombre con "…"), "Preparando PDF…", los errores, la confirmación del enlace ~~y "Volver a vertical"~~ se ven enteros; nada se corta y todos los botones miden ≥ 48 dp. El texto de la tarea en la banda escala como mucho a ×1,6, como el pie de la imagen (CA-007-23; `imageCaptionMaxTextScale`), y se ve entero (la banda crece con él). El texto del PDF no cambia con la escala del sistema (para eso está el zoom). *(Enmienda del propietario, 2026-09-28: el límite de ×1,6 de la banda, por coherencia con la 007.)*
 
 ## 4. Casos límite
 

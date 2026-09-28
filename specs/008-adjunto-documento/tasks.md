@@ -34,9 +34,8 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 - [x] Todos los CA de la spec tienen test en verde (`flutter test` 689 y 44 *goldens* que se saltan fuera de Linux; `integration_test` en el emulador, T-008-22).
 - [ ] Definition of Done (`specs/constitution.md`) completa. Falta:
-  - **CI en verde en la PR svallev/una#14** con este último commit (incluidos los *goldens*: `current_task_pdf_es_x2.0` se regenera tras la corrección de la banda, T-008-24);
+  - **CI en verde en la PR svallev/una#14** con el último commit (el golden `current_task_pdf_es_x2.0` ya está regenerado y subido, T-008-24);
   - **prueba a mano del propietario en el Xiaomi (HyperOS)**: el giro con el sensor (los seis pasos de T-008-22) y, con TalkBack, que el menú de acciones de una página ofrece Completar y Eliminar (T-008-23);
-  - **decisión del propietario**: la banda del texto del PDF limitada a ×1,6 (ver T-008-25);
   - revisar los *goldens* generados frente al prototipo (pantallas 3, 5 y 10; T-008-24).
 - [ ] Spec marcada como **Implementada** (cuando lo anterior esté hecho).
 
