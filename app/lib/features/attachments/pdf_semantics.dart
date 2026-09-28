@@ -152,35 +152,68 @@ class _LinkNodeState extends State<_LinkNode> {
   var _focused = false;
 
   @override
-  Widget build(BuildContext context) => FocusableActionDetector(
-    onShowFocusHighlight: (v) => setState(() => _focused = v),
-    shortcuts: const {
-      SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-      SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
-      SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
-    },
-    actions: {
-      ActivateIntent: CallbackAction<ActivateIntent>(
-        onInvoke: (_) {
-          widget.onActivate();
-          return null;
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
+    super.dispose();
+  }
+
+  void _onHighlightMode(FocusHighlightMode _) => setState(() {});
+
+  // Sin FocusableActionDetector: su MouseRegion es opaca y se quedaba los
+  // toques del dedo, que no llegaban al visor (ni al enlace ni al doble toque).
+  // Los toques los recibe pdfrx (`onLinkTap`); esta capa es solo para el
+  // lector y el teclado.
+  @override
+  Widget build(BuildContext context) {
+    final ring =
+        _focused &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+      },
+      child: Actions(
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              widget.onActivate();
+              return null;
+            },
+          ),
         },
-      ),
-    },
-    child: Semantics(
-      link: true,
-      label: widget.label,
-      onTap: widget.onActivate,
-      excludeSemantics: true,
-      child: DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: BoxDecoration(
-          border: _focused
-              ? Border.all(color: UnaColors.ink, width: UnaBorders.focusWidth)
-              : null,
+        child: Focus(
+          onFocusChange: (v) => setState(() => _focused = v),
+          child: Semantics(
+            link: true,
+            label: widget.label,
+            onTap: widget.onActivate,
+            excludeSemantics: true,
+            // El anillo tampoco capta toques (BoxDecoration sí lo haría).
+            child: IgnorePointer(
+              child: DecoratedBox(
+                position: DecorationPosition.foreground,
+                decoration: BoxDecoration(
+                  border: ring
+                      ? Border.all(
+                          color: UnaColors.ink,
+                          width: UnaBorders.focusWidth,
+                        )
+                      : null,
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
         ),
-        child: const SizedBox.expand(),
       ),
-    ),
-  );
+    );
+  }
 }

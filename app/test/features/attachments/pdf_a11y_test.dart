@@ -4,6 +4,7 @@ import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/pdf_position.dart';
 import 'package:app/features/attachments/task_pdf.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -99,6 +100,19 @@ void main() {
     await tester.pump();
     expect(links.single, isA<WebLink>());
     expect((links.single as WebLink).host, 'example.com');
+    await unmount(tester);
+    handle.dispose();
+  });
+  testWidgets('CA-008-12: un enlace tocado con el dedo llega a la app (la '
+      'capa de lectura no se queda los toques)', (tester) async {
+    final handle = tester.ensureSemantics();
+    final links = await pumpPdf(tester, 'links.pdf');
+    final c = tester.getCenter(find.bySemanticsLabel('Enlace a example.org'));
+    await tester.tapAt(c);
+    // El visor espera por si es un doble toque.
+    await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+    expect(links.single, isA<WebLink>());
+    expect((links.single as WebLink).host, 'example.org');
     await unmount(tester);
     handle.dispose();
   });
