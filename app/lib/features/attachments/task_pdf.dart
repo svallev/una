@@ -25,6 +25,7 @@ class TaskPdfArgs {
     required this.initialPosition,
     required this.onPosition,
     this.onLeave,
+    this.onUnreadable,
     this.caption,
     this.actions = const {},
     this.onLink,
@@ -51,6 +52,10 @@ class TaskPdfArgs {
   /// Se deja de ver el PDF (segundo plano, otra pantalla encima o se quita):
   /// la pantalla guarda [PdfPosition] en el disco (CA-008-09).
   final ValueChanged<PdfPosition>? onLeave;
+
+  /// El motor no puede abrir el PDF: la pantalla muestra "Adjunto no
+  /// disponible" (CA-008-18).
+  final VoidCallback? onUnreadable;
 
   /// Acciones de la tarea (completar, eliminar) que también lleva el PDF para
   /// el lector, antes que las suyas (CA-008-20).
@@ -637,6 +642,11 @@ class _TaskPdfViewState extends State<TaskPdfView> {
           onViewerReady: (document, controller) {
             unawaited(_restore(controller));
             unawaited(_loadContent(document));
+          },
+          // No se puede abrir (estropeado tras guardarlo): la pantalla
+          // muestra "Adjunto no disponible" (CA-008-18).
+          onDocumentLoadFinished: (_, succeeded) {
+            if (!succeeded) widget.args.onUnreadable?.call();
           },
           linkHandlerParams: PdfLinkHandlerParams(
             onLinkTap: _onLink,

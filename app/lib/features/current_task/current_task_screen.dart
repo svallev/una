@@ -473,6 +473,10 @@ class CurrentTaskScreen extends ConsumerWidget {
       // en horizontal es lo único que hay (CA-008-11, CA-008-20).
       actions: taskActions,
       taskLabel: landscape ? taskLabel : null,
+      // El motor no lo puede abrir: "Adjunto no disponible" (CA-008-18).
+      onUnreadable: () => ref
+          .read(attachmentHealthProvider(attachment).notifier)
+          .reportUnreadable(),
       onLeave: (left) {
         unawaited(
           persistPdfPosition(
@@ -571,6 +575,7 @@ class _MissingAttachment extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MissingAttachmentCard(
       text: task.text ?? '',
+      isPdf: task.attachment?.isPdf ?? false,
       header: header,
       onRemove: interactive ? () => _remove(context, ref) : () {},
       onDelete: interactive

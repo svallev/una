@@ -27,6 +27,9 @@ class FakePdfImporter implements PdfImporter {
   PdfInfo info = (pageCount: 3, width: 595, height: 842);
   Object? copyError;
   Object? inspectError;
+
+  /// Error al rehacer la versión de pantalla (PDF ilegible, CA-008-18).
+  Object? renderError;
   Duration copyDelay = Duration.zero;
   Duration inspectDelay = Duration.zero;
 
@@ -89,6 +92,7 @@ class FakePdfImporter implements PdfImporter {
   Future<void> renderScreen(Attachment attachment, PdfPosition position) async {
     // Como el real: si el PDF ya no existe, no hace nada.
     if (store.bytes(attachment.documentPath) == null) return;
+    if (renderError case final e?) throw e;
     rendered.add((attachment.id, position));
     store.putStored(attachment.id, 'screen.jpg', tinyImage);
   }

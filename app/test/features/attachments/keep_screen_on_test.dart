@@ -333,6 +333,21 @@ void main() {
     });
   });
 
+  testWidgets('CA-008-18: con "Adjunto no disponible" (falta el PDF), apagado '
+      'normal', (tester) async {
+    await repo.insert(await pdfTask());
+    store.removeFile('p-t-pdf', 'document.pdf');
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Adjunto no disponible'), findsOneWidget);
+    expect(find.byKey(const Key('fake-task-pdf')), findsNothing);
+    expect(awake.on, isFalse);
+    // Tampoco al tocar la pantalla.
+    await tester.tapAt(const Offset(40, 40));
+    await tester.pump();
+    expect(awake.on, isFalse);
+  });
+
   test('el ajuste está activo por defecto y se guarda', () async {
     final r = InMemoryTaskRepository();
     expect(await r.keepScreenOn(), isTrue);
