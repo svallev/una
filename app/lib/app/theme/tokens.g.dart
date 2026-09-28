@@ -232,6 +232,7 @@ abstract final class UnaSizes {
   static const double attachPreviewTop = 14.0;
   static const double removeAttachment = 48.0;
   static const double pdfStripGap = 10.0;
+  static const double webLoadingHeight = 3.0;
   static const double removeAttachmentIcon = 14.0;
   static const double removeAttachmentStroke = 3.4;
 }
@@ -385,6 +386,9 @@ abstract final class UnaMotion {
 
   /// Cambio de zoom del PDF por doble toque, acción o tecla (CA-008-10); con reducir movimiento, salta
   static const Duration pdfZoom = Duration(milliseconds: 200);
+
+  /// Avance de la línea de carga de la tarea web entre dos valores de progreso (CA-009-06); con reducir movimiento, salta
+  static const Duration webLoadingProgress = Duration(milliseconds: 200);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);

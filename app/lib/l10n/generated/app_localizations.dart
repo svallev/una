@@ -889,6 +889,120 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cancelar'**
   String get linkConfirmCancel;
+
+  /// Título de la hoja "Cargar URL". CA-009-01
+  ///
+  /// In es, this message translates to:
+  /// **'Cargar URL'**
+  String get urlSheetTitle;
+
+  /// Marcador del campo de la dirección. CA-009-01
+  ///
+  /// In es, this message translates to:
+  /// **'https://'**
+  String get urlPlaceholder;
+
+  /// Ayuda bajo el campo de la hoja "Cargar URL". CA-009-01
+  ///
+  /// In es, this message translates to:
+  /// **'Se abre como tarea, arriba del todo.'**
+  String get urlHelp;
+
+  /// Botón de la hoja "Cargar URL": crea (o sustituye) la tarea web. CA-009-03/05
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir'**
+  String get urlOpen;
+
+  /// Error de la hoja: campo vacío. CA-009-02
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una dirección web.'**
+  String get urlErrEmpty;
+
+  /// Error de la hoja: esquema que no es http ni https. CA-009-02
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se admiten direcciones web (http o https).'**
+  String get urlErrScheme;
+
+  /// Error de la hoja: dirección no válida. CA-009-02
+  ///
+  /// In es, this message translates to:
+  /// **'Esa dirección no parece válida.'**
+  String get urlErrInvalid;
+
+  /// Aviso de la tarea web sin conexión, con "Reintentar" y "Abrir en el navegador". CA-009-08
+  ///
+  /// In es, this message translates to:
+  /// **'Necesitas conexión para ver esta página.'**
+  String get urlNeedsConnection;
+
+  /// Aviso de la tarea web cuando el servidor no admite https. CA-009-09
+  ///
+  /// In es, this message translates to:
+  /// **'Esta página no usa conexión segura. Ábrela en el navegador.'**
+  String get urlInsecure;
+
+  /// Aviso de la tarea web con el motivo (p. ej. urlReasonCertificate). CA-009-10
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido cargar la página ({reason}).'**
+  String urlLoadFailed(String reason);
+
+  /// Motivo de urlLoadFailed: certificado no válido. CA-009-10
+  ///
+  /// In es, this message translates to:
+  /// **'certificado no válido'**
+  String get urlReasonCertificate;
+
+  /// Aviso de la tarea web cuando la dirección descarga un archivo (p. ej. un PDF). CL-009-4
+  ///
+  /// In es, this message translates to:
+  /// **'Esta dirección no es una página web. Ábrela en el navegador.'**
+  String get urlNotAPage;
+
+  /// Aviso único cuando la carga inicial acaba en otro sitio. CL-009-1
+  ///
+  /// In es, this message translates to:
+  /// **'Esta dirección te ha llevado a {host}.'**
+  String urlRedirected(String host);
+
+  /// Botón de los avisos de la tarea web. CA-009-08/09/10
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir en el navegador'**
+  String get urlOpenInBrowser;
+
+  /// Solo lector de pantalla: lectura y anuncio del indicador de carga de la tarea web. CA-009-06/20
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando página'**
+  String get urlLoadingA11y;
+
+  /// Lectura de la tarea web (barra o logotipo en horizontal), con el prefijo currentTaskSemantics. CA-009-18
+  ///
+  /// In es, this message translates to:
+  /// **'Página web de {host}'**
+  String urlA11yBar(String host);
+
+  /// Insignia de la barra y del listado de una tarea web. Spec 009 §7
+  ///
+  /// In es, this message translates to:
+  /// **'WEB'**
+  String get attachmentWeb;
+
+  /// Lectura de la fila del listado de una tarea web. CA-009-17/18
+  ///
+  /// In es, this message translates to:
+  /// **'{host}. Página web'**
+  String a11yRowWeb(String host);
+
+  /// Solo web de pruebas: abre la dirección en una pestaña nueva. CL-009-5
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir página ↗'**
+  String get urlOpenPageWeb;
 }
 
 class _AppLocalizationsDelegate
