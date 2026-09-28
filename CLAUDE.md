@@ -2,7 +2,7 @@
 
 App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y deja un único elemento (foto, PDF, web) a pantalla completa nada más abrirla. Sin servidor, sin cuentas y sin analítica. Nombre provisional: "Una." (nunca literal en el código: `AppIdentity` / clave l10n `appName`).
 
-**Fase actual:** F4 (adjuntos), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). El código de la app está en `app/`: en `main` están las specs 001–008 y el ADR-0012 (sin histórico; esquema v2). La 007 no tiene visor de imágenes (ADR-0013); la 008 es **solo PDF** en la v1 (ADR-0014/0015), fusionada el 2026-09-28 (PR svallev/una#14). **Siguiente:** la spec 009 (URL). Pendientes anotados: H-5 y H-6 (`specs/adr-0012-sin-historico/plan.md` §9) y los puntos de la auditoría de F5 (`docs/PLAN.md`). No hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
+**Fase actual:** F4 (adjuntos), **Android primero** (D17: sin Xcode por ahora; iOS al final si se decide). El código de la app está en `app/`: en `main` están las specs 001–008 y el ADR-0012 (sin histórico; esquema v2). La 007 no tiene visor de imágenes (ADR-0013); la 008 es **solo PDF** en la v1 (ADR-0014/0015), fusionada el 2026-09-28 (PR svallev/una#14). **Siguiente:** la spec 009 (URL), reescrita tras la revisión del 2026-09-28 y pendiente de aprobar; luego su plan en una sesión nueva. Pendientes anotados: H-5 y H-6 (`specs/adr-0012-sin-historico/plan.md` §9) y los puntos de la auditoría de F5 (`docs/PLAN.md`). No hagas spikes sin aprobación explícita (ver `docs/PLAN.md`).
 
 ## Lee primero
 
@@ -16,6 +16,7 @@ App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y d
 spec (**Aprobada**) → plan → tareas → implementación con tests → verificación de los CA → DoD.
 Skills: `/spec-new`, `/spec-implement NNN`, `/adr-new`, `/security-check`, `/i18n-check`, `/strings-add`, `/tokens-validate`, `/release-checklist`.
 Subagentes: `spec-reviewer`, `security-reviewer`, `a11y-reviewer`, `test-writer` y `spec-task` (ejecuta una tarea T-NNN-XX de principio a fin; la sesión coordinadora lanza uno por tarea).
+**Sesiones cortas:** una sesión para la spec, otra para el plan, las de implementación (coordinador + un `spec-task` por tarea; 2 en paralelo solo si es seguro) y la de cierre. Cada una empieza desde los archivos; `tasks.md` (línea **Siguiente** y tabla **Estado**) es el traspaso. Ver `docs/claude-code.md §2.1`.
 Si el código y la spec discrepan, **se para y se pregunta**; no se "arregla" la spec en silencio.
 
 ## Stack y comandos (a partir de F2; provisional según ADR-0001)

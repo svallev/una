@@ -110,7 +110,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R5 adjuntos siempre arriba | 002, 007, 008, 009 | CA-002-09, CA-007-05, CA-008-05, CA-009-03 |
 | R6 solo una tarea | 001 | CA-001-06 |
 | R7 listado en ≥ 2 interacciones | 005, 006 | CA-005-01/03, CA-006-01 |
-| R8 abrir → tarea actual rápido | 001, 007, 008, 009 | CA-001-09, CA-007-07, CA-008-08, CA-009-05/06 |
+| R8 abrir → tarea actual rápido | 001, 007, 008, 009 | CA-001-09, CA-007-07, CA-008-08, CA-009-08/09 |
 | R9 completar manteniendo pulsado + refuerzo | 003 | CA-003-01 a 04, 07, 08 |
 | R10 eliminar con confirmación y arrugado | 004 | CA-004-01 a 06 |
 | R11 editar, crear y menú | 005 | CA-005-01 a 09 |
@@ -135,7 +135,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | P-3 | ¿Confirmar al cancelar con texto? | Producto | Spec 002 | No |
 | P-4 | ¿Deshacer al completar? | Producto | Spec 003 | No |
 | P-5 | ¿Descripción alternativa de las imágenes escrita por el usuario? | Producto | Spec 007 | Sí, opcional, en la v1.1 |
-| P-6 | ¿Una URL que apunta a un PDF se guarda como documento? | Producto | Spec 009 | Sí |
+| P-6 | ~~¿Una URL que apunta a un PDF se guarda como documento?~~ **Resuelto: no en la v1** (propietario, 2026-09-28; ADR-0014, CL-009-4) | — | — | — |
 
 ## 8. Hoja de ruta posterior (no se desarrolla ahora; la arquitectura la admite)
 
