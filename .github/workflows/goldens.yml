@@ -27,9 +27,10 @@ jobs:
         working-directory: .
         run: bash tools/install-flutter.sh && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
       - run: flutter pub get --enforce-lockfile
-      # Como en ci.yml: `dart run` ejecuta los hooks de los paquetes nativos
-      # (PDFium de pdfrx); sin este paso, los goldens del PDF no lo encuentran.
-      - run: dart run build_runner build --delete-conflicting-outputs
+      # Como en ci.yml: `dart run` de un script ejecuta los hooks de los paquetes
+      # nativos (PDFium de pdfrx); sin este paso, los goldens del PDF no lo
+      # encuentran. (`build_runner` compila aparte y no los ejecuta.)
+      - run: dart run tool/check_licenses.dart
       - run: flutter test --update-goldens --tags golden
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
