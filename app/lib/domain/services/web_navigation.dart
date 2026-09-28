@@ -1,12 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-import '../entities/link_target.dart';
 import 'host_display.dart';
-import 'link_policy.dart';
-import 'public_suffix.dart';
 
 /// Qué hace una petición de navegación de la página de una tarea web
-/// (CA-009-11, T-5; `decideWebNavigation`).
+/// (CA-009-11, ADR-0018; `decideWebNavigation`).
 @immutable
 sealed class WebNavigation {
   const WebNavigation();
@@ -29,18 +26,7 @@ final class StayInTask extends WebNavigation {
   String toString() => 'StayInTask(${upgraded == null ? '' : 'https'})';
 }
 
-/// No navega dentro de la tarea: se confirma y, si se acepta, sale. [target]
-/// es un [WebLink] (al navegador, `openInBrowserConfirm`), un [MailLink] o un
-/// [PhoneLink] (a otra app, `openInAppConfirm`), como los enlaces del PDF.
-final class LeaveTask extends WebNavigation {
-  const LeaveTask(this.target);
-  final LinkTarget target;
-
-  @override
-  String toString() => 'LeaveTask($target)';
-}
-
-/// No hace nada.
+/// No hace nada: la tarea se queda en la página que ya se ve.
 final class BlockNavigation extends WebNavigation {
   const BlockNavigation();
 
@@ -52,25 +38,26 @@ final class BlockNavigation extends WebNavigation {
   String toString() => 'BlockNavigation()';
 }
 
-/// Decide qué hace la petición de navegar a [url] (CA-009-11, CL-009-1).
+/// Decide qué hace la petición de navegar a [url] (CA-009-11, CL-009-1,
+/// ADR-0018). La tarea web muestra **solo** la página de su dirección
+/// guardada: no es un navegador.
 ///
-/// - [referenceSite] es el sitio de la página que se ve ([webSiteOf] de la
-///   del primer `onPageStarted`); null durante la **carga inicial**, en la que
-///   se siguen las redirecciones, también a otro sitio (CL-009-1).
+/// - [shownPage] es la página que se ve (la del primer `onPageStarted`); null
+///   durante la **carga inicial**, en la que se siguen las redirecciones del
+///   servidor, también a otro sitio (CL-009-1).
 /// - Un marco interno ([isMainFrame] a false) es parte de la página: se carga
-///   si es web, de cualquier sitio (o `about:blank`/`about:srcdoc`), y nunca
-///   sale de la tarea.
-/// - En el marco principal, `http(s)` del mismo sitio navega dentro de la
-///   tarea (`http://` se carga como `https://`); de otro sitio, o `mailto:` y
-///   `tel:`, sale tras confirmar (`classifyLink`, la regla del PDF).
-/// - `usuario:clave@`, una web sin dominio y cualquier otro esquema
-///   (`javascript:`, `file:`, `content:`, `intent:`, `data:`, `about:`, de
-///   otras apps…) no hacen nada.
+///   si es web, de cualquier sitio (o `about:blank`/`about:srcdoc`).
+/// - En el marco principal, ya vista la página, solo se admite un enlace a
+///   otra parte de **la misma página** (un ancla `#…`, CA-009-11). Cualquier
+///   otro enlace, formulario, redirección de la propia página o ventana nueva
+///   no hace nada: ni navega ni sale al navegador ni a otra app (`mailto:` y
+///   `tel:` tampoco).
+/// - `usuario:clave@`, una web sin dominio y cualquier otro esquema nunca se
+///   cargan.
 WebNavigation decideWebNavigation(
   Uri url, {
-  required String? referenceSite,
+  required Uri? shownPage,
   required bool isMainFrame,
-  required PublicSuffixList psl,
 }) {
   final scheme = url.scheme.toLowerCase();
   final isWeb = scheme == 'http' || scheme == 'https';
@@ -82,45 +69,24 @@ WebNavigation decideWebNavigation(
         scheme == 'about' && (url.path == 'blank' || url.path == 'srcdoc');
     return isWeb || isBlankFrame ? const StayInTask() : const BlockNavigation();
   }
-  if (isWeb &&
-      (referenceSite == null || webSiteOf(url, psl) == referenceSite)) {
+  if (!isWeb) return const BlockNavigation();
+  if (shownPage == null) {
     return StayInTask(scheme == 'http' ? httpsVersion(url) : null);
   }
-  // Durante la carga inicial nadie ha tocado nada: solo se siguen webs.
-  if (referenceSite == null) return const BlockNavigation();
-  return switch (classifyLink(url: url)) {
-    final LinkTarget t when t is WebLink || t is MailLink || t is PhoneLink =>
-      LeaveTask(t),
-    _ => const BlockNavigation(),
-  };
-}
-
-/// El sitio de [url]: su dominio registrable (PSL), en minúsculas y en
-/// punycode, para comparar sin importar cómo llegó el dominio. Una IP o un
-/// sufijo público son su propio sitio. Null si no tiene dominio.
-String? webSiteOf(Uri url, PublicSuffixList psl) {
-  var host = _decodePercent(url.host).toLowerCase();
-  if (host.endsWith('.')) host = host.substring(0, host.length - 1);
-  if (host.isEmpty) return null;
-  final ascii = host.contains(':')
-      ? host
-      : host.split('.').map(toPunycodeLabel).join('.');
-  return psl.registrableDomain(ascii) ?? ascii;
+  return url.hasFragment && _samePage(url, shownPage)
+      ? const StayInTask()
+      : const BlockNavigation();
 }
 
 /// El dominio que se avisa con `urlRedirected` si la carga inicial de la
-/// dirección guardada [saved] ha acabado en otro sitio ([started], la del
+/// dirección guardada [saved] ha acabado en otro dominio ([started], la del
 /// primer `onPageStarted`), como en la barra (sin `www.`); null si es el
-/// mismo sitio (CL-009-1).
-String? redirectNoticeHost({
-  required Uri saved,
-  required Uri started,
-  required PublicSuffixList psl,
-}) {
-  final site = webSiteOf(started, psl);
-  if (site == null || site == webSiteOf(saved, psl)) return null;
-  final host = displayHost(started.host, dropWww: true);
-  return host.isEmpty ? null : host;
+/// mismo (CL-009-1). Sin lista de sufijos públicos (ADR-0018): un cambio de
+/// subdominio (`ejemplo.com` → `m.ejemplo.com`) también se avisa.
+String? redirectNoticeHost({required Uri saved, required Uri started}) {
+  final host = _barHost(started);
+  if (host.isEmpty || host == _barHost(saved)) return null;
+  return host;
 }
 
 /// [url] con `https://` en lugar de `http://` (CA-009-09); el puerto 80, el de
@@ -138,10 +104,23 @@ Uri httpsVersion(Uri url) {
   );
 }
 
-String _decodePercent(String s) {
-  try {
-    return Uri.decodeComponent(s);
-  } on ArgumentError {
-    return s;
-  }
+String _barHost(Uri url) => displayHost(_host(url), dropWww: true);
+
+/// El dominio de [url] en minúsculas y sin el punto final.
+String _host(Uri url) {
+  final host = url.host.toLowerCase();
+  return host.endsWith('.') ? host.substring(0, host.length - 1) : host;
+}
+
+/// Si [a] y [b] son la misma página sin contar el ancla (`#…`), con `http://`
+/// como `https://`.
+bool _samePage(Uri a, Uri b) {
+  final x = httpsVersion(a);
+  final y = httpsVersion(b);
+  String path(Uri u) => u.path.isEmpty ? '/' : u.path;
+  return x.scheme.toLowerCase() == y.scheme.toLowerCase() &&
+      _host(x) == _host(y) &&
+      x.port == y.port &&
+      path(x) == path(y) &&
+      x.query == y.query;
 }

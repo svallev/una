@@ -41,8 +41,6 @@ flutter:
   assets:
     - assets/fonts/archivo/OFL.txt
     - assets/fonts/space_mono/OFL.txt
-    # Public Suffix List (MPL-2.0, sin modificar; versión y sha256 en tools/psl.lock).
-    - assets/psl/public_suffix_list.dat
   fonts:
     - family: Archivo
       fonts:

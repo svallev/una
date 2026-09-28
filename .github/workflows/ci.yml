@@ -22,8 +22,6 @@ jobs:
           persist-credentials: false
       - name: Validar design/tokens.json (estructura y contraste AA)
         run: node tools/validate-tokens.mjs
-      - name: PSL fijada (tools/psl.lock, spec 009)
-        run: bash tools/update-psl.sh --check
       - name: Validar JSON del repo
         run: |
           find . -name '*.json' -not -path './node_modules/*' -not -path './app/build/*' -print0 \

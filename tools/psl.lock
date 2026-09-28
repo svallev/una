@@ -1,7 +1,0 @@
-# Public Suffix List empaquetada (spec 009, CA-009-11). Generado por tools/update-psl.sh:
-# no se edita a mano. CI comprueba que app/assets/psl/public_suffix_list.dat es exactamente
-# esta (tools/update-psl.sh --check). Origen: https://publicsuffix.org/list/public_suffix_list.dat (MPL-2.0).
-# Descargada el 2026-09-28.
-version 2026-09-24_13-26-36_UTC
-commit a179a48c465e818cfd8d626691cb317985da87fb
-sha256 257b298daca42f6d8ec964e238c2a55518e14f09d3117917ec8acee6f188503e

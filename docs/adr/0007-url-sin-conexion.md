@@ -1,6 +1,6 @@
 # ADR-0007: URL como tarea: WebView endurecida en vivo + captura de página completa para sin conexión
 
-- **Estado:** Aceptado para Android (spike S4, 2026-09-24); provisional para iOS (F-iOS). **Enmendado por el [ADR-0016](0016-web-sin-copia-local.md) (2026-09-28): sin captura ni copia local**; siguen la validación, la WebView endurecida, la navegación contenida y la barra del dominio. Completado por el [ADR-0017](0017-webview-fallo-del-proceso.md) (2026-09-28): el fallo del proceso de la página se gestiona envolviendo el `WebViewClient` del paquete
+- **Estado:** Aceptado para Android (spike S4, 2026-09-24); provisional para iOS (F-iOS). **Enmendado por el [ADR-0016](0016-web-sin-copia-local.md) (2026-09-28): sin captura ni copia local**; siguen la validación, la WebView endurecida y la barra del dominio. **Enmendado por el [ADR-0018](0018-web-sin-navegacion.md) (2026-09-29): sin navegación contenida; solo la página de la dirección guardada.** Completado por el [ADR-0017](0017-webview-fallo-del-proceso.md) (2026-09-28): el fallo del proceso de la página se gestiona envolviendo el `WebViewClient` del paquete
 - **Fecha:** 2026-09-24
 - **Relacionado:** spec 009, modelo de amenazas (T-4, T-5, T-6), ADR-0001; riesgos R-04, R-05
 
@@ -34,7 +34,7 @@
 - JavaScript activado (la mayoría de sitios lo necesitan), pero **sin ningún canal JS** (`addJavaScriptChannel`), sin `addJavascriptInterface` ni *message handlers*. Verificado en S4: `window` no expone ningún objeto de la app.
 - `allowFileAccess`, `allowContentAccess`, `allowFileAccessFromFileURLs` y `allowUniversalAccessFromFileURLs` a `false`.
 - Almacén de datos **no persistente** (`WKWebsiteDataStore.nonPersistent()` en iOS; modo incógnito o borrar cookies y almacenamiento al cerrar en Android). Sin autorrellenado ni contraseñas guardadas.
-- Navegación: se permite dentro del **mismo dominio registrable**. Otros dominios, `target=_blank` y `window.open` se abren en el **navegador del sistema** tras avisar. Los esquemas no http(s) se bloquean.
+- ~~Navegación: se permite dentro del **mismo dominio registrable**.~~ **Sustituido por el ADR-0018: sin navegación (solo la dirección guardada y las anclas de la misma página).** Otros dominios, `target=_blank` y `window.open` se abren en el **navegador del sistema** tras avisar. Los esquemas no http(s) se bloquean.
 - Sin descargas, sin permisos (cámara, micrófono, geolocalización: todos denegados), sin depuración en *release* (`isInspectable` solo en debug).
 - Se bloquea el contenido mixto.
 - **Errores = captura fallida (I-5):** un certificado inválido **siempre se cancela** (`onReceivedSslError` → `cancel`) y, junto con cualquier respuesta HTTP ≥ 400 del marco principal, hace fallar la captura. Sin esto, S4 guardó una página en blanco como válida.

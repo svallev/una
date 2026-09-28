@@ -21,18 +21,12 @@ void main() {
     },
   );
 
-  test(
-    'las licencias OFL de las fuentes y la MPL de la PSL quedan registradas',
-    () async {
-      registerBundledLicenses();
-      final packages = <String>{};
-      await for (final l in LicenseRegistry.licenses) {
-        packages.addAll(l.packages);
-      }
-      expect(
-        packages,
-        containsAll(['Archivo', 'Space Mono', 'Public Suffix List']),
-      );
-    },
-  );
+  test('las licencias OFL de las fuentes quedan registradas', () async {
+    registerBundledLicenses();
+    final packages = <String>{};
+    await for (final l in LicenseRegistry.licenses) {
+      packages.addAll(l.packages);
+    }
+    expect(packages, containsAll(['Archivo', 'Space Mono']));
+  });
 }

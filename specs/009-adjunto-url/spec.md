@@ -1,10 +1,10 @@
 # Spec 009: Tareas con una página web (URL)
 
-- **Estado:** **Aprobada** (propietario, 2026-09-28), con las propuestas de §9. Reescrita ese día con sus decisiones: **se guarda solo la dirección y la página se carga en vivo cada vez; nada de la página se guarda en el móvil** (ADR-0016). Sin revisión de `spec-reviewer` (aprobada directamente por el propietario)
+- **Estado:** **Aprobada** (propietario, 2026-09-28), con las propuestas de §9. Reescrita ese día con sus decisiones: **se guarda solo la dirección y la página se carga en vivo cada vez; nada de la página se guarda en el móvil** (ADR-0016). Sin revisión de `spec-reviewer` (aprobada directamente por el propietario). **Enmendada el 2026-09-29 (ADR-0018): sin navegación; solo se ve la página de la dirección guardada**
 - **Reglas de producto:** R3 (URL), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido). La propuesta de valor 2 **sin conexión no aplica** a la tarea web (ADR-0016)
 - **Pantallas del prototipo:** 9 "Añadir (+)", 11 "Tarea web (URL)", hoja "Cargar URL", 5 "Todas las tareas" (insignia). Los errores, el estado de carga y el horizontal no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
-- **Decisiones y ADR:** **ADR-0016 (web sin copia local; sustituye a D9 y enmienda el ADR-0007)**, ADR-0007 (validación, WebView endurecida y navegación: se mantienen), D10 y ADR-0013/0014/0015 (giro y excepción del horizontal), ADR-0012 (completar y eliminar borran la tarea del todo), DEV-04 (cambia), DEV-18; modelo de amenazas T-4, T-5, T-6
-- **Dependencias:** 001 a 008 (hoja "Añadir", giro, pantalla encendida, confirmaciones de enlaces de la 008, listado)
+- **Decisiones y ADR:** **ADR-0016 (web sin copia local; sustituye a D9 y enmienda el ADR-0007)**, **ADR-0018 (sin navegación; enmienda el ADR-0007 y el ADR-0016)**, ADR-0007 (validación y WebView endurecida: se mantienen), D10 y ADR-0013/0014/0015 (giro y excepción del horizontal), ADR-0012 (completar y eliminar borran la tarea del todo), DEV-04 (cambia), DEV-18; modelo de amenazas T-4, T-5, T-6
+- **Dependencias:** 001 a 008 (hoja "Añadir", giro, pantalla encendida, `LinkOpener` de la 008 para "Abrir en el navegador", listado)
 - **Enmienda:** CA-007-01 (en modo editar, la hoja "Añadir a la tarea" **no muestra** "Cargar URL"; CA-009-01)
 - **Cierra:** DEV-18 para "Cargar URL" y la pregunta P-6 (una URL que es un PDF: fuera de la v1, CL-009-4)
 
@@ -12,7 +12,9 @@
 
 ## 1. Objetivo
 
-Tener una página web (el programa de un congreso, una receta, un mapa) como tarea actual, **a la vista nada más abrir la app**, con el dominio real siempre visible y sin poder salir de ella sin darse cuenta.
+Tener **una** página web (la carta de un restaurante, la página de contacto de una web, la agenda de un congreso o de un festival) como tarea actual, **a la vista nada más abrir la app**, con el dominio real siempre visible.
+
+Es una **consulta**, como una imagen o un PDF: se ve **solo esa dirección**. Una no es un navegador: los enlaces de la página no llevan a ninguna parte (ADR-0018).
 
 La app **no guarda la página**: guarda la dirección y la carga cada vez que se muestra la tarea. Sin conexión, la tarea lo dice (ADR-0016).
 
@@ -21,7 +23,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
 ## 2. Historias de usuario
 
 - **HU-009-1** Como asistente a un congreso, quiero la página del programa como tarea, para verla al abrir la app sin buscarla en el navegador.
-- **HU-009-2** Como usuario, quiero saber qué web estoy viendo (el dominio real) y no salir de ella sin darme cuenta.
+- **HU-009-2** Como usuario, quiero saber qué web estoy viendo (el dominio real) y que la tarea siga siendo esa página, toque lo que toque.
 - **HU-009-3** Como usuario, quiero que la app no guarde nada de las webs que veo.
 
 ## 3. Criterios de aceptación
@@ -78,13 +80,13 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
   - **Entonces**, sin ningún toque y en el tiempo de CA-001-09 (< 1 s p50, dispositivo de referencia, *release*), se ve la tarea:
     - arriba, el logotipo y el menú; abajo, el botón de completar, como en cualquier tarea;
     - entre ellos, con borde negro arriba y abajo, la **barra negra** con el candado, el **dominio real** (CA-009-14) y la insignia "WEB", como en el prototipo (pantalla 11);
-    - debajo, la página **en vivo**, al ancho, con su propio desplazamiento y el zoom que permita el sitio (la app no añade zoom propio).
+    - debajo, la página **en vivo**, al ancho, con su propio desplazamiento y el zoom que permita el sitio (la app no añade zoom propio). Solo esa página: sin navegación (CA-009-11).
   - Mientras la página carga se ve un indicador de carga. El tiempo de la página depende de la red y no cuenta para CA-001-09 (ADR-0016).
 - **CA-009-07 Se carga cada vez**
   - **Dado** una tarea web
   - **Cuando** se vuelve a mostrar (desde otra pantalla, en un arranque en frío o desde segundo plano tras 10 minutos o más)
   - **Entonces** se carga **la dirección guardada** desde cero, arriba del todo, sin la sesión anterior (CA-009-13).
-  - Desde segundo plano en menos de 10 minutos se ve todo igual, en la misma página y posición (CA-001-12). Si el sistema ha descartado la página mientras tanto, se vuelve a cargar la dirección guardada.
+  - Desde segundo plano en menos de 10 minutos se ve todo igual, en la misma posición (CA-001-12). Si el sistema ha descartado la página mientras tanto, se vuelve a cargar la dirección guardada.
   - Abrir y cerrar el menú (una hoja sobre la tarea) no recarga la página.
 - **CA-009-08 Sin conexión**
   - **Dado** la tarea web actual
@@ -97,21 +99,20 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
   - **Entonces** se intenta como `https://`. Si el servidor no admite https, se ve "Esta página no usa conexión segura. Ábrela en el navegador." con el botón "Abrir en el navegador". Nunca se carga nada sin cifrar, tampoco recursos sueltos dentro de una página https (contenido mixto).
 - **CA-009-10 Certificado no válido (T-6)**
   - **Dado** un sitio cuyo certificado no es válido (caducado, autofirmado, de otro dominio…)
-  - **Cuando** se carga la página o cualquier página del mismo sitio
+  - **Cuando** se carga la página
   - **Entonces** **nunca** se acepta: se ve "No se ha podido cargar la página (certificado no válido)." con "Abrir en el navegador" y "Reintentar".
-- **CA-009-11 Navegación contenida (T-5)**
+- **CA-009-11 Sin navegación: solo la dirección guardada (T-5, ADR-0018)**
   - **Dado** la página en vivo
-  - **Cuando** el usuario sigue un enlace
+  - **Cuando** el usuario toca un enlace, envía un formulario o la página intenta ir a otra dirección
   - **Entonces**:
-    - dentro del **mismo sitio** (el mismo dominio registrable, p. ej. `www.ejemplo.com` y `m.ejemplo.com`) navega dentro de la tarea, y la barra muestra siempre el dominio de la página que se ve;
-    - a **otro sitio**, o un enlace que abre una ventana nueva (`target=_blank`, `window.open`): no navega dentro de la tarea; pregunta "¿Abrir {host} en el navegador?" (`openInBrowserConfirm`) y, solo si se confirma, lo abre en el navegador del sistema;
-    - `mailto:` y `tel:` siguen la regla de los enlaces del PDF (CA-008-12): "¿Abrir {destino} con otra app?" (`openInAppConfirm`), sin enviar ni llamar, y del `mailto:` solo los destinatarios y el asunto;
-    - un enlace `http(s)` con usuario o contraseña en la dirección y cualquier otro esquema (`javascript:` hacia fuera, `file:`, `content:`, `intent:`, `data:`, esquemas de otras apps o desconocidos) **no hacen nada**;
-    - `{host}` y `{destino}` se muestran saneados y enteros, como en CA-008-12. Si no hay app para abrirlo: "No hay ninguna app para abrir este enlace.".
-- **CA-009-12 Atrás dentro de la página**
-  - **Dado** que el usuario ha navegado dentro de la tarea (CA-009-11)
+    - **no pasa nada**: la tarea sigue en la misma página, sin cargar otra, sin abrir el navegador ni otra app y sin preguntar. Da igual que sea del mismo sitio o de otro, que abra una ventana nueva (`target=_blank`, `window.open`), que sea `mailto:`, `tel:` o cualquier otro esquema, o una redirección de la propia página (JavaScript, `meta refresh`);
+    - **excepción:** un enlace a otra parte de **la misma página** (un ancla, `#seccion`) desplaza dentro de ella, como en un navegador;
+    - lo que la página hace sin cambiar de dirección (pestañas, desplegables, contenido que carga con JavaScript) funciona dentro de la página;
+    - la barra muestra siempre el dominio de esa página (CA-009-14).
+- **CA-009-12 Atrás**
+  - **Dado** la tarea actual web
   - **Cuando** usa el gesto o el botón atrás del sistema
-  - **Entonces** vuelve a la página anterior, como un navegador, mientras la haya. Sin páginas anteriores, atrás hace lo mismo que en cualquier tarea (propietario, 2026-09-28).
+  - **Entonces** hace lo mismo que en cualquier tarea: la página no tiene páginas anteriores a las que volver (ADR-0018).
 - **CA-009-13 Aislamiento: la página no toca la app (T-4)**
   - **Dado** la página en vivo
   - **Cuando** carga cualquier página
@@ -129,7 +130,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     - es el **host real** de la página que se ve, sin `www.` delante (como el prototipo);
     - se muestra en punycode (`xn--…`) si mezcla alfabetos (posible homógrafo);
     - se muestra saneado, sin caracteres de control ni de cambio de dirección;
-    - si no cabe, se recorta **por el principio** ("…congreso.ejemplo.com"), para que siempre se vea el dominio registrable. El lector lo lee entero.
+    - si no cabe, se recorta **por el principio** ("…congreso.ejemplo.com"), para que siempre se vea el final del dominio. El lector lo lee entero.
 - **CA-009-15 Girar (D10; igual que imagen y PDF, CA-008-11)**
   - **Dado** la tarea actual web a la vista (sin el menú, una confirmación ni el listado encima)
   - **Cuando** gira el móvil a horizontal
@@ -176,8 +177,8 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     | Se cierra "Cargar URL" | El botón (+) del editor | Ninguno |
     | Aviso sin conexión, sin https o de certificado | Donde estaba | El texto del aviso |
     | "Reintentar" | Donde estaba | "Cargando página" |
-    | Confirmación de enlace | "Cancelar" | El texto de la confirmación |
-    | Cierra la confirmación o vuelve del navegador u otra app | Donde estaba | Ninguno |
+    | Toca un enlace de la página | Donde estaba | Ninguno (CA-009-11) |
+    | Vuelve del navegador ("Abrir en el navegador") | Donde estaba | Ninguno |
     | Gira a horizontal | La página | Ninguno |
 
 - **CA-009-20 Reducir movimiento, teclado y texto grande**
@@ -186,13 +187,13 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
   - **Entonces**:
     - con reducir movimiento, el indicador de carga no se anima;
     - con teclado: Intro en el campo equivale a "Abrir", y Tab entra en la página y la recorre;
-    - con el texto al 200 % en un móvil de 360 dp: la hoja, los errores, la barra (dominio recortado por el principio), los avisos y las confirmaciones se ven enteros, nada se corta y todos los botones miden ≥ 48 dp. El texto de la página sigue el tamaño que decida la propia página.
+    - con el texto al 200 % en un móvil de 360 dp: la hoja, los errores, la barra (dominio recortado por el principio) y los avisos se ven enteros, nada se corta y todos los botones miden ≥ 48 dp. El texto de la página sigue el tamaño que decida la propia página.
 
 ## 4. Casos límite
 
 | ID | Situación | Comportamiento |
 |---|---|---|
-| CL-009-1 | Redirecciones al cargar la dirección guardada, también a otro sitio | Se siguen durante esa carga inicial. La barra muestra el dominio final. Si el sitio final no es el de la dirección guardada, se avisa una vez: "Esta dirección te ha llevado a {host}." |
+| CL-009-1 | Redirecciones del servidor al cargar la dirección guardada, también a otro dominio | Se siguen durante esa carga inicial. La barra muestra el dominio final. Si el dominio final (sin `www.`) no es el de la dirección guardada, se avisa una vez: "Esta dirección te ha llevado a {host}." (también entre subdominios, p. ej. `m.ejemplo.com`: sin lista de sufijos públicos, ADR-0018). Una redirección de la propia página (JavaScript, `meta refresh`) no se sigue (CA-009-11) |
 | CL-009-2 | Banner de cookies o muro de registro | Se ve tal cual (no se manipula el contenido de terceros). Sin cookies guardadas, puede volver a salir cada vez (ADR-0016) |
 | CL-009-3 | Sitio que exige iniciar sesión | No se conserva la sesión entre visitas (CA-009-13) |
 | CL-009-4 | La dirección es un PDF u otro archivo, no una página (P-6: **fuera de la v1**, propietario 2026-09-28) | "Esta dirección no es una página web. Ábrela en el navegador." con "Abrir en el navegador". No se descarga nada |
@@ -203,6 +204,8 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
 | CL-009-9 | Registros (logs) en *release* | No se registra ninguna dirección, dominio ni contenido de páginas |
 | CL-009-10 | La miniatura de la app en "Recientes" | Muestra la página. **[Pendiente, spec 010]** Ocultarla, como CL-007-11 y CL-008-13 |
 | CL-009-11 | Se completa o se elimina mientras la página carga | La carga se cancela y no queda nada (CA-009-13) |
+| CL-009-12 | Página que cambia su contenido sin cambiar de dirección (aplicación de una sola página, `history.pushState`) | Funciona dentro de la página: la WebView no avisa de esos cambios y no se pueden impedir. Sigue siendo el mismo dominio (ADR-0018) |
+| CL-009-13 | Enlace a la misma dirección sin ancla, o con otra consulta (`?dia=2`) | No hace nada: sería cargar otra página (CA-009-11) |
 
 ## 5. Estados de error
 
@@ -217,7 +220,6 @@ Los errores de validación aparecen bajo el campo de la hoja. Los de la página,
 | Sin https | "Esta página no usa conexión segura. Ábrela en el navegador." | "Abrir en el navegador" |
 | Certificado no válido | "No se ha podido cargar la página (certificado no válido)." | "Abrir en el navegador", "Reintentar" |
 | No es una página | "Esta dirección no es una página web. Ábrela en el navegador." | "Abrir en el navegador" |
-| Enlace sin app | "No hay ninguna app para abrir este enlace." | — |
 
 "Abrir en el navegador" abre la dirección guardada en el navegador del sistema. No pide confirmación, porque el botón ya dice lo que hace.
 
@@ -226,9 +228,9 @@ Los errores de validación aparecen bajo el campo de la hoja. Los de la página,
 - Lectura, foco y anuncios: CA-009-18 y CA-009-19. La insignia del listado es decorativa.
 - La página en vivo es accesible con la accesibilidad de la propia página: la app no puede arreglar una web mal hecha.
 - Orientación (WCAG 1.3.4): la tarea web gira igual que la de imagen y la de PDF (CA-009-15), con la misma excepción del horizontal ya aprobada (ADR-0013, ADR-0014, ADR-0015; constitución P6), que se amplía a la tarea web. En horizontal, lo único que se puede enfocar es la página.
-- Confirmaciones para salir al navegador o a otra app: diálogos modales (los de la 008).
+- Sin confirmaciones para salir: los enlaces de la página no hacen nada (ADR-0018).
 - Contraste: la barra, blanco sobre negro. El anillo de foco, con borde blanco y negro (como en la 007).
-- Objetivos táctiles ≥ 48 dp: "Abrir", la X, "Reintentar", "Abrir en el navegador" y los botones de las confirmaciones.
+- Objetivos táctiles ≥ 48 dp: "Abrir", la X, "Reintentar", y "Abrir en el navegador".
 
 ## 7. Textos (ES / EN)
 
@@ -254,9 +256,9 @@ Los errores de validación aparecen bajo el campo de la hoja. Los de la página,
 | `a11yRowWeb` | {host}. Página web | {host}. Web page | Fila del listado |
 | `urlOpenPageWeb` | Abrir página ↗ | Open page ↗ | Solo web de pruebas |
 
-Se reutilizan `attachUrl` ("Cargar URL"), `attachUrlHint`, `attachSheetClose`, `openInBrowserConfirm`, `openInAppConfirm`, `linkConfirmOpen`, `linkConfirmCancel`, `errNoAppForLink`, `retry`, `currentTaskSemantics` y las lecturas de las specs 001, 003, 004 y 006 con `{text}` = dominio.
+Se reutilizan `attachUrl` ("Cargar URL"), `attachUrlHint`, `attachSheetClose`, `retry`, `currentTaskSemantics` y las lecturas de las specs 001, 003, 004 y 006 con `{text}` = dominio.
 
-**Quitadas** respecto a la versión anterior de esta spec (ADR-0016): `urlSaving`, `urlSnapshotOf`, `urlSnapshotPartial`, `urlRefresh`, `urlSnapshotPending` y `urlReasonHttp`.
+**Quitadas** respecto a la versión anterior de esta spec (ADR-0016): `urlSaving`, `urlSnapshotOf`, `urlSnapshotPartial`, `urlRefresh`, `urlSnapshotPending` y `urlReasonHttp`. Desde el ADR-0018 la tarea web **ya no reutiliza** `openInBrowserConfirm`, `openInAppConfirm`, `linkConfirmOpen`, `linkConfirmCancel` ni `errNoAppForLink` (siguen para los enlaces del PDF).
 
 ## 8. Fuera de alcance (v1)
 
@@ -264,6 +266,7 @@ Se reutilizan `attachUrl` ("Cargar URL"), `attachUrlHint`, `attachSheetClose`, `
 - Guardar como PDF una dirección que apunta a un PDF (P-6, CL-009-4).
 - Convertir una tarea en web al editarla, o una web en otro tipo de tarea (se crea otra y se elimina la anterior).
 - Texto en una tarea web.
+- **Navegar** (ADR-0018): seguir enlaces, ir atrás o adelante, abrir enlaces de la página en el navegador o en otra app (también `mailto:` y `tel:`). Solo se admiten las anclas de la misma página.
 - Barra de direcciones, botones de navegación, recargar a mano (fuera de "Reintentar"), buscar en la página, compartir.
 - Varias URL por tarea, lector de artículos, compartir desde el navegador hacia la app (*share extension*, futuro).
 
@@ -272,7 +275,8 @@ Se reutilizan `attachUrl` ("Cargar URL"), `attachUrlHint`, `attachSheetClose`, `
 - **[Resuelto 2026-09-28, propietario]** Se guarda **solo la dirección** y la página se carga en vivo cada vez; no se guarda nada de la página (ADR-0016, que sustituye a D9 y enmienda el ADR-0007). ADR-0016 aceptado y excepción a P3 en la constitución (versión 1.4), el mismo día.
 - **[Resuelto 2026-09-28, propietario]** Tarea web **sin texto**, creada directamente desde "Cargar URL". El texto del editor se descarta, y en modo editar no aparece "Cargar URL" (CA-009-01, CA-009-03).
 - **[Resuelto 2026-09-28, propietario]** Sin conexión: aviso y "Reintentar", que también se reintenta solo al volver a la app o a la tarea (sin vigilar la red).
-- **[Resuelto 2026-09-28, propietario]** Atrás vuelve a la página anterior mientras la haya (CA-009-12).
+- ~~**[Resuelto 2026-09-28, propietario]** Atrás vuelve a la página anterior mientras la haya (CA-009-12).~~ Sustituida por la siguiente.
+- **[Resuelto 2026-09-29, propietario]** **Sin navegación** (ADR-0018): solo se ve la página de la dirección guardada, como una imagen o un PDF; ningún enlace hace nada, tampoco `mailto:` ni `tel:`; las anclas de la misma página sí; atrás, como en cualquier tarea; se quita la lista de sufijos públicos (CA-009-11, CA-009-12, CL-009-1).
 - **[Resuelto 2026-09-28, propietario]** Gira igual que la imagen y el PDF (CA-009-15).
 - **[Resuelto 2026-09-28, propietario]** Pantalla encendida igual que con imagen y PDF (CA-009-16).
 - **[Resuelto 2026-09-28, propietario]** P-6: una dirección que es un PDF queda fuera de la v1 (CL-009-4).

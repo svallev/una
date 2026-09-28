@@ -29,7 +29,7 @@ Del ADR-0007 **se mantienen**:
 
 - la validación de la dirección;
 - el WebView endurecido (sin puente JavaScript, sin acceso a archivos, almacén no persistente, sin permisos ni descargas, certificados inválidos siempre rechazados, sin contenido mixto);
-- la navegación contenida en el mismo sitio;
+- ~~la navegación contenida en el mismo sitio;~~ (enmendado por el [ADR-0018](0018-web-sin-navegacion.md): sin navegación)
 - la barra con el dominio real (punycode si mezcla alfabetos).
 
 **Desaparecen** la captura, el `WebSnapshotter`, "Copia del {fecha}", "Actualizar" y "Copia pendiente".

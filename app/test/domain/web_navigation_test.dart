@@ -1,140 +1,70 @@
-import 'dart:io';
-
-import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/web_load_failure.dart';
-import 'package:app/domain/services/public_suffix.dart';
 import 'package:app/domain/services/web_navigation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// La lista empaquetada (la misma que el asset; tools/psl.lock la fija).
-final _asset = File('assets/psl/public_suffix_list.dat');
-
 void main() {
-  late PublicSuffixList psl;
+  const shown = 'https://www.ejemplo.com/carta?dia=hoy';
 
-  setUpAll(() => psl = PublicSuffixList.parse(_asset.readAsStringSync()));
-
-  /// Decisión para un enlace del marco principal, ya cargada una página de
-  /// [site] (el sitio de referencia).
-  WebNavigation follow(String url, {String site = 'ejemplo.com'}) =>
+  /// Decisión para un enlace del marco principal, ya vista la página [page].
+  WebNavigation follow(String url, {String page = shown}) =>
       decideWebNavigation(
         Uri.parse(url),
-        referenceSite: site,
+        shownPage: Uri.parse(page),
         isMainFrame: true,
-        psl: psl,
       );
 
   /// Decisión durante la carga inicial (antes del primer `onPageStarted`).
-  WebNavigation initial(String url) => decideWebNavigation(
-    Uri.parse(url),
-    referenceSite: null,
-    isMainFrame: true,
-    psl: psl,
-  );
+  WebNavigation initial(String url) =>
+      decideWebNavigation(Uri.parse(url), shownPage: null, isMainFrame: true);
 
-  group('CA-009-11: el sitio es el dominio registrable', () {
-    String? site(String url) => webSiteOf(Uri.parse(url), psl);
-
-    test('subdominios del mismo dominio registrable son el mismo sitio', () {
-      expect(site('https://www.ejemplo.com/a'), 'ejemplo.com');
-      expect(site('https://m.ejemplo.com/'), 'ejemplo.com');
-      expect(site('https://EJEMPLO.com./'), 'ejemplo.com');
-    });
-
-    test('con la PSL: co.uk, comodines, excepciones y dominios privados', () {
-      expect(site('https://www.ejemplo.co.uk/'), 'ejemplo.co.uk');
-      expect(site('https://otro.co.uk/'), 'otro.co.uk');
-      expect(site('https://a.b.city.kobe.jp/'), 'city.kobe.jp');
-      expect(site('https://www.foo.kobe.jp/'), 'www.foo.kobe.jp');
-      expect(site('https://ana.github.io/'), 'ana.github.io');
-      expect(site('https://luis.github.io/'), 'luis.github.io');
-    });
-
-    test('un dominio internacional es el mismo en Unicode y en punycode', () {
+  group('CA-009-11: solo la página de la dirección guardada (ADR-0018)', () {
+    test('un ancla de la misma página se sigue dentro de la página', () {
+      expect(follow('$shown#postres'), const StayInTask());
       expect(
-        site('https://www.xn--e1afmkfd.xn--p1ai/'),
-        site('https://пример.рф/'),
+        follow('https://WWW.ejemplo.com/carta?dia=hoy#a'),
+        const StayInTask(),
       );
       expect(
-        site('https://www.xn--e1afmkfd.xn--p1ai/'),
-        'xn--e1afmkfd.xn--p1ai',
+        follow('http://www.ejemplo.com/carta?dia=hoy#a'),
+        const StayInTask(),
+      );
+      expect(
+        follow('https://ejemplo.com/#arriba', page: 'https://ejemplo.com'),
+        const StayInTask(),
+      );
+      // La página vista ya tenía ancla.
+      expect(
+        follow('https://ejemplo.com/p#b', page: 'https://ejemplo.com/p#a'),
+        const StayInTask(),
       );
     });
 
-    test('una IP o un sufijo público son su propio sitio', () {
-      expect(site('https://93.184.216.34/x'), '93.184.216.34');
-      expect(site('https://[2001:db8::1]/'), '2001:db8::1');
-      expect(site('https://github.io/'), 'github.io');
+    test('cualquier otra página, también del mismo sitio, no hace nada', () {
+      for (final url in [
+        'https://www.ejemplo.com/programa',
+        'https://www.ejemplo.com/carta?dia=manana',
+        'https://www.ejemplo.com/carta?dia=hoy',
+        'https://ejemplo.com/carta?dia=hoy#a',
+        'https://m.ejemplo.com/carta?dia=hoy#a',
+        'https://www.ejemplo.com:8443/carta?dia=hoy#a',
+        'https://www.otro.com/#a',
+        'http://otro.com/',
+      ]) {
+        expect(follow(url), const BlockNavigation(), reason: url);
+      }
     });
 
-    test('sin dominio no hay sitio', () {
-      expect(site('mailto:ana@ejemplo.com'), isNull);
-      expect(site('https:///ruta'), isNull);
-    });
-  });
-
-  group('CA-009-11: navegación contenida', () {
-    test('al mismo sitio navega dentro de la tarea', () {
-      expect(follow('https://ejemplo.com/programa'), const StayInTask());
-      expect(follow('https://m.ejemplo.com/'), const StayInTask());
-      expect(follow('https://a.b.ejemplo.com/x?y=1#z'), const StayInTask());
-    });
-
-    test('a otro sitio: al navegador tras confirmar, con el host entero', () {
-      final leave = follow('https://www.otro.com/pagina') as LeaveTask;
-      final web = leave.target as WebLink;
-      expect(web.host, 'www.otro.com');
-      expect(web.uri.toString(), 'https://www.otro.com/pagina');
-      // Mismo sufijo público no es el mismo sitio.
-      expect(
-        follow('https://otro.co.uk/', site: 'ejemplo.co.uk'),
-        isA<LeaveTask>(),
-      );
-      expect(
-        follow('https://luis.github.io/', site: 'ana.github.io'),
-        isA<LeaveTask>(),
-      );
-    });
-
-    test('el host del navegador sale saneado y en punycode si mezcla', () {
-      // "аpple.com" con la "а" cirílica.
-      final leave = follow('https://аpple.com/') as LeaveTask;
-      expect((leave.target as WebLink).host, 'xn--pple-43d.com');
-    });
-
-    test('http:// dentro del sitio se carga como https:// (CA-009-09)', () {
-      expect(
-        follow('http://www.ejemplo.com/a?b=1'),
-        StayInTask(Uri.parse('https://www.ejemplo.com/a?b=1')),
-      );
-    });
-
-    test('http:// a otro sitio va al navegador tal cual', () {
-      final leave = follow('http://otro.com/') as LeaveTask;
-      expect((leave.target as WebLink).uri.toString(), 'http://otro.com/');
-    });
-
-    test('mailto: y tel: siguen la regla de los enlaces del PDF', () {
-      final mail = follow(
-        'mailto:ana@ejemplo.com?subject=Hola&body=secreto',
-      ) as LeaveTask;
-      expect(mail.target, isA<MailLink>());
-      expect((mail.target as MailLink).display, 'ana@ejemplo.com');
-      expect(mail.target.toString(), isNot(contains('secreto')));
-
-      final tel = follow('tel:+34 600 000 000') as LeaveTask;
-      expect((tel.target as PhoneLink).display, '+34600000000');
-    });
-
-    test('mailto: o tel: sin destino válido no hacen nada', () {
-      expect(follow('mailto:'), const BlockNavigation());
-      expect(follow('tel:abc'), const BlockNavigation());
+    test('mailto: y tel: no hacen nada', () {
+      expect(follow('mailto:ana@ejemplo.com'), const BlockNavigation());
+      expect(follow('tel:+34600000000'), const BlockNavigation());
     });
 
     test('usuario o contraseña en la dirección no hacen nada (T-5)', () {
-      expect(follow('https://user:pass@ejemplo.com/'), const BlockNavigation());
+      expect(
+        follow('https://user:pass@www.ejemplo.com/carta?dia=hoy#a'),
+        const BlockNavigation(),
+      );
       expect(follow('https://ejemplo.com@otro.com/'), const BlockNavigation());
-      expect(follow('https://user@otro.com/'), const BlockNavigation());
     });
 
     test('cualquier otro esquema no hace nada', () {
@@ -159,9 +89,8 @@ void main() {
   group('CA-009-11: marcos internos (iframes) de la página', () {
     WebNavigation frame(String url) => decideWebNavigation(
       Uri.parse(url),
-      referenceSite: 'ejemplo.com',
+      shownPage: Uri.parse(shown),
       isMainFrame: false,
-      psl: psl,
     );
 
     test('un marco interno web se carga dentro de la página, de cualquier '
@@ -196,23 +125,33 @@ void main() {
       expect(initial('https://u:p@otro.org/'), const BlockNavigation());
     });
 
-    test('se avisa si la página final es de otro sitio, con su dominio', () {
+    test('se avisa si la página final es de otro dominio, con su dominio', () {
       String? notice(String saved, String started) => redirectNoticeHost(
         saved: Uri.parse(saved),
         started: Uri.parse(started),
-        psl: psl,
       );
 
       expect(
         notice('https://ejemplo.com/', 'https://www.otro.org/x'),
         'otro.org',
       );
-      // Mismo sitio (otro subdominio, o http → https): sin aviso.
-      expect(notice('https://ejemplo.com/', 'https://m.ejemplo.com/'), isNull);
-      expect(notice('http://ejemplo.com/', 'https://www.ejemplo.com/'), isNull);
+      // Sin lista de sufijos públicos, otro subdominio también se avisa.
       expect(
-        notice('https://ejemplo.co.uk/', 'https://otro.co.uk/'),
-        'otro.co.uk',
+        notice('https://ejemplo.com/', 'https://m.ejemplo.com/'),
+        'm.ejemplo.com',
+      );
+      // Mismo dominio (con o sin www., http → https, otra ruta): sin aviso.
+      expect(
+        notice('http://ejemplo.com/', 'https://www.ejemplo.com/b'),
+        isNull,
+      );
+      expect(notice('https://EJEMPLO.com./', 'https://ejemplo.com/'), isNull);
+      expect(
+        notice(
+          'https://xn--e1afmkfd.xn--p1ai/',
+          'https://www.xn--e1afmkfd.xn--p1ai/',
+        ),
+        isNull,
       );
     });
   });

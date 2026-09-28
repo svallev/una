@@ -20,7 +20,7 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Foto | Photo | `AttachmentKind.image` (origen `camera`) | Imagen hecha con la cámara desde la app. |
 | Imagen | Image | `AttachmentKind.image` (origen `gallery`) | Imagen elegida de la galería. |
 | Documento | Document | `AttachmentKind.pdf` (v1); `AttachmentKind.document` (futuro) | Archivo adjunto que no es una imagen ni una URL. **En la v1 solo PDF** (ADR-0014): se ve en la propia tarea, al ancho, con desplazamiento y zoom. |
-| Tarea web / URL | Web task / URL | `AttachmentKind.web` | Tarea que muestra una página web. |
+| Tarea web / URL | Web task / URL | `AttachmentKind.web` | Tarea que muestra **una** página web, en vivo, a partir de la dirección guardada. Sin navegación: los enlaces de la página no hacen nada (ADR-0018). |
 | Instantánea / captura | Snapshot | `snapshot` | Imagen de página completa de una URL, guardada al crearla, para verla sin conexión. |
 | Miniatura | Thumbnail | `thumbnail`, `thumb.jpg` | Versión pequeña de un adjunto para el listado: cuadrada y recortada, de 176 px (se ve a 44). |
 | Insignia | Badge | `TaskThumbnail` (`attachmentKindLabel`) | Recuadro negro de 44 px con el tipo ("PDF") en la fila del listado de una tarea con PDF, en lugar de la miniatura; decorativa para el lector (spec 008). |
