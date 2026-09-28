@@ -236,6 +236,12 @@ class _FitWidthDelegate implements PdfViewerSizeDelegate {
     );
   }
 
+  /// Cambia el hueco de la banda (se edita el texto) o el tamaño de la vista.
+  /// pdfrx conserva lo que se ve respecto a la página de arriba; si se veía la
+  /// banda (el principio), la página 1 baja al alargar el texto y la parte de
+  /// arriba de la banda quedaba fuera de la vista: se vuelve al principio,
+  /// con la banda entera (CA-008-08). A media lectura, como pdfrx: las páginas
+  /// no saltan (CA-008-09).
   @override
   void onLayoutUpdate({
     required PdfViewerLayoutSnapshot oldState,
@@ -245,15 +251,36 @@ class _FitWidthDelegate implements PdfViewerSizeDelegate {
     required int? anchorPageNumber,
     required bool isLayoutChanged,
     required bool isViewSizeChanged,
-  }) => _legacy.onLayoutUpdate(
-    oldState: oldState,
-    newState: newState,
-    currentZoom: currentZoom,
-    oldVisibleRect: oldVisibleRect,
-    anchorPageNumber: anchorPageNumber,
-    isLayoutChanged: isLayoutChanged,
-    isViewSizeChanged: isViewSizeChanged,
-  );
+  }) {
+    final controller = _controller;
+    final oldPages = oldState.layout?.pageLayouts ?? const <Rect>[];
+    if (controller != null &&
+        isLayoutChanged &&
+        newState.layout != null &&
+        oldPages.isNotEmpty &&
+        positionIn(oldState.layout!, oldVisibleRect) == PdfPosition.start) {
+      final zoom =
+          currentZoom < newState.minScale || currentZoom == oldState.minScale
+          ? newState.minScale
+          : currentZoom;
+      unawaited(
+        controller.goToPosition(
+          documentOffset: Offset(oldVisibleRect.left, 0),
+          zoom: zoom,
+        ),
+      );
+      return;
+    }
+    _legacy.onLayoutUpdate(
+      oldState: oldState,
+      newState: newState,
+      currentZoom: currentZoom,
+      oldVisibleRect: oldVisibleRect,
+      anchorPageNumber: anchorPageNumber,
+      isLayoutChanged: isLayoutChanged,
+      isViewSizeChanged: isViewSizeChanged,
+    );
+  }
 }
 
 /// Niveles de zoom sobre el ancho para "Ampliar" y "Reducir" (acción o tecla,
