@@ -114,7 +114,21 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 
 ### Xiaomi 15T Pro
 
-- **[Pendiente]** No se pudo medir el 2026-09-28: el móvil se desconectó de `adb` al empezar la tarea y no volvió a aparecer. Faltan: arranque en frío con el PDF en la última posición (CA-008-08, < 1 s p50), el tiempo hasta ver la página (no solo el primer fotograma), la memoria de CL-008-5 con la GPU (`dumpsys meminfo`) y la fluidez al desplazar. Pasos (con el permiso del propietario; nunca sin `--keep-app-running`, y siempre con el binario ya compilado para que flutter no deduzca el paquete base, que es la app real):
+Medido el 2026-09-28 (Xiaomi 15T Pro, 120 Hz, app `.profile` aparte; la app real no se tocó).
+
+| Medida | Solo texto | Con el PDF escaneado | Diferencia |
+|---|---|---|---|
+| PSS del proceso en el test (smaps, sin GPU) | 157 MB | página 1: 174 MB · pico al desplazar de la 1 a la 20: 198 MB · en la 20: 197 MB | pico +41 MB |
+| `dumpsys meminfo`, proceso nuevo (PSS total / Graphics) | 245 / 87 MB | 329 / 157 MB (en la página 7 guardada) | +84 MB (+70 MB de GPU) |
+| Arranque en frío (`am start -W -S`, 20 veces; primer fotograma) | p50 399 ms · p90 443 ms | p50 410 ms · p90 461 ms (máx. 672) | +11 ms |
+| Desplazar de la 1 a la 20 (3211 fotogramas) | — | build medio / p99 / peor: 0,7 / 1,7 / 2,7 ms; raster medio / p99 / peor: 1,3 / 2,1 / 4,5 ms; 0 fotogramas perdidos | — |
+
+- **[Hecho]** CL-008-5 en el móvil: pico +41 MB sin GPU y +84 MB con ella en un proceso nuevo; muy por debajo de 200 MB. Desplazamiento sin ningún fotograma perdido a 120 Hz.
+- **[Hecho]** El primer fotograma con el PDF llega en p50 410 ms (< 1 s).
+- **[Pendiente, CA-008-08] La página no se ve en < 1 s.** En una captura a ~0,84 s del lanzamiento (arranque en frío, página 7 guardada) ya están la cabecera, la franja ("PDF scanned_20p.pdf 8,5 MB"), el botón y los bordes de las páginas, pero **el contenido de la página está en blanco** (las páginas del fichero son ruido gris). Es lo mismo que se vio en el emulador. No se pudo medir cuándo aparece: el USB del móvil se desconectaba al copiar cada captura. **[Suposición]** La causa es la de arriba: `screen.jpg` no se pinta de forma síncrona en el primer fotograma (lectura de `position.json` y decodificación asíncrona) y el visor pdfrx tarda en dibujar la página. Propuesta: leer `position.json` y precargar `screen.jpg` (`precacheImage`) antes de `runApp`, como ya se lee la tarea, y no quitar la cara hasta que pdfrx haya dibujado la página visible; medirlo con capturas (o `screenrecord` + `ffmpeg`) con el cable estable.
+- **[Pendiente]** Giro en HyperOS: necesita la mano del propietario (pasos en la fila de T-008-22 de `tasks.md`).
+
+Pasos (con el permiso del propietario; nunca sin `--keep-app-running`, y siempre con el binario ya compilado para que flutter no deduzca el paquete base, que es la app real). **Ojo:** el APK partido por ABI tiene `versionCode` 2001 y el del test 1: si la app `.profile` del paso 1 sigue instalada, `flutter drive` del paso 2 no puede instalar (`INSTALL_FAILED_VERSION_DOWNGRADE`) y corre la app vieja. Antes del paso 2: `adb uninstall invalid.pending.app.profile`, `adb install /tmp/perf-pdf.apk`, `adb shell mkdir -p` de la carpeta y después el `push`.
 
 ```bash
 cd app
