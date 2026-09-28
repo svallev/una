@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:app/app/font_licenses.dart';
+import 'package:app/app/bundled_licenses.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -21,12 +21,18 @@ void main() {
     },
   );
 
-  test('las licencias OFL de las fuentes quedan registradas', () async {
-    registerFontLicenses();
-    final packages = <String>{};
-    await for (final l in LicenseRegistry.licenses) {
-      packages.addAll(l.packages);
-    }
-    expect(packages, containsAll(['Archivo', 'Space Mono']));
-  });
+  test(
+    'las licencias OFL de las fuentes y la MPL de la PSL quedan registradas',
+    () async {
+      registerBundledLicenses();
+      final packages = <String>{};
+      await for (final l in LicenseRegistry.licenses) {
+        packages.addAll(l.packages);
+      }
+      expect(
+        packages,
+        containsAll(['Archivo', 'Space Mono', 'Public Suffix List']),
+      );
+    },
+  );
 }
