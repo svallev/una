@@ -776,12 +776,6 @@ abstract class AppLocalizations {
   /// **'Ajustar al ancho'**
   String get pdfZoomFit;
 
-  /// Botón de la tarea con imagen o PDF en horizontal. CA-008-11
-  ///
-  /// In es, this message translates to:
-  /// **'Volver a vertical'**
-  String get backToPortrait;
-
   /// Lectura de la tarea actual con PDF y texto. CA-008-20
   ///
   /// In es, this message translates to:

@@ -22,7 +22,6 @@ import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../attachments/attachment_health.dart';
-import '../attachments/back_to_portrait_button.dart';
 import '../attachments/keep_screen_on_controller.dart';
 import '../attachments/link_confirm_sheet.dart';
 import '../attachments/missing_attachment_card.dart';
@@ -140,22 +139,17 @@ class CurrentTaskScreen extends ConsumerWidget {
     final pdfTitle = pdfName(l10n, attachment?.originalName);
     final pdfBytes = pdfSize(l10n, attachment?.byteSize ?? 0);
     // En horizontal (solo gira la tarea con imagen o PDF), lo mismo con los
-    // dos: el adjunto a todo el ancho, el logotipo y "Volver a vertical"; sin
-    // menú, botón, franja ni texto (CA-008-11, enmienda CA-007-11).
+    // dos: el adjunto a todo el ancho y el logotipo; sin menú, botón, franja
+    // ni texto (CA-008-11). Se vuelve a vertical girando el móvil (sin botón:
+    // propietario, 2026-09-28).
     final landscape =
         withAttachment &&
         !faceOnly &&
         !chromeOnly &&
         mq.orientation == Orientation.landscape;
-    // Con PDF, en horizontal el visor ocupa toda la pantalla y el logotipo y
-    // el botón van encima, como con la imagen.
+    // Con PDF, en horizontal el visor ocupa toda la pantalla y el logotipo va
+    // encima, como con la imagen.
     final pdfLandscape = showPdf && landscape;
-    void backToPortrait() {
-      unawaited(AttachmentRotation.backToPortrait());
-      // El foco va a la tarea (CA-008-21): con PDF, a la franja, que vuelve
-      // al estar en vertical.
-      ref.read(screenFocusProvider.notifier).signal();
-    }
 
     final kind = isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage;
 
@@ -249,9 +243,7 @@ class CurrentTaskScreen extends ConsumerWidget {
           children: [
             wordmark,
             const Spacer(),
-            if (landscape)
-              _Order(1, child: BackToPortraitButton(onPressed: backToPortrait))
-            else
+            if (!landscape)
               _Order(
                 1,
                 child: SquareIconButton(
@@ -392,8 +384,8 @@ class CurrentTaskScreen extends ConsumerWidget {
                             fit: StackFit.expand,
                             children: [
                               content,
-                              // En horizontal, el logotipo y "Volver a
-                              // vertical" encima de las páginas.
+                              // En horizontal, el logotipo encima de las
+                              // páginas.
                               if (pdfLandscape)
                                 SafeArea(
                                   child: Padding(

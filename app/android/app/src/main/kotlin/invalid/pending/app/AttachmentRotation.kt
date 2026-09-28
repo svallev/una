@@ -11,39 +11,25 @@ import android.view.OrientationEventListener
  * en HyperOS: su sensor de orientación del sistema no avisa hasta el siguiente
  * toque. Mientras se ve, se lee el acelerómetro, como hacen las galerías, y se
  * fija la orientación. Con el bloqueo de rotación del sistema activo, se queda
- * en vertical. Sin permisos.
- *
- * "Volver a vertical" ([backToPortrait]) fija el vertical aunque el móvil siga
- * en horizontal, hasta que el móvil pase por la zona vertical. Ese estado
- * sobrevive a salir de la tarea: si se vuelve con el móvil aún en horizontal,
- * se ve en vertical. Un único estado ([following], [heldPortrait]) para que el
- * sensor y el botón no se pisen.
+ * en vertical. Sin permisos. Se vuelve a vertical solo girando el móvil (sin
+ * botón "Volver a vertical": propietario, 2026-09-28).
  */
 class AttachmentRotation(private val activity: Activity) {
-    private var following = false
-    private var heldPortrait = false
+    private var active = false
 
     private val listener = object : OrientationEventListener(activity) {
         override fun onOrientationChanged(degrees: Int) {
             if (degrees == ORIENTATION_UNKNOWN) return // Plano sobre la mesa.
-            // Márgenes entre zonas para que no oscile cerca de los 45°.
-            val zone = when (degrees) {
-                in 0..30, in 330..359 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                in 60..120 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
-                in 240..300 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                else -> return // Boca abajo o entre zonas: sin cambios.
-            }
-            // El móvil ha pasado por vertical: vuelve a girar solo.
-            if (zone == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) heldPortrait = false
-            if (!following) {
-                // Solo se escuchaba para saber si pasa por vertical.
-                if (!heldPortrait) disable()
-                return
-            }
-            val target = if (heldPortrait || !autoRotate()) {
+            val target = if (!autoRotate()) {
                 ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             } else {
-                zone
+                // Márgenes entre zonas para que no oscile cerca de los 45°.
+                when (degrees) {
+                    in 0..30, in 330..359 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    in 60..120 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                    in 240..300 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    else -> return // Boca abajo o entre zonas: sin cambios.
+                }
             }
             if (activity.requestedOrientation != target) activity.requestedOrientation = target
         }
@@ -54,15 +40,8 @@ class AttachmentRotation(private val activity: Activity) {
 
     /** La tarea actual con imagen o PDF se ve ([on] = true) o deja de verse. */
     fun follow(on: Boolean) {
-        following = on
-        if (!on || heldPortrait) activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        resume()
-    }
-
-    /** "Volver a vertical": vertical ya, aunque el móvil siga en horizontal. */
-    fun backToPortrait() {
-        heldPortrait = true
-        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        active = on
+        if (!on) activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         resume()
     }
 
@@ -70,10 +49,6 @@ class AttachmentRotation(private val activity: Activity) {
     fun pause() = listener.disable()
 
     fun resume() {
-        if ((following || heldPortrait) && listener.canDetectOrientation()) {
-            listener.enable()
-        } else {
-            listener.disable()
-        }
+        if (active && listener.canDetectOrientation()) listener.enable() else listener.disable()
     }
 }

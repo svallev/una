@@ -20,16 +20,11 @@ class MainActivity : FlutterActivity() {
         MethodChannel(messenger, LinkOpener.CHANNEL).setMethodCallHandler(LinkOpener(this))
         val attachmentRotation = AttachmentRotation(this).also { rotation = it }
         // Pantalla encendida mientras se ve un adjunto (spec 007, CA-007-12) y
-        // giro de la tarea actual con imagen o PDF, con "Volver a vertical"
-        // (CA-008-11).
+        // giro de la tarea actual con imagen o PDF (CA-008-11).
         MethodChannel(messenger, "una/screen").setMethodCallHandler { call, result ->
             when (call.method) {
                 "rotateWithAttachment" -> {
                     attachmentRotation.follow(call.arguments == true)
-                    result.success(null)
-                }
-                "backToPortrait" -> {
-                    attachmentRotation.backToPortrait()
                     result.success(null)
                 }
                 "keepOn" -> {

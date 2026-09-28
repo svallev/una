@@ -113,7 +113,6 @@
   "pdfZoomIn": "Zoom in",
   "pdfZoomOut": "Zoom out",
   "pdfZoomFit": "Fit to width",
-  "backToPortrait": "Back to portrait",
   "a11yWithPdf": "{text}. With PDF, {name}, {size}",
   "a11yPdfOnly": "{name}. PDF, {size}",
   "a11yRowWithPdf": "{text}. With PDF",

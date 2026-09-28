@@ -1,16 +1,15 @@
 import 'package:app/app/providers.dart';
-import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
-import 'package:app/features/attachments/back_to_portrait_button.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/pdf_strip.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
+import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/wordmark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -24,9 +23,10 @@ import '../../support/fake_pdf_view.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
-/// Giro de la tarea actual con imagen o con PDF (CA-008-11, enmienda
-/// CA-007-11). La parte nativa (sensor y "Volver a vertical") se prueba a mano
-/// en el emulador y el móvil; aquí, lo que la app pide y lo que se ve.
+/// Giro de la tarea actual con imagen o con PDF (CA-008-11). Sin botón
+/// "Volver a vertical" (propietario, 2026-09-28): se vuelve girando el móvil.
+/// La parte nativa (sensor) se prueba a mano en el emulador y el móvil; aquí,
+/// lo que la app pide y lo que se ve.
 void main() {
   setUpAll(loadAppFonts);
 
@@ -160,32 +160,23 @@ void main() {
       expect(rotating(), isTrue);
     });
 
-    testWidgets('en horizontal: el PDF a todo el ancho, el logotipo y '
-        '"Volver a vertical"; sin menú, botón, franja ni texto', (
-      tester,
-    ) async {
+    testWidgets('en horizontal: el PDF a todo el ancho y el logotipo; sin '
+        'menú, botón, franja ni texto', (tester) async {
       await pumpApp(tester, [await pdfTask()]);
       addTearDown(tester.view.reset);
       await turn(tester, landscape: true);
 
       expect(find.byType(Wordmark), findsOneWidget);
-      expect(find.byType(BackToPortraitButton), findsOneWidget);
-      expect(find.text('Volver a vertical'), findsOneWidget);
       expect(find.bySemanticsLabel('Menú de la tarea'), findsNothing);
+      expect(find.byType(BrutalButton), findsNothing);
       expect(find.byType(HoldToCompleteButton), findsNothing);
       expect(find.byType(PdfStrip), findsNothing);
       // Sin la banda del texto.
       expect(taskPdfCalls.last.caption, isNull);
-      // El PDF ocupa toda la pantalla, detrás del logotipo y el botón.
+      // El PDF ocupa toda la pantalla, detrás del logotipo.
       expect(tester.getRect(pdfViewer), const Rect.fromLTWH(0, 0, 844, 390));
-      // El botón mide al menos 48 dp de alto.
-      expect(
-        tester.getSize(find.byType(BackToPortraitButton)).height,
-        greaterThanOrEqualTo(UnaSizes.backToPortrait),
-      );
 
       await turn(tester, landscape: false);
-      expect(find.byType(BackToPortraitButton), findsNothing);
       expect(find.byType(PdfStrip), findsOneWidget);
       expect(find.byType(HoldToCompleteButton), findsOneWidget);
       expect(taskPdfCalls.last.caption, 'Programa');
@@ -262,57 +253,28 @@ void main() {
     });
   });
 
-  group('CA-008-11: "Volver a vertical" (también con imagen)', () {
-    testWidgets('con imagen, en horizontal aparece y pide el vertical', (
-      tester,
-    ) async {
+  group('CA-008-11: sin "Volver a vertical" (propietario, 2026-09-28)', () {
+    testWidgets('con imagen, en horizontal: la imagen a todo el ancho y el '
+        'logotipo, sin menú ni botones', (tester) async {
       await pumpApp(tester, [await imageTask()]);
       addTearDown(tester.view.reset);
-      expect(find.byType(BackToPortraitButton), findsNothing);
       await turn(tester, landscape: true);
-      expect(find.byType(BackToPortraitButton), findsOneWidget);
+      expect(find.byType(Wordmark), findsOneWidget);
       expect(find.bySemanticsLabel('Menú de la tarea'), findsNothing);
+      expect(find.byType(BrutalButton), findsNothing);
+      expect(find.byType(HoldToCompleteButton), findsNothing);
       expect(tester.getSize(find.byType(TaskImage)).width, 844);
-
-      await tester.tap(find.byType(BackToPortraitButton));
-      await tester.pumpAndSettle();
-      expect(calls.last, 'backToPortrait:null');
-    });
-
-    testWidgets('con PDF, pide el vertical y el foco va a la tarea', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      await pumpApp(tester, [await pdfTask()]);
-      addTearDown(tester.view.reset);
-      await turn(tester, landscape: true);
+      // Se vuelve a vertical girando el móvil: la app no pide nada más.
       expect(
-        tester.getSemantics(find.bySemanticsLabel('Volver a vertical')),
-        matchesSemantics(
-          label: 'Volver a vertical',
-          isButton: true,
-          hasTapAction: true,
-          hasEnabledState: true,
-          isEnabled: true,
-        ),
+        calls.where((c) => !c.startsWith('rotateWithAttachment:')),
+        isEmpty,
       );
-      await tester.tap(find.byType(BackToPortraitButton));
-      await tester.pumpAndSettle();
-      expect(calls.last, 'backToPortrait:null');
-
-      // El sistema pone la app en vertical.
       await turn(tester, landscape: false);
-      final strip = find.byType(PdfStrip);
-      expect(
-        Focus.of(tester.element(strip)).hasFocus,
-        isTrue,
-        reason: 'el foco va a la tarea',
-      );
-      handle.dispose();
+      expect(find.byType(HoldToCompleteButton), findsOneWidget);
     });
 
-    testWidgets('CA-008-22: con el texto al 200 %, se ve entero y nada se '
-        'corta', (tester) async {
+    testWidgets('CA-008-22: con PDF en horizontal y el texto al 200 %, nada '
+        'se corta', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpApp(tester, [await pdfTask()]);
       addTearDown(tester.view.reset);
@@ -321,10 +283,7 @@ void main() {
       await turn(tester, landscape: true);
       expect(tester.takeException(), isNull);
       expect(find.byType(Wordmark), findsOneWidget);
-      final button = tester.getRect(find.byType(BackToPortraitButton));
-      expect(button.right, lessThanOrEqualTo(844));
-      expect(button.height, greaterThanOrEqualTo(UnaSizes.backToPortrait));
-      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      expect(find.byType(BrutalButton), findsNothing);
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       handle.dispose();
     });

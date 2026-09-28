@@ -226,8 +226,6 @@
   "@pdfZoomOut": { "description": "Acción del lector en el PDF. CA-008-10" },
   "pdfZoomFit": "Ajustar al ancho",
   "@pdfZoomFit": { "description": "Acción del lector en el PDF: vuelve a ×1. CA-008-10" },
-  "backToPortrait": "Volver a vertical",
-  "@backToPortrait": { "description": "Botón de la tarea con imagen o PDF en horizontal. CA-008-11" },
   "a11yWithPdf": "{text}. Con PDF, {name}, {size}",
   "@a11yWithPdf": { "description": "Lectura de la tarea actual con PDF y texto. CA-008-20", "placeholders": { "text": { "type": "String", "example": "Congreso" }, "name": { "type": "String", "example": "Programa.pdf" }, "size": { "type": "String", "example": "2,4 MB" } } },
   "a11yPdfOnly": "{name}. PDF, {size}",

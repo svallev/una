@@ -416,9 +416,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pdfZoomFit => 'Ajustar al ancho';
 
   @override
-  String get backToPortrait => 'Volver a vertical';
-
-  @override
   String a11yWithPdf(String text, String name, String size) {
     return '$text. Con PDF, $name, $size';
   }

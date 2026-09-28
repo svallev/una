@@ -21,7 +21,7 @@
   - `PdfSniffer` y `LinkPolicy` (clasifica un enlace en interno, web, correo, teléfono o bloqueado; sanea `{host}`/`{destino}`, punycode si mezcla alfabetos, rechaza `usuario@`, y reconstruye el `mailto:` solo con destinatarios y asunto);
   - `PdfPosition` (página + fracción) y su serialización;
   - `taskLabel`: la etiqueta sin texto ("Foto", "Imagen" o el nombre del PDF), usada por el listado, eliminar y los anuncios.
-- **Giro igual con imagen y con PDF (CA-008-11):** `ImageRotation.kt` pasa a `AttachmentRotation` y gana `backToPortrait()`. Fija el vertical e ignora el sensor hasta que el móvil pasa por la zona vertical; ese estado sobrevive a salir de la tarea (así se cumple "si vuelve con el móvil aún en horizontal, se ve en vertical"). En Dart, `_RotatesWithImage` pasa a `_RotatesWithAttachment` y el botón "Volver a vertical" aparece en horizontal para los dos tipos.
+- **Giro igual con imagen y con PDF (CA-008-11):** `ImageRotation.kt` pasa a `AttachmentRotation`. En Dart, `_RotatesWithImage` pasa a `_RotatesWithAttachment` y `AttachmentRotation` cuenta las pantallas que quieren girar (la tarea que entra se monta antes de que salga la anterior). ~~`backToPortrait()` y el botón "Volver a vertical"~~: **quitados por el propietario (2026-09-28)**; la app vuelve a vertical solo al poner el móvil en vertical.
 - **Enlaces (CA-008-12):** nuevo canal `una/links` en Kotlin. `http(s)`: `ACTION_VIEW` solo si hay navegador; `mailto:`: `ACTION_SENDTO` con la URI reconstruida; `tel:`: `ACTION_DIAL` (marca, no llama, sin permiso). Antes de lanzar, `resolveActivity` (I-7), con los `<queries>` de Android 11+ para esos tres intents. Sin permiso `INTERNET` (la app no descarga nada).
 - **Accesibilidad del PDF:** pdfrx no expone semántica. Encima de cada página (con `pageOverlaysBuilder`) va un nodo "Página {n} de {total}" con su texto (con 20 páginas como máximo, el texto y los enlaces de todas se cargan al abrir la tarea, después del primer fotograma) y un nodo enfocable por enlace (`loadLinks`) con su etiqueta, alcanzable con Tab y activable con Enter. Las acciones de la tarea, las de página, zoom y desplazamiento van en el contenedor del visor. El zoom por pasos (×1 → ×1,5 → ×2,5 → ×4) y el doble toque se hacen con el controlador de pdfrx.
 
@@ -32,10 +32,10 @@
 | Dominio | `entities/attachment.dart`, `entities/pdf_position.dart`, `entities/link_target.dart`, `services/file_name.dart`, `services/link_policy.dart`, `services/pdf_sniffer.dart`, `ports/pdf_importer.dart`, `ports/link_opener.dart`, `usecases/import_pdf.dart`, `services/task_label.dart` | Tipo `pdf`, origen `file`, nombre y páginas; saneado del nombre; política de enlaces; tipo por contenido; puerto de importación de PDF (elegir, copiar, preparar, cancelar, regenerar la versión de pantalla); puerto para abrir enlaces; etiqueta sin texto |
 | Datos | `drift_task_repository.dart`, `in_memory_task_repository.dart`, `attachments/file_attachment_store.dart`, `attachments/memory_attachment_store.dart`, `import/pdfrx_pdf_importer.dart`, `import/web_pdf_importer.dart`, `links/native_link_opener.dart`, `attachments/pdf_position_store.dart` | Leer y escribir `kind = pdf`, `origin = file`, `originalName`, `pageCount` (columnas ya existentes); `commit` y `check` para PDF; importador con pdfrx; posición en `position.json` |
 | Estado | `features/attachments/image_import_controller.dart` → `attachment_import_controller.dart`, `pdf_view_controller.dart`, `providers.dart` | La importación genérica (imagen o PDF: "Preparando…", 20 s, cancelar, errores); estado del visor (posición, zoom, guardado de la posición y la versión de pantalla) |
-| Presentación | `current_task_screen.dart`, `features/attachments/task_pdf.dart` (nuevo), `pdf_strip.dart`, `pdf_page_semantics.dart`, `link_confirm_sheet.dart`, `attach_sheet.dart`, `attachment_preview.dart`, `missing_attachment_card.dart`, `task_list_row.dart`, `delete_confirm_sheet.dart`, `back_to_portrait_button.dart`, controladores de completar y eliminar | Tarea con PDF (franja fija, banda del texto que se desplaza, páginas), zoom y teclado, enlaces con confirmación, horizontal igual que la imagen con "Volver a vertical", vista previa del editor, insignia y etiquetas |
-| Nativo | `ImageImport.kt` (origen `file`), `ImageSanitizer.kt` (`encodeJpeg`), `ImageRotation.kt` → `AttachmentRotation.kt`, `LinkOpener.kt` (nuevo), `MainActivity.kt`, `AndroidManifest.xml` (`<queries>`) | Selector de PDF, JPEG desde píxeles, "Volver a vertical", abrir enlaces |
+| Presentación | `current_task_screen.dart`, `features/attachments/task_pdf.dart` (nuevo), `pdf_strip.dart`, `pdf_page_semantics.dart`, `link_confirm_sheet.dart`, `attach_sheet.dart`, `attachment_preview.dart`, `missing_attachment_card.dart`, `task_list_row.dart`, `delete_confirm_sheet.dart`, controladores de completar y eliminar | Tarea con PDF (franja fija, banda del texto que se desplaza, páginas), zoom y teclado, enlaces con confirmación, horizontal igual que la imagen (sin "Volver a vertical" desde 2026-09-28), vista previa del editor, insignia y etiquetas |
+| Nativo | `ImageImport.kt` (origen `file`), `ImageSanitizer.kt` (`encodeJpeg`), `ImageRotation.kt` → `AttachmentRotation.kt`, `LinkOpener.kt` (nuevo), `MainActivity.kt`, `AndroidManifest.xml` (`<queries>`) | Selector de PDF, JPEG desde píxeles, giro con imagen o PDF, abrir enlaces |
 | l10n | `app_es.arb`, `app_en.arb` | Las claves de la §7 de la spec; cambia `attachPickFileHint` |
-| Tokens | `design/tokens.json` → `tokens.g.dart` | Franja (11 px mono), banda del texto (24 px, 800), insignia de 44 px, botón "Volver a vertical", niveles de zoom |
+| Tokens | `design/tokens.json` → `tokens.g.dart` | Franja (11 px mono), banda del texto (24 px, 800), insignia de 44 px, ~~botón "Volver a vertical"~~ (quitado, 2026-09-28), niveles de zoom |
 
 ## 3. Modelo de datos y migraciones
 
@@ -62,7 +62,7 @@ La última posición **no** va en la BD (§1): va en `position.json` junto al PD
 | CA-008-07; CL-008-6 | Unitario | `test/domain/file_name_test.dart` |
 | CA-008-08, 09 | Widget (franja, banda, posición restaurada con un almacén falso) + rendimiento en el Xiaomi | `test/features/current_task/current_task_pdf_test.dart`; `docs/perf/baseline.md` |
 | CA-008-10 | Widget (acciones, teclas, pasos, límites) | `test/features/attachments/task_pdf_zoom_test.dart` |
-| CA-008-11 | Widget (horizontal con imagen y con PDF: lo mismo, "Volver a vertical") + Kotlin probado a mano en el emulador y el Xiaomi | `test/features/current_task/landscape_test.dart` |
+| CA-008-11 | Widget (horizontal con imagen y con PDF: lo mismo, sin botón) + Kotlin probado a mano en el emulador y el Xiaomi | `test/features/current_task/landscape_test.dart` |
 | CA-008-12 | Unitarios de `LinkPolicy` (todos los esquemas, `usuario@`, bidi, punycode, `mailto` con `attach`/`cc`/`body`) + widget de la confirmación | `test/domain/link_policy_test.dart`, `test/features/attachments/link_confirm_test.dart` |
 | CA-008-13 | Widget | `test/features/attachments/keep_screen_on_test.dart` (ampliado) |
 | CA-008-15 | Widget | `attachment_import_controller_test.dart` |
@@ -92,7 +92,7 @@ Ficheros de prueba: `tools/fixtures/gen_pdf_fixtures.py` escribe PDF a mano, sin
   - Se pasan `security-reviewer` y `/security-check`.
 - **Accesibilidad:**
   - ninguna excepción nueva a P6 (el zoom tiene alternativas);
-  - el horizontal usa la excepción ya ampliada (constitución 1.2) con "Volver a vertical";
+  - el horizontal usa la excepción ya ampliada (constitución 1.2); ~~con "Volver a vertical"~~ sin botón desde el 2026-09-28 (propietario);
   - se pasan `a11y-reviewer` y TalkBack en el emulador, con la limitación de foco ya aceptada en la 007.
 - **Rendimiento:**
   - el arranque no abre el PDF antes del primer fotograma: pinta `screen.jpg` y abre pdfrx después;
@@ -109,4 +109,4 @@ Ficheros de prueba: `tools/fixtures/gen_pdf_fixtures.py` escribe PDF a mano, sin
 | pdfrx en web carga PDFium desde un CDN | Configurarlo para usar el asset del paquete; si no se puede, el PDF en la web de pruebas se limita a la tarjeta (CL-008-12 cambiaría: se consulta) |
 | `encodeJpeg` nativo añade memoria (RGBA de una página al ancho: ~4 MB) | Se libera enseguida; se dibuja a la resolución de pantalla, nunca más |
 | La restauración de la posición falla con PDF de páginas de tamaños distintos | La posición es página + fracción, independiente del ancho; test con páginas mixtas |
-| El giro con el sensor (HyperOS) y "Volver a vertical" interfieren | Un único estado en Kotlin (`following`, `heldPortrait`); prueba a mano en el Xiaomi |
+| ~~El giro con el sensor (HyperOS) y "Volver a vertical" interfieren~~ | Sin objeto: el botón se quita (propietario, 2026-09-28). El giro con el sensor se prueba a mano en el Xiaomi |

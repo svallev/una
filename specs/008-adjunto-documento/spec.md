@@ -5,7 +5,7 @@
 - **Pantallas del prototipo:** 9 "Añadir (+)", 3 "Nueva tarea" (con documento), 10 "Tarea con documento (abierto)", 5 "Todas las tareas" (insignia). Los errores y el giro no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
 - **Decisiones y ADR:** **ADR-0014 (solo PDF en la v1)**, D5, D6 y D19 (enmendadas por el ADR-0014), D10 (enmendada: también gira la tarea con PDF), D17, D18, ADR-0004 (y R-10), ADR-0008 (enmendado por el ADR-0014), ADR-0010, ADR-0011, ADR-0012 (completar borra los archivos), ADR-0013 (**no** aplica al PDF: el zoom del PDF se queda y tiene alternativas), DEV-01, DEV-18 a DEV-42 citadas (enmendadas DEV-02, DEV-03, DEV-18, DEV-39, DEV-40 y DEV-42), DEV-36; modelo de amenazas T-2, T-3, T-5, T-7
 - **Dependencias:** 001 a 007 (hoja "Añadir", editor con adjunto, importación, borrado único, "Adjunto no disponible", pantalla encendida, giro)
-- **Enmienda:** CA-007-11 (el horizontal de la imagen añade "Volver a vertical", CA-008-11)
+- **Enmienda:** CA-007-11 (~~el horizontal de la imagen añade "Volver a vertical"~~; la imagen y el PDF giran igual, CA-008-11). **Enmienda del propietario (2026-09-28):** se quita el botón "Volver a vertical" con los dos tipos; la app vuelve a vertical solo al poner el móvil en vertical. CA-007-11 queda como estaba en la 007
 - **Cierra lo diferido a la 008:** CA-002-09, CL-003-4, CL-003-8, CA-004-01 (etiqueta sin texto), CL-004-3, CA-005-07, CL-005-3, CA-006-02 (insignia), CA-006-18 (tipo de adjunto), el texto para documentos sin extensión (spec 006 §7; con solo PDF, siempre hay insignia "PDF") y DEV-18 ("Subir archivo"). La URL sigue en la 009
 
 > Esta spec describe **qué** y **por qué**, sin tecnología. El **cómo** va en `plan.md`.
@@ -107,15 +107,16 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - **Entonces** la pantalla gira sola y en horizontal se ve **lo mismo con los dos tipos** (propietario, 2026-09-27):
     - el adjunto al 100 % del ancho, con desplazamiento vertical (el PDF, además, con su zoom, CA-008-10; la imagen, con su pellizco de vistazo, CA-007-10);
     - el logotipo, como en CA-007-11;
-    - el botón **"Volver a vertical"**, nuevo también para la imagen;
+    - ~~el botón **"Volver a vertical"**, nuevo también para la imagen;~~ (quitado, ver la nota de abajo)
     - sin menú, botón de completar, franja, pie ni texto de la tarea.
-  - "Volver a vertical" (≥ 48 dp, con fondo propio para verse sobre cualquier imagen o página) pone la app en vertical aunque el móvil siga en horizontal. Vuelve a girar sola la próxima vez que el móvil pase por vertical y luego a horizontal.
+  - ~~"Volver a vertical" (≥ 48 dp, con fondo propio para verse sobre cualquier imagen o página) pone la app en vertical aunque el móvil siga en horizontal. Vuelve a girar sola la próxima vez que el móvil pase por vertical y luego a horizontal.~~
+  - **Enmienda del propietario (2026-09-28):** sin "Volver a vertical", ni con imagen ni con PDF. La app vuelve a vertical solo cuando el móvil se pone en vertical.
   - Al volver a vertical se conservan la posición y, en el PDF, el zoom.
   - En horizontal se sigue pudiendo completar o eliminar con las acciones del lector (CA-003-07, CA-004-10), que lleva el adjunto (CA-008-20).
   - **No gira** con "Adjunto no disponible" (CA-008-18, CA-007-19).
   - Si se completa o se elimina en horizontal y la siguiente tarea no tiene PDF ni imagen, la app vuelve a vertical.
   - Si gira con la confirmación de un enlace abierta, la confirmación sigue abierta en la nueva orientación.
-  - "Volver a vertical" dura mientras se vea esa tarea: si sale de ella y vuelve con el móvil aún en horizontal, se ve en vertical hasta que el móvil pase por vertical.
+  - ~~"Volver a vertical" dura mientras se vea esa tarea: si sale de ella y vuelve con el móvil aún en horizontal, se ve en vertical hasta que el móvil pase por vertical.~~ (Sin objeto desde la enmienda de 2026-09-28.)
   - Respeta el bloqueo de rotación del sistema. En tablets y plegables, en horizontal usa todo el ancho de la pantalla (como CA-007-11).
 - **CA-008-12 Enlaces del PDF, sin nada peligroso**
   - **Dado** un PDF con JavaScript, formularios, acciones, archivos incrustados o enlaces
@@ -185,7 +186,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
     - cada página se lee como "Página {n} de {total}" seguida de su texto, en el orden del PDF, cuando lo tiene; si no (PDF escaneado), solo "Página {n} de {total}" (solo para el lector: no hay indicador visible);
     - los enlaces del PDF se pueden alcanzar y activar con el lector (con la confirmación de CA-008-12);
     - el contenedor del PDF lleva las acciones, en las dos orientaciones y en este orden: Completar tarea, Eliminar tarea, "Página siguiente", "Página anterior", las de zoom y las de desplazamiento (CA-008-10), solo las que se pueden hacer;
-    - en horizontal, sin franja ni texto, la página visible se lee con el prefijo "Tarea actual: {texto o nombre}", y "Volver a vertical" es un botón más;
+    - en horizontal, sin franja ni texto, la página visible se lee con el prefijo "Tarea actual: {texto o nombre}"~~, y "Volver a vertical" es un botón más~~ (enmienda del propietario, 2026-09-28);
     - fila del listado (cierra CA-006-18): "{n} de {total}: {texto}. Con PDF", o "{n} de {total}: {nombre}. PDF" sin texto;
     - anuncios de completar y eliminar sin texto (cierra CL-003-8): "Tarea completada. Siguiente: {nombre}".
 - **CA-008-21 Foco y anuncios**
@@ -206,7 +207,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
     | Cierra la confirmación o vuelve del navegador u otra app | El enlace | Ninguno |
     | Enlace sin app para abrirlo | El enlace | El texto del error |
     | Gira a horizontal | La página visible | Ninguno |
-    | "Volver a vertical" | La tarea | Ninguno |
+    | ~~"Volver a vertical"~~ (quitado, 2026-09-28) | — | — |
 
 - **CA-008-22 Reducir movimiento, teclado y texto grande**
   - **Dado** "reducir movimiento", un teclado o el texto al 200 %
@@ -214,7 +215,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - **Entonces**:
     - con reducir movimiento: el zoom, el paso de página y "Preparando PDF…" no se animan;
     - con teclado: Av Pág / Re Pág pasan de pantalla, las flechas desplazan, Tab recorre los enlaces y `+`, `-` y `0` hacen zoom (CA-008-10);
-    - con el texto al 200 % en un móvil de 360 dp: la franja (nombre con "…"), "Preparando PDF…", los errores, la confirmación del enlace y "Volver a vertical" se ven enteros; nada se corta y todos los botones miden ≥ 48 dp. El texto del PDF no cambia con la escala del sistema (para eso está el zoom).
+    - con el texto al 200 % en un móvil de 360 dp: la franja (nombre con "…"), "Preparando PDF…", los errores, la confirmación del enlace ~~y "Volver a vertical"~~ se ven enteros; nada se corta y todos los botones miden ≥ 48 dp. El texto del PDF no cambia con la escala del sistema (para eso está el zoom).
 
 ## 4. Casos límite
 
@@ -254,9 +255,9 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 - Lectura, foco y anuncios: CA-008-20 y CA-008-21. La insignia del listado es decorativa.
 - Zoom y paso de página sin gestos: CA-008-10 y CA-008-22 (P6). **No hay excepción a P6**: la del ADR-0013 es solo para la imagen.
 - Desplazamiento sin gestos: acciones de desplazamiento del lector y de Switch Access (también a los lados si está ampliado), Av Pág / Re Pág y flechas con teclado; los enlaces, con Tab y Enter.
-- Orientación (WCAG 1.3.4): la tarea con PDF gira igual que la de imagen (CA-008-11); el resto de la app sigue en vertical (D10). El horizontal es solo para ver el adjunto, con la misma excepción aprobada para la imagen, que se amplía al PDF (ADR-0014, constitución P6). "Volver a vertical" es enfocable, así que con teclado sin lector siempre queda algo que enfocar y se puede volver a la vista completa.
-- Contraste: franja blanca sobre negro; "Volver a vertical" con fondo propio; el anillo de foco, con borde blanco y negro (como en la 007).
-- Objetivos táctiles ≥ 48 dp: "Quitar adjunto", "Cancelar", "Volver a vertical" y los botones de la confirmación del enlace.
+- Orientación (WCAG 1.3.4): la tarea con PDF gira igual que la de imagen (CA-008-11); el resto de la app sigue en vertical (D10). El horizontal es solo para ver el adjunto, con la misma excepción aprobada para la imagen, que se amplía al PDF (ADR-0014, constitución P6). ~~"Volver a vertical" es enfocable, así que con teclado sin lector siempre queda algo que enfocar y se puede volver a la vista completa.~~ **Enmienda del propietario (2026-09-28):** sin "Volver a vertical", en horizontal vuelve la situación aceptada en la 007 para la imagen (ADR-0013): el PDF, que lleva Completar, Eliminar, página, zoom y desplazamiento, es lo único que se puede enfocar, y la vista completa vuelve al poner el móvil en vertical.
+- Contraste: franja blanca sobre negro; ~~"Volver a vertical" con fondo propio;~~ el anillo de foco, con borde blanco y negro (como en la 007).
+- Objetivos táctiles ≥ 48 dp: "Quitar adjunto", "Cancelar", ~~"Volver a vertical"~~ y los botones de la confirmación del enlace.
 
 ## 7. Textos (ES / EN)
 
@@ -270,7 +271,7 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 | `pdfPageA11y` | Página {page} de {total} | Page {page} of {total} | Solo lector de pantalla |
 | `pdfNextPage` / `pdfPrevPage` | Página siguiente / Página anterior | Next page / Previous page | Acciones del lector |
 | `pdfZoomIn` / `pdfZoomOut` / `pdfZoomFit` | Ampliar / Reducir / Ajustar al ancho | Zoom in / Zoom out / Fit to width | Acciones del lector |
-| `backToPortrait` | Volver a vertical | Back to portrait | CA-008-11; imagen y PDF |
+| ~~`backToPortrait`~~ | ~~Volver a vertical~~ | ~~Back to portrait~~ | Quitada (propietario, 2026-09-28) |
 | `a11yWithPdf` | {text}. Con PDF, {name}, {size} | {text}. With PDF, {name}, {size} | Tarea actual con texto |
 | `a11yPdfOnly` | {name}. PDF, {size} | {name}. PDF, {size} | Tarea actual sin texto |
 | `a11yRowWithPdf` | {text}. Con PDF | {text}. With PDF | Fila del listado (sin texto, `text` = nombre) |
@@ -301,7 +302,7 @@ Se reutilizan `currentTaskSemantics` ("Tarea actual: {text}", prefijo en horizon
 ## 9. Preguntas abiertas
 
 - **[Resuelto 2026-09-27, propietario]** **Solo PDF en la v1**, para ahorrar riesgos. Registrado en el **ADR-0014**, que enmienda D6, D19, el ADR-0008, DEV-02 y DEV-03 (ya actualizados en `docs/`).
-- **[Resuelto 2026-09-27, propietario]** La tarea con PDF **gira exactamente igual** que la de imagen, para ver en detalle: en horizontal, el adjunto, el logotipo y el botón "Volver a vertical", que también se añade a la imagen (enmienda D10 y DEV-42).
+- **[Resuelto 2026-09-27, propietario]** La tarea con PDF **gira exactamente igual** que la de imagen, para ver en detalle: en horizontal, el adjunto, el logotipo ~~y el botón "Volver a vertical", que también se añade a la imagen~~ (enmienda D10 y DEV-42). El botón se quita el 2026-09-28 (propietario).
 - **[Resuelto 2026-09-27, propietario]** El zoom del PDF **se queda puesto** (a diferencia de la imagen), con alternativas accesibles.
 - **[Resuelto 2026-09-27, propietario]** Sin indicador de página: el PDF se ve al 100 % del ancho, con desplazamiento y zoom.
 - **[Resuelto 2026-09-27, propietario]** Los enlaces siguen siendo enlaces salvo los peligrosos: `http(s)`, `mailto:` y `tel:` con confirmación; el resto no hace nada.
@@ -310,7 +311,8 @@ Se reutilizan `currentTaskSemantics` ("Tarea actual: {text}", prefijo en horizon
 - **[Resuelto 2026-09-27, propietario]** Pantalla encendida solo con PDF (el único tipo de la v1).
 - **[Resuelto 2026-09-27, propietario]** Se guarda el **nombre** del PDF, saneado (CA-008-07).
 - **[Resuelto 2026-09-27, propietario]** Un PDF con contraseña de apertura se **rechaza** al importar (CL-008-1).
-- **[Resuelto 2026-09-27, propietario]** "Volver a vertical" también en la tarea con imagen (CA-008-11 enmienda CA-007-11; se implementa en esta spec).
-- **[Resuelto 2026-09-27]** Desviaciones del prototipo registradas: DEV-02 ("PDF · va arriba del todo"), DEV-03 (solo PDF), DEV-18 ("Subir archivo" funciona desde la 008), DEV-40 (icono de documento) y DEV-42 (también gira el PDF, con "Volver a vertical").
-- **[Resuelto 2026-09-27, propietario]** El horizontal es igual con imagen y con PDF, así que la excepción de accesibilidad ya aprobada para el horizontal de la imagen (WCAG 1.3.4 y 2.1.1, ADR-0013) se amplía al PDF en el ADR-0014 y en la nota de P6 de la constitución. "Volver a vertical" la mitiga en los dos casos.
+- ~~**[Resuelto 2026-09-27, propietario]** "Volver a vertical" también en la tarea con imagen (CA-008-11 enmienda CA-007-11; se implementa en esta spec).~~
+- **[Resuelto 2026-09-28, propietario]** **Sin "Volver a vertical"**, ni con imagen ni con PDF (se había implementado en T-008-17 y se quita): la app vuelve a vertical solo al poner el móvil en vertical.
+- **[Resuelto 2026-09-27]** Desviaciones del prototipo registradas: DEV-02 ("PDF · va arriba del todo"), DEV-03 (solo PDF), DEV-18 ("Subir archivo" funciona desde la 008), DEV-40 (icono de documento) y DEV-42 (también gira el PDF~~, con "Volver a vertical"~~; sin botón desde 2026-09-28).
+- **[Resuelto 2026-09-27, propietario]** El horizontal es igual con imagen y con PDF, así que la excepción de accesibilidad ya aprobada para el horizontal de la imagen (WCAG 1.3.4 y 2.1.1, ADR-0013) se amplía al PDF en el ADR-0014 y en la nota de P6 de la constitución. ~~"Volver a vertical" la mitiga en los dos casos.~~ Desde el 2026-09-28 (propietario) no hay botón: la excepción queda como en el ADR-0013. **[Pendiente]** Actualizar la nota de P6 de la constitución y el ADR-0014, que citan el botón como mitigación (cambio de la constitución: requiere ADR y el "sí" del propietario).
 - **[Pendiente P-6, spec 009]** Si una URL apunta a un PDF, se ofrece guardarlo como tarea con PDF (esta spec), con los mismos límites (10 MB y 20 páginas).

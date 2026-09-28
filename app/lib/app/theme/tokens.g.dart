@@ -231,7 +231,6 @@ abstract final class UnaSizes {
   static const double attachTextField = 96.0;
   static const double attachPreviewTop = 14.0;
   static const double removeAttachment = 48.0;
-  static const double backToPortrait = 48.0;
   static const double pdfStripGap = 10.0;
   static const double removeAttachmentIcon = 14.0;
   static const double removeAttachmentStroke = 3.4;

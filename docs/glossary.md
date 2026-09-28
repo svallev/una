@@ -32,7 +32,6 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Pie | Caption | `caption` | Texto de la tarea sobre su imagen (recuadro negro, texto blanco). |
 | Franja | Strip | `AttachmentStrip` | Barra negra fija sobre el PDF con "PDF", el nombre y el tamaño (spec 008). |
 | Última posición | Last position | `lastPosition` | Página y desplazamiento dentro de ella donde se dejó de ver un PDF; al volver, se ve ahí (spec 008). |
-| Volver a vertical | Back to portrait | `backToPortrait` | Botón de la tarea con imagen o PDF en horizontal que pone la app en vertical (spec 008). |
 | Visor del sistema | System viewer | `SystemViewer` | QuickLook (iOS) o la app que registre el tipo (Android). **No se usa en la v1** (ADR-0014). |
 | Nota adhesiva | Sticky note | `StickyNote` | Representación visual de una tarea (color de la paleta). |
 | Color de la nota | Note color | `colorKey` | Índice 0–4 de la paleta. Se guarda con la tarea. |

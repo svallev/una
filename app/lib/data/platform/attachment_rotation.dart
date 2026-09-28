@@ -44,11 +44,6 @@ abstract final class AttachmentRotation {
     await _invoke('rotateWithAttachment', on);
   }
 
-  /// "Volver a vertical": la app pasa a vertical aunque el móvil siga en
-  /// horizontal, y vuelve a girar sola cuando el móvil pase por vertical
-  /// (CA-008-11). Lo decide la parte nativa, que lee el sensor.
-  static Future<void> backToPortrait() => _invoke('backToPortrait');
-
   static Future<void> _invoke(String method, [Object? arguments]) async {
     // En la web de pruebas no hay canal.
     if (kIsWeb) return;
