@@ -1,8 +1,8 @@
 # Tareas — Spec NNN: Nombre
 
-**Siguiente:** T-NNN-01 <!-- el coordinador la actualiza al cortar cada sesión: ola o tarea que va después -->
+**Siguiente:** T-NNN-01 <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
-Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se marca `[P]` si puede hacerse a la vez que otras de su ola: sus dependencias están hechas, su columna **Toca** no comparte archivos ni zonas con ellas y no usa el emulador ni el móvil, ni cambia el esquema de BD, los ARB, `tokens.json`, `pubspec.yaml` ni código nativo compartido (ver `/spec-implement` §1). Los textos y los tokens van juntos en una tarea al principio. Una PR puede agrupar varias tareas consecutivas.
+Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Los textos y los tokens van juntos en una tarea al principio. Una PR puede agrupar varias tareas consecutivas.
 
 | ID | Tarea | Depende de | Toca | Verificación | CA |
 |---|---|---|---|---|---|

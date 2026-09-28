@@ -34,13 +34,13 @@ Objetivo: que el desarrollo con Claude Code sea **consistente** (SDD, convencion
 | `security-reviewer` | Solo lectura | Amenazas T-x / MASVS sobre diffs, specs o planes |
 | `a11y-reviewer` | Solo lectura | Gestos → acciones semánticas, foco, anuncios, contraste, texto grande |
 | `test-writer` | Lectura, escritura, Bash | Tests desde los CA (unitarios, widgets, goldens, integración, migraciones) |
-| `spec-task` | Lectura, escritura, Bash | Una tarea T-NNN-XX de principio a fin con el contexto limpio (tests, código, verificación, fila de Estado, commit); en "modo worktree", en paralelo con otra tarea `[P]` |
+| `spec-task` | Lectura, escritura, Bash | Una tarea T-NNN-XX de principio a fin con el contexto limpio (tests, código, verificación, fila de Estado, commit) |
 
-### 2.1 Sesiones cortas y tareas en paralelo
+### 2.1 Sesiones cortas
 
 Para gastar menos contexto, cada spec se hace en varias sesiones que empiezan solo con archivos: **1. Spec** (revisión y aprobación) → **2. Plan** (`plan.md` + `tasks.md`) → **3…n. Implementación** (un coordinador que lee solo `tasks.md` y lanza un `spec-task` nuevo por tarea; se corta antes de usar el móvil o cada ~6 tareas, dejando la línea **Siguiente** de `tasks.md` al día) → **Cierre** (revisiones, DoD, PR). Las filas de Estado miden ≤ 3 líneas y cada `spec-task` lee solo las de sus dependencias; lo que sirve para otras tareas va a las **Trampas** de `spec-task.md`.
 
-Dos tareas pueden ir a la vez solo si llevan `[P]`, su columna **Toca** no comparte archivos y ninguna usa el emulador o el móvil, ni cambia el esquema de BD, los ARB, los tokens, `pubspec.yaml` o código nativo compartido. Cada una va en su *worktree* y el coordinador las integra de una en una, con analyze y tests tras cada una; si una no integra, se repite en serie. Como mucho 2 a la vez, por el espacio en disco. Detalle en `.claude/skills/spec-implement/SKILL.md`.
+Las tareas van **de una en una, en orden**. Se valoró hacer dos a la vez en *worktrees* y se descartó (propietario, 2026-09-28): gasta más tokens y disco (~10 GB por copia), hay fallos que solo se ven al juntarlas y en la 008 apenas había tareas independientes. Detalle en `.claude/skills/spec-implement/SKILL.md`.
 
 ## 3. Skills, plugins y MCP de terceros: evaluación
 

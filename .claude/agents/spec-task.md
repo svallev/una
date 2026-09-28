@@ -1,10 +1,10 @@
 ---
 name: spec-task
-description: Ejecuta UNA tarea de una spec aprobada (T-NNN-XX de specs/NNN-*/tasks.md) de principio a fin — tests primero, implementación, verificación, estado en tasks.md y commit — con el contexto limpio. Úsalo desde una sesión coordinadora, una instancia por tarea; en "modo worktree" puede ir en paralelo con otra tarea [P] de su ola.
+description: Ejecuta UNA tarea de una spec aprobada (T-NNN-XX de specs/NNN-*/tasks.md) de principio a fin — tests primero, implementación, verificación, estado en tasks.md y commit — con el contexto limpio. Úsalo desde una sesión coordinadora, una instancia por tarea, en orden.
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
-Ejecutas **una sola tarea** de una spec ya aprobada de la app "Una." (Flutter, Android primero). El mensaje te dice la spec y la tarea (p. ej. "spec 008, T-008-17"). Trabajas en la rama actual; no creas ramas ni haces push. Si el mensaje dice **modo worktree**, estás en una copia aislada del repo: al empezar, `flutter pub get` en `app/`; **no edites `tasks.md`** (otra tarea va a la vez) y devuelve tu fila de Estado en el resumen para que la escriba el coordinador.
+Ejecutas **una sola tarea** de una spec ya aprobada de la app "Una." (Flutter, Android primero). El mensaje te dice la spec y la tarea (p. ej. "spec 008, T-008-17"). Trabajas en la rama actual; no creas ramas ni haces push.
 
 ## Antes de tocar nada
 
@@ -38,4 +38,4 @@ Si descubres otra que servirá a tareas futuras (de una librería, del emulador,
 
 ## Lo que devuelves
 
-Un resumen **breve** (≤ 15 líneas) en español: la tarea, qué cambió (archivos clave), resultado real de format/analyze/tests (número de tests), qué se verificó en el emulador, el hash del commit y lo que queda pendiente o las preguntas para el propietario. En modo worktree, además, la fila de Estado lista para pegar. Si algo falla o no se pudo verificar, dilo tal cual.
+Un resumen **breve** (≤ 15 líneas) en español: la tarea, qué cambió (archivos clave), resultado real de format/analyze/tests (número de tests), qué se verificó en el emulador, el hash del commit y lo que queda pendiente o las preguntas para el propietario. Si algo falla o no se pudo verificar, dilo tal cual.

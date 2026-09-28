@@ -14,10 +14,10 @@ Cada spec pasa por varias sesiones; cada una empieza **solo con archivos** (nada
 |---|---|---|
 | 1. Spec | `spec-reviewer`, decisiones del propietario, spec **Aprobada** | Commit de la spec |
 | 2. Plan | `plan.md` y `tasks.md` desde `specs/_templates/`; `security-reviewer` y `a11y-reviewer` sobre el plan si toca sus superficies | Plan **Aprobado** y commit |
-| 3…n. Implementación | Esta sesión coordina: lanza **un `spec-task` nuevo por tarea** (u ola, abajo) y no programa ella misma | Punto natural: antes de una tarea que necesita el móvil del propietario, tras ~6 tareas o si el contexto pasa de ~150k |
+| 3…n. Implementación | Esta sesión coordina: lanza **un `spec-task` nuevo por tarea** y no programa ella misma | Punto natural: antes de una tarea que necesita el móvil del propietario, tras ~6 tareas o si el contexto pasa de ~150k |
 | Final. Cierre | Revisiones, DoD, PR (§3) | PR lista |
 
-Al cortar una sesión: la línea **Siguiente** de `tasks.md` dice qué ola o tarea va después, y la sesión nueva empieza con "`/spec-implement NNN`".
+Al cortar una sesión: la línea **Siguiente** de `tasks.md` dice qué tarea va después, y la sesión nueva empieza con "`/spec-implement NNN`".
 
 ## 0. Comprobaciones previas (si alguna falla, para y avisa)
 
@@ -30,17 +30,13 @@ Al cortar una sesión: la línea **Siguiente** de `tasks.md` dice qué ola o tar
 
 Lee **solo** `tasks.md` (tabla de tareas, línea **Siguiente** y la tabla **Estado**). No leas la spec ni el código salvo para resolver una pregunta de un subagente.
 
-1. Elige la siguiente **ola**: tareas cuyas dependencias están hechas.
-2. **Una sola tarea** (el caso normal): lanza `spec-task` en primer plano con "spec NNN, T-NNN-XX" en la rama de trabajo. Lee su resumen y sigue.
-3. **Varias tareas a la vez**, solo si se cumplen **todas** estas condiciones:
-   - todas llevan `[P]` y sus columnas **Toca** no comparten ningún archivo ni zona;
-   - ninguna usa el emulador ni el móvil, ni cambia el esquema de BD (`build_runner`), los ARB, `tokens.json`, `pubspec.yaml` ni código nativo compartido;
-   - como mucho **2** a la vez (espacio en disco: cada copia genera varios GB en `.dart_tool` y `build`; mira `df -h` antes).
+Las tareas van **de una en una, en orden** (decisión del propietario, 2026-09-28: nada en paralelo; no compensa el riesgo ni el disco para lo poco que se gana).
 
-   Cómo: cada una con `isolation: "worktree"` y el mensaje "spec NNN, T-NNN-XX, **modo worktree**". En ese modo el subagente no toca `tasks.md`: devuelve su fila de **Estado**. Al terminar todas, **integra de una en una** en la rama de trabajo (`git cherry-pick` de su commit); tras cada una, `flutter analyze --fatal-infos` y `flutter test` en verde. Si una no integra limpia o rompe los tests, se descarta (`git cherry-pick --abort`) y se repite **en serie** con un `spec-task` nuevo sobre la rama al día. Después escribe las filas de Estado, haz un commit `docs(NNN): status T-…` y borra los *worktrees* (`git worktree remove`, `git branch -D`).
-4. Si un subagente devuelve una pregunta: pásala al propietario con su recomendación. Para seguir, lanza un `spec-task` **nuevo** con un encargo corto; no reanudes el anterior (reanudar recarga todo su historial).
-5. Tareas con el móvil del propietario: las hace el coordinador (los subagentes no lo usan), con su permiso y `--keep-app-running`.
-6. Actualiza la línea **Siguiente** de `tasks.md` antes de cortar la sesión.
+1. Elige la siguiente tarea cuyas dependencias están hechas.
+2. Lanza `spec-task` en primer plano con "spec NNN, T-NNN-XX" en la rama de trabajo. Lee su resumen y sigue con la siguiente.
+3. Si un subagente devuelve una pregunta: pásala al propietario con su recomendación. Para seguir, lanza un `spec-task` **nuevo** con un encargo corto; no reanudes el anterior (reanudar recarga todo su historial).
+4. Tareas con el móvil del propietario: las hace el coordinador (los subagentes no lo usan), con su permiso y `--keep-app-running`.
+5. Actualiza la línea **Siguiente** de `tasks.md` antes de cortar la sesión.
 
 Si se pide una sola tarea (`/spec-implement NNN T-NNN-XX`), lanza solo esa.
 
