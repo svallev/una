@@ -232,7 +232,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
 | CL-008-9 | Doble toque rápido en "Continuar" con PDF | Se crea una sola tarea |
 | CL-008-10 | Páginas de tamaños u orientaciones distintas | Cada página, al ancho, con su proporción |
 | CL-008-11 | Registros (logs) en *release* | No se registra ningún nombre, ruta, dirección, enlace ni contenido de un PDF |
-| CL-008-12 | Web de pruebas (ADR-0010) | "Subir archivo" usa el selector del navegador; el PDF se guarda solo en memoria; no hay giro |
+| CL-008-12 | Web de pruebas (ADR-0010) | "Subir archivo" usa el selector del navegador; el PDF se guarda solo en memoria; no hay giro, ni con PDF ni con imagen (enmienda del propietario, 2026-09-28, por CA-008-11) |
 | CL-008-13 | La miniatura de la app en "Recientes" | Muestra el PDF. **[Pendiente, spec 010]** Ocultarla, como en CL-007-11 |
 
 ## 5. Estados vacíos y de error
