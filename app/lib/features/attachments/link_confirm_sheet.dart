@@ -11,11 +11,25 @@ import '../../ui/una_sheet.dart';
 /// Pregunta antes de abrir un enlace de un PDF (CA-008-12): "¿Abrir {host} en
 /// el navegador?" o "¿Abrir {destino} con otra app?". Devuelve true solo con
 /// "Abrir"; "Cancelar", tocar fuera, atrás, deslizar o Esc devuelven null.
-Future<bool?> showLinkConfirmSheet(BuildContext context, LinkTarget target) =>
-    showUnaSheet<bool>(
+Future<bool?> showLinkConfirmSheet(
+  BuildContext context,
+  LinkTarget target,
+) async {
+  linkConfirmOpen.value = true;
+  try {
+    return await showUnaSheet<bool>(
       context,
       builder: (_) => LinkConfirmSheet(target: target),
     );
+  } finally {
+    linkConfirmOpen.value = false;
+  }
+}
+
+/// La confirmación de un enlace está abierta. A diferencia del menú, deja
+/// girar la tarea de debajo: si se gira con ella abierta, sigue abierta en la
+/// nueva orientación (CA-008-11).
+final linkConfirmOpen = ValueNotifier<bool>(false);
 
 class LinkConfirmSheet extends StatefulWidget {
   const LinkConfirmSheet({super.key, required this.target});

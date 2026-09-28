@@ -8,7 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var images: ImageImport? = null
-    private var rotation: ImageRotation? = null
+    private var rotation: AttachmentRotation? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -18,13 +18,18 @@ class MainActivity : FlutterActivity() {
         }
         // Enlaces de un PDF (spec 008).
         MethodChannel(messenger, LinkOpener.CHANNEL).setMethodCallHandler(LinkOpener(this))
-        val imageRotation = ImageRotation(this).also { rotation = it }
+        val attachmentRotation = AttachmentRotation(this).also { rotation = it }
         // Pantalla encendida mientras se ve un adjunto (spec 007, CA-007-12) y
-        // giro de la tarea actual con imagen (CA-007-11).
+        // giro de la tarea actual con imagen o PDF, con "Volver a vertical"
+        // (CA-008-11).
         MethodChannel(messenger, "una/screen").setMethodCallHandler { call, result ->
             when (call.method) {
-                "rotateWithImage" -> {
-                    imageRotation.follow(call.arguments == true)
+                "rotateWithAttachment" -> {
+                    attachmentRotation.follow(call.arguments == true)
+                    result.success(null)
+                }
+                "backToPortrait" -> {
+                    attachmentRotation.backToPortrait()
                     result.success(null)
                 }
                 "keepOn" -> {

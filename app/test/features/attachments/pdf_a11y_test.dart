@@ -22,7 +22,11 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   }
 
-  Future<List<LinkTarget>> pumpPdf(WidgetTester tester, String name) async {
+  Future<List<LinkTarget>> pumpPdf(
+    WidgetTester tester,
+    String name, {
+    String? taskLabel,
+  }) async {
     final links = <LinkTarget>[];
     tester.view
       ..physicalSize = const Size(390, 700)
@@ -45,6 +49,7 @@ void main() {
             initialPosition: PdfPosition.start,
             onPosition: (_) {},
             onLink: links.add,
+            taskLabel: taskLabel,
           ),
         ),
       ),
@@ -71,6 +76,22 @@ void main() {
     );
     // No queda la etiqueta inglesa del visor.
     expect(find.bySemanticsLabel(RegExp(r'^Page \d')), findsNothing);
+    await unmount(tester);
+    handle.dispose();
+  });
+
+  testWidgets('CA-008-20 / CA-008-11: en horizontal, la página visible se lee '
+      'con el prefijo "Tarea actual"', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pumpPdf(tester, 'pages_20.pdf', taskLabel: 'Tarea actual: Programa');
+    expect(
+      find.bySemanticsLabel(
+        RegExp(r'^Tarea actual: Programa\. Página 1 de 20\. Pagina 1'),
+      ),
+      findsOneWidget,
+    );
+    // Solo la primera página visible.
+    expect(find.bySemanticsLabel(RegExp('Tarea actual')), findsOneWidget);
     await unmount(tester);
     handle.dispose();
   });

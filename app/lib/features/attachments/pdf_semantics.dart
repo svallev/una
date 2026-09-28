@@ -64,11 +64,16 @@ class PdfSemanticsLayer extends StatelessWidget {
     required this.controller,
     required this.content,
     required this.onLink,
+    this.prefix,
   });
 
   final PdfViewerController controller;
   final Map<int, PdfPageContent> content;
   final ValueChanged<PdfLink> onLink;
+
+  /// Se lee delante de la primera página visible: "Tarea actual: …" en
+  /// horizontal, donde no está la franja (CA-008-20).
+  final String? prefix;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -83,15 +88,18 @@ class PdfSemanticsLayer extends StatelessWidget {
       final layout = controller.layout.pageLayouts;
       final total = pages.length;
       final children = <Widget>[];
+      var first = true;
       for (var i = 0; i < pages.length && i < layout.length; i++) {
         final page = pages[i];
         final rect = MatrixUtils.transformRect(m, layout[i]);
         if (!rect.overlaps(view)) continue;
         final data = content[page.pageNumber];
         final text = data?.text ?? '';
-        final label = text.isEmpty
-            ? l10n.pdfPageA11y(page.pageNumber, total)
-            : '${l10n.pdfPageA11y(page.pageNumber, total)}. $text';
+        final pageLabel = l10n.pdfPageA11y(page.pageNumber, total);
+        final withText = text.isEmpty ? pageLabel : '$pageLabel. $text';
+        final lead = first ? prefix : null;
+        first = false;
+        final label = lead == null ? withText : '$lead. $withText';
         final links = <Widget>[];
         for (final link in data?.links ?? const <PdfLink>[]) {
           final target = linkTargetOf(link);

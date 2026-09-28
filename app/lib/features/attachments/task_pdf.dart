@@ -28,6 +28,7 @@ class TaskPdfArgs {
     this.caption,
     this.actions = const {},
     this.onLink,
+    this.taskLabel,
   });
 
   final PdfSource source;
@@ -59,6 +60,10 @@ class TaskPdfArgs {
   /// pantalla pide confirmación (CA-008-12). Los internos los resuelve el
   /// visor y los bloqueados no llegan.
   final ValueChanged<LinkTarget>? onLink;
+
+  /// En horizontal, sin franja ni texto, la página visible se lee con este
+  /// prefijo: "Tarea actual: {texto o nombre}" (CA-008-20). Null en vertical.
+  final String? taskLabel;
 }
 
 /// El visor del PDF de la tarea actual. Se sustituye en los tests de widgets:
@@ -688,6 +693,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
                       controller: _controller,
                       content: _content,
                       onLink: _onLink,
+                      prefix: args.taskLabel,
                     ),
                   ],
                 ),
