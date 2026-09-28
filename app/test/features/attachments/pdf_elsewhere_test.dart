@@ -185,7 +185,9 @@ void main() {
     });
 
     testWidgets('CA-008-20: el lector lee "{n} de {total}: {texto}. Con PDF" '
-        'y, sin texto, el nombre; la insignia es decorativa', (tester) async {
+        'y, sin texto, "{nombre}. PDF"; la insignia es decorativa', (
+      tester,
+    ) async {
       final handle = tester.ensureSemantics();
       await openListWith(tester, [
         await pdfTask('t1', text: 'Congreso', rank: 'A'),
@@ -196,10 +198,8 @@ void main() {
         find.bySemanticsLabel('1 de 3. Tarea actual: Congreso. Con PDF'),
         findsOneWidget,
       );
-      // [Pendiente: pregunta al propietario] la spec dice "{nombre}. PDF"
-      // (CA-008-20) y la tabla de textos, `a11yRowWithPdf` con el nombre.
       expect(
-        find.bySemanticsLabel('2 de 3: Programa.pdf. Con PDF'),
+        find.bySemanticsLabel('2 de 3: Programa.pdf. PDF'),
         findsOneWidget,
       );
       expect(

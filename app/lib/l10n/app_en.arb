@@ -116,6 +116,7 @@
   "a11yWithPdf": "{text}. With PDF, {name}, {size}",
   "a11yPdfOnly": "{name}. PDF, {size}",
   "a11yRowWithPdf": "{text}. With PDF",
+  "a11yRowPdfOnly": "{name}. PDF",
   "a11yZoomLevel": "Zoom {percent}%",
   "pdfLinkWeb": "Link to {host}",
   "pdfLinkPage": "Link to page {page}",

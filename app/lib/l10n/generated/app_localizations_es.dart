@@ -431,6 +431,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String a11yRowPdfOnly(String name) {
+    return '$name. PDF';
+  }
+
+  @override
   String a11yZoomLevel(int percent) {
     return 'Zoom $percent %';
   }

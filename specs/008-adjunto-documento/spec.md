@@ -274,7 +274,8 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 | ~~`backToPortrait`~~ | ~~Volver a vertical~~ | ~~Back to portrait~~ | Quitada (propietario, 2026-09-28) |
 | `a11yWithPdf` | {text}. Con PDF, {name}, {size} | {text}. With PDF, {name}, {size} | Tarea actual con texto |
 | `a11yPdfOnly` | {name}. PDF, {size} | {name}. PDF, {size} | Tarea actual sin texto |
-| `a11yRowWithPdf` | {text}. Con PDF | {text}. With PDF | Fila del listado (sin texto, `text` = nombre) |
+| `a11yRowWithPdf` | {text}. Con PDF | {text}. With PDF | Fila del listado con texto |
+| `a11yRowPdfOnly` | {name}. PDF | {name}. PDF | Fila del listado sin texto. **Enmienda del propietario (2026-09-28):** antes, `a11yRowWithPdf` con el nombre ("{nombre}. Con PDF"); manda CA-008-20 |
 | `a11yZoomLevel` | Zoom {percent} % | Zoom {percent}% | Tras una acción de zoom |
 | `pdfLinkWeb` / `pdfLinkPage` / `pdfLinkApp` | Enlace a {host} / Enlace a la página {page} / Enlace a {target} | Link to {host} / Link to page {page} / Link to {target} | Etiquetas de los enlaces |
 | `a11yPdfAdded` | PDF añadido | PDF added | |

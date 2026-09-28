@@ -26,12 +26,16 @@ String taskLabel(AppLocalizations l10n, Task task) {
 
 /// Lectura para el lector de pantalla (CA-007-21, CA-008-20): "{texto}. Con
 /// foto" / "Con imagen" / "Con PDF", o "Foto"/"Imagen" sin texto. Con PDF y
-/// sin texto, `a11yRowWithPdf` con el nombre (tabla de textos de la spec 008).
+/// sin texto, "{nombre}. PDF" (`a11yRowPdfOnly`).
 String taskReading(AppLocalizations l10n, Task task) {
   final text = task.text ?? '';
   final attachment = task.attachment;
   if (attachment == null) return text;
-  if (attachment.isPdf) return l10n.a11yRowWithPdf(taskLabel(l10n, task));
+  if (attachment.isPdf) {
+    return text.isEmpty
+        ? l10n.a11yRowPdfOnly(taskLabel(l10n, task))
+        : l10n.a11yRowWithPdf(text);
+  }
   if (text.isEmpty) return attachmentKindLabel(l10n, task)!;
   return attachment.isPhoto
       ? l10n.a11yWithPhoto(text)

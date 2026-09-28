@@ -788,11 +788,17 @@ abstract class AppLocalizations {
   /// **'{name}. PDF, {size}'**
   String a11yPdfOnly(String name, String size);
 
-  /// Lectura de la fila del listado con PDF; sin texto, `text` es el nombre del archivo. CA-008-20
+  /// Lectura de la fila del listado con PDF y texto. CA-008-20
   ///
   /// In es, this message translates to:
   /// **'{text}. Con PDF'**
   String a11yRowWithPdf(String text);
+
+  /// Lectura de la fila del listado con PDF sin texto: el nombre del archivo. CA-008-20
+  ///
+  /// In es, this message translates to:
+  /// **'{name}. PDF'**
+  String a11yRowPdfOnly(String name);
 
   /// Anuncio tras una acción de zoom del PDF. CA-008-10/21
   ///
