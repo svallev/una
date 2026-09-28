@@ -1,7 +1,7 @@
 # Plan técnico — Spec 009: Tareas con una página web (URL)
 
 - **Spec:** `specs/009-adjunto-url/spec.md` (estado: Aprobada, 2026-09-28)
-- **ADR aplicables:** ADR-0016 (sin copia local; excepción a P3), ADR-0007 (validación, WebView endurecida, navegación; enmendado por el 0016), ADR-0002 (repositorio y esquema), ADR-0004 (copias), ADR-0010 (web de pruebas), ADR-0012 (completar borra), ADR-0013/0014/0015 (horizontal), resultados del spike S4 (`docs/spikes/F1-S3-S4-S5-resultados.md`)
+- **ADR aplicables:** ADR-0016 (sin copia local; excepción a P3), ADR-0007 (validación, WebView endurecida, navegación; enmendado por el 0016), ADR-0017 (envoltorio del `WebViewClient` para el fallo del proceso de la página), ADR-0002 (repositorio y esquema), ADR-0004 (copias), ADR-0010 (web de pruebas), ADR-0012 (completar borra), ADR-0013/0014/0015 (horizontal), resultados del spike S4 (`docs/spikes/F1-S3-S4-S5-resultados.md`)
 - **Estado del plan:** Aprobado (propietario, 2026-09-28)
 - **Rama:** `feat/009-adjunto-url`, desde `main` (la 008 ya está fusionada)
 
@@ -22,7 +22,8 @@
     - `allowFileAccess`/`allowContentAccess` a `false`, `saveFormData` a `false`;
     - `mixedContentMode = NEVER_ALLOW`, Safe Browsing activado y `supportMultipleWindows` a `false`;
     - un **`DownloadListener`** que no descarga y avisa a Dart (→ "no es una página", CL-009-4; sin él, un PDF dejaba la página en blanco);
-    - `setWebContentsDebuggingEnabled(false)` en *release*.
+    - `setWebContentsDebuggingEnabled(false)` en *release*;
+    - un **envoltorio del `WebViewClient` del paquete** que le reenvía todos los callbacks y solo añade `onRenderProcessGone` (devuelve `true` y avisa a Dart para recrear la WebView), aplicado después de `setNavigationDelegate` y comprobado (ADR-0017).
 - **Nada de la página se queda en el móvil** (CA-009-13, ADR-0016):
   - **al salir de la tarea** (otra pantalla, otra tarea, completar, eliminar): se borran las cookies (`WebViewCookieManager.clearCookies`), el almacenamiento web (`clearLocalStorage`, que en Android es `WebStorage.deleteAllData`: localStorage, IndexedDB y el resto) y la caché (`clearCache`);
   - **al usar la web por primera vez** se escribe una marca (`files/web_used`). Si la app se cerró sin borrar, **después del primer fotograma** del arranque siguiente se borra lo mismo desde Kotlin: `CookieManager.removeAllCookies`, `WebStorage.deleteAllData` y la caché de la WebView. Solo se hace si existe la marca, así que no cuesta nada a quien no usa la web;
@@ -80,12 +81,13 @@ La dirección viaja en la copia de seguridad con la tarea (va en la BD, como el 
 ## 4. Dependencias nuevas
 
 - **`webview_flutter`** (4.x) + **`webview_flutter_android`** (dependencia directa: hace falta para los ajustes de Android y para `WebViewFlutterAndroidExternalApi`). Licencia BSD-3, del equipo de Flutter (`flutter.dev`, publicador verificado), en mantenimiento activo. Ya se probó en S4. Usa la WebView del sistema (Chromium, que se actualiza con Play): no añade motor al APK. Motivo: no hay WebView en el SDK de Flutter, y el ADR-0007 la eligió frente a `flutter_inappwebview`, sin mantenimiento. Solo se registra la implementación de Android: `webview_flutter_wkwebview` llega como transitiva, pero no se usa hasta F-iOS.
-  - **Comprobaciones [Pendiente, T-009-01]**, en el emulador y con la versión fijada; si alguna falla, se para y se consulta (§7):
-    1. un certificado inválido **se cancela** y llega como error distinguible (`onSslAuthError`, o el comportamiento por defecto del paquete);
-    2. los diálogos JS, el selector de archivos, los permisos y la pantalla completa se pueden descartar desde Dart;
-    3. `WebViewFlutterAndroidExternalApi.getWebView` da la instancia para los ajustes nativos y el `DownloadListener`;
-    4. **un fallo del proceso de la página** (`chrome://crash`, cargado solo en la prueba) **no cierra la app**;
-    5. `onPageStarted` no llega en un fallo de DNS o sin red (lo necesita el temporizador de 20 s).
+  - **Comprobaciones [Hecho, T-009-01, 2026-09-28]**, en el emulador (Pixel_6a, API 37, WebView 149) con 4.14.1 y servidores locales:
+    1. **OK.** Un certificado inválido llega a `onSslAuthError`, se cancela y no llega ninguna petición al servidor. Ojo: después llega `onPageFinished` **sin** `onPageStarted`.
+    2. **OK.** Diálogos JS, selector de archivos, permisos (cámara, geolocalización) y pantalla completa se descartan desde Dart. Si no se pasa el callback de pantalla completa, el paquete pone el suyo: hay que pasarlo siempre.
+    3. **OK.** `getWebView` da la instancia desde Kotlin; los ajustes se leen de vuelta; un `DownloadListener` propio recibe `application/pdf`. Safe Browsing viene activado de serie.
+    4. **Falla con el paquete solo**: `chrome://crash` cierra la app (su cliente no implementa `onRenderProcessGone`). **Resuelto con el envoltorio del ADR-0017** (decisión del propietario, opción (a)): con él, la app sigue viva, la WebView se recrea (probado dos veces seguidas) y el `NavigationDelegate` de la nueva recibe `onNavigationRequest`, `onPageStarted`, `onPageFinished`, `onWebResourceError` y `onSslAuthError`. Un `setNavigationDelegate` posterior quita el envoltorio.
+    5. **`onPageStarted` sí llega** sin red (DNS), seguido del `onWebResourceError` del marco principal. Por eso **se clasifica por el error**, no por el temporizador. El de 20 s sigue haciendo falta: con una conexión colgada no llegó nada en 30 s.
+  - **[Hecho]** Licencias (`check_licenses.dart`), `check-android-permissions.sh release` (solo `INTERNET`), `flutter build web` sin la WebView y APK arm64 de 28.238.092 a 28.304.161 bytes (+66 KB).
   - Licencias en `check_licenses.dart`; tamaño del APK con `--analyze-size` (se espera poco: solo código Java/Kotlin del paquete); `threat-model.md §5`.
 - **La PSL** es un dato (MPL-2.0), no una dependencia de código; su aviso de licencia se añade a `font_licenses.dart` (o a un registro de licencias equivalente).
 - **Sin más dependencias:** para detectar la red no se usa `connectivity_plus` (propietario: "Reintentar"); para abrir en el navegador, `LinkOpener` de la 008 (`ACTION_VIEW` + `BROWSABLE`, ya con `<queries>`), no `url_launcher`.
@@ -124,7 +126,9 @@ La WebView no funciona en `flutter test`. Los tests de widget usan un `WebPageDr
   - nada de la página se guarda; ningún registro con direcciones (CL-009-9);
   - `INTERNET` es el único permiso nuevo: `check-android-permissions.sh` lo pasa a permitido en *release*, y cualquier otro sigue fallando;
   - se pasan `security-reviewer` y `/security-check`.
-- **Privacidad (P4):** la única red es la página que el usuario pidió ver ("Data Not Collected" no cambia). Safe Browsing de Android puede consultar a Google la reputación de las direcciones (con prefijos de hash). **[Pendiente T-009-01]** Confirmar cómo lo trata la ficha de Data Safety; si es un problema, se desactiva y se consulta.
+- **Privacidad (P4):** la única red es la página que el usuario pidió ver ("Data Not Collected" no cambia).
+  - **Safe Browsing activado** (propietario, 2026-09-28): la WebView del sistema consulta a Google la reputación de las direcciones (con prefijos de hash). **[Suposición, PD-9]** No cambia la ficha de Data Safety; se revisa antes de publicar (checklist de publicación).
+  - **`android.webkit.WebView.MetricsOptOut` = `true`** en el manifiesto: la WebView no envía métricas ni diagnósticos (T-009-01).
 - **Accesibilidad:**
   - la barra y el logotipo en horizontal llevan la tarea y sus acciones;
   - la página, con la accesibilidad de la WebView;
@@ -141,10 +145,10 @@ La WebView no funciona en `flutter test`. Los tests de widget usan un `WebPageDr
 
 | Riesgo | Mitigación / alternativa |
 |---|---|
-| `webview_flutter` no deja cancelar un certificado inválido de forma distinguible, o un fallo del proceso de la página cierra la app | T-009-01 lo comprueba antes de construir nada. Si falla: **WebView propia en Kotlin** (vista de plataforma con su `WebViewClient`: `onReceivedSslError` → `cancel`, `onRenderProcessGone`), sin el paquete. Supondría enmendar el ADR-0007, así que **se para y se consulta** |
+| `webview_flutter` no deja cancelar un certificado inválido de forma distinguible, o un fallo del proceso de la página cierra la app | **[Hecho, T-009-01]** El certificado se cancela y se distingue. El fallo del proceso **sí cerraba la app**: se resuelve envolviendo el `WebViewClient` del paquete desde Kotlin (ADR-0017, opción (a) del propietario). **Riesgo que queda (R-21):** depende de detalles internos del paquete; se comprueba que el envoltorio está puesto cada vez que se aplica, la app no llama a `setNavigationDelegate` después, y se revalida (`chrome://crash` y callbacks) en cada actualización. Alternativa si se rompe: WebView propia en Kotlin, sin el paquete (enmendaría el ADR-0007: se consulta) |
 | No se puede distinguir un enlace que abre ventana nueva (`target=_blank`) de uno normal: con `supportMultipleWindows = false`, Android lo carga en la misma WebView | La política de sitio se aplica igual: a otro sitio pide confirmación; al mismo sitio navega dentro de la tarea en vez de preguntar. **[Pendiente de consultar]** Si se quiere preguntar siempre, `supportMultipleWindows = true` + `onCreateWindow` exige la WebView propia en Kotlin |
 | Sin red y "el servidor no admite https" dan errores parecidos (CA-009-08 frente a CA-009-09) | Solo se clasifica como `insecure` si la dirección era `http://` y falla la conexión o el TLS del intento https; un fallo de DNS es siempre `offline`. Tests con servidores locales |
 | La PSL caduca (dominios nuevos) | `tools/update-psl.sh` y una revisión en cada versión (checklist de publicación). Un sufijo desconocido cae en la regla por defecto de la PSL (la última etiqueta), que como mucho pide confirmación de más |
 | TalkBack no enfoca el logotipo como nodo de la tarea en horizontal, o la WebView se queda el foco | Se prueba en el emulador (T-009-19). Alternativa: un nodo propio encima de la página, sin toques, con la lectura y las acciones |
 | La WebView tarda en crearse (~100–300 ms) y el primer contenido depende de la red | Fuera del presupuesto de CA-001-09 (ADR-0016): la barra y el indicador están en el primer fotograma |
-| Safe Browsing envía datos a Google (P4) | Se evalúa en T-009-01; se puede desactivar (`WebSettingsCompat`) |
+| Safe Browsing envía datos a Google (P4) | **[Hecho]** Se mantiene activado (propietario, 2026-09-28), con `MetricsOptOut`; la ficha Data Safety queda en PD-9. Se puede desactivar (`WebSettings.safeBrowsingEnabled`) si Play lo exigiera |

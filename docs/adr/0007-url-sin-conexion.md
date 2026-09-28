@@ -1,6 +1,6 @@
 # ADR-0007: URL como tarea: WebView endurecida en vivo + captura de página completa para sin conexión
 
-- **Estado:** Aceptado para Android (spike S4, 2026-09-24); provisional para iOS (F-iOS). **Enmendado por el [ADR-0016](0016-web-sin-copia-local.md) (2026-09-28): sin captura ni copia local**; siguen la validación, la WebView endurecida, la navegación contenida y la barra del dominio
+- **Estado:** Aceptado para Android (spike S4, 2026-09-24); provisional para iOS (F-iOS). **Enmendado por el [ADR-0016](0016-web-sin-copia-local.md) (2026-09-28): sin captura ni copia local**; siguen la validación, la WebView endurecida, la navegación contenida y la barra del dominio. Completado por el [ADR-0017](0017-webview-fallo-del-proceso.md) (2026-09-28): el fallo del proceso de la página se gestiona envolviendo el `WebViewClient` del paquete
 - **Fecha:** 2026-09-24
 - **Relacionado:** spec 009, modelo de amenazas (T-4, T-5, T-6), ADR-0001; riesgos R-04, R-05
 

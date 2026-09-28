@@ -18,6 +18,9 @@ dependencies:
   path_provider: ^2.1.6
   pdfrx: 2.6.5
   uuid: ^4.6.0
+  # Spec 009 (ADR-0007/0016): WebView del sistema para la tarea web. Fijadas (P11).
+  webview_flutter: 4.14.1
+  webview_flutter_android: 4.14.1
 
 dev_dependencies:
   flutter_test:

@@ -28,7 +28,7 @@ Recorre cada punto y presenta el estado (✅ / ❌ / N/A con evidencia). **No su
 
 ## Privacidad y tiendas
 - [ ] `PrivacyInfo.xcprivacy` sin datos recogidos y con las *required reason APIs*; App Store: "Data Not Collected".
-- [ ] Play Data Safety: "No data collected / shared"; el manifiesto combinado solo con los permisos permitidos (`tools/check-android-permissions.sh`).
+- [ ] Play Data Safety: "No data collected / shared"; el manifiesto combinado solo con los permisos permitidos (`tools/check-android-permissions.sh`). Revisar PD-9 (Safe Browsing de la WebView, spec 009) con la guía de Play vigente.
 - [ ] Política de privacidad publicada y enlazada (Bloque 5; necesaria para publicar).
 - [ ] Fichas en ES y EN, capturas (con datos ficticios), icono, clasificación de contenido.
 - [ ] Play: la prueba cerrada con ≥ 12 testers durante 14 días está cumplida (cuenta personal nueva).

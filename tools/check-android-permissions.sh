@@ -4,14 +4,14 @@
 #
 #   tools/check-android-permissions.sh [release|debug]     (desde app/, tras compilar esa variante)
 #
-# La release es la que importa: sin ningún permiso hasta la spec 009 (INTERNET para
-# la WebView de tareas URL, ADR-0007). Se revisan todos los <uses-permission*>, de
+# La release es la que importa: solo INTERNET, para la WebView de la tarea web (spec 009,
+# ADR-0016; P4: "la carga de una URL que el usuario ha pedido ver"). Se revisan todos los <uses-permission*>, de
 # cualquier espacio de nombres (p. ej. com.google.android.gms.permission.AD_ID).
 set -euo pipefail
 
 MODE="${1:-release}"
 case "$MODE" in
-  release) ALLOWED=() ;;                              # Spec 009 añadirá android.permission.INTERNET
+  release) ALLOWED=("android.permission.INTERNET") ;; # WebView de la tarea web (spec 009)
   debug)   ALLOWED=("android.permission.INTERNET") ;; # La herramienta de Flutter la añade en debug
   *) echo "Uso: $0 [release|debug]" >&2; exit 2 ;;
 esac
