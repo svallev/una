@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:app/app/providers.dart';
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
@@ -127,13 +128,18 @@ void main() {
       String? taskLabel,
       Map<CustomSemanticsAction, VoidCallback> actions = const {},
       GlobalKey<NavigatorState>? navigator,
+      String? caption,
+      Size size = const Size(390, 700),
+      double textScale = 1,
     }) async {
       final links = <LinkTarget>[];
       listen(tester);
       tester.view
-        ..physicalSize = const Size(390, 700)
+        ..physicalSize = size
         ..devicePixelRatio = 1;
       addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = textScale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pumpWidget(
         MaterialApp(
           navigatorKey: navigator,
@@ -148,6 +154,7 @@ void main() {
                 key: name,
               ),
               screen: MemoryImage(tinyImage),
+              caption: caption,
               captionColor: const Color(0xFFFFE55C),
               initialPosition: PdfPosition.start,
               onPosition: (_) {},
@@ -212,6 +219,102 @@ void main() {
         handle.dispose();
       },
     );
+
+    // Fallo visto en el golden `current_task_pdf_es_x2.0` (T-008-24): el alto
+    // de la banda se medía con la escala limitada y el texto se dibujaba con
+    // la del sistema, así que las páginas tapaban la última línea. Los tests
+    // de T-008-23 usaban el visor sustituido, que no dibuja la banda.
+    for (final (width, scale, text) in [
+      (390.0, 1.0, 'Programa del congreso'),
+      (390.0, 2.0, 'Programa del congreso'),
+      (360.0, 2.0, 'Programa del congreso'),
+      (
+        360.0,
+        2.0,
+        'Revisar el programa del congreso de otoño en Valencia y '
+            'confirmar la sala',
+      ),
+      (
+        390.0,
+        1.0,
+        'Revisar el programa del congreso de otoño en Valencia y '
+            'confirmar la sala',
+      ),
+    ]) {
+      testWidgets('CA-008-08 / CA-008-22: con el texto al '
+          '${(scale * 100).round()} % en $width dp, la banda muestra "$text" '
+          'entero, por encima de la primera página', (tester) async {
+        await pumpPdf(
+          tester,
+          'pages_20.pdf',
+          caption: text,
+          size: Size(width, 780),
+          textScale: scale,
+        );
+        expect(tester.takeException(), isNull);
+        final band = tester.getRect(find.byType(PdfCaptionBand));
+        final finder = find.text(text);
+        final paragraph = tester.renderObject<RenderParagraph>(finder);
+        // Alto que necesita el texto con la escala con la que se dibuja.
+        final needed = paragraph.getMaxIntrinsicHeight(paragraph.size.width);
+        final top = tester.getRect(finder).top;
+        expect(
+          top + needed,
+          lessThanOrEqualTo(band.bottom - UnaBorders.strongWidth + 0.5),
+          reason: 'texto $top + $needed, banda $band',
+        );
+        expect(paragraph.size.height, greaterThanOrEqualTo(needed - 0.5));
+        // La primera versión de pantalla (primer fotograma) mide lo mismo:
+        // la banda no salta al quitarla.
+        final face = PdfCaptionBand.heightFor(
+          text,
+          width,
+          PdfCaptionBand.scalerOf(tester.element(finder)),
+          TextDirection.ltr,
+        );
+        expect(band.height, moreOrLessEquals(face, epsilon: 0.5));
+        await unmount(tester);
+      });
+    }
+
+    testWidgets('CA-008-08 / CA-008-22: con el texto al 200 % en 360 dp, la '
+        'banda del primer fotograma mide lo mismo que la del visor', (
+      tester,
+    ) async {
+      const text = 'Programa del congreso';
+      tester.view
+        ..physicalSize = const Size(360, 780)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TaskPdfFace(
+            args: TaskPdfArgs(
+              source: (path: null, bytes: null, key: 'face'),
+              screen: MemoryImage(tinyImage),
+              caption: text,
+              captionColor: const Color(0xFFFFE55C),
+              initialPosition: PdfPosition.start,
+              onPosition: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final finder = find.text(text);
+      final viewerBand = PdfCaptionBand.heightFor(
+        text,
+        360,
+        PdfCaptionBand.scalerOf(tester.element(finder)),
+        TextDirection.ltr,
+      );
+      expect(
+        tester.getSize(find.byType(PdfCaptionBand)).height,
+        moreOrLessEquals(viewerBand, epsilon: 0.5),
+      );
+    });
 
     testWidgets('CA-008-20 / CA-008-11: en horizontal, la página visible se '
         'lee con el prefijo "Tarea actual"', (tester) async {

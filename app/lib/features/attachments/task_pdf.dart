@@ -100,6 +100,14 @@ class PdfCaptionBand extends StatelessWidget {
   final String text;
   final Color color;
 
+  /// Escala del texto de la banda: la del sistema, hasta
+  /// [UnaSizes.imageCaptionMaxTextScale] (como el pie de la imagen, 007). La
+  /// misma al medir el alto ([heightFor]) y al dibujarlo: si no, con el texto
+  /// grande las páginas tapan las últimas líneas.
+  static TextScaler scalerOf(BuildContext context) =>
+      MediaQuery.textScalerOf(context)
+          .clamp(maxScaleFactor: UnaSizes.imageCaptionMaxTextScale);
+
   /// Alto de la banda con [text] a [width] px.
   static double heightFor(
     String text,
@@ -130,13 +138,16 @@ class PdfCaptionBand extends StatelessWidget {
         ),
       ),
       child: Padding(
+        // El borde no aparta al hijo (DecoratedBox): abajo, relleno y borde,
+        // como [heightFor] (y el CSS del prototipo). Así la banda del primer
+        // fotograma mide lo mismo que la del visor.
         padding: const EdgeInsets.fromLTRB(
           UnaSpace.l,
           UnaSpace.m,
           UnaSpace.l,
-          UnaSpace.m,
+          UnaSpace.m + UnaBorders.strongWidth,
         ),
-        child: Text(text, style: captionStyle),
+        child: Text(text, style: captionStyle, textScaler: scalerOf(context)),
       ),
     ),
   );
@@ -705,8 +716,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
             : PdfCaptionBand.heightFor(
                 _caption,
                 width,
-                MediaQuery.textScalerOf(context)
-                    .clamp(maxScaleFactor: UnaSizes.imageCaptionMaxTextScale),
+                PdfCaptionBand.scalerOf(context),
                 Directionality.of(context),
               );
         if (width != _width || band != _bandPx) {
