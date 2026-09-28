@@ -429,7 +429,8 @@ class CurrentTaskScreen extends ConsumerWidget {
       ),
     );
     if (faceOnly || chromeOnly) return ExcludeSemantics(child: screen);
-    // Con imagen, la pantalla no se apaga mientras se usa (CA-007-12).
+    // Con imagen o PDF, en vertical y en horizontal, la pantalla no se apaga
+    // mientras se usa (CA-007-12, CA-008-13).
     return KeepScreenOnWhileVisible(
       enabled: showImage || showPdf,
       child: screen,
