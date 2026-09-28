@@ -8,7 +8,8 @@ import 'attachment_health.dart';
 
 /// Miniatura de 44 px del listado, recortada y con borde de 2 px (prototipo
 /// `item.isImg`, CA-007-20). Si falta o no se puede leer, la insignia
-/// "FOTO"/"IMAGEN" (CA-007-19). Decorativa para el lector.
+/// "FOTO"/"IMAGEN" (CA-007-19). Un PDF lleva siempre la insignia "PDF", esté
+/// o no disponible (CA-008-19). Decorativa para el lector.
 class TaskThumbnail extends ConsumerWidget {
   const TaskThumbnail({
     super.key,
@@ -18,7 +19,7 @@ class TaskThumbnail extends ConsumerWidget {
 
   final Attachment attachment;
 
-  /// "Foto" o "Imagen" (la insignia va en mayúsculas).
+  /// "Foto", "Imagen" o "PDF" (la insignia va en mayúsculas).
   final String kindLabel;
 
   @override

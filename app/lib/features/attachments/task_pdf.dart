@@ -754,14 +754,31 @@ class _TaskPdfViewState extends State<TaskPdfView> {
 
 /// Primer fotograma (y la cara que se rompe o se arruga al completar o
 /// eliminar): la banda (si se empieza por arriba) y la versión de pantalla de
-/// la página, colocada en la fracción guardada.
+/// la página, colocada en la fracción guardada. Al completar o eliminar, si
+/// hay [snapshot] (lo que se veía, CA-008-19), esa imagen.
 class TaskPdfFace extends StatelessWidget {
-  const TaskPdfFace({super.key, required this.args});
+  const TaskPdfFace({super.key, required this.args, this.snapshot});
 
   final TaskPdfArgs args;
 
+  /// Imagen de lo que se veía al empezar a completar o eliminar.
+  final ui.Image? snapshot;
+
   @override
   Widget build(BuildContext context) {
+    final snapshot = this.snapshot;
+    if (snapshot != null) {
+      return ColoredBox(
+        color: UnaColors.surface,
+        child: ClipRect(
+          child: RawImage(
+            image: snapshot,
+            fit: BoxFit.fitWidth,
+            alignment: Alignment.topCenter,
+          ),
+        ),
+      );
+    }
     final caption = args.caption ?? '';
     final position = args.initialPosition ?? PdfPosition.start;
     final atStart = position == PdfPosition.start;

@@ -38,6 +38,7 @@ import '../delete/deletion_controller.dart';
 import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
 import '../task_list/task_list_screen.dart';
+import 'pdf_face_snapshot.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
 class CurrentTaskScreen extends ConsumerWidget {
@@ -493,10 +494,22 @@ class CurrentTaskScreen extends ConsumerWidget {
     final Widget pages = chromeOnly
         ? const SizedBox.expand()
         : faceOnly
-        ? TaskPdfFace(args: args)
+        ? TaskPdfFace(
+            args: args,
+            // Lo que se veía al empezar a completar o eliminar (CA-008-19).
+            snapshot: ref.watch(
+              pdfFaceSnapshotProvider.select(
+                (s) => s?.attachmentId == attachment.id ? s!.image : null,
+              ),
+            ),
+          )
         : !loaded
         ? const ColoredBox(color: UnaColors.surface)
-        : ref.watch(taskPdfBuilderProvider)(args);
+        : PdfFaceCapture(
+            taskId: task.id,
+            attachmentId: attachment.id,
+            child: ref.watch(taskPdfBuilderProvider)(args),
+          );
     // En horizontal, a sangre: sin bordes ni franja (CA-008-11).
     return DecoratedBox(
       position: DecorationPosition.foreground,
