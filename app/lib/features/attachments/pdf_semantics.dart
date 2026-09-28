@@ -7,6 +7,7 @@ import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/link_target.dart';
 import '../../domain/services/link_policy.dart';
 import '../../l10n/generated/app_localizations.dart';
+import 'task_labels.dart';
 
 /// Texto y enlaces de una página, leídos una vez al abrir el PDF (con 20
 /// páginas como máximo caben todos, CA-008-03).
@@ -66,6 +67,7 @@ class PdfSemanticsLayer extends StatelessWidget {
     required this.onLink,
     required this.ready,
     this.prefix,
+    this.actions,
   });
 
   final PdfViewerController controller;
@@ -82,6 +84,12 @@ class PdfSemanticsLayer extends StatelessWidget {
   /// horizontal, donde no está la franja (CA-008-20).
   final String? prefix;
 
+  /// Las acciones del lector sobre el PDF (completar, eliminar, página y
+  /// zoom, CA-008-20), solo las que se pueden hacer ahora. Van en cada página:
+  /// TalkBack enfoca la página, no el contenedor (sin etiqueta; visto en el
+  /// emulador, T-008-23), y solo ofrece las acciones del nodo enfocado.
+  final Map<CustomSemanticsAction, VoidCallback> Function()? actions;
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
@@ -95,6 +103,7 @@ class PdfSemanticsLayer extends StatelessWidget {
       final layout = controller.layout.pageLayouts;
       final total = pages.length;
       final children = <Widget>[];
+      final actions = this.actions?.call();
       var first = true;
       for (var i = 0; i < pages.length && i < layout.length; i++) {
         final page = pages[i];
@@ -106,7 +115,9 @@ class PdfSemanticsLayer extends StatelessWidget {
         final withText = text.isEmpty ? pageLabel : '$pageLabel. $text';
         final lead = first ? prefix : null;
         first = false;
-        final label = lead == null ? withText : '$lead. $withText';
+        final label = lead == null
+            ? withText
+            : '${readingText(lead)}. $withText';
         final links = <Widget>[];
         for (final link in data?.links ?? const <PdfLink>[]) {
           final target = linkTargetOf(link);
@@ -137,6 +148,9 @@ class PdfSemanticsLayer extends StatelessWidget {
                   Semantics(
                     label: label,
                     readOnly: true,
+                    customSemanticsActions: actions == null || actions.isEmpty
+                        ? null
+                        : actions,
                     child: const SizedBox.expand(),
                   ),
                   ...links,

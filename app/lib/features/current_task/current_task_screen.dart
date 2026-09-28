@@ -29,6 +29,7 @@ import '../attachments/pdf_labels.dart';
 import '../attachments/pdf_position_controller.dart';
 import '../attachments/pdf_strip.dart';
 import '../attachments/task_image.dart';
+import '../attachments/task_labels.dart';
 import '../attachments/task_pdf.dart';
 import '../complete/complete_task_action.dart';
 import '../complete/completion_controller.dart';
@@ -168,7 +169,7 @@ class CurrentTaskScreen extends ConsumerWidget {
           null => text,
           _ when missing => l10n.a11yAttachmentMissing(
             text.isNotEmpty
-                ? text
+                ? readingText(text)
                 : isPdf
                 ? pdfTitle
                 : kind,
@@ -176,9 +177,16 @@ class CurrentTaskScreen extends ConsumerWidget {
           // Con PDF (CA-008-20): "{texto}. Con PDF, {nombre}, {tamaño}" o
           // "{nombre}. PDF, {tamaño}".
           _ when isPdf && text.isEmpty => l10n.a11yPdfOnly(pdfTitle, pdfBytes),
-          _ when isPdf => l10n.a11yWithPdf(text, pdfTitle, pdfBytes),
+          _ when isPdf => l10n.a11yWithPdf(
+            readingText(text),
+            pdfTitle,
+            pdfBytes,
+          ),
           _ when text.isEmpty => kind,
-          _ => isPhoto ? l10n.a11yWithPhoto(text) : l10n.a11yWithImage(text),
+          _ =>
+            isPhoto
+                ? l10n.a11yWithPhoto(readingText(text))
+                : l10n.a11yWithImage(readingText(text)),
         }),
         // Papel de imagen, salvo si la lectura ya acaba en "imagen".
         image: isPhoto && showImage,

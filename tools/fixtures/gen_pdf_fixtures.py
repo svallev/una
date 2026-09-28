@@ -326,6 +326,10 @@ def main():
     files['pages_21.pdf'] = p21.build(cat)
 
     files['links.pdf'] = links_pdf()
+    # Una URL escrita en el texto, sin anotación de enlace: pdfrx la detecta
+    # como enlace (T-008-23).
+    url, cat = simple_pdf([['Inscripciones', 'https://example.net/alta']])
+    files['text_url.pdf'] = url.build(cat)
     files['js_form.pdf'] = js_form_pdf()
     files['protected_user.pdf'] = encrypted_pdf(b'secreto', b'owner')      # CL-008-1
     files['protected_owner_only.pdf'] = encrypted_pdf(b'', b'owner')       # CL-008-2

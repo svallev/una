@@ -328,6 +328,21 @@ class _TaskPdfViewState extends State<TaskPdfView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Flutter entrega las acciones al sistema ordenadas por su identificador,
+    // que es global y se da la primera vez que se ve cada una: se registran
+    // aquí en el orden de CA-008-20, o "Página anterior" (que aparece
+    // después) quedaría detrás de las de zoom.
+    final l10n = AppLocalizations.of(context);
+    widget.args.actions.keys.forEach(CustomSemanticsAction.getIdentifier);
+    for (final label in [
+      l10n.pdfNextPage,
+      l10n.pdfPrevPage,
+      l10n.pdfZoomIn,
+      l10n.pdfZoomOut,
+      l10n.pdfZoomFit,
+    ]) {
+      CustomSemanticsAction.getIdentifier(CustomSemanticsAction(label: label));
+    }
     // Otra pantalla encima (menú, editor, listado): se guarda al taparse.
     final covered = !(ModalRoute.isCurrentOf(context) ?? true);
     if (covered && !_covered) _leave();
@@ -463,15 +478,28 @@ class _TaskPdfViewState extends State<TaskPdfView> {
     return false;
   }
 
-  int get _page => _visible?.page ?? 1;
+  /// La página de arriba, para "Página siguiente" y "Página anterior". Tras
+  /// ir a una página, el borde de arriba puede quedar una fracción de punto
+  /// por encima de ella (redondeo): se cuenta con medio punto de margen, o
+  /// "Página siguiente" iría una y otra vez a la misma (visto en T-008-23).
+  int get _page {
+    if (!_controller.isReady || !_restored) return _visible?.page ?? 1;
+    return positionIn(
+      _controller.layout,
+      _controller.visibleRect.translate(0, 0.5),
+    ).page;
+  }
 
   void _goToPage(int page) {
     if (!_controller.isReady) return;
     if (page < 1 || page > _controller.pageCount) return;
+    // Con la página arriba del todo (la 1, con la banda del texto). No con
+    // `goToPage`: si la página cabe entera en la vista, la centra y deja
+    // arriba el final de la anterior (visto en T-008-23).
+    final top = page == 1 ? 0.0 : _controller.layout.pageLayouts[page - 1].top;
     unawaited(
-      _controller.goToPage(
-        pageNumber: page,
-        anchor: PdfPageAnchor.top,
+      _controller.goToPosition(
+        documentOffset: Offset(_controller.visibleRect.left, top),
         duration: _duration,
       ),
     );
@@ -519,17 +547,43 @@ class _TaskPdfViewState extends State<TaskPdfView> {
     return KeyEventResult.handled;
   }
 
-  /// Acciones del lector y de Switch Access sobre el PDF: solo las que se
-  /// pueden hacer ahora (CA-008-10, CA-008-20).
+  /// Acciones del lector y de Switch Access sobre el PDF, en este orden:
+  /// completar, eliminar, página y zoom; solo las que se pueden hacer ahora
+  /// (CA-008-10, CA-008-20). Las lleva cada página visible
+  /// ([PdfSemanticsLayer]).
+  Map<CustomSemanticsAction, VoidCallback> _readerActions() {
+    final ready = _controller.isReady && _ready;
+    if (!ready) return const {};
+    final l10n = AppLocalizations.of(context);
+    final r = _relative;
+    final page = _page;
+    final pages = _controller.pageCount;
+    return {
+      ...widget.args.actions,
+      // En la última pantalla no hay "siguiente", aunque arriba se vea la
+      // penúltima página.
+      if (page < pages && _canScroll(0, 1))
+        CustomSemanticsAction(label: l10n.pdfNextPage): () =>
+            _goToPage(page + 1),
+      if (page > 1)
+        CustomSemanticsAction(label: l10n.pdfPrevPage): () =>
+            _goToPage(page - 1),
+      if (zoomInStep(r) != null)
+        CustomSemanticsAction(label: l10n.pdfZoomIn): _zoomIn,
+      if (zoomOutStep(r) != null)
+        CustomSemanticsAction(label: l10n.pdfZoomOut): _zoomOut,
+      if (r > 1 + _zoomEpsilon)
+        CustomSemanticsAction(label: l10n.pdfZoomFit): _zoomFit,
+    };
+  }
+
+  /// Desplazamiento sin gestos para el lector y Switch Access (CA-008-10):
+  /// en el contenedor, que es lo que desplazan sus gestos de desplazamiento.
   Widget _accessible(Widget child) => ListenableBuilder(
     // Solo escucha: leer `value` antes de que el visor esté listo falla.
     listenable: _controller,
     builder: (context, child) {
-      final l10n = AppLocalizations.of(context);
       final ready = _controller.isReady && _ready;
-      final r = _relative;
-      final page = _page;
-      final pages = ready ? _controller.pageCount : 0;
       final view = ready ? _view : Size.zero;
       return Semantics(
         container: true,
@@ -545,23 +599,6 @@ class _TaskPdfViewState extends State<TaskPdfView> {
         onScrollRight: ready && _canScroll(-1, 0)
             ? () => _scrollBy(-view.width * 0.8, 0)
             : null,
-        customSemanticsActions: !ready
-            ? null
-            : {
-                ...widget.args.actions,
-                if (page < pages)
-                  CustomSemanticsAction(label: l10n.pdfNextPage): () =>
-                      _goToPage(page + 1),
-                if (page > 1)
-                  CustomSemanticsAction(label: l10n.pdfPrevPage): () =>
-                      _goToPage(page - 1),
-                if (zoomInStep(r) != null)
-                  CustomSemanticsAction(label: l10n.pdfZoomIn): _zoomIn,
-                if (zoomOutStep(r) != null)
-                  CustomSemanticsAction(label: l10n.pdfZoomOut): _zoomOut,
-                if (r > 1 + _zoomEpsilon)
-                  CustomSemanticsAction(label: l10n.pdfZoomFit): _zoomFit,
-              },
         child: child,
       );
     },
@@ -705,6 +742,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
                       content: _content,
                       onLink: _onLink,
                       prefix: args.taskLabel,
+                      actions: _readerActions,
                     ),
                   ],
                 ),

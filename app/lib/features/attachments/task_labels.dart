@@ -34,10 +34,23 @@ String taskReading(AppLocalizations l10n, Task task) {
   if (attachment.isPdf) {
     return text.isEmpty
         ? l10n.a11yRowPdfOnly(taskLabel(l10n, task))
-        : l10n.a11yRowWithPdf(text);
+        : l10n.a11yRowWithPdf(readingText(text));
   }
   if (text.isEmpty) return attachmentKindLabel(l10n, task)!;
   return attachment.isPhoto
-      ? l10n.a11yWithPhoto(text)
-      : l10n.a11yWithImage(text);
+      ? l10n.a11yWithPhoto(readingText(text))
+      : l10n.a11yWithImage(readingText(text));
+}
+
+/// [text] para ponerlo delante de ". Con PDF", ". Página 1…" y similares:
+/// sin los puntos del final, para que el lector no diga "congreso.. Con PDF"
+/// (T-008-23). Si solo tiene puntos, tal cual.
+String readingText(String text) {
+  final trimmed = text.trimRight();
+  if (!trimmed.endsWith('.')) return text;
+  var end = trimmed.length;
+  while (end > 0 && trimmed[end - 1] == '.') {
+    end--;
+  }
+  return end == 0 ? text : trimmed.substring(0, end).trimRight();
 }
