@@ -34,6 +34,8 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 ## Estado
 
+Las **[Suposición]** de T-009-01..06 las aceptó el propietario tal cual (2026-09-28), salvo PD-9, que sigue abierto hasta antes de publicar.
+
 | Tareas | Estado | Commit |
 |---|---|---|
 | T-009-01 | **Hecha.** `webview_flutter`/`_android` 4.14.1 fijadas, `INTERNET` en *release* (permitido en el script), `MetricsOptOut`; licencias, permisos, build web y APK (+66 KB) OK. Plan §4 en el emulador: 1, 2, 3 y 5 OK (5: `onPageStarted` sí llega sin red, se clasifica por el error); 4 fallaba (`chrome://crash` cerraba la app) → envoltorio del `WebViewClient` validado con una sonda (ADR-0017, R-21). **[Suposición, PD-9]** Safe Browsing activado no cambia Data Safety | 76d891a |
