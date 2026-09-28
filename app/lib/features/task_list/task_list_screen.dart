@@ -565,12 +565,16 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     if (index < 0) return;
     ref.read(taskListProvider.notifier).flash(saved.id);
     _focusRow(saved.id, after: _editorClosed);
-    _announce(
-      index == 0
-          ? l10n.a11yNowCurrent
-          : l10n.a11yAddedAt(index + 1, tasks.length),
-      afterSheet: true,
-    );
+    // Una web creada con "Abrir" no se anuncia: el foco en su fila basta
+    // (CA-009-19).
+    if (!(saved.attachment?.isWeb ?? false)) {
+      _announce(
+        index == 0
+            ? l10n.a11yNowCurrent
+            : l10n.a11yAddedAt(index + 1, tasks.length),
+        afterSheet: true,
+      );
+    }
     await WidgetsBinding.instance.endOfFrame;
     if (mounted) await _reveal(saved.id);
   }

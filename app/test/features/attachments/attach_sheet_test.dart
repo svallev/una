@@ -5,6 +5,7 @@ import 'package:app/domain/entities/attachment.dart';
 import 'package:app/features/attachments/attach_sheet.dart';
 import 'package:app/features/attachments/attachment_import_controller.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
+import 'package:app/features/web/url_sheet.dart';
 import 'package:app/ui/sheet_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,35 +65,55 @@ void main() {
   ProviderContainer containerOf(WidgetTester tester) =>
       ProviderScope.containerOf(tester.element(find.byType(TaskEditorScreen)));
 
-  for (final mode in EditorMode.values) {
-    testWidgets(
-      'CA-007-01: en el editor (${mode.name}), (+) abre "Añadir a la tarea" '
-      'con cuatro filas de dos líneas',
-      (tester) async {
-        await pumpEditor(tester, mode: mode);
-        await openSheet(tester);
+  for (final mode in [EditorMode.first, EditorMode.create]) {
+    testWidgets('CA-007-01 / CA-009-01: en el editor de una tarea nueva '
+        '(${mode.name}), (+) abre "Añadir a la tarea" con cuatro filas de dos '
+        'líneas', (tester) async {
+      await pumpEditor(tester, mode: mode);
+      await openSheet(tester);
 
-        expect(find.bySemanticsLabel('Añadir a la tarea'), findsWidgets);
-        for (final (title, hint) in [
-          ('Hacer foto', 'Con la cámara · va arriba del todo'),
-          ('Subir imagen', 'Desde tu galería · va arriba del todo'),
-          ('Subir archivo', 'PDF · va arriba del todo'),
-          ('Cargar URL', 'Una página web · va arriba del todo'),
-        ]) {
-          expect(find.text(title), findsOneWidget);
-          expect(find.text(hint), findsOneWidget);
-        }
-        final rows = find.byType(SheetRow);
-        expect(rows, findsNWidgets(4));
-        for (final row in rows.evaluate()) {
-          expect(
-            tester.getSize(find.byWidget(row.widget)).height,
-            greaterThanOrEqualTo(UnaSizes.sheetRowTall),
-          );
-        }
-      },
-    );
+      expect(find.bySemanticsLabel('Añadir a la tarea'), findsWidgets);
+      for (final (title, hint) in [
+        ('Hacer foto', 'Con la cámara · va arriba del todo'),
+        ('Subir imagen', 'Desde tu galería · va arriba del todo'),
+        ('Subir archivo', 'PDF · va arriba del todo'),
+        ('Cargar URL', 'Una página web · va arriba del todo'),
+      ]) {
+        expect(find.text(title), findsOneWidget);
+        expect(find.text(hint), findsOneWidget);
+      }
+      final rows = find.byType(SheetRow);
+      expect(rows, findsNWidgets(4));
+      for (final row in rows.evaluate()) {
+        expect(
+          tester.getSize(find.byWidget(row.widget)).height,
+          greaterThanOrEqualTo(UnaSizes.sheetRowTall),
+        );
+      }
+    });
   }
+
+  testWidgets(
+    'CA-009-01: en modo editar, "Añadir a la tarea" tiene tres filas, sin '
+    '"Cargar URL" (enmienda CA-007-01)',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpEditor(tester, mode: EditorMode.edit);
+      await openSheet(tester);
+
+      expect(find.byType(SheetRow), findsNWidgets(3));
+      for (final title in ['Hacer foto', 'Subir imagen', 'Subir archivo']) {
+        expect(find.text(title), findsOneWidget);
+      }
+      expect(find.text('Cargar URL'), findsNothing);
+      expect(find.text('Una página web · va arriba del todo'), findsNothing);
+      expect(
+        find.bySemanticsLabel(RegExp('Cargar URL|Una página web')),
+        findsNothing,
+      );
+      semantics.dispose();
+    },
+  );
 
   testWidgets('CA-007-01: el lector lee cada fila con su segunda línea', (
     tester,
@@ -179,22 +200,25 @@ void main() {
     expect(find.byType(AttachSheet), findsNothing);
   });
 
-  testWidgets(
-    'CA-007-01 / DEV-18: "Cargar URL" se ve activa pero no hace nada hasta '
-    'la 009',
-    (tester) async {
-      await pumpEditor(tester);
-      await openSheet(tester);
-      await tester.tap(find.text('Cargar URL'));
-      await tester.pumpAndSettle();
-      expect(find.byType(AttachSheet), findsOneWidget);
-      expect(importer.picks, isEmpty);
-      expect(pdfs.picks, isEmpty);
-      for (final row in tester.widgetList<SheetRow>(find.byType(SheetRow))) {
-        expect(row.enabled, isTrue);
-      }
-    },
-  );
+  for (final mode in [EditorMode.first, EditorMode.create]) {
+    testWidgets(
+      'CA-009-01: "Cargar URL" (${mode.name}) cierra la hoja y abre "Cargar '
+      'URL", sin abrir ningún selector',
+      (tester) async {
+        await pumpEditor(tester, mode: mode);
+        await openSheet(tester);
+        for (final row in tester.widgetList<SheetRow>(find.byType(SheetRow))) {
+          expect(row.enabled, isTrue);
+        }
+        await tester.tap(find.text('Cargar URL'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AttachSheet), findsNothing);
+        expect(find.byType(UrlSheet), findsOneWidget);
+        expect(importer.picks, isEmpty);
+        expect(pdfs.picks, isEmpty);
+      },
+    );
+  }
 
   testWidgets(
     'CA-008-01: "Subir archivo" cierra la hoja y abre el selector de PDF',

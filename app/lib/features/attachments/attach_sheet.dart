@@ -7,36 +7,42 @@ import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
 
 /// Lo que se eligió en "Añadir a la tarea".
-enum AttachChoice { camera, gallery, file }
+enum AttachChoice { camera, gallery, file, url }
 
 /// Abre la hoja "Añadir a la tarea" (CA-007-01). Devuelve la opción elegida,
-/// o null si se cierra.
-Future<AttachChoice?> showAttachSheet(BuildContext context) =>
-    showUnaSheet<AttachChoice>(
-      context,
-      builder: (sheet) => AttachSheet(
-        onTakePhoto: () => Navigator.of(sheet).pop(AttachChoice.camera),
-        onPickImage: () => Navigator.of(sheet).pop(AttachChoice.gallery),
-        onPickFile: () => Navigator.of(sheet).pop(AttachChoice.file),
-      ),
-    );
+/// o null si se cierra. Sin [withUrl] (modo editar), no tiene "Cargar URL":
+/// una tarea no se convierte en web (CA-009-01).
+Future<AttachChoice?> showAttachSheet(
+  BuildContext context, {
+  required bool withUrl,
+}) => showUnaSheet<AttachChoice>(
+  context,
+  builder: (sheet) => AttachSheet(
+    onTakePhoto: () => Navigator.of(sheet).pop(AttachChoice.camera),
+    onPickImage: () => Navigator.of(sheet).pop(AttachChoice.gallery),
+    onPickFile: () => Navigator.of(sheet).pop(AttachChoice.file),
+    onLoadUrl: withUrl ? () => Navigator.of(sheet).pop(AttachChoice.url) : null,
+  ),
+);
 
 /// Hoja "Añadir a la tarea" (prototipo "HOJA: añadir foto, imagen o
-/// archivo"): cuatro filas de dos líneas. "Subir archivo" sube un PDF (spec
-/// 008); "Cargar URL" se ve activa pero no hace nada hasta la 009 (DEV-18).
+/// archivo"): filas de dos líneas. "Subir archivo" sube un PDF (spec 008);
+/// "Cargar URL" abre su hoja (spec 009) y solo está en las tareas nuevas.
 class AttachSheet extends StatelessWidget {
   const AttachSheet({
     super.key,
     required this.onTakePhoto,
     required this.onPickImage,
     required this.onPickFile,
+    this.onLoadUrl,
   });
 
   final VoidCallback onTakePhoto;
   final VoidCallback onPickImage;
   final VoidCallback onPickFile;
 
-  static void _notYet() {}
+  /// "Cargar URL"; sin él, la fila no aparece (modo editar, CA-009-01).
+  final VoidCallback? onLoadUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -81,13 +87,14 @@ class AttachSheet extends StatelessWidget {
               divider: true,
               onTap: onPickFile,
             ),
-            SheetRow(
-              icon: UnaIcons.link,
-              label: l10n.attachUrl,
-              subtitle: l10n.attachUrlHint,
-              divider: true,
-              onTap: _notYet,
-            ),
+            if (onLoadUrl case final onLoadUrl?)
+              SheetRow(
+                icon: UnaIcons.link,
+                label: l10n.attachUrl,
+                subtitle: l10n.attachUrlHint,
+                divider: true,
+                onTap: onLoadUrl,
+              ),
           ],
         ),
       ),
