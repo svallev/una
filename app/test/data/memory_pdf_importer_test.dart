@@ -55,6 +55,7 @@ void main() {
           return jpeg;
         },
         screenWidthPx: () => 360,
+        screenHeightPx: () => 800,
       );
 
   setUp(() {
@@ -163,8 +164,8 @@ void main() {
       expect(await store.stagingIds(), isEmpty);
     });
 
-    test('CA-008-08/18: rehace la versión de pantalla con la página pedida; '
-        'sin el PDF, no hace nada', () async {
+    test('CA-008-08/18: rehace la versión de pantalla con lo que se ve desde '
+        'la posición pedida; sin el PDF, no hace nada', () async {
       next = file('mixed_sizes.pdf');
       final job = (await useCase(importer()).pick())!;
       final attachment = await store.commit(
@@ -179,10 +180,11 @@ void main() {
         const PdfPosition(page: 2, offset: 0.5),
       );
       expect(store.bytes(attachment.screenPath), jpeg);
-      // La página 2 es apaisada (842 × 595).
+      // La página 2 es apaisada (842 × 595, 254 px de alto a 360 de ancho):
+      // su mitad de abajo y la 3 (300 × 400, 480 px), hasta el final.
       expect(
         (encoded.single.width, encoded.single.height),
-        (360, (360 * 595 / 842).round()),
+        (360, (254 - 127) + 480),
       );
 
       await store.delete(attachment.id);
@@ -191,6 +193,53 @@ void main() {
         const PdfPosition(page: 1, offset: 0),
       );
       expect(await store.storedIds(), isEmpty);
+    });
+
+    test('CA-008-08: la versión de pantalla empieza en la fracción guardada y '
+        'sigue con las páginas de debajo, separadas por el borde, hasta el '
+        'alto de la pantalla', () async {
+      next = file('pages_20.pdf');
+      final job = (await useCase(importer()).pick())!;
+      final attachment = await store.commit(
+        await job.prepare(),
+        DateTime.utc(2026, 9, 28),
+      );
+      encoded.clear();
+      const ink = 0xFF111111;
+
+      await importer().renderScreen(
+        attachment,
+        const PdfPosition(page: 3, offset: 0.5),
+        gap: (px: 3, argb: ink),
+      );
+      final view = encoded.single;
+      // A4 a 360 px de ancho: 509 px de alto. De la 3, desde la fila 254.
+      expect((view.width, view.height), (360, 800));
+      List<int> pixel(int x, int y) {
+        final i = (y * view.width + x) * 4;
+        return view.bgra.sublist(i, i + 4);
+      }
+
+      // BGRA: el borde entre la 3 y la 4, de lado a lado.
+      for (final y in [255, 256, 257]) {
+        for (final x in [0, 180, 359]) {
+          expect(pixel(x, y), [0x11, 0x11, 0x11, 0xFF], reason: '($x, $y)');
+        }
+      }
+      // Fuera del borde, el blanco de la página.
+      expect(pixel(0, 254), [0xFF, 0xFF, 0xFF, 0xFF]);
+      expect(pixel(0, 258), [0xFF, 0xFF, 0xFF, 0xFF]);
+      // Y el de la 4 y la 5.
+      expect(pixel(0, 258 + 509), [0x11, 0x11, 0x11, 0xFF]);
+
+      // En la última página: hasta el final del documento.
+      encoded.clear();
+      await importer().renderScreen(
+        attachment,
+        const PdfPosition(page: 20, offset: 0.5),
+        gap: (px: 3, argb: ink),
+      );
+      expect(encoded.single.height, 509 - 254);
     });
   });
 }

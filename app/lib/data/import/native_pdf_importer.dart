@@ -18,7 +18,9 @@ class NativePdfImporter implements PdfImporter {
     required this.stagingFile,
     required this.storedFile,
     int Function()? screenWidthPx,
-  }) : screenWidthPx = screenWidthPx ?? _physicalScreenWidth;
+    int Function()? screenHeightPx,
+  }) : screenWidthPx = screenWidthPx ?? _physicalScreenWidth,
+       screenHeightPx = screenHeightPx ?? physicalScreenLongSide;
 
   static const _channel = MethodChannel('una/images');
 
@@ -31,6 +33,9 @@ class NativePdfImporter implements PdfImporter {
   /// Ancho físico de la pantalla en vertical: la versión de pantalla se dibuja
   /// a ese ancho, nunca más (I-2).
   final int Function() screenWidthPx;
+
+  /// Alto de la versión de pantalla: el lado largo de la pantalla (CA-008-08).
+  final int Function() screenHeightPx;
 
   static int _physicalScreenWidth() {
     final views = PlatformDispatcher.instance.views;
@@ -101,14 +106,19 @@ class NativePdfImporter implements PdfImporter {
   }
 
   @override
-  Future<void> renderScreen(Attachment attachment, PdfPosition position) async {
+  Future<void> renderScreen(
+    Attachment attachment,
+    PdfPosition position, {
+    PageGap gap = noPageGap,
+  }) async {
     final file = storedFile(attachment.documentPath);
     if (!file.existsSync()) return;
-    final count = attachment.pageCount ?? 1;
-    final page = await PdfEngine.renderPage(
+    final page = await PdfEngine.renderView(
       PdfEngine.file(file.path),
-      position.clampTo(count).page,
+      position,
       width: screenWidthPx(),
+      height: screenHeightPx(),
+      gap: gap,
     );
     await _encode(attachment.id, 'stored', page);
   }

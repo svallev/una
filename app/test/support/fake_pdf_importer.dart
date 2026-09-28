@@ -38,6 +38,9 @@ class FakePdfImporter implements PdfImporter {
   final pageLimits = <int>[];
   final cancelled = <String>[];
   final rendered = <(String, PdfPosition)>[];
+
+  /// El borde entre páginas pedido en cada [renderScreen].
+  final renderGaps = <PageGap>[];
   final _waits = <String, Completer<void>>{};
 
   Future<void> _wait(String id, Duration d) async {
@@ -89,11 +92,16 @@ class FakePdfImporter implements PdfImporter {
   }
 
   @override
-  Future<void> renderScreen(Attachment attachment, PdfPosition position) async {
+  Future<void> renderScreen(
+    Attachment attachment,
+    PdfPosition position, {
+    PageGap gap = noPageGap,
+  }) async {
     // Como el real: si el PDF ya no existe, no hace nada.
     if (store.bytes(attachment.documentPath) == null) return;
     if (renderError case final e?) throw e;
     rendered.add((attachment.id, position));
+    renderGaps.add(gap);
     store.putStored(attachment.id, 'screen.jpg', tinyImage);
   }
 

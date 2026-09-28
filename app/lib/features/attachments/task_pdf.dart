@@ -34,8 +34,9 @@ class TaskPdfArgs {
 
   final PdfSource source;
 
-  /// La versión de pantalla: la página de [initialPosition], dibujada al
-  /// ancho. Se ve en el primer fotograma, antes que el visor (CA-008-08).
+  /// La versión de pantalla: lo que se ve desde [initialPosition] (la página
+  /// desde su fracción y las de debajo), dibujado al ancho. Se ve en el primer
+  /// fotograma y hasta que el visor ha dibujado esas páginas (CA-008-08).
   final ImageProvider screen;
 
   /// Texto de la tarea: la banda del color de la nota encima de la primera
@@ -291,10 +292,17 @@ PdfPosition positionIn(PdfPageLayout layout, Rect visible) {
   return PdfPosition(page: pages.length, offset: 1);
 }
 
+/// Si el visor no avisa de que ha dibujado las páginas que se ven (una página
+/// que no se puede dibujar, CL-008-4), la versión de pantalla se quita pasado
+/// este tiempo. Holgado: en el emulador, el aviso llega hasta 2,8 s después de
+/// estar listo, y quitarla antes deja las páginas en blanco (CA-008-08); si
+/// se toca, se quita antes.
+const pdfFaceTimeout = Duration(seconds: 10);
+
 /// Páginas al 100 % del ancho, una debajo de otra, con desplazamiento vertical
-/// y zoom (CA-008-08/10). Hasta que el visor está listo se ve la versión de
-/// pantalla en la última posición, así que el primer fotograma no espera al
-/// motor.
+/// y zoom (CA-008-08/10). Hasta que el visor ha dibujado las páginas que se
+/// ven en la última posición, encima está la versión de pantalla: el primer
+/// fotograma no espera al motor y la página nunca se ve en blanco.
 class TaskPdfView extends StatefulWidget {
   const TaskPdfView({super.key, required this.args});
 
@@ -309,6 +317,11 @@ class _TaskPdfViewState extends State<TaskPdfView> {
   late final AppLifecycleListener _lifecycle;
   var _ready = false;
   var _restored = false;
+
+  /// El visor ha dibujado las páginas que se ven al empezar (o se ha tocado,
+  /// o ha pasado [pdfFaceTimeout]): ya se puede quitar la versión de pantalla.
+  var _painted = false;
+  Timer? _faceTimer;
   double _width = 0;
   double _bandPx = 0;
   PdfPosition? _visible;
@@ -351,6 +364,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
 
   @override
   void dispose() {
+    _faceTimer?.cancel();
     _leave();
     _lifecycle.dispose();
     _controller.removeListener(_onMatrix);
@@ -643,7 +657,41 @@ class _TaskPdfViewState extends State<TaskPdfView> {
       zoom: controller.minScale,
     );
     _restored = true;
-    if (mounted) setState(() => _ready = true);
+    if (!mounted) return;
+    setState(() => _ready = true);
+    _faceTimer ??= Timer(pdfFaceTimeout, _showViewer);
+  }
+
+  /// Quita la versión de pantalla: se ve el visor.
+  void _showViewer() {
+    _faceTimer?.cancel();
+    if (mounted && !_painted) setState(() => _painted = true);
+  }
+
+  /// La última página que se verá al volver a la posición guardada (CA-008-08).
+  /// pdfrx avisa de que ha terminado de cargar ([PdfViewerParams
+  /// .onDocumentLoadFinished]) cuando tiene dibujada su página inicial, y las
+  /// dibuja en orden, así que esa es también la de las de encima: hasta
+  /// entonces se ve la versión de pantalla.
+  int? _lastVisiblePage(PdfDocument document, PdfViewerController controller) {
+    final pages = controller.layout.pageLayouts;
+    final view = controller.viewSize;
+    if (pages.isEmpty || view.width <= 0) return null;
+    final position = widget.args.initialPosition ?? PdfPosition.start;
+    var top = 0.0;
+    if (position != PdfPosition.start) {
+      final p = position.clampTo(pages.length);
+      final r = pages[p.page - 1];
+      top = r.top + p.offset * r.height;
+    }
+    // Al ancho: la vista mide su alto en unidades del documento así.
+    final bottom =
+        top + view.height * controller.layout.documentSize.width / view.width;
+    var last = 1;
+    for (var i = 0; i < pages.length && pages[i].top < bottom; i++) {
+      last = i + 1;
+    }
+    return last;
   }
 
   @override
@@ -676,14 +724,17 @@ class _TaskPdfViewState extends State<TaskPdfView> {
           enableKeyboardNavigation: false,
           onGeneralTap: _onGeneralTap,
           pagePaintCallbacks: [_paintSeparator],
+          calculateInitialPageNumber: _lastVisiblePage,
           onViewerReady: (document, controller) {
             unawaited(_restore(controller));
             unawaited(_loadContent(document));
           },
-          // No se puede abrir (estropeado tras guardarlo): la pantalla
-          // muestra "Adjunto no disponible" (CA-008-18).
           onDocumentLoadFinished: (_, succeeded) {
-            if (!succeeded) widget.args.onUnreadable?.call();
+            // Ya ha dibujado las páginas que se ven (CA-008-08).
+            if (succeeded) return _showViewer();
+            // No se puede abrir (estropeado tras guardarlo): la pantalla
+            // muestra "Adjunto no disponible" (CA-008-18).
+            widget.args.onUnreadable?.call();
           },
           linkHandlerParams: PdfLinkHandlerParams(
             onLinkTap: _onLink,
@@ -704,12 +755,14 @@ class _TaskPdfViewState extends State<TaskPdfView> {
           errorBannerBuilder: (_, _, _, _) => const SizedBox.shrink(),
         );
         final source = args.source;
+        final initialPage = (args.initialPosition ?? PdfPosition.start).page;
         final path = source.path;
         final bytes = source.bytes;
         final viewer = path != null
             ? PdfViewer.file(
                 path,
                 key: ValueKey(source.key),
+                initialPageNumber: initialPage,
                 // Con 20 páginas como máximo, todas de una vez (CA-008-03).
                 useProgressiveLoading: false,
                 controller: _controller,
@@ -720,35 +773,49 @@ class _TaskPdfViewState extends State<TaskPdfView> {
                 bytes,
                 sourceName: source.key,
                 key: ValueKey(source.key),
+                initialPageNumber: initialPage,
                 // Con 20 páginas como máximo, todas de una vez (CA-008-03).
                 useProgressiveLoading: false,
                 controller: _controller,
                 params: params,
               )
             : const SizedBox.expand();
-        return ClipRect(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _accessible(
-                Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Su semántica dice "Page N" en inglés: se usa la nuestra.
-                    ExcludeSemantics(child: viewer),
-                    PdfSemanticsLayer(
-                      controller: _controller,
-                      ready: _ready,
-                      content: _content,
-                      onLink: _onLink,
-                      prefix: args.taskLabel,
-                      actions: _readerActions,
-                    ),
-                  ],
+        // Al tocar, se quita la versión de pantalla (si el visor aún no ha
+        // avisado) y el gesto le llega al visor.
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) {
+            if (_ready) _showViewer();
+          },
+          child: ClipRect(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _accessible(
+                  Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Su semántica dice "Page N" en inglés: se usa la nuestra.
+                      ExcludeSemantics(child: viewer),
+                      PdfSemanticsLayer(
+                        controller: _controller,
+                        ready: _ready,
+                        content: _content,
+                        onLink: _onLink,
+                        prefix: args.taskLabel,
+                        actions: _readerActions,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              if (!_ready) TaskPdfFace(args: args),
-            ],
+                // Solo imagen: el lector ya lee la capa de debajo.
+                if (!_ready || !_painted)
+                  IgnorePointer(
+                    ignoring: _ready,
+                    child: ExcludeSemantics(child: TaskPdfFace(args: args)),
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -792,8 +859,8 @@ class _TaskPdfViewState extends State<TaskPdfView> {
 }
 
 /// Primer fotograma (y la cara que se rompe o se arruga al completar o
-/// eliminar): la banda (si se empieza por arriba) y la versión de pantalla de
-/// la página, colocada en la fracción guardada. Al completar o eliminar, si
+/// eliminar): la banda (si se empieza por arriba) y la versión de pantalla,
+/// que es lo que se ve desde la posición guardada. Al completar o eliminar, si
 /// hay [snapshot] (lo que se veía, CA-008-19), esa imagen.
 class TaskPdfFace extends StatelessWidget {
   const TaskPdfFace({super.key, required this.args, this.snapshot});
@@ -821,6 +888,8 @@ class TaskPdfFace extends StatelessWidget {
     final caption = args.caption ?? '';
     final position = args.initialPosition ?? PdfPosition.start;
     final atStart = position == PdfPosition.start;
+    // La versión de pantalla ya empieza en la fracción guardada: arriba del
+    // todo, sin desplazarla (CA-008-08).
     return ColoredBox(
       color: UnaColors.surface,
       child: ClipRect(
@@ -833,14 +902,11 @@ class TaskPdfFace extends StatelessWidget {
             children: [
               if (atStart && caption.isNotEmpty)
                 PdfCaptionBand(text: caption, color: args.captionColor),
-              FractionalTranslation(
-                translation: Offset(0, atStart ? 0 : -position.offset),
-                child: Image(
-                  image: args.screen,
-                  fit: BoxFit.fitWidth,
-                  gaplessPlayback: true,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
+              Image(
+                image: args.screen,
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             ],
           ),

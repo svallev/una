@@ -57,8 +57,11 @@ class FixturePdfImporter implements PdfImporter {
       native.inspect(id, maxPages: maxPages);
 
   @override
-  Future<void> renderScreen(Attachment attachment, PdfPosition position) =>
-      native.renderScreen(attachment, position);
+  Future<void> renderScreen(
+    Attachment attachment,
+    PdfPosition position, {
+    PageGap gap = noPageGap,
+  }) => native.renderScreen(attachment, position, gap: gap);
 
   @override
   Future<void> cancel(String id) => native.cancel(id);

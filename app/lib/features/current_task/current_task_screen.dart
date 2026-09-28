@@ -467,11 +467,13 @@ class CurrentTaskScreen extends ConsumerWidget {
     // Sin `ref` al salir: el almacén y el importador se capturan ahora.
     final store = ref.read(attachmentStoreProvider);
     final importer = ref.read(pdfImporterProvider);
-    // La página de la versión de pantalla que hay ahora en el disco.
-    var shownPage = (ref.read(position).position ?? PdfPosition.start).page;
+    // La posición de la versión de pantalla que hay ahora en el disco.
+    var shown = ref.read(position).position ?? PdfPosition.start;
+    final gap = pdfPageGap(MediaQuery.devicePixelRatioOf(context));
+    final screen = images.stored(attachment.screenPath);
     final args = TaskPdfArgs(
       source: images.storedPdf(attachment.documentPath),
-      screen: images.stored(attachment.screenPath),
+      screen: screen,
       // En horizontal, sin la banda del texto (CA-008-11).
       caption: landscape ? null : task.text,
       captionColor:
@@ -494,10 +496,12 @@ class CurrentTaskScreen extends ConsumerWidget {
             importer: importer,
             attachment: attachment,
             position: left,
-            shownPage: shownPage,
+            shown: shown,
+            gap: gap,
+            screen: screen,
           ),
         );
-        shownPage = left.page;
+        shown = left;
       },
     );
     final Widget pages = chromeOnly

@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../domain/entities/attachment.dart';
 import '../../domain/entities/pdf_position.dart';
 import '../../domain/ports/attachment_store.dart';
+import 'pdf_position_controller.dart' show pdfPageGapOfScreen;
 
 /// Estado de los archivos de un adjunto que se muestra (CA-007-19).
 enum AttachmentHealth {
@@ -110,9 +111,10 @@ class AttachmentHealthController extends Notifier<AttachmentHealthState> {
     }
   }
 
-  /// La versión de pantalla del PDF es la página de la última posición, la
-  /// que se pinta en el primer fotograma (CA-008-08); sin posición legible,
-  /// la primera. Si el PDF no se puede dibujar, lanza.
+  /// La versión de pantalla del PDF es lo que se ve desde la última
+  /// posición, lo que se pinta en el primer fotograma (CA-008-08); sin
+  /// posición legible, desde el principio. Si el PDF no se puede dibujar,
+  /// lanza.
   Future<void> _renderPdfScreen() async {
     final store = ref.read(attachmentStoreProvider);
     final importer = ref.read(pdfImporterProvider);
@@ -122,7 +124,11 @@ class AttachmentHealthController extends Notifier<AttachmentHealthState> {
     } on Object {
       saved = null;
     }
-    await importer.renderScreen(attachment, saved ?? PdfPosition.start);
+    await importer.renderScreen(
+      attachment,
+      saved ?? PdfPosition.start,
+      gap: pdfPageGapOfScreen(),
+    );
   }
 
   void _set(AttachmentHealth health) {

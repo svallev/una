@@ -198,7 +198,8 @@ void main() {
 
   group('CA-008-09 / CA-008-08: al dejar de verlo se guarda la posición', () {
     testWidgets(
-      'en otra página: posición y versión de pantalla de esa página',
+      'en otra página: posición y versión de pantalla desde ahí, con el borde '
+      'entre páginas del visor (3 dp en píxeles físicos, tinta)',
       (tester) async {
         await pumpScreen(tester, await pdfTask());
         const left = PdfPosition(page: 5, offset: 0.5);
@@ -206,17 +207,55 @@ void main() {
         await tester.pumpAndSettle();
         expect(await store.readPosition('p1'), left);
         expect(pdfs.rendered, [('p1', left)]);
+        final dpr = tester.view.devicePixelRatio;
+        expect(pdfs.renderGaps, [
+          (
+            px: (UnaBorders.strongWidth * dpr).round(),
+            argb: UnaColors.ink.toARGB32(),
+          ),
+        ]);
       },
     );
 
-    testWidgets('en la misma página: solo la posición', (tester) async {
+    testWidgets(
+      'en la misma página, más abajo: también la versión de pantalla (se pinta '
+      'desde la fracción guardada)',
+      (tester) async {
+        await pumpScreen(tester, await pdfTask());
+        const left = PdfPosition(page: 1, offset: 0.3);
+        taskPdfCalls.last.onLeave!(left);
+        await tester.pumpAndSettle();
+        expect(await store.readPosition('p1'), left);
+        expect(pdfs.rendered, [('p1', left)]);
+      },
+    );
+
+    testWidgets(
+      'al redibujarla, la versión vieja sale de la caché de imágenes (el '
+      'arranque la deja decodificada; al volver a la tarea no se ve la vieja)',
+      (tester) async {
+        await pumpScreen(tester, await pdfTask());
+        final screen = taskPdfCalls.last.screen;
+        await tester.runAsync(
+          () => precacheImage(
+            screen,
+            tester.element(find.byType(CurrentTaskScreen)),
+          ),
+        );
+        expect(imageCache.containsKey(screen), isTrue);
+        taskPdfCalls.last.onLeave!(const PdfPosition(page: 5, offset: 0.5));
+        await tester.pumpAndSettle();
+        expect(imageCache.containsKey(screen), isFalse);
+      },
+    );
+
+    testWidgets('en la misma posición: nada que volver a dibujar', (
+      tester,
+    ) async {
       await pumpScreen(tester, await pdfTask());
-      taskPdfCalls.last.onLeave!(const PdfPosition(page: 1, offset: 0.3));
+      taskPdfCalls.last.onLeave!(PdfPosition.start);
       await tester.pumpAndSettle();
-      expect(
-        await store.readPosition('p1'),
-        const PdfPosition(page: 1, offset: 0.3),
-      );
+      expect(await store.readPosition('p1'), PdfPosition.start);
       expect(pdfs.rendered, isEmpty);
     });
 

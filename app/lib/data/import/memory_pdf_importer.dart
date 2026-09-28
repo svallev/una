@@ -29,7 +29,8 @@ class MemoryPdfImporter implements PdfImporter {
     required this.pickFile,
     required this.encodeJpeg,
     required this.screenWidthPx,
-  });
+    int Function()? screenHeightPx,
+  }) : screenHeightPx = screenHeightPx ?? physicalScreenLongSide;
 
   final MemoryAttachmentStore store;
 
@@ -41,6 +42,9 @@ class MemoryPdfImporter implements PdfImporter {
 
   /// Ancho de la pantalla en vertical, en píxeles físicos (I-2).
   final int Function() screenWidthPx;
+
+  /// Alto de la versión de pantalla: el lado largo de la pantalla (CA-008-08).
+  final int Function() screenHeightPx;
 
   static const _source = 'source';
   static const _document = 'document.pdf';
@@ -109,13 +113,19 @@ class MemoryPdfImporter implements PdfImporter {
   }
 
   @override
-  Future<void> renderScreen(Attachment attachment, PdfPosition position) async {
+  Future<void> renderScreen(
+    Attachment attachment,
+    PdfPosition position, {
+    PageGap gap = noPageGap,
+  }) async {
     final bytes = store.bytes(attachment.documentPath);
     if (bytes == null) return;
-    final page = await PdfEngine.renderPage(
+    final page = await PdfEngine.renderView(
       PdfEngine.data(bytes),
-      position.clampTo(attachment.pageCount ?? 1).page,
+      position,
       width: screenWidthPx(),
+      height: screenHeightPx(),
+      gap: gap,
     );
     final jpeg = await _encode(page);
     // Si se ha borrado mientras tanto, no se resucita.

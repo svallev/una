@@ -10,6 +10,13 @@ typedef PickedPdf = ({String token, String? name});
 /// Lo que se sabe de un PDF que se ha podido abrir.
 typedef PdfInfo = ({int pageCount, int width, int height});
 
+/// Separación entre páginas en la versión de pantalla: [px] filas del color
+/// [argb] (como el borde que dibuja el visor entre páginas, CA-008-08).
+typedef PageGap = ({int px, int argb});
+
+/// Sin separación.
+const PageGap noPageGap = (px: 0, argb: 0xFFFFFFFF);
+
 /// Por qué no se ha podido importar un PDF (spec 008 §5).
 enum PdfImportError {
   notPdf,
@@ -49,9 +56,15 @@ abstract interface class PdfImporter {
   /// preparación `document.pdf` y su versión de pantalla (CA-008-03/14).
   Future<PdfInfo> inspect(String id, {required int maxPages});
 
-  /// Rehace la versión de pantalla de un PDF **guardado** con la página de
-  /// [position] (CA-008-08, CA-008-18). Si ya no existe, no hace nada.
-  Future<void> renderScreen(Attachment attachment, PdfPosition position);
+  /// Rehace la versión de pantalla de un PDF **guardado**: lo que se ve desde
+  /// [position], la página desde su fracción guardada y las siguientes
+  /// separadas por [gap], hasta el alto de la pantalla (CA-008-08, CA-008-18).
+  /// Si ya no existe, no hace nada.
+  Future<void> renderScreen(
+    Attachment attachment,
+    PdfPosition position, {
+    PageGap gap = noPageGap,
+  });
 
   /// Aborta el trabajo en curso de `<id>` y borra su preparación.
   Future<void> cancel(String id);

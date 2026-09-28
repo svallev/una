@@ -25,8 +25,9 @@ class UnavailablePdfImporter implements PdfImporter {
   @override
   Future<void> renderScreen(
     Attachment attachment,
-    PdfPosition position,
-  ) async {}
+    PdfPosition position, {
+    PageGap gap = noPageGap,
+  }) async {}
 
   @override
   Future<void> cancel(String id) async {}
