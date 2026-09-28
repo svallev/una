@@ -633,7 +633,13 @@ class _TaskPdfViewState extends State<TaskPdfView> {
             unawaited(_restore(controller));
             unawaited(_loadContent(document));
           },
-          linkHandlerParams: PdfLinkHandlerParams(onLinkTap: _onLink),
+          linkHandlerParams: PdfLinkHandlerParams(
+            onLinkTap: _onLink,
+            // Los enlaces no se marcan: el PDF se ve tal cual (propietario,
+            // 2026-09-28). Sin esto pdfrx los pinta de azul, también los
+            // bloqueados, que no hacen nada.
+            linkColor: Colors.transparent,
+          ),
           viewerOverlayBuilder: _caption.isEmpty
               ? null
               : (context, size, _) => [

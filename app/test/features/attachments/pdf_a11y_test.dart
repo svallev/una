@@ -7,6 +7,7 @@ import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import '../../../integration_test/fixtures/pdf_fixtures.g.dart';
 import '../../support/attachments.dart';
@@ -103,6 +104,14 @@ void main() {
     await unmount(tester);
     handle.dispose();
   });
+  testWidgets('CA-008-12: los enlaces no se marcan sobre la página '
+      '(decisión del propietario, 2026-09-28)', (tester) async {
+    await pumpPdf(tester, 'links.pdf');
+    final viewer = tester.widget<PdfViewer>(find.byType(PdfViewer));
+    expect(viewer.params.linkHandlerParams?.linkColor, Colors.transparent);
+    await unmount(tester);
+  });
+
   testWidgets('CA-008-12: un enlace tocado con el dedo llega a la app (la '
       'capa de lectura no se queda los toques)', (tester) async {
     final handle = tester.ensureSemantics();
