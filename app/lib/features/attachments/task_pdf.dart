@@ -701,6 +701,7 @@ class _TaskPdfViewState extends State<TaskPdfView> {
                     ExcludeSemantics(child: viewer),
                     PdfSemanticsLayer(
                       controller: _controller,
+                      ready: _ready,
                       content: _content,
                       onLink: _onLink,
                       prefix: args.taskLabel,

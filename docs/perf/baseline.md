@@ -86,6 +86,60 @@ Presupuestos (docs/PLAN.md, CA-001-09): tarea actual visible en **< 1 s (p50)** 
 - **[Hecho]** La foto se ve en el primer fotograma (captura justo al volver `am start -W`), sin fondo vacío previo.
 - **Repetido sin visor** (2026-09-27, imagen al ancho con teselas encima de la versión de pantalla): n = 20, mín 212, **p50 245 ms**, p90 262, máx 278 ms. Sigue en el 25 % del presupuesto.
 
+## Tarea actual con PDF (spec 008, T-008-22)
+
+- **Fecha:** 2026-09-28 · **Rama:** `feat/008-pdf`
+- **Fichero:** `tools/fixtures/out/scanned_20p.pdf` (20 páginas escaneadas, JPEG de ruido, 8,5 MB: el caso más pesado admitido, CL-008-5), generado con `tools/fixtures/gen_pdf_fixtures.py`.
+- **Método:** `integration_test/pdf_perf_test.dart` en modo *profile* crea en la app `.profile` una tarea con texto (referencia) y la misma tarea con el PDF; mide la memoria del proceso (`/proc/self/smaps_rollup`, sin la GPU) con la tarea de texto, con el PDF en la página 1, el pico mientras se desplaza de la 1 a la 20 con el dedo y al final; guarda la posición en una página intermedia. Después se instala la app normal `.profile` (misma BD) y se mide el arranque en frío (`am start -W -S`) y `dumpsys meminfo` en un proceso nuevo. Con `--dart-define=PDF_PERF_TEXT_ONLY=true` deja solo la tarea con texto (la referencia del arranque y de `dumpsys`).
+
+### Tamaño del APK
+
+| Compilación | En disco | Comprimido (`gzip -9`, como CI) | Nota |
+|---|---|---|---|
+| `flutter build apk --release --split-per-abi --target-platform android-arm64` | 28,2 MB | 12,6 MB | 20,7 MB en disco en la 007: +7,5 MB, casi todo `libpdfium.so` (6,4 MB); pdfrx y sus paquetes Dart, ~0,4 MB |
+
+- **[Hecho]** Dentro del presupuesto (< 25 MB por ABI, comprimido). `--analyze-size`: `lib/arm64-v8a` 26 MB (libflutter 11,7, libapp 7,4, libpdfium 6,4, libsqlite3 1,7 MB).
+
+### Emulador (Pixel 6a, *profile*, sin GPU)
+
+| Medida | Solo texto | Con el PDF escaneado | Diferencia |
+|---|---|---|---|
+| PSS del proceso en el test (smaps) | 115 MB | página 1: 136 MB · pico al desplazar de la 1 a la 20: 181 MB · en la 20: 137 MB | pico +66 MB |
+| `dumpsys meminfo`, proceso nuevo (PSS total) | 113 MB | 130 MB (en la página 7 guardada) | +17 MB |
+| Desplazar de la 1 a la 20 (703 fotogramas) | — | build medio / p90: 3,3 / 7,5 ms; raster medio 177 ms | sin GPU: el raster del emulador no cuenta |
+
+- **[Hecho]** CL-008-5 en el emulador: se desplaza de la 1 a la 20 sin cerrarse y la tarea añade como mucho ~66 MB (pico) sobre la misma tarea con texto, muy por debajo de 200 MB.
+- **[Hecho]** El arranque en frío vuelve a la página guardada (la 7) sin ningún toque.
+- **[Hecho, emulador]** Justo al volver `am start -W` (primer fotograma), la zona de las páginas se ve **en blanco**; unos segundos después, la página. En este emulador el arranque en frío tarda 4,5–6 s también con solo texto (5–8 s), así que el tiempo no dice nada del móvil. **[Suposición]** El blanco del primer fotograma es la lectura de `position.json` (la zona es blanca hasta tenerla) más la decodificación de `screen.jpg`, que no es síncrona; en el Xiaomi debería ser de pocos fotogramas. Hay que medirlo allí (abajo).
+
+### Xiaomi 15T Pro
+
+- **[Pendiente]** No se pudo medir el 2026-09-28: el móvil se desconectó de `adb` al empezar la tarea y no volvió a aparecer. Faltan: arranque en frío con el PDF en la última posición (CA-008-08, < 1 s p50), el tiempo hasta ver la página (no solo el primer fotograma), la memoria de CL-008-5 con la GPU (`dumpsys meminfo`) y la fluidez al desplazar. Pasos (con el permiso del propietario; nunca sin `--keep-app-running`, y siempre con el binario ya compilado para que flutter no deduzca el paquete base, que es la app real):
+
+```bash
+cd app
+S=<serial>
+flutter build apk --profile --target=integration_test/pdf_perf_test.dart && cp build/app/outputs/flutter-apk/app-profile.apk /tmp/perf-pdf.apk
+flutter build apk --profile --target=integration_test/pdf_perf_test.dart --dart-define=PDF_PERF_TEXT_ONLY=true && cp build/app/outputs/flutter-apk/app-profile.apk /tmp/perf-text.apk
+flutter build apk --profile --split-per-abi --target-platform android-arm64 && cp build/app/outputs/flutter-apk/app-arm64-v8a-profile.apk /tmp/app-profile.apk
+# 1) Referencia con texto
+flutter drive --profile --no-dds --keep-app-running --use-application-binary=/tmp/perf-text.apk \
+  --driver=test_driver/perf_driver.dart --target=integration_test/pdf_perf_test.dart -d $S
+adb -s $S install -r /tmp/app-profile.apk
+../tools/measure-cold-start.sh $S 20 invalid.pending.app.profile   # ver la nota del nombre de la actividad
+adb -s $S shell dumpsys meminfo invalid.pending.app.profile | grep -E "TOTAL PSS|Graphics"
+# 2) Con el PDF escaneado
+adb -s $S push ../tools/fixtures/out/scanned_20p.pdf /sdcard/Android/data/invalid.pending.app.profile/files/scanned_20p.pdf
+flutter drive --profile --no-dds --keep-app-running --use-application-binary=/tmp/perf-pdf.apk \
+  --driver=test_driver/perf_driver.dart --target=integration_test/pdf_perf_test.dart -d $S
+cat build/pdf_memory.json build/pdf_scroll_frames.json
+adb -s $S install -r /tmp/app-profile.apk
+# (arranque y dumpsys como en 1)
+```
+
+- `measure-cold-start.sh` lanza `$PKG/.MainActivity`; con `.profile` la actividad es `invalid.pending.app.MainActivity`: `am start -W -S -n invalid.pending.app.profile/invalid.pending.app.MainActivity`.
+- La app `.profile` queda instalada al terminar; se quita a mano (`adb uninstall invalid.pending.app.profile`, **solo** ese paquete).
+
 ## Cómo repetir la medición
 
 ```bash

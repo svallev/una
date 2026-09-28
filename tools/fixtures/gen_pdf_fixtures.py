@@ -258,6 +258,19 @@ def many_pages_pdf(n):
     return pdf.build(catalog)
 
 
+def broken_page_pdf():
+    """CL-008-4: tres páginas; la 2 no se puede dibujar (flujo comprimido corrupto y una
+    imagen que no existe). La 1 y la 3 tienen texto."""
+    pdf, catalog = simple_pdf([page_lines(i, 3) for i in (1, 2, 3)])
+    # Objetos de simple_pdf: catálogo 1, páginas 2, fuente 3, páginas 4-6 y sus
+    # contenidos 7-9. Se estropea el contenido de la página 2 (objeto 8).
+    garbage = bytes((i * 37 + 11) % 256 for i in range(512))
+    pdf.set(8, b'<< /Filter /FlateDecode', b'x\x9c' + garbage)
+    pdf.set(5, b'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 8 0 R '
+               b'/Resources << /XObject << /Im0 99 0 R >> >> >>')
+    return pdf.build(catalog)
+
+
 def zero_pages_pdf():
     pdf = Pdf()
     catalog = pdf.add()
@@ -325,6 +338,7 @@ def main():
     files['cyclic.pdf'] = cyclic_pdf()
     files['bomb.pdf'] = bomb_pdf()
     files['zero_pages.pdf'] = zero_pages_pdf()
+    files['broken_page.pdf'] = broken_page_pdf()                         # CL-008-4
     files['pages_10000.pdf'] = many_pages_pdf(10000)
     files['html_as.pdf'] = b'<!DOCTYPE html><html><body><script>alert(1)</script>%PDF-1.7</body></html>'
     files['zip_as.pdf'] = b'PK\x03\x04' + b'\x14\x00' + b'\x00' * 24 + b'[Content_Types].xml' + b'\x00' * 64

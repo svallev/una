@@ -64,10 +64,17 @@ class PdfSemanticsLayer extends StatelessWidget {
     required this.controller,
     required this.content,
     required this.onLink,
+    required this.ready,
     this.prefix,
   });
 
   final PdfViewerController controller;
+
+  /// El visor ya tiene su tamaño y su posición. `isReady` del controlador
+  /// solo dice que el documento está cargado: puede serlo antes de la primera
+  /// maquetación, y entonces `viewSize` falla (visto en el emulador al
+  /// rearrancar con un PDF, T-008-22).
+  final bool ready;
   final Map<int, PdfPageContent> content;
   final ValueChanged<PdfLink> onLink;
 
@@ -80,7 +87,7 @@ class PdfSemanticsLayer extends StatelessWidget {
     listenable: controller,
     builder: (context, _) {
       // Sin el texto todavía, cada página se lee al menos "Página n de total".
-      if (!controller.isReady) return const SizedBox.shrink();
+      if (!ready || !controller.isReady) return const SizedBox.shrink();
       final l10n = AppLocalizations.of(context);
       final m = controller.value;
       final view = Offset.zero & controller.viewSize;
