@@ -1,4 +1,4 @@
-import 'link_policy.dart' show toPunycodeLabel;
+import 'host_display.dart' show toPunycodeLabel;
 
 final _space = RegExp(r'\s');
 final _numeric = RegExp(r'^(0x[0-9a-f]*|[0-9]+)$');

@@ -202,10 +202,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         _fieldFocus.unfocus();
         setState(() => _previewSignal++);
         final l10n = AppLocalizations.of(context);
-        _announce(switch (origin) {
-          AttachmentOrigin.camera => l10n.a11yPhotoAdded,
-          AttachmentOrigin.gallery => l10n.a11yImageAdded,
-          AttachmentOrigin.file => l10n.a11yPdfAdded,
+        _announce(switch (choice) {
+          AttachChoice.camera => l10n.a11yPhotoAdded,
+          AttachChoice.gallery => l10n.a11yImageAdded,
+          AttachChoice.file => l10n.a11yPdfAdded,
         });
       case ImportOutcome.unchanged:
         _focusPlus();
@@ -456,10 +456,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     // Una imagen (la nueva o la que ya tenía la tarea): su versión de pantalla.
     final ImageProvider? previewImage = switch (staged) {
       StagedImage(:final id) => images.staged(id, 'screen.jpg'),
-      StagedPdf() => null,
-      null when existing != null && !existing.isPdf => images.stored(
-        existing.screenPath,
-      ),
+      StagedPdf() || StagedWeb() => null,
+      null when existing != null && existing.kind == AttachmentKind.image =>
+        images.stored(existing.screenPath),
       null => null,
     };
     // Un PDF: franja y páginas (CA-008-04).
@@ -469,7 +468,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         name: pdfName(l10n, originalName),
         size: pdfSize(l10n, byteSize),
       ),
-      StagedImage() => null,
+      StagedImage() || StagedWeb() => null,
       null when existing != null && existing.isPdf => (
         source: images.storedPdf(existing.documentPath),
         name: pdfName(l10n, existing.originalName),

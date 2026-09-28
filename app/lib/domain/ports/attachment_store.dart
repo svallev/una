@@ -75,4 +75,16 @@ Attachment attachmentFrom(StagedAttachment staged, DateTime at) =>
         originalName: staged.originalName,
         pageCount: staged.pageCount,
       ),
+      // Sin archivos ni medidas: solo la dirección (plan §3, ADR-0016).
+      StagedWeb() => Attachment(
+        id: staged.id,
+        kind: AttachmentKind.web,
+        origin: AttachmentOrigin.url,
+        mime: 'text/html',
+        byteSize: 0,
+        width: 0,
+        height: 0,
+        createdAt: at,
+        url: staged.url,
+      ),
     };

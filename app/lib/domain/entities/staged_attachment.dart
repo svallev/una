@@ -78,3 +78,22 @@ final class StagedPdf extends StagedAttachment {
   @override
   String toString() => 'StagedPdf($id, $pageCount p., $byteSize)';
 }
+
+/// Página web (spec 009): solo la dirección ya validada (`validateWebAddress`).
+/// No hay nada preparado en disco (ADR-0016): [id] es el del adjunto.
+final class StagedWeb extends StagedAttachment {
+  const StagedWeb({required super.id, required this.url}) : super(byteSize: 0);
+
+  final String url;
+
+  @override
+  bool operator ==(Object other) =>
+      other is StagedWeb && other.id == id && other.url == url;
+
+  @override
+  int get hashCode => Object.hash(id, url);
+
+  // Sin la dirección: no va a ningún registro (CL-009-9).
+  @override
+  String toString() => 'StagedWeb($id)';
+}

@@ -1,4 +1,5 @@
 import 'package:app/domain/entities/link_target.dart';
+import 'package:app/domain/services/host_display.dart';
 import 'package:app/domain/services/link_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
 

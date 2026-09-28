@@ -29,7 +29,7 @@
   - **al usar la web por primera vez** se escribe una marca (`files/web_used`). Si la app se cerró sin borrar, **después del primer fotograma** del arranque siguiente se borra lo mismo desde Kotlin: `CookieManager.removeAllCookies`, `WebStorage.deleteAllData` y la caché de la WebView. Solo se hace si existe la marca, así que no cuesta nada a quien no usa la web;
   - los directorios de la WebView (`app_webview/`, `cache/`) ya quedan **fuera** de la copia en la nube y de la transferencia: las reglas solo incluyen `app_flutter/`, `shared_prefs/` y `files/`. Se añade un test que lo fija, y la marca va en `files/`, sin contenido.
 - **"Mismo sitio" = mismo dominio registrable (CA-009-11).** Hace falta la *Public Suffix List* (PSL): sin ella, `ejemplo.co.uk` y `otro.co.uk` serían "el mismo sitio".
-  - Se **incluye la lista como asset**: `public_suffix_list.dat` de Mozilla, MPL-2.0, ~230 KB, con su versión y su sha256 en `tools/psl.lock`.
+  - Se **incluye la lista como asset**: `public_suffix_list.dat` de Mozilla, MPL-2.0, ~335 KB (~90 KB comprimida), con su versión y su sha256 en `tools/psl.lock`.
   - El intérprete es propio, en Dart puro (unas 60 líneas, con comodines y excepciones), y un script actualiza la lista (`tools/update-psl.sh`).
   - Se carga la primera vez que se muestra una tarea web, nunca en el arranque.
   - Se descarta un paquete de pub.dev: casi todos están sin mantenimiento o traen red.
