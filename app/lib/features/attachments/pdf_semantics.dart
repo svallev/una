@@ -3,10 +3,10 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/link_target.dart';
 import '../../domain/services/link_policy.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../ui/focus_ring.dart';
 import 'task_labels.dart';
 
 /// Texto y enlaces de una página, leídos una vez al abrir el PDF (con 20
@@ -225,20 +225,11 @@ class _LinkNodeState extends State<_LinkNode> {
             label: widget.label,
             onTap: widget.onActivate,
             excludeSemantics: true,
-            // El anillo tampoco capta toques (BoxDecoration sí lo haría).
+            // El anillo tampoco capta toques (BoxDecoration sí lo haría). El
+            // de la app, blanco y negro, para verse sobre cualquier página
+            // (spec 008 §6, como en la 007).
             child: IgnorePointer(
-              child: DecoratedBox(
-                position: DecorationPosition.foreground,
-                decoration: BoxDecoration(
-                  border: ring
-                      ? Border.all(
-                          color: UnaColors.ink,
-                          width: UnaBorders.focusWidth,
-                        )
-                      : null,
-                ),
-                child: const SizedBox.expand(),
-              ),
+              child: FocusRing(visible: ring, child: const SizedBox.expand()),
             ),
           ),
         ),

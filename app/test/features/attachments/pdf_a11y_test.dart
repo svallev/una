@@ -22,6 +22,7 @@ import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:app/ui/brutal_button.dart';
+import 'package:app/ui/focus_ring.dart';
 import 'package:app/ui/una_sheet.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -580,6 +581,26 @@ void main() {
       expect(focusedLabel(), 'Enlace a example.org');
       await unmount(tester);
       handle.dispose();
+    });
+
+    // Hallazgo de la revisión de accesibilidad de T-008-25: el anillo del
+    // enlace era solo negro y no se veía sobre una zona oscura de la página.
+    testWidgets('CA-008-12 / spec 008 §6: el enlace con el foco del teclado '
+        'lleva el anillo blanco y negro de la app (como en la 007)', (
+      tester,
+    ) async {
+      await pumpPdf(tester, 'links.pdf');
+      for (var i = 0; i < 6; i++) {
+        if (focusedLabel() == 'Enlace a example.org') break;
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(focusedLabel(), 'Enlace a example.org');
+      final rings = tester
+          .widgetList<FocusRing>(find.byType(FocusRing))
+          .where((r) => r.visible);
+      expect(rings, hasLength(1));
+      await unmount(tester);
     });
   });
 

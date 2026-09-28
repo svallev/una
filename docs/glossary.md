@@ -23,15 +23,18 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Tarea web / URL | Web task / URL | `AttachmentKind.web` | Tarea que muestra una página web. |
 | Instantánea / captura | Snapshot | `snapshot` | Imagen de página completa de una URL, guardada al crearla, para verla sin conexión. |
 | Miniatura | Thumbnail | `thumbnail`, `thumb.jpg` | Versión pequeña de un adjunto para el listado: cuadrada y recortada, de 176 px (se ve a 44). |
+| Insignia | Badge | `TaskThumbnail` (`attachmentKindLabel`) | Recuadro negro de 44 px con el tipo ("PDF") en la fila del listado de una tarea con PDF, en lugar de la miniatura; decorativa para el lector (spec 008). |
 | Versión completa | Full version | `relPath` (prefijo de las teselas) | Copia de la imagen que guarda la app: recodificada, sin metadatos y como mucho de 24 MP, sin límite de lado. |
 | Tesela | Tile | `ImageTiles`, `full-<fila>-<columna>.jpg` | Trozo de 4096 px como máximo de la versión completa. |
-| Versión de pantalla | Display version | `displayRelPath`, `screen.jpg` | Recorte al tamaño de la pantalla para pintar la tarea actual rápido al abrir (CA-001-09). |
-| Preparación | Staging | `cache/import/<id>`, `StagedImage` | Zona temporal donde se copia y limpia una imagen antes de guardarla con la tarea. |
+| Versión de pantalla | Display version | `displayRelPath`, `screen.jpg` | Recorte al tamaño de la pantalla para pintar la tarea actual rápido al abrir (CA-001-09). Con PDF, lo que se ve desde la última posición (spec 008). |
+| Preparación | Staging | `cache/import/<id>`, `StagedImage`, `StagedPdf` | Zona temporal donde se copia y prepara un adjunto (imagen o PDF) antes de guardarlo con la tarea. |
 | Adjunto no disponible | Missing attachment | `AttachmentFiles.missing`, `MissingAttachmentCard` | El archivo principal del adjunto (la versión completa de la imagen o el PDF) falta o no se puede leer: se muestra la tarjeta con una sola acción. |
 | Barrido | Sweep | `AttachmentJanitor` | Limpieza, tras el primer fotograma, de adjuntos sin tarea y preparaciones abandonadas. |
 | Pie | Caption | `caption` | Texto de la tarea sobre su imagen (recuadro negro, texto blanco). |
-| Franja | Strip | `AttachmentStrip` | Barra negra fija sobre el PDF con "PDF", el nombre y el tamaño (spec 008). |
-| Última posición | Last position | `lastPosition` | Página y desplazamiento dentro de ella donde se dejó de ver un PDF; al volver, se ve ahí (spec 008). |
+| Franja | Strip | `PdfStrip` | Barra negra fija sobre el PDF con "PDF", el nombre y el tamaño (spec 008). |
+| Banda del texto | Caption band | `PdfCaptionBand` | Texto de la tarea sobre la primera página del PDF, del color de la nota; se desplaza y se amplía con las páginas (spec 008). |
+| Última posición | Last position | `PdfPosition`, `position.json` | Página que ocupaba la parte de arriba y fracción desplazada dentro de ella donde se dejó de ver un PDF; al volver, se ve ahí (spec 008). |
+| Enlace del PDF | PDF link | `LinkTarget`, `classifyLink` | Enlace dentro de un PDF: a otra página, a una web, a un correo o a un teléfono (siempre con confirmación, salvo a otra página); el resto no hace nada (spec 008). |
 | Visor del sistema | System viewer | `SystemViewer` | QuickLook (iOS) o la app que registre el tipo (Android). **No se usa en la v1** (ADR-0014). |
 | Nota adhesiva | Sticky note | `StickyNote` | Representación visual de una tarea (color de la paleta). |
 | Color de la nota | Note color | `colorKey` | Índice 0–4 de la paleta. Se guarda con la tarea. |

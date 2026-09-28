@@ -22,13 +22,20 @@ class _PreviewPages extends StatelessWidget {
 
   final PdfSource source;
 
-  static const _params = PdfViewerParams(
+  static final _params = PdfViewerParams(
     backgroundColor: UnaColors.surface,
     margin: 0,
     pageDropShadow: null,
     scaleEnabled: false,
     panAxis: PanAxis.vertical,
     enableKeyboardNavigation: false,
+    // Sin seleccionar ni copiar el texto (spec 008 §8), como en la tarea.
+    textSelectionParams: const PdfTextSelectionParams(enabled: false),
+    // Ni el aviso de carga ni la pantalla de error de pdfrx: esta, en inglés,
+    // con la traza y con un enlace que abre internet sin preguntar (P4, P7).
+    // Si el PDF no se puede abrir, el recuadro queda en blanco.
+    loadingBannerBuilder: (_, _, _) => const SizedBox.shrink(),
+    errorBannerBuilder: (_, _, _, _) => const SizedBox.shrink(),
   );
 
   @override
