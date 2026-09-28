@@ -1,6 +1,6 @@
 # ADR-0014: En la v1 solo se adjuntan PDF, que se ven, giran y se amplían en la propia tarea
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado. **Enmendado por el [ADR-0015](0015-sin-volver-a-vertical.md) (2026-09-28):** no hay botón "Volver a vertical" (ni con imagen ni con PDF) y deja de ser la mitigación de la excepción del horizontal; el resto de este ADR sigue
 - **Fecha:** 2026-09-27
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** spec 008, ADR-0008 (enmendado), ADR-0013, D6, D10, D18, D19, DEV-02, DEV-03, DEV-42, R-11, modelo de amenazas T-3 y T-8

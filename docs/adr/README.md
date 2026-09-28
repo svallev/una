@@ -17,4 +17,5 @@ Formato MADR simplificado ([plantilla](0000-template.md)). Nuevos ADR con la ski
 | [0011](0011-eliminar-sin-deshacer.md) | Eliminar es definitivo (sin deshacer), con marca de borrado sin contenido | Sustituido por ADR-0012 |
 | [0012](0012-sin-historico.md) | Sin histórico: completar y eliminar borran la tarea del todo | Aceptado |
 | [0013](0013-sin-visor-de-imagenes.md) | Sin visor de imágenes: la imagen se ve y se amplía en la propia tarea | Aceptado (excepción a P6) |
-| [0014](0014-solo-pdf-en-la-v1.md) | En la v1 solo se adjuntan PDF, que se ven, giran y se amplían en la propia tarea | Aceptado |
+| [0014](0014-solo-pdf-en-la-v1.md) | En la v1 solo se adjuntan PDF, que se ven, giran y se amplían en la propia tarea | Aceptado; enmendado por ADR-0015 (sin "Volver a vertical") |
+| [0015](0015-sin-volver-a-vertical.md) | Sin "Volver a vertical": la tarea con adjunto vuelve a vertical solo al girar el móvil | Aceptado (excepción a P6 sin el botón) |
