@@ -14,7 +14,7 @@
   - la **versión de pantalla** de la página es un JPEG al ancho físico (I-2). pdfrx da los píxeles y el JPEG lo codifica el `ImageSanitizer` nativo (nuevo método `encodeJpeg`, sin dependencia; en Dart es 15 veces más lento, H-4).
 - **Guardado** en `attachments/<id>/`: `document.pdf` (el archivo tal cual, sin nombre original), `screen.jpg` (versión de pantalla) y `position.json` (última posición). Ninguna miniatura: el listado usa la insignia "PDF".
 - **Última posición sin cambiar el esquema:** se guarda en `position.json` dentro del directorio del adjunto (página + fracción desplazada dentro de ella, CA-008-09). Así se borra con el mismo borrado del adjunto (CA-008-16), no toca la BD y, como los adjuntos no van a la copia en la nube, tras restaurar empieza por la primera página, que es lo que dice la spec.
-- **Arranque en < 1 s con la última posición (CA-008-08):** al salir de la tarea o pasar a segundo plano, se vuelve a dibujar en segundo plano la página de la última posición como `screen.jpg`. En el arranque en frío se pinta esa imagen, colocada según la fracción guardada, y encima entra el visor de pdfrx cuando está listo (18–20 ms en S3). Se mide en el Xiaomi (T-008-22).
+- **Arranque en < 1 s con la última posición (CA-008-08):** al salir de la tarea o pasar a segundo plano, se vuelve a dibujar en segundo plano, como `screen.jpg`, **lo que se ve desde la última posición**: la página desde la fracción guardada y las siguientes, con su separación, hasta el alto de la pantalla (`PdfEngine.renderView`). Al importar, `screen.jpg` es la página 1. Antes de `runApp`, y solo si la tarea actual tiene PDF (con un tope de 1 s), se leen `position.json` y se decodifica `screen.jpg` (`pdf_boot.dart`), así que el primer fotograma ya la pinta. El visor de pdfrx se abre debajo y la imagen **no se quita hasta que pdfrx avisa de que ha dibujado las páginas visibles**, al primer toque o, como respaldo, a los 10 s; si no, el visor listo pero aún sin dibujar la tapaba en blanco (T-008-22). Al redibujar `screen.jpg`, la imagen anterior sale de la caché. Se mide en el Xiaomi (T-008-22).
 - **Dominio (Dart puro):**
   - `AttachmentKind.pdf` y `AttachmentOrigin.file`; `Attachment` gana `originalName` y `pageCount`, y las rutas `documentPath` y `positionPath`;
   - `sanitizeFileName` (CA-008-07: sin rutas, controles ni marcas bidi, 120 grafemas conservando la extensión; vacío → null → "PDF");
@@ -95,7 +95,7 @@ Ficheros de prueba: `tools/fixtures/gen_pdf_fixtures.py` escribe PDF a mano, sin
   - el horizontal usa la excepción ya ampliada (constitución 1.2); ~~con "Volver a vertical"~~ sin botón desde el 2026-09-28 (propietario);
   - se pasan `a11y-reviewer` y TalkBack en el emulador, con la limitación de foco ya aceptada en la 007.
 - **Rendimiento:**
-  - el arranque no abre el PDF antes del primer fotograma: pinta `screen.jpg` y abre pdfrx después;
+  - el arranque no abre el PDF antes del primer fotograma: decodifica `screen.jpg` antes de `runApp`, la pinta y abre pdfrx después, sin quitarla hasta que ha dibujado;
   - la memoria de CL-008-5 (20 páginas escaneadas, casi 10 MB) se mide con `dumpsys meminfo` en el Xiaomi (con permiso y `--keep-app-running`);
   - el tamaño del APK, con `--analyze-size`.
 
