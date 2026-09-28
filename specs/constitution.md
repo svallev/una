@@ -2,7 +2,7 @@
 
 > Principios que **no se negocian**. Toda spec, plan, tarea y PR se revisa contra este documento.
 > Para cambiarlo hace falta un ADR que lo justifique y la aprobación explícita del propietario del producto.
-> Versión 1.3 · 2026-09-28 (sin "Volver a vertical" en el horizontal, ADR-0015). Versión 1.2 · 2026-09-27 (excepción del horizontal ampliada al PDF, ADR-0014). Versión 1.1 · 2026-09-27 (nota de excepciones bajo P6, ADR-0013). Versión 1.0 · 2026-09-24
+> Versión 1.4 · 2026-09-28 (excepción a P3: la tarea web necesita conexión, ADR-0016). Versión 1.3 · 2026-09-28 (sin "Volver a vertical" en el horizontal, ADR-0015). Versión 1.2 · 2026-09-27 (excepción del horizontal ampliada al PDF, ADR-0014). Versión 1.1 · 2026-09-27 (nota de excepciones bajo P6, ADR-0013). Versión 1.0 · 2026-09-24
 
 ## Principios
 
@@ -14,6 +14,8 @@ Abrir la app lleva directamente a la tarea actual, a pantalla completa, sin toqu
 
 ### P3. Local y sin conexión
 Sin servidor, sin cuentas y sin login. Todo funciona en modo avión. Los adjuntos se **copian** dentro de la app: nunca se guardan referencias a archivos externos que pueden desaparecer.
+
+> **Excepción aprobada por el propietario:** [ADR-0016](../docs/adr/0016-web-sin-copia-local.md) (2026-09-28): la tarea web guarda solo la dirección y **necesita conexión** para verse; no se guarda nada de la página. Es una función de uso ocasional; sin conexión, la tarea lo dice, y para tener algo a mano sin cobertura están la imagen y el PDF. El resto de la app sigue funcionando en modo avión, también la tarea web (se crea, se edita, se completa y se elimina sin red).
 
 ### P4. Privacidad por defecto
 Cero red por defecto: sin analítica, sin informes de errores y sin SDK de terceros que envíen datos. La única conexión permitida es la carga de una URL que el usuario ha pedido ver. Objetivo: declarar **"Data Not Collected"** en ambas tiendas. Cualquier excepción futura será opcional, con consentimiento explícito y con su ADR.

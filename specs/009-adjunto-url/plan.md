@@ -1,0 +1,150 @@
+# Plan técnico — Spec 009: Tareas con una página web (URL)
+
+- **Spec:** `specs/009-adjunto-url/spec.md` (estado: Aprobada, 2026-09-28)
+- **ADR aplicables:** ADR-0016 (sin copia local; excepción a P3), ADR-0007 (validación, WebView endurecida, navegación; enmendado por el 0016), ADR-0002 (repositorio y esquema), ADR-0004 (copias), ADR-0010 (web de pruebas), ADR-0012 (completar borra), ADR-0013/0014/0015 (horizontal), resultados del spike S4 (`docs/spikes/F1-S3-S4-S5-resultados.md`)
+- **Estado del plan:** Aprobado (propietario, 2026-09-28)
+- **Rama:** `feat/009-adjunto-url`, desde `main` (la 008 ya está fusionada)
+
+## 1. Resumen del enfoque
+
+- **La tarea web es un adjunto sin archivos.** Se reutiliza el modelo de la 007/008 (`Attachment`, `CreateTask`, `EditTask`, `taskLabel`, insignia, giro, pantalla encendida) con `AttachmentKind.web`, `AttachmentOrigin.url` y la dirección en `Attachment.url`. No hay preparación, versión de pantalla ni archivos que comprobar, respaldar o borrar: `commit` no mueve nada, `check` da siempre `ok` y `delete` no encuentra nada. Así "Adjunto no disponible" no aplica, y completar o eliminar ya borran la tarea del todo (ADR-0012).
+- **Sin cambio de esquema.** La v2 ya tiene `kind = web`, `origin = url` y `sourceUrl` (previstos en el ADR-0002). `relPath` es obligatorio: para la web se guarda vacío. `mime` = `text/html`, `byteSize` = 0, sin medidas. `sourceHost`, `snapshotRelPath` y `snapshotAt` se quedan nulos: el dominio se calcula de la dirección y no hay captura (ADR-0016).
+- **Una dependencia nueva: `webview_flutter`** (oficial; con `webview_flutter_android`), la que eligió el ADR-0007 tras el spike S4 (4.14.1 entonces; se fija la última 4.x estable al empezar). Ver §4.
+- **Endurecimiento en dos niveles** (T-4):
+  - desde Dart (API del paquete):
+    - JavaScript activado, **sin ningún canal JS**;
+    - `NavigationDelegate` con la política de navegación (`onNavigationRequest`), `onWebResourceError` (solo el marco principal) y el rechazo de los errores de certificado;
+    - permisos de la página denegados (`setOnPlatformPermissionRequest`, geolocalización);
+    - diálogos JS descartados (`setOnJavaScriptAlertDialog`/`Confirm`/`TextInput` sin mostrar nada);
+    - sin selector de archivos (`setOnShowFileSelector` devuelve vacío);
+    - sin pantalla completa (`setCustomWidgetCallbacks` no la muestra);
+  - desde **Kotlin**, con la instancia nativa que da `WebViewFlutterAndroidExternalApi.getWebView` (canal nuevo `una/webview`):
+    - `allowFileAccess`/`allowContentAccess` a `false`, `saveFormData` a `false`;
+    - `mixedContentMode = NEVER_ALLOW`, Safe Browsing activado y `supportMultipleWindows` a `false`;
+    - un **`DownloadListener`** que no descarga y avisa a Dart (→ "no es una página", CL-009-4; sin él, un PDF dejaba la página en blanco);
+    - `setWebContentsDebuggingEnabled(false)` en *release*.
+- **Nada de la página se queda en el móvil** (CA-009-13, ADR-0016):
+  - **al salir de la tarea** (otra pantalla, otra tarea, completar, eliminar): se borran las cookies (`WebViewCookieManager.clearCookies`), el almacenamiento web (`clearLocalStorage`, que en Android es `WebStorage.deleteAllData`: localStorage, IndexedDB y el resto) y la caché (`clearCache`);
+  - **al usar la web por primera vez** se escribe una marca (`files/web_used`). Si la app se cerró sin borrar, **después del primer fotograma** del arranque siguiente se borra lo mismo desde Kotlin: `CookieManager.removeAllCookies`, `WebStorage.deleteAllData` y la caché de la WebView. Solo se hace si existe la marca, así que no cuesta nada a quien no usa la web;
+  - los directorios de la WebView (`app_webview/`, `cache/`) ya quedan **fuera** de la copia en la nube y de la transferencia: las reglas solo incluyen `app_flutter/`, `shared_prefs/` y `files/`. Se añade un test que lo fija, y la marca va en `files/`, sin contenido.
+- **"Mismo sitio" = mismo dominio registrable (CA-009-11).** Hace falta la *Public Suffix List* (PSL): sin ella, `ejemplo.co.uk` y `otro.co.uk` serían "el mismo sitio".
+  - Se **incluye la lista como asset**: `public_suffix_list.dat` de Mozilla, MPL-2.0, ~230 KB, con su versión y su sha256 en `tools/psl.lock`.
+  - El intérprete es propio, en Dart puro (unas 60 líneas, con comodines y excepciones), y un script actualiza la lista (`tools/update-psl.sh`).
+  - Se carga la primera vez que se muestra una tarea web, nunca en el arranque.
+  - Se descarta un paquete de pub.dev: casi todos están sin mantenimiento o traen red.
+- **Estado de la página** (`WebPageController`, capa de estado), sobre una interfaz `WebPageDriver` que en los tests se sustituye por un falso, como el visor del PDF:
+  - estados: `loading`, `shown`, `offline`, `insecure`, `certificate`, `notAPage`;
+  - **se carga cada vez** que la tarea aparece (CA-009-07). Segundo plano de menos de 10 minutos: se conserva (CA-001-12). Si el sistema mató el proceso de la página, se recarga;
+  - `http://` → se carga como `https://` (CA-009-09). Si falla con un error de conexión o de TLS, `insecure`; con cualquier otro error de red del marco principal, `offline`. Un error de certificado siempre es `certificate` y la carga se cancela;
+  - **20 s** sin `onPageStarted` → `offline` (CA-009-08, CL-009-7);
+  - "Reintentar", y la vuelta a la app o a la tarea en un estado de error, recargan la dirección guardada;
+  - las redirecciones de la **carga inicial** se siguen (CL-009-1). Al primer `onPageStarted`, el sitio de la página pasa a ser el de referencia, y si difiere del de la dirección guardada se muestra una vez `urlRedirected`.
+- **Atrás (CA-009-12):** un `PopScope` en la tarea actual web que, si `canGoBack()`, llama a `goBack()` en lugar de salir.
+- **Presentación:**
+  - la **barra** reutiliza la franja del PDF (negra, mono 11, candado + dominio + "WEB"), y el dominio se recorta por el principio con un `TextPainter` propio: "…" + el final que quepa (CA-009-14);
+  - debajo, la WebView (composición híbrida de Android);
+  - los avisos de error y el indicador de carga ocupan la zona de la página;
+  - en horizontal, la WebView a sangre con el logotipo, **sin recrearla** (clave estable, como el visor del PDF, CA-009-15).
+- **Accesibilidad:** la barra es el nodo de la tarea ("Tarea actual: Página web de {host}") con las acciones Completar y Eliminar. En horizontal no hay barra: el nodo pasa al logotipo, con la misma lectura y las mismas acciones. La WebView no admite acciones propias de Flutter, y en la 008 TalkBack no enfocaba un contenedor sin etiqueta. Se comprueba con TalkBack en el emulador.
+- **Cara de completar y eliminar (CA-009-17):** la barra y la zona de la página **en blanco**. Una vista nativa no se puede capturar de forma fiable con `toImageSync`.
+- **Web de pruebas (CL-009-5):** sin WebView. Tarjeta del prototipo con el dominio, la dirección y "Abrir página ↗", que abre la dirección en una pestaña nueva con `window.open(url, '_blank', 'noopener,noreferrer')` (`package:web`, ya presente). `webview_flutter` se importa solo en la variante nativa (importación condicional, como `repository_factory`). La CSP no cambia: no hay `connect-src` ni `frame-src` nuevos.
+
+## 2. Cambios por capa
+
+| Capa | Archivos o módulos | Cambio |
+|---|---|---|
+| Dominio | `entities/attachment.dart`, `entities/staged_attachment.dart` (`StagedWeb`), `ports/attachment_store.dart` (`attachmentFrom`), `services/web_address.dart` (nuevo), `services/host_display.dart` (nuevo, sale de `link_policy.dart`), `services/public_suffix.dart` (nuevo), `services/web_navigation.dart` (nuevo), `entities/web_load_failure.dart` (nuevo) | Tipo `web`, origen `url` y `url`; validación y normalización de la dirección (CA-009-02, CL-009-8, IP privadas y locales); dominio visible (`www.`, saneado, punycode si mezcla alfabetos), compartido con los enlaces del PDF; dominio registrable con la PSL; política de navegación (dentro, al navegador, a otra app o bloqueado; carga inicial con redirecciones); tipos de fallo |
+| Datos | `drift_task_repository.dart`, `in_memory_task_repository.dart`, `attachments/file_attachment_store.dart`, `attachments/memory_attachment_store.dart`, `web/web_data_janitor.dart` (nuevo), `web/psl_asset.dart` (nuevo) | Leer y escribir `kind = web` / `origin = url` / `sourceUrl`; `commit`/`check`/`delete` sin archivos para la web; borrar los datos de la WebView (canal `una/webview`) al salir y en el arranque con la marca; cargar la PSL del asset |
+| Estado | `features/web/web_page_controller.dart` (nuevo), `features/web/web_page_driver.dart` (interfaz + implementación con `webview_flutter`), `providers.dart` | Estados de la página, 20 s, reintento, http → https, redirección inicial, atrás, limpieza al salir, cancelar al completar o eliminar (CL-009-11) |
+| Presentación | `features/web/url_sheet.dart` (nuevo), `features/web/task_web.dart` (nuevo), `features/web/web_bar.dart` (nuevo), `features/web/web_task_card_web.dart` (web de pruebas), `attach_sheet.dart`, `task_editor_screen.dart`, `current_task_screen.dart`, `task_list_screen.dart` y el menú (Editar), `task_labels.dart`, `task_thumbnail.dart`, `link_confirm_sheet.dart` (reutilizada), controladores de completar y eliminar | Hoja "Cargar URL", fila activa solo en tareas nuevas, crear directamente; Editar abre la hoja; tarea web con barra, página, carga y avisos; giro, pantalla encendida, atrás; insignia "WEB" y dominio como etiqueta; cara con la barra |
+| Nativo | `WebViewHardening.kt` (nuevo, canal `una/webview`), `MainActivity.kt`, `AndroidManifest.xml` (`INTERNET`), `tools/check-android-permissions.sh` | Ajustes nativos, `DownloadListener`, depuración solo en *debug*, borrado de datos; **primer permiso de la app en *release*: `INTERNET`** (P4 lo admite: "la carga de una URL que el usuario ha pedido ver") |
+| l10n | `app_es.arb`, `app_en.arb` | Las claves de la §7 de la spec |
+| Tokens | `design/tokens.json` → `tokens.g.dart` | Indicador de carga (alto, duración) y, si hace falta, la separación de la barra; la barra reutiliza los de la franja del PDF |
+| Assets | `assets/psl/public_suffix_list.dat`, `tools/psl.lock`, `tools/update-psl.sh` | PSL fijada por versión y sha256 (CI comprueba que el asset coincide) |
+
+## 3. Modelo de datos y migraciones
+
+**Sin cambios de esquema** (sigue la v2). La tabla `attachments` ya tiene lo necesario (`kind`, `origin`, `sourceUrl`). Fila de una tarea web:
+
+| Columna | Valor |
+|---|---|
+| `kind` / `origin` | `web` / `url` |
+| `sourceUrl` | la dirección validada (CA-009-04) |
+| `mime` | `text/html` |
+| `byteSize` | 0 |
+| `relPath` | `''` |
+| resto | nulo |
+
+La dirección viaja en la copia de seguridad con la tarea (va en la BD, como el texto). Nada más de la página.
+
+## 4. Dependencias nuevas
+
+- **`webview_flutter`** (4.x) + **`webview_flutter_android`** (dependencia directa: hace falta para los ajustes de Android y para `WebViewFlutterAndroidExternalApi`). Licencia BSD-3, del equipo de Flutter (`flutter.dev`, publicador verificado), en mantenimiento activo. Ya se probó en S4. Usa la WebView del sistema (Chromium, que se actualiza con Play): no añade motor al APK. Motivo: no hay WebView en el SDK de Flutter, y el ADR-0007 la eligió frente a `flutter_inappwebview`, sin mantenimiento. Solo se registra la implementación de Android: `webview_flutter_wkwebview` llega como transitiva, pero no se usa hasta F-iOS.
+  - **Comprobaciones [Pendiente, T-009-01]**, en el emulador y con la versión fijada; si alguna falla, se para y se consulta (§7):
+    1. un certificado inválido **se cancela** y llega como error distinguible (`onSslAuthError`, o el comportamiento por defecto del paquete);
+    2. los diálogos JS, el selector de archivos, los permisos y la pantalla completa se pueden descartar desde Dart;
+    3. `WebViewFlutterAndroidExternalApi.getWebView` da la instancia para los ajustes nativos y el `DownloadListener`;
+    4. **un fallo del proceso de la página** (`chrome://crash`, cargado solo en la prueba) **no cierra la app**;
+    5. `onPageStarted` no llega en un fallo de DNS o sin red (lo necesita el temporizador de 20 s).
+  - Licencias en `check_licenses.dart`; tamaño del APK con `--analyze-size` (se espera poco: solo código Java/Kotlin del paquete); `threat-model.md §5`.
+- **La PSL** es un dato (MPL-2.0), no una dependencia de código; su aviso de licencia se añade a `font_licenses.dart` (o a un registro de licencias equivalente).
+- **Sin más dependencias:** para detectar la red no se usa `connectivity_plus` (propietario: "Reintentar"); para abrir en el navegador, `LinkOpener` de la 008 (`ACTION_VIEW` + `BROWSABLE`, ya con `<queries>`), no `url_launcher`.
+
+## 5. Estrategia de tests
+
+La WebView no funciona en `flutter test`. Los tests de widget usan un `WebPageDriver` falso, que emite los eventos del paquete: inicio, fin, errores por tipo, peticiones de navegación, descarga, `canGoBack`. La WebView real se prueba en el emulador **sin red externa**: servidores locales en el propio dispositivo (`127.0.0.1`) y modo avión. La dirección local se inserta directamente en el repositorio, porque la hoja la rechazaría con razón (CA-009-02).
+
+| Criterio de aceptación | Tipo de test | Archivo |
+|---|---|---|
+| CA-009-01 | Widget (fila activa solo en tareas nuevas, sin "Cargar URL" en modo editar; hoja, teclado de URL y sin autocorrección) | `test/features/web/url_sheet_test.dart`, `test/features/attachments/attach_sheet_test.dart` (ampliado) |
+| CA-009-02; CL-009-8 | Unitarios exhaustivos (vacío, esquemas, IDN, IP privadas v4/v6, `user:pass@`, 2048, espacios) + widget del error como alerta | `test/domain/web_address_test.dart`, `url_sheet_test.dart` |
+| CA-009-03, 04, 05 | Casos de uso y widget (arriba, sin texto, descarta texto y adjunto preparado sin archivos, doble toque, editar conserva posición y color, misma dirección sin cambios) + contrato de repositorios | `test/domain/create_task_web_test.dart`, `test/features/editor/editor_url_test.dart`, `test/data/task_repository_contract_test.dart` (ampliado) |
+| CA-009-06, 07, 08 | Widget con el falso (barra, carga, se carga cada vez, 10 minutos, menú no recarga, 20 s, "Reintentar", reintento al volver) + integración en modo avión | `test/features/web/task_web_test.dart`, `integration_test/web_flow_test.dart` |
+| CA-009-09, 10; CL-009-4 | Unitario de la clasificación de fallos + integración con servidores locales (`http://127.0.0.1`: bloqueado en claro; `https` autofirmado: certificado; respuesta `application/pdf`: no es una página) | `test/features/web/web_page_controller_test.dart`, `integration_test/web_flow_test.dart` |
+| CA-009-11; CL-009-1 | Unitarios de `web_navigation` y `public_suffix` (mismo sitio, `co.uk`, comodines, excepciones, IP, esquemas, `usuario@`, carga inicial) + widget de las confirmaciones | `test/domain/web_navigation_test.dart`, `test/domain/public_suffix_test.dart`, `task_web_test.dart` |
+| CA-009-12 | Widget (atrás con y sin historial) | `task_web_test.dart` |
+| CA-009-13 | Widget (limpieza al salir por cada camino) + unitario del janitor (marca) + reglas de copia + integración (tras salir, `document.cookie` y `localStorage` vacíos al volver) + revisión de los ajustes nativos | `test/features/web/web_isolation_test.dart`, `test/app/backup_rules_test.dart`, `integration_test/web_flow_test.dart` |
+| CA-009-14 | Unitario (`www.`, bidi, punycode) + widget (recorte por el principio al 200 %, lectura entera) | `test/domain/host_display_test.dart`, `test/features/web/web_bar_test.dart` |
+| CA-009-15 | Widget (horizontal: página y logotipo; no gira con avisos; no se recrea) + prueba a mano en el emulador con el sensor simulado | `test/features/current_task/landscape_test.dart` (ampliado) |
+| CA-009-16 | Widget | `test/features/attachments/keep_screen_on_test.dart` (ampliado) |
+| CA-009-17; CL-009-11 | Widget (insignia, dominio como etiqueta en el listado, eliminar y anuncios; cara con la barra; carga cancelada) | `test/features/web/web_elsewhere_test.dart` |
+| CA-009-18, 19, 20 | Widget con `SemanticsTester`, `meetsGuideline`, texto al 200 % en 360 dp (`loadAppFonts`) + TalkBack en el emulador | `test/features/web/web_a11y_test.dart` |
+| CL-009-5 | Build web y prueba a mano | — |
+| CL-009-9 | Revisión del código + `security-reviewer` | — |
+| Aspecto | *Goldens* (hoja con error, tarea web cargando, sin conexión, sin https, fila con insignia "WEB") | `test/goldens/web_golden_test.dart` |
+
+## 6. Seguridad, accesibilidad y rendimiento
+
+- **Seguridad (T-4, T-5, T-6):**
+  - la página nunca tiene puente con la app: sin canales JS ni `addJavascriptInterface`, que se revisa con un test que busca `addJavaScriptChannel` en `lib/`;
+  - sin acceso a archivos ni contenido; sin permisos, descargas, diálogos, autorrellenado ni pantalla completa;
+  - solo https: `cleartextTrafficPermitted=false`, ya fijado, y contenido mixto `NEVER_ALLOW`; certificados inválidos siempre cancelados;
+  - navegación solo por `web_navigation`, con la PSL fijada y confirmación antes de salir;
+  - el dominio, saneado y en punycode si mezcla alfabetos;
+  - nada de la página se guarda; ningún registro con direcciones (CL-009-9);
+  - `INTERNET` es el único permiso nuevo: `check-android-permissions.sh` lo pasa a permitido en *release*, y cualquier otro sigue fallando;
+  - se pasan `security-reviewer` y `/security-check`.
+- **Privacidad (P4):** la única red es la página que el usuario pidió ver ("Data Not Collected" no cambia). Safe Browsing de Android puede consultar a Google la reputación de las direcciones (con prefijos de hash). **[Pendiente T-009-01]** Confirmar cómo lo trata la ficha de Data Safety; si es un problema, se desactiva y se consulta.
+- **Accesibilidad:**
+  - la barra y el logotipo en horizontal llevan la tarea y sus acciones;
+  - la página, con la accesibilidad de la WebView;
+  - el horizontal usa la excepción ya aprobada (constitución P6), ampliada a la web;
+  - se pasan `a11y-reviewer` y TalkBack en el emulador (memoria: verificar TalkBack en el emulador, no solo con tests de eventos de foco).
+- **Rendimiento:**
+  - el primer fotograma no espera a la WebView: la barra se pinta con Flutter y la WebView se crea después del primer fotograma;
+  - se mide el arranque en frío con una tarea web actual en el Xiaomi (CA-001-09 con la barra; objetivo p50 < 1 s), con tu permiso y `--keep-app-running`;
+  - la PSL se carga fuera del arranque;
+  - el borrado de datos en el arranque va después del primer fotograma y solo con la marca;
+  - tamaño del APK con `--analyze-size`.
+
+## 7. Riesgos y alternativas
+
+| Riesgo | Mitigación / alternativa |
+|---|---|
+| `webview_flutter` no deja cancelar un certificado inválido de forma distinguible, o un fallo del proceso de la página cierra la app | T-009-01 lo comprueba antes de construir nada. Si falla: **WebView propia en Kotlin** (vista de plataforma con su `WebViewClient`: `onReceivedSslError` → `cancel`, `onRenderProcessGone`), sin el paquete. Supondría enmendar el ADR-0007, así que **se para y se consulta** |
+| No se puede distinguir un enlace que abre ventana nueva (`target=_blank`) de uno normal: con `supportMultipleWindows = false`, Android lo carga en la misma WebView | La política de sitio se aplica igual: a otro sitio pide confirmación; al mismo sitio navega dentro de la tarea en vez de preguntar. **[Pendiente de consultar]** Si se quiere preguntar siempre, `supportMultipleWindows = true` + `onCreateWindow` exige la WebView propia en Kotlin |
+| Sin red y "el servidor no admite https" dan errores parecidos (CA-009-08 frente a CA-009-09) | Solo se clasifica como `insecure` si la dirección era `http://` y falla la conexión o el TLS del intento https; un fallo de DNS es siempre `offline`. Tests con servidores locales |
+| La PSL caduca (dominios nuevos) | `tools/update-psl.sh` y una revisión en cada versión (checklist de publicación). Un sufijo desconocido cae en la regla por defecto de la PSL (la última etiqueta), que como mucho pide confirmación de más |
+| TalkBack no enfoca el logotipo como nodo de la tarea en horizontal, o la WebView se queda el foco | Se prueba en el emulador (T-009-19). Alternativa: un nodo propio encima de la página, sin toques, con la lectura y las acciones |
+| La WebView tarda en crearse (~100–300 ms) y el primer contenido depende de la red | Fuera del presupuesto de CA-001-09 (ADR-0016): la barra y el indicador están en el primer fotograma |
+| Safe Browsing envía datos a Google (P4) | Se evalúa en T-009-01; se puede desactivar (`WebSettingsCompat`) |

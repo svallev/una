@@ -1,0 +1,38 @@
+# Tareas — Spec 009: Tareas con una página web (URL)
+
+Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se marca `[P]` si puede hacerse en paralelo con la anterior. Una PR puede agrupar varias tareas consecutivas.
+
+| ID | Tarea | Depende de | Verificación | CA |
+|---|---|---|---|---|
+| T-009-01 | Dependencia `webview_flutter` + `webview_flutter_android` fijadas; `INTERNET` en el manifiesto de *release* y permitido en `check-android-permissions.sh`; comprobar en el emulador las cinco cosas del plan §4 (certificado cancelado y distinguible, diálogos/selector/permisos/pantalla completa descartables, `getWebView` nativo, un fallo del proceso de la página no cierra la app, `onPageStarted` sin red) y Safe Browsing frente a P4; licencias, tamaño del APK, build web sin la WebView; registrarla en `threat-model.md §5`. **Si algo falla, se para y se consulta** (plan §7) | — | `check_licenses.dart`, `check-android-permissions.sh release`, `--analyze-size`, `flutter build web`; nota de las comprobaciones en esta tabla | Plan §4 |
+| T-009-02 [P] | Textos ES/EN de la §7 (`/strings-add`) y tokens del indicador de carga (y de la barra, si hace falta); regenerar `tokens.g.dart` | — | `gen-l10n`, `/i18n-check`, `node tools/validate-tokens.mjs` | §7, CA-009-06 |
+| T-009-03 [P] | PSL: asset `public_suffix_list.dat` fijado (`tools/psl.lock`, `tools/update-psl.sh`, comprobación en CI) y `public_suffix.dart` (dominio registrable con comodines y excepciones; aviso de licencia MPL-2.0) | — | `public_suffix_test` (casos de la suite oficial de la PSL que apliquen) | CA-009-11 |
+| T-009-04 | Dominio: `AttachmentKind.web`, `AttachmentOrigin.url`, `Attachment.url`, `StagedWeb`, `attachmentFrom`; `validateWebAddress` (CA-009-02); `host_display.dart` (sale de `link_policy`: `www.`, saneado, punycode; los tests de la 008 siguen en verde); `taskLabel`/`taskReading`/insignia con la web | 02 | `web_address_test`, `host_display_test`, `link_policy_test` | CA-009-02/04/14/17/18, CL-009-8 |
+| T-009-05 | Dominio: `web_navigation.dart` (dentro del sitio, al navegador, `mailto:`/`tel:` con `classifyLink`, bloqueado; carga inicial con redirecciones) y `WebLoadFailure` (offline, insecure, certificate, notAPage) | 03, 04 | `web_navigation_test` | CA-009-08/09/10/11, CL-009-1/4 |
+| T-009-06 | Datos: repositorios drift y memoria con la web (`kind`, `origin`, `sourceUrl`, `relPath` vacío; sin cambio de esquema); almacenes: `commit`/`check`/`delete` sin archivos para la web; salud del adjunto `ok`; `CreateTask`/`EditTask` con `StagedWeb` | 04 | Tests de contrato, del almacén y de los casos de uso | CA-009-03/04/05 |
+| T-009-07 | Hoja "Cargar URL" y editor: fila activa solo en tareas nuevas (sin ella en modo editar, enmienda CA-007-01); validación y error como alerta; crear directamente (descarta el texto y el adjunto preparado sin dejar archivos), volver al origen, doble toque; foco y anuncios | 02, 06 | `url_sheet_test`, `attach_sheet_test`, `editor_url_test` | CA-009-01/02/03/19 |
+| T-009-08 | Editar una tarea web desde el menú y el listado: abre la hoja con la dirección; sustituye conservando posición y color; misma dirección sin cambios; cerrar la deja igual | 07 | `editor_url_test` (editar) | CA-009-05 |
+| T-009-09 | Nativo: `WebViewHardening.kt` (canal `una/webview`: ajustes, `DownloadListener` → no es una página, depuración solo en *debug*, borrado de cookies, almacenamiento y caché) y `web_data_janitor.dart` (al salir y, con la marca, después del primer fotograma del arranque) | 01 | Prueba en el emulador (ajustes leídos de vuelta, descarga bloqueada, datos borrados); unitario del janitor | CA-009-13, CL-009-4 |
+| T-009-10 | Estado: `WebPageDriver` (interfaz, implementación con `webview_flutter` y falso para tests) y `WebPageController` (estados, se carga cada vez, 10 minutos, http → https, 20 s, "Reintentar", reintento al volver, redirección inicial, cancelar al completar o eliminar) | 05, 09 | `web_page_controller_test` con el falso | CA-009-07/08/09/10, CL-009-1/7/11 |
+| T-009-11 | Tarea actual web: barra (candado, dominio recortado por el principio, "WEB"), WebView tras el primer fotograma, indicador de carga, avisos con "Reintentar" y "Abrir en el navegador" (`LinkOpener`), nodo de la tarea con Completar y Eliminar | 10 | `task_web_test`, `web_bar_test` | CA-009-06/07/08/09/10/14/18 |
+| T-009-12 | Navegación contenida: `onNavigationRequest` con la política, confirmaciones de la 008 (`openInBrowserConfirm`, `openInAppConfirm`), `errNoAppForLink`, aviso de redirección | 11 | `task_web_test` (confirmaciones), prueba a mano con un servidor local | CA-009-11, CL-009-1 |
+| T-009-13 | Atrás dentro de la página (`PopScope` con `canGoBack`/`goBack`) | 11 | `task_web_test` | CA-009-12 |
+| T-009-14 | Aislamiento completo: limpieza por cada camino de salida, test de que no hay canales JS en `lib/`, reglas de copia (`app_webview/`, `cache/` y la marca fuera de la nube), sin registros | 09, 11 | `web_isolation_test`, `backup_rules_test`; revisión | CA-009-13, CL-009-9 |
+| T-009-15 | Giro (página y logotipo, no gira con avisos, la WebView no se recrea, nodo de la tarea en el logotipo) y pantalla encendida con la web | 11 | `landscape_test`, `keep_screen_on_test`; sensor simulado en el emulador | CA-009-15/16 |
+| T-009-16 | Resto de la app: insignia "WEB", dominio como etiqueta (listado, eliminar, anuncios), cara de completar y eliminar con la barra y la página en blanco | 04, 11 | `web_elsewhere_test` | CA-009-17/18, CL-009-11 |
+| T-009-17 | Web de pruebas: tarjeta del prototipo (dominio, dirección, "Abrir página ↗" en pestaña nueva con `noopener`), sin WebView ni giro, CSP sin cambios | 04, 11 | Build web y prueba a mano en local | CL-009-5 |
+| T-009-18 | Integración en el emulador (sin red externa): flujo completo con modo avión (crear, aviso, "Reintentar"), servidores locales (http en claro, https autofirmado, respuesta PDF), limpieza de cookies y `localStorage` al volver; prueba a mano con webs reales; rendimiento en el Xiaomi (arranque en frío con tarea web) y tamaño del APK, con tu permiso y `--keep-app-running` | 09–17 | `integration_test/web_flow_test.dart`; `docs/perf/baseline.md` | CA-009-06/08/09/10/13, CL-009-4 |
+| T-009-19 | Accesibilidad global: texto al 200 % en 360 dp, `meetsGuideline`, tabla de foco y anuncios; TalkBack en el emulador (barra, logotipo en horizontal, acciones, confirmaciones) | 11–17 | `web_a11y_test`; lista de la revisión | CA-009-18/19/20 |
+| T-009-20 | *Goldens* (hoja con error, tarea web cargando, sin conexión, sin https, fila con "WEB"; regenerar la hoja "Añadir" si cambia) en Linux con la etiqueta `actualizar-goldens` | 11–17 | CI | Aspecto |
+| T-009-21 | Documentos (arquitectura: tarea web y canal `una/webview`; glosario: "Tarea web", "Barra del dominio", "Dirección guardada"; DEV-18 cerrada) y revisiones: `a11y-reviewer`, `security-reviewer`, `/security-check`, `/i18n-check`, `/tokens-validate` | 18–20 | Hallazgos resueltos o registrados | DoD |
+
+## Cierre
+
+- [ ] Todos los CA de la spec tienen test en verde.
+- [ ] Definition of Done (`specs/constitution.md`) completa.
+- [ ] Spec marcada como **Implementada**.
+
+## Estado
+
+| Tareas | Estado | Commit |
+|---|---|---|
