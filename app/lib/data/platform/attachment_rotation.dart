@@ -34,6 +34,9 @@ abstract final class AttachmentRotation {
   }
 
   static Future<void> _follow(bool on) async {
+    // La web de pruebas no gira (CL-008-12): ni se pide la orientación, que en
+    // un navegador móvil la bloquearía.
+    if (kIsWeb) return;
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       if (on) ...[
@@ -45,8 +48,6 @@ abstract final class AttachmentRotation {
   }
 
   static Future<void> _invoke(String method, [Object? arguments]) async {
-    // En la web de pruebas no hay canal.
-    if (kIsWeb) return;
     try {
       await _channel.invokeMethod<void>(method, arguments);
     } on MissingPluginException {

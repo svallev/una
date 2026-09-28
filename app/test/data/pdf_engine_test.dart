@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:app/data/import/pdf_engine.dart';
 import 'package:app/domain/ports/pdf_importer.dart';
@@ -15,9 +16,11 @@ void main() {
   setUp(() => tmp = Directory.systemTemp.createTempSync('una_pdf_'));
   tearDown(() => tmp.deleteSync(recursive: true));
 
-  File fixture(String name) =>
-      File('${tmp.path}/$name')
-        ..writeAsBytesSync(base64Decode(pdfFixtures[name]!));
+  PdfOpen fixture(String name) => PdfEngine.file(
+    (File(
+      '${tmp.path}/$name',
+    )..writeAsBytesSync(base64Decode(pdfFixtures[name]!))).path,
+  );
 
   Future<PdfImportError?> errorOf(String name) async {
     try {
@@ -78,6 +81,31 @@ void main() {
       expect(await errorOf('js_form.pdf'), isNull);
     },
   );
+
+  test('CL-008-12: también se abre de los bytes en memoria (web de '
+      'pruebas)', () async {
+    Uint8List bytes(String name) => base64Decode(pdfFixtures[name]!);
+    final (info, _) = await PdfEngine.inspect(
+      PdfEngine.data(bytes('one_page.pdf')),
+      maxPages: 20,
+      renderWidth: 360,
+    );
+    expect(info, (pageCount: 1, width: 595, height: 842));
+    await expectLater(
+      PdfEngine.inspect(
+        PdfEngine.data(bytes('protected_user.pdf')),
+        maxPages: 20,
+        renderWidth: 360,
+      ),
+      throwsA(
+        isA<PdfImportFailure>().having(
+          (e) => e.error,
+          'error',
+          PdfImportError.protected,
+        ),
+      ),
+    );
+  });
 
   test('CA-008-08: dibuja cualquier página a un ancho dado', () async {
     final page = await PdfEngine.renderPage(

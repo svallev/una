@@ -90,6 +90,7 @@ void main() {
     WidgetTester tester,
     List<Task> tasks, {
     bool screenReader = false,
+    bool rotates = true,
   }) async {
     orientations = [];
     calls = [];
@@ -127,6 +128,7 @@ void main() {
       overrides: [
         attachmentStoreProvider.overrideWithValue(store),
         pdfImporterProvider.overrideWithValue(FakePdfImporter(store)),
+        attachmentRotatesProvider.overrideWithValue(rotates),
         ...fakePdfViews,
       ],
     );
@@ -356,6 +358,34 @@ void main() {
       expect(find.text('Sin adjunto'), findsOneWidget);
       expect(rotating(), isFalse);
       handle.dispose();
+    });
+  });
+
+  group('CL-008-12: la web de pruebas no gira', () {
+    testWidgets('con PDF y la ventana apaisada, se ve como en vertical', (
+      tester,
+    ) async {
+      await pumpApp(tester, [await pdfTask()], rotates: false);
+      addTearDown(tester.view.reset);
+      await turn(tester, landscape: true);
+
+      expect(find.byType(PdfStrip), findsOneWidget);
+      expect(find.byType(HoldToCompleteButton), findsOneWidget);
+      expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
+      expect(taskPdfCalls.last.caption, 'Programa');
+    });
+
+    testWidgets('con imagen, igual', (tester) async {
+      await pumpApp(tester, [await imageTask()], rotates: false);
+      addTearDown(tester.view.reset);
+      await turn(tester, landscape: true);
+
+      expect(find.byType(HoldToCompleteButton), findsOneWidget);
+      expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
+      expect(
+        tester.widget<TaskImage>(find.byType(TaskImage)).caption,
+        'Horario del festival',
+      );
     });
   });
 }

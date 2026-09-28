@@ -91,7 +91,7 @@ class NativePdfImporter implements PdfImporter {
   Future<PdfInfo> inspect(String id, {required int maxPages}) async {
     final source = stagingFile(id, 'source');
     final (info, page) = await PdfEngine.inspect(
-      source,
+      PdfEngine.file(source.path),
       maxPages: maxPages,
       renderWidth: screenWidthPx(),
     );
@@ -106,7 +106,7 @@ class NativePdfImporter implements PdfImporter {
     if (!file.existsSync()) return;
     final count = attachment.pageCount ?? 1;
     final page = await PdfEngine.renderPage(
-      file,
+      PdfEngine.file(file.path),
       position.clampTo(count).page,
       width: screenWidthPx(),
     );

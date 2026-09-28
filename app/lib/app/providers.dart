@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -94,6 +95,10 @@ final importPdfProvider = Provider<ImportPdf>(
 final linkOpenerProvider = Provider<LinkOpener>(
   (ref) => const NativeLinkOpener(),
 );
+
+/// Si la tarea con imagen o PDF gira a horizontal (CA-008-11). La web de
+/// pruebas no gira (CL-008-12): con la ventana apaisada se ve como en vertical.
+final attachmentRotatesProvider = Provider<bool>((ref) => !kIsWeb);
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".
 final bootStateProvider = Provider<BootState>(

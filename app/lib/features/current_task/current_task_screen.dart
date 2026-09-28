@@ -142,8 +142,9 @@ class CurrentTaskScreen extends ConsumerWidget {
     // En horizontal (solo gira la tarea con imagen o PDF), lo mismo con los
     // dos: el adjunto a todo el ancho y el logotipo; sin menú, botón, franja
     // ni texto (CA-008-11). Se vuelve a vertical girando el móvil (sin botón:
-    // propietario, 2026-09-28).
+    // propietario, 2026-09-28). La web de pruebas no gira (CL-008-12).
     final landscape =
+        ref.watch(attachmentRotatesProvider) &&
         withAttachment &&
         !faceOnly &&
         !chromeOnly &&
