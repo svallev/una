@@ -1,6 +1,6 @@
 # Spec 008: Tareas con PDF
 
-- **Estado:** **Aprobada** (propietario, 2026-09-27). Reescrita ese día con sus respuestas a dos revisiones de `spec-reviewer`: **en la v1 solo se sube PDF** (ADR-0014). Enmendada el mismo día por el propietario: **20 páginas como máximo** (CA-008-03)
+- **Estado:** **Implementada** (2026-09-28; PR svallev/una#14). Aprobada (propietario, 2026-09-27). Reescrita ese día con sus respuestas a dos revisiones de `spec-reviewer`: **en la v1 solo se sube PDF** (ADR-0014). Enmendada el mismo día por el propietario: **20 páginas como máximo** (CA-008-03)
 - **Reglas de producto:** R3 (documento, **solo PDF en la v1**), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido), **propuesta de valor 2**
 - **Pantallas del prototipo:** 9 "Añadir (+)", 3 "Nueva tarea" (con documento), 10 "Tarea con documento (abierto)", 5 "Todas las tareas" (insignia). Los errores y el giro no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
 - **Decisiones y ADR:** **ADR-0014 (solo PDF en la v1)**, **ADR-0015 (sin "Volver a vertical", 2026-09-28)**, D5, D6 y D19 (enmendadas por el ADR-0014), D10 (enmendada: también gira la tarea con PDF), D17, D18, ADR-0004 (y R-10), ADR-0008 (enmendado por el ADR-0014), ADR-0010, ADR-0011, ADR-0012 (completar borra los archivos), ADR-0013 (**no** aplica al PDF: el zoom del PDF se queda y tiene alternativas), DEV-01, DEV-18 a DEV-42 citadas (enmendadas DEV-02, DEV-03, DEV-18, DEV-39, DEV-40 y DEV-42), DEV-36; modelo de amenazas T-2, T-3, T-5, T-7

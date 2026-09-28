@@ -33,10 +33,8 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 ## Cierre
 
 - [x] Todos los CA de la spec tienen test en verde (`flutter test` 689 y 44 *goldens* que se saltan fuera de Linux; `integration_test` en el emulador, T-008-22).
-- [ ] Definition of Done (`specs/constitution.md`) completa. Falta:
-  - **CI en verde en la PR svallev/una#14** con el último commit (el golden `current_task_pdf_es_x2.0` ya está regenerado y subido, T-008-24);
-  - revisar los *goldens* generados frente al prototipo (pantallas 3, 5 y 10; T-008-24).
-- [ ] Spec marcada como **Implementada** (cuando lo anterior esté hecho).
+- [x] Definition of Done (`specs/constitution.md`) completa: CI en verde en la PR svallev/una#14 (commit `73b4db5`, 2026-09-28); pruebas a mano del propietario en el Xiaomi (giro con el sensor y TalkBack), correctas; *goldens* revisados frente al prototipo por el propietario (2026-09-28).
+- [x] Spec marcada como **Implementada** (2026-09-28).
 
 ## Estado
 
