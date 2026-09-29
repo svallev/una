@@ -23,6 +23,7 @@ Todas terminan con `fvm dart format .`, `fvm flutter analyze --fatal-infos` y `f
 | Tarea | Estado | Notas |
 |---|---|---|
 | T-010-01 | [Hecho] 2026-09-29 | `resolveAppLocale` sin `setting`; fuera `supportedAppLocales` y el test de CA-010-03. Tests nuevos: `es-419` y `es-Latn` con subetiquetas, `en-GB`, lista sin admitidos y vacía → en, `ar`/`he` → en (CL-010-4). `locale_resolution_test.dart` 5/5; suite completa 1072 en verde; el grep sale vacío. Sin emulador (no se pedía) |
+| T-010-02 | [Hecho] 2026-09-29 | `test/l10n/formats_test.dart` (5 tests, sin widgets: `lookupAppLocalizations` + `pdfSize`): "2,4 MB"/"2.4 MB", "3 KB" en los dos, `menuAllTasksCount` 1/3, `editorCharsLeft` 1/5, `a11yDeletedFromList` 1/3, pares de la spec tal cual. Pasan sin cambiar `lib/` (los ARB ya cumplían). Suite 1077 en verde. Sin emulador (no se pedía) |
 
 ## Resultados de T-010-10
 
