@@ -131,6 +131,8 @@ void main() {
       expect(find.byType(HoldToCompleteButton), findsOneWidget);
       final bar = tester.widget<WebBar>(find.byType(WebBar));
       expect((bar.host, bar.badge), (_host, 'WEB'));
+      web.last.started(_address);
+      await tester.pumpAndSettle();
       final view = find.byKey(const ValueKey('web-view-0'));
       expect(view, findsOneWidget);
       final barRect = tester.getRect(find.byType(WebBar));
@@ -163,13 +165,20 @@ void main() {
       // El primer fotograma, con la barra y sin la vista de la WebView: se
       // crea al acabar el fotograma, sin cargar nada.
       expect(find.byType(WebBar), findsOneWidget);
-      expect(find.byKey(const ValueKey('web-view-0')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('web-view-0'), skipOffstage: false),
+        findsNothing,
+      );
       expect(web.drivers, hasLength(1));
       expect(web.last.attachCount, 0);
       expect(web.last.loads, isEmpty);
       // En el siguiente, la vista; al acabar, la carga.
+      // Montada, aún fuera del escenario hasta que empieza a verse.
       await tester.pump();
-      expect(find.byKey(const ValueKey('web-view-0')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('web-view-0'), skipOffstage: false),
+        findsOneWidget,
+      );
       await tester.pump();
       expect(web.last.attachCount, 1);
       expect(web.last.loads, [_saved]);

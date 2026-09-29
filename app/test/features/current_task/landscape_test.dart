@@ -375,7 +375,8 @@ void main() {
   group('CA-009-15: la tarea web gira como la imagen y el PDF', () {
     const address = 'https://www.congreso.ejemplo.com/programa';
     const nodeLabel = 'Tarea actual: Página web de congreso.ejemplo.com';
-    final view = find.byKey(const ValueKey('web-view-0'));
+    // Mientras carga, la vista está montada pero fuera del escenario.
+    final view = find.byKey(const ValueKey('web-view-0'), skipOffstage: false);
 
     Task webTask({String id = 'w', String rank = 'MA'}) {
       final at = DateTime.utc(2026, 9, 29, 9);

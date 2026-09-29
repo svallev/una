@@ -303,7 +303,16 @@ class CurrentTaskScreen extends ConsumerWidget {
         padding: const EdgeInsets.only(top: UnaSpace.l),
         child: Align(
           alignment: Alignment.topCenter,
-          child: side(Row(children: [taskNode(wordmark, webHost: host)])),
+          child: side(
+            Row(
+              children: [
+                Semantics(
+                  container: true,
+                  child: taskNode(wordmark, webHost: host),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -327,18 +336,28 @@ class CurrentTaskScreen extends ConsumerWidget {
               child: showImage
                   ? const SizedBox.shrink()
                   : showWeb
-                  ? TaskWeb(
-                      // Otra dirección (Editar, CA-009-05): otra página.
-                      key: ValueKey('web-${attachment!.id}'),
-                      attachmentId: attachment.id,
-                      address: attachment.url ?? '',
-                      landscapeLogo: landscape ? webLandscapeLogo : null,
-                      // Al empezar a guardar la completada, la página se
-                      // suelta (CL-009-11).
-                      live: !faceOnly && !chromeOnly && !leaving,
-                      showBar: !chromeOnly,
-                      taskNode: (bar, host) =>
-                          faceOnly ? bar : taskNode(bar, webHost: host),
+                  // La tarea (la barra), la página o su aviso, antes que el
+                  // menú: TalkBack empieza por el primero (CA-009-18).
+                  ? _Order(
+                      0,
+                      child: TaskWeb(
+                        // Otra dirección (Editar, CA-009-05): otra página.
+                        key: ValueKey('web-${attachment!.id}'),
+                        attachmentId: attachment.id,
+                        address: attachment.url ?? '',
+                        landscapeLogo: landscape ? webLandscapeLogo : null,
+                        // Al empezar a guardar la completada, la página se
+                        // suelta (CL-009-11).
+                        live: !faceOnly && !chromeOnly && !leaving,
+                        showBar: !chromeOnly,
+                        // Su propio nodo, no el de toda la zona (CA-009-18).
+                        taskNode: (bar, host) => faceOnly
+                            ? bar
+                            : Semantics(
+                                container: true,
+                                child: taskNode(bar, webHost: host),
+                              ),
+                      ),
                     )
                   : showPdf
                   ? _pdfZone(

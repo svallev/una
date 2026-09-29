@@ -341,7 +341,8 @@ void main() {
 
   group('CA-009-16: pantalla encendida con la web', () {
     const address = 'https://www.congreso.ejemplo.com/programa';
-    final view = find.byKey(const ValueKey('web-view-0'));
+    // Mientras carga, la vista está montada pero fuera del escenario.
+    final view = find.byKey(const ValueKey('web-view-0'), skipOffstage: false);
 
     Task webTask({String rank = 'M'}) {
       final at = DateTime.utc(2026, 9, 29, 9);

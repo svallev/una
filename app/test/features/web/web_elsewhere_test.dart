@@ -67,7 +67,10 @@ Finder _webViewIn(Finder of) => find.descendant(
     (w) =>
         w.key is ValueKey<String> &&
         (w.key! as ValueKey<String>).value.startsWith('web-view-'),
+    skipOffstage: false,
   ),
+  // Mientras carga, la vista está montada pero fuera del escenario.
+  skipOffstage: false,
 );
 
 void main() {

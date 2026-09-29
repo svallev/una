@@ -156,6 +156,7 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
     final page = _page;
     if (page == null) return;
     if (covered) {
+      _announced = null;
       page.leave();
     } else if (_started) {
       unawaited(page.comeBack());
@@ -167,13 +168,28 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
 
   /// Cada aviso nuevo se anuncia una vez (CA-009-19), y la redirección de la
   /// carga inicial a otro dominio se avisa una vez (CL-009-1).
+  ///
+  /// Al volver a la app (p. ej. del navegador) con un aviso, la página se
+  /// reintenta sola (CA-009-08): si vuelve el mismo aviso, no se repite
+  /// ("Vuelve del navegador": ningún anuncio). Se vuelve a anunciar tras
+  /// "Reintentar", tras verse la página ya cargada o tras volver de otra
+  /// pantalla.
   void _onPage() {
     _showRedirectNotice();
-    final failure = _page?.value.failure;
+    final state = _page?.value;
+    final failure = state?.failure;
     _reportNotice(failure != null);
+    if (failure == null) {
+      if (state != null &&
+          state.status == WebPageStatus.shown &&
+          !state.pageLoading) {
+        _announced = null;
+      }
+      return;
+    }
     if (failure == _announced) return;
     _announced = failure;
-    if (failure == null || !mounted) return;
+    if (!mounted) return;
     unawaited(
       SemanticsService.sendAnnouncement(
         View.of(context),
@@ -254,6 +270,7 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
   void _retry() {
     final page = _page;
     if (page == null) return;
+    _announced = null;
     unawaited(page.retry());
     unawaited(
       SemanticsService.sendAnnouncement(
@@ -356,8 +373,14 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
                       ),
                     if (page != null && state != null)
                       // Bajo un aviso, la página no se ve ni la lee el lector.
+                      // Tampoco hasta que empieza a verse: tras "Reintentar"
+                      // o al volver, la WebView aún muestra lo anterior (la
+                      // página de error de la carga fallida), y TalkBack se
+                      // iba a ella (CA-009-19).
                       Offstage(
-                        offstage: failure != null,
+                        offstage:
+                            failure != null ||
+                            state.status == WebPageStatus.loading,
                         child: page.driver.buildView(
                           key: ValueKey('web-view-${state.viewGeneration}'),
                         ),
