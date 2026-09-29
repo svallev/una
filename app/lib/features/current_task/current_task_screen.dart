@@ -333,7 +333,9 @@ class CurrentTaskScreen extends ConsumerWidget {
                       attachmentId: attachment.id,
                       address: attachment.url ?? '',
                       landscapeLogo: landscape ? webLandscapeLogo : null,
-                      live: !faceOnly && !chromeOnly,
+                      // Al empezar a guardar la completada, la página se
+                      // suelta (CL-009-11).
+                      live: !faceOnly && !chromeOnly && !leaving,
                       showBar: !chromeOnly,
                       taskNode: (bar, host) =>
                           faceOnly ? bar : taskNode(bar, webHost: host),

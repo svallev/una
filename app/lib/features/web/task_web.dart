@@ -52,7 +52,9 @@ class WebNoticeShown extends Notifier<bool> {
 ///   la página: deja de cargar y borra sus datos (CL-009-11).
 ///
 /// Sin [live] (las caras de completar y eliminar, CA-009-17), solo la barra y
-/// la zona en blanco, sin WebView.
+/// la zona en blanco, sin WebView. Si deja de estar en vivo (se empieza a
+/// guardar la tarea completada), suelta la página en ese momento (CL-009-11);
+/// si vuelve a estarlo (no se pudo guardar), la carga otra vez.
 ///
 /// En horizontal ([landscapeLogo], CA-009-15), la página a sangre, sin barra
 /// ni bordes, con el logotipo encima, que pasa a ser el nodo de la tarea. La
@@ -78,7 +80,8 @@ class TaskWeb extends ConsumerStatefulWidget {
   /// (CA-009-18).
   final Widget Function(Widget bar, String host) taskNode;
 
-  /// Con la página en vivo (no en las caras de completar y eliminar).
+  /// Con la página en vivo (no en las caras de completar y eliminar, ni
+  /// mientras se completa).
   final bool live;
 
   /// Sin la barra (lo que queda encima mientras se arruga).
@@ -94,6 +97,10 @@ class TaskWeb extends ConsumerStatefulWidget {
 
 class _TaskWebState extends ConsumerState<TaskWeb> {
   WebPageController? _page;
+
+  /// Lo último que se vio de la página soltada: la barra no cambia al dejar
+  /// de estar en vivo.
+  WebPageState? _released;
   bool _started = false;
   bool _covered = false;
   ValueListenable<TickerModeData>? _onStage;
@@ -124,7 +131,7 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
   /// Tras el primer fotograma: la WebView y su estado. Carga en el siguiente,
   /// con la vista ya puesta.
   void _create() {
-    if (!mounted) return;
+    if (!mounted || !widget.live || _page != null) return;
     final page = WebPageController(
       address: _address,
       createDriver: ref.read(webPageDriverFactoryProvider),
@@ -205,6 +212,33 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
   }
 
   @override
+  void didUpdateWidget(TaskWeb oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.live == widget.live) return;
+    if (widget.live) {
+      _released = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _create());
+    } else {
+      _release();
+    }
+  }
+
+  /// Deja de cargar y borra los datos de la página (CL-009-11), con la zona
+  /// en blanco y la barra como estaba.
+  void _release() {
+    final page = _page;
+    if (page == null) return;
+    _released = page.value;
+    _page = null;
+    _started = false;
+    _announced = null;
+    page
+      ..removeListener(_onPage)
+      ..dispose();
+    _reportNotice(false);
+  }
+
+  @override
   void dispose() {
     _onStage?.removeListener(_onStageChanged);
     _page
@@ -256,7 +290,9 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
   Widget _zone(BuildContext context, WebPageController? page) {
     final l10n = AppLocalizations.of(context);
     final state = page?.value;
-    final host = _host(l10n, state?.pageUrl);
+    final shown = state ?? _released;
+    final host = _host(l10n, shown?.pageUrl);
+    // Soltada la página, sin aviso: la zona en blanco.
     final failure = state?.failure;
     // Antes de crear la WebView ya se está cargando.
     final loading = widget.live && (state == null || state.pageLoading);
@@ -290,7 +326,7 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
                   badge: l10n.attachmentWeb,
                   // Sin candado con el aviso de conexión no segura
                   // (propietario, 2026-09-29).
-                  secure: failure != WebLoadFailure.insecure,
+                  secure: shown?.failure != WebLoadFailure.insecure,
                 ),
                 host,
               ),

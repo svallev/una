@@ -192,12 +192,25 @@ class HomeRouter extends ConsumerWidget {
       key: ValueKey('screens-${deletion.generation}'),
       duration: reduced ? UnaMotion.reducedMotionFade : UnaMotion.introFade,
       // Cada pantalla es una "ruta" para el lector (se anuncia el cambio) y la
-      // que sale no se lee durante el fundido.
+      // que sale no se lee durante el fundido; tampoco anima nada (así una
+      // tarea web que sale deja de cargar y borra sus datos, CL-009-11). La
+      // actual va envuelta igual y con su clave, para que al pasar a ser la
+      // que sale no se vuelva a montar: una tarea web volvería a crear su
+      // WebView y a cargar la página durante el fundido.
       layoutBuilder: (current, previous) => Stack(
         alignment: Alignment.center,
         children: [
-          for (final p in previous) ExcludeSemantics(child: p),
-          ?current,
+          for (final p in previous)
+            ExcludeSemantics(
+              key: p.key,
+              child: TickerMode(enabled: false, child: p),
+            ),
+          if (current != null)
+            ExcludeSemantics(
+              key: current.key,
+              excluding: false,
+              child: TickerMode(enabled: true, child: current),
+            ),
         ],
       ),
       child: screen,
