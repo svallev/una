@@ -43,7 +43,7 @@ Reglas de la casa: cada test cita su CA; sin red; relojes inyectables; los que m
 
 | CA | Tipo de test | Archivo | Cómo |
 |---|---|---|---|
-| CA-010-01 | Unitario | `test/app/locale_resolution_test.dart` | Ya existe. Se añaden `es-419` explícito y más casos de "resto" |
+| CA-010-01 | Unitario | `test/app/locale_resolution_test.dart` | Ya existe. Se añaden `es-419` explícito y más casos de "resto". Enmienda 2026-09-30: `ca-*` → español (test `'CA-010-01: el catalán (ca-*) abre en español'`) |
 | CA-010-02 | Unitario + manual | ídem + T-010-10 | Ya existe (`fr-FR, es-ES` → es; `de, en-GB, es` → en; `null` → en). Se añade una lista sin ningún admitido. La suposición (Android entrega la lista completa) se comprueba en el emulador |
 | CA-010-03 | — | ídem | Se **borra** el test del ajuste manual |
 | CA-010-04 | Widget | `test/l10n/formats_test.dart` (nuevo) | Por idioma: el tamaño de un PDF con la función de `pdf_labels.dart` ("2,4 MB" / "2.4 MB"; "3 KB"), `menuAllTasksCount` (1 y 3), `editorCharsLeft` (1 y 5) y `a11yDeletedFromList` (1 y 3) |

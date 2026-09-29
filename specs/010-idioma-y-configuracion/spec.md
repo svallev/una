@@ -24,9 +24,9 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
 **Estado de partida [Hecho]:** la detección automática ya existe y tiene tests de CA-010-01 y 02. Pero conserva restos del cambio manual de idioma (CA-010-03, ahora retirado) y un test que lo cita. Esta spec **verifica** el comportamiento y **retira esos restos** (P10: no construir el futuro). No añade pantallas.
 
 - **CA-010-01 Detección automática**
-  - **Dado** que el idioma preferido del dispositivo es cualquier variante `es-*` (es-ES, es-MX, es-419…)
+  - **Dado** que el idioma preferido del dispositivo es cualquier variante `es-*` (es-ES, es-MX, es-419…) o `ca-*` (catalán)
   - **Cuando** se abre la app
-  - **Entonces** la app está en español; con cualquier otro idioma (incluidos ca, gl, eu y pt), en inglés.
+  - **Entonces** la app está en español; con cualquier otro idioma (incluidos gl, eu y pt), en inglés. **El catalán abre en español** (decisión del propietario, 2026-09-30; antes, inglés). Los demás idiomas cooficiales (gl, eu) siguen en inglés hasta que el propietario decida otra cosa.
 - **CA-010-02 Lista de idiomas del sistema**
   - **Dado** que el dispositivo tiene varios idiomas preferidos (p. ej. `fr-FR`, `es-ES`)
   - **Cuando** se abre la app
@@ -83,7 +83,7 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
 | ID | Situación | Comportamiento esperado |
 |---|---|---|
 | CL-010-1 | Se cambia el idioma del sistema con la app abierta | Ver CA-010-06 |
-| CL-010-2 | Sistema en un idioma que la app no admite (p. ej. `ca` o `fr`) y **sin español ni inglés en su lista** | App en inglés, también la voz de la interfaz y del contenido del usuario (CA-010-10). Los selectores del sistema (fotos, archivos) siguen en el idioma del sistema, y los anuncios se oyen con su voz: aceptado en la beta |
+| CL-010-2 | Sistema en un idioma que la app no admite (p. ej. `fr` o `de`) y **sin español ni inglés en su lista** | App en inglés, también la voz de la interfaz y del contenido del usuario (CA-010-10). Los selectores del sistema (fotos, archivos) siguen en el idioma del sistema, y los anuncios se oyen con su voz: aceptado en la beta |
 | CL-010-3 | Variantes regionales (`es-MX`, `en-GB`) | Textos y formatos de español o inglés sin variante. TalkBack puede usar la voz por defecto del idioma (p. ej. la de España) en vez de la regional: aceptado en la beta. Se comprueba una vez en el emulador |
 | CL-010-4 | Sistema en un idioma de derecha a izquierda (árabe, hebreo) | App en inglés, de izquierda a derecha; al cambiarlo con la app abierta, se comporta como en CA-010-06 |
 | CL-010-5 | El sistema cierra la app mientras el usuario está en Ajustes | Arranque normal, ya en el idioma nuevo |
