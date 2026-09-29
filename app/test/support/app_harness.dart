@@ -23,13 +23,19 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   bool firstRunDone = true,
   bool screenReader = false,
   bool reduced = false,
+  double textScale = 1.0,
+  Size size = const Size(390, 844),
   Clock? clock,
   List<Override> overrides = const [],
 }) async {
   tester.platformDispatcher.localesTestValue = [locale];
   addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+  if (textScale != 1.0) {
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+  }
   tester.view
-    ..physicalSize = const Size(390, 844)
+    ..physicalSize = size
     ..devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   if (screenReader || reduced) {
