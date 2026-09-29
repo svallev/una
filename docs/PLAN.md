@@ -119,7 +119,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R12 estado vacío ("Todo hecho.") | 003, 004 | CA-003-05, CA-004-07/08 |
 | R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-04 a 16 |
 | R14 histórico | 003 | CA-003-06 — **retirada por el ADR-0012 (2026-09-26)** |
-| R15 idioma | 010 (y P7 en todas) | CA-010-01, 02 y 04–07 |
+| R15 idioma | 010 (y P7 en todas) | CA-010-01, 02, 04–07 y 10–12 |
 
 ## 7. Decisiones pendientes
 

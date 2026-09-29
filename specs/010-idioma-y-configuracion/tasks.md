@@ -53,6 +53,6 @@ Emulador Pixel_6a (Android 17, `sdk_gphone16k_arm64`), app debug `invalid.pendin
 
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde (o verificación manual anotada: CA-010-02, la parte de voz de CA-010-10 y el foco de CA-010-06).
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada**.
+- [x] Todos los CA de la spec tienen test en verde (2026-09-30, suite 1203 en verde). Verificación manual anotada en "Resultados de T-010-10": CA-010-02, CA-010-06 (foco), CL-010-2, 3 y 5; voz de CA-010-10, orden de acciones (CA-010-11), Switch Access y teclado, dados por buenos por el propietario sin verificar; CA-010-12 visto a mano solo en tarea, menú y editor.
+- [x] Definition of Done (`specs/constitution.md`) completa: `format`/`analyze`/tests en verde, `validate-tokens` y `gen_identity --check` al día, sin textos nuevos (solo cambia la descripción de `@menuSettings`), sin dependencias ni permisos nuevos (`security-reviewer`: sin hallazgos), `a11y-reviewer` y `spec-reviewer` sin bloqueantes y sus ajustes aplicados (`bea7721`). El CI de la PR se comprueba al abrirla.
+- [x] Spec marcada como **Implementada** (2026-09-30).

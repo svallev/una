@@ -374,7 +374,7 @@ abstract class AppLocalizations {
   /// **'Nueva tarea'**
   String get menuNewTask;
 
-  /// Enlace del menú (spec 010). CA-005-09
+  /// Texto del menú, sin interacción hasta la spec de Configuración y perfil. CA-005-09, CL-010-7
   ///
   /// In es, this message translates to:
   /// **'Configuración y perfil'**
