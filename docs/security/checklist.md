@@ -27,10 +27,10 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 ## Si toca URL o WebView (T-4, T-5, T-6)
 
 - [ ] Solo `http(s)`; tests con `javascript:`, `data:`, `file:`, `intent:`, `user:pass@`, IDN mixto.
-- [ ] `javaScriptBridgeEnabled:false`, sin acceso a archivos ni contenido, almacén no persistente, sin permisos ni descargas.
-- [ ] Navegación fuera del dominio → navegador del sistema; ventanas nuevas bloqueadas.
+- [ ] WebView endurecida (canal `una/webview`, spec 009): sin acceso a archivos ni contenido, sin guardar formularios, contenido mixto `NEVER_ALLOW`, sin permisos, diálogos, selector de archivos, pantalla completa ni descargas; depuración remota solo en *debug*; el envoltorio del `WebViewClient` puesto y comprobado (ADR-0017). Nada de la página se queda: cookies, almacenamiento web y caché se borran al salir y en el arranque siguiente, y quedan fuera de la copia (ADR-0016).
+- [ ] Sin navegación (ADR-0018): solo la dirección guardada (con las redirecciones del servidor de la carga inicial) y las anclas de la misma página; ventanas nuevas bloqueadas; nada sale al navegador ni a otra app desde la página. ~~Navegación fuera del dominio → navegador del sistema~~.
 - [ ] Sin excepciones de ATS ni de *cleartext*.
-- [ ] Certificado inválido → cancelar siempre (`onReceivedSslError`) y HTTP ≥ 400 del marco principal → captura fallida (I-5). Test con `expired.badssl.com`, `self-signed.badssl.com` y una 404.
+- [ ] Certificado inválido → cancelar siempre (`onReceivedSslError`), con test (servidor local con certificado autofirmado, sin red externa). ~~HTTP ≥ 400 del marco principal → captura fallida (I-5)~~: sin captura (ADR-0016).
 - [ ] Ningún canal JS (`addJavaScriptChannel`) ni `addJavascriptInterface`.
 
 ## Si toca el almacenamiento o el esquema (T-1, T-7)

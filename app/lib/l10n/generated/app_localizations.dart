@@ -590,7 +590,7 @@ abstract class AppLocalizations {
   /// **'PDF · va arriba del todo'**
   String get attachPickFileHint;
 
-  /// Fila de la hoja "Añadir"; sin efecto hasta la spec 009 (DEV-18)
+  /// Fila de la hoja "Añadir", solo en tareas nuevas: abre la hoja "Cargar URL" (spec 009, CA-009-01)
   ///
   /// In es, this message translates to:
   /// **'Cargar URL'**

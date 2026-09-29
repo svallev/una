@@ -165,7 +165,7 @@
   "attachPickFileHint": "PDF · va arriba del todo",
   "@attachPickFileHint": { "description": "Segunda línea de \"Subir archivo\": solo PDF en la v1 (DEV-02, ADR-0014)" },
   "attachUrl": "Cargar URL",
-  "@attachUrl": { "description": "Fila de la hoja \"Añadir\"; sin efecto hasta la spec 009 (DEV-18)" },
+  "@attachUrl": { "description": "Fila de la hoja \"Añadir\", solo en tareas nuevas: abre la hoja \"Cargar URL\" (spec 009, CA-009-01)" },
   "attachUrlHint": "Una página web · va arriba del todo",
   "@attachUrlHint": { "description": "Segunda línea de \"Cargar URL\"" },
   "imagePreparing": "Preparando imagen…",
