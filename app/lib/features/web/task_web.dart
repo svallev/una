@@ -1,0 +1,349 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../app/providers.dart';
+import '../../app/theme/tokens.g.dart';
+import '../../domain/entities/link_target.dart';
+import '../../domain/entities/web_load_failure.dart';
+import '../../domain/services/host_display.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../ui/brutal_button.dart';
+import 'web_bar.dart';
+import 'web_page_controller.dart';
+import 'web_page_driver_factory.dart';
+
+/// La zona de la tarea web en la pantalla principal (CA-009-06): borde negro
+/// arriba y abajo, la barra del dominio (que es el nodo de la tarea para el
+/// lector, [taskNode]) y debajo la página en vivo, con la línea de carga, o
+/// el aviso que la sustituye (spec 009 §5).
+///
+/// - **Primer fotograma sin WebView** (P2, plan §6): la barra se pinta con
+///   Flutter; la WebView se crea tras el primer fotograma y empieza a cargar
+///   cuando su vista ya está en pantalla.
+/// - **Otra pantalla encima** (el editor, el listado): se quita la página y se
+///   borran sus datos; al volver, se carga desde cero (CA-009-07, CA-009-13).
+///   Una hoja (el menú, una confirmación, "Cargar URL") no tapa la tarea y no
+///   recarga nada. Se sabe porque la ruta de la tarea queda fuera del
+///   escenario (`TickerMode`) solo bajo una pantalla opaca.
+/// - Al desmontarse (completar, eliminar, otra tarea, otra dirección) suelta
+///   la página: deja de cargar y borra sus datos (CL-009-11).
+///
+/// Sin [live] (las caras de completar y eliminar, CA-009-17), solo la barra y
+/// la zona en blanco, sin WebView.
+class TaskWeb extends ConsumerStatefulWidget {
+  const TaskWeb({
+    super.key,
+    required this.address,
+    required this.taskNode,
+    this.live = true,
+    this.showBar = true,
+  });
+
+  /// La dirección guardada.
+  final String address;
+
+  /// Envuelve la barra en el nodo de la tarea con la lectura de [host]
+  /// (CA-009-18).
+  final Widget Function(Widget bar, String host) taskNode;
+
+  /// Con la página en vivo (no en las caras de completar y eliminar).
+  final bool live;
+
+  /// Sin la barra (lo que queda encima mientras se arruga).
+  final bool showBar;
+
+  @override
+  ConsumerState<TaskWeb> createState() => _TaskWebState();
+}
+
+class _TaskWebState extends ConsumerState<TaskWeb> {
+  WebPageController? _page;
+  bool _started = false;
+  bool _covered = false;
+  ValueListenable<TickerModeData>? _onStage;
+  WebLoadFailure? _announced;
+
+  late final Uri _address = Uri.parse(widget.address);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.live) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _create());
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final onStage = TickerMode.getValuesNotifier(context);
+    if (!identical(onStage, _onStage)) {
+      _onStage?.removeListener(_onStageChanged);
+      _onStage = onStage..addListener(_onStageChanged);
+      _onStageChanged();
+    }
+  }
+
+  /// Tras el primer fotograma: la WebView y su estado. Carga en el siguiente,
+  /// con la vista ya puesta.
+  void _create() {
+    if (!mounted) return;
+    final page = WebPageController(
+      address: _address,
+      createDriver: ref.read(webPageDriverFactoryProvider),
+      janitor: ref.read(webDataJanitorProvider),
+      clock: ref.read(clockProvider),
+    )..addListener(_onPage);
+    setState(() => _page = page);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !identical(page, _page) || _covered) return;
+      _started = true;
+      unawaited(page.start());
+    });
+  }
+
+  void _onStageChanged() {
+    final covered = !(_onStage?.value.enabled ?? true);
+    if (covered == _covered) return;
+    _covered = covered;
+    final page = _page;
+    if (page == null) return;
+    if (covered) {
+      page.leave();
+    } else if (_started) {
+      unawaited(page.comeBack());
+    } else {
+      _started = true;
+      unawaited(page.start());
+    }
+  }
+
+  /// Cada aviso nuevo se anuncia una vez (CA-009-19).
+  void _onPage() {
+    final failure = _page?.value.failure;
+    if (failure == _announced) return;
+    _announced = failure;
+    if (failure == null || !mounted) return;
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        _failureText(AppLocalizations.of(context), failure),
+        Directionality.of(context),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _onStage?.removeListener(_onStageChanged);
+    _page
+      ?..removeListener(_onPage)
+      ..dispose();
+    super.dispose();
+  }
+
+  /// "Reintentar": vuelve a cargar la dirección guardada y lo anuncia.
+  void _retry() {
+    final page = _page;
+    if (page == null) return;
+    unawaited(page.retry());
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        AppLocalizations.of(context).urlLoadingA11y,
+        Directionality.of(context),
+      ),
+    );
+  }
+
+  /// "Abrir en el navegador": la dirección guardada, sin confirmar (spec 009
+  /// §5). Si no hay navegador, no pasa nada (la tarea web ya no reutiliza el
+  /// aviso de los enlaces del PDF, §7).
+  void _openInBrowser(String host) {
+    unawaited(ref.read(linkOpenerProvider).open(WebLink(_address, host)));
+  }
+
+  /// El dominio de la barra: el de la página que se ve (o se carga).
+  String _host(AppLocalizations l10n, Uri? pageUrl) {
+    final shown = pageUrl == null || pageUrl.host.isEmpty
+        ? ''
+        : displayHost(pageUrl.host, dropWww: true);
+    if (shown.isNotEmpty) return shown;
+    return webAddressHost(widget.address) ?? l10n.attachmentWeb;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final page = _page;
+    if (page == null) return _zone(context, null);
+    return ListenableBuilder(
+      listenable: page,
+      builder: (context, _) => _zone(context, page),
+    );
+  }
+
+  Widget _zone(BuildContext context, WebPageController? page) {
+    final l10n = AppLocalizations.of(context);
+    final state = page?.value;
+    final host = _host(l10n, state?.pageUrl);
+    final failure = state?.failure;
+    // Antes de crear la WebView ya se está cargando.
+    final loading = widget.live && (state == null || state.pageLoading);
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: const BoxDecoration(
+        border: Border.symmetric(
+          horizontal: BorderSide(
+            color: UnaColors.ink,
+            width: UnaBorders.strongWidth,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: UnaBorders.strongWidth),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.showBar)
+              widget.taskNode(
+                WebBar(host: host, badge: l10n.attachmentWeb),
+                host,
+              ),
+            Expanded(
+              child: ColoredBox(
+                color: UnaColors.surface,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (page != null && state != null)
+                      // Bajo un aviso, la página no se ve ni la lee el lector.
+                      Offstage(
+                        offstage: failure != null,
+                        child: page.driver.buildView(
+                          key: ValueKey('web-view-${state.viewGeneration}'),
+                        ),
+                      ),
+                    if (failure != null)
+                      _Notice(
+                        text: _failureText(l10n, failure),
+                        failure: failure,
+                        onRetry: _retry,
+                        onOpenInBrowser: () => _openInBrowser(host),
+                      )
+                    else if (loading)
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: _LoadingLine(progress: state?.progress ?? 0),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _failureText(AppLocalizations l10n, WebLoadFailure failure) =>
+    switch (failure) {
+      WebLoadFailure.offline => l10n.urlNeedsConnection,
+      WebLoadFailure.insecure => l10n.urlInsecure,
+      WebLoadFailure.certificate => l10n.urlLoadFailed(
+        l10n.urlReasonCertificate,
+      ),
+      WebLoadFailure.notAPage => l10n.urlNotAPage,
+    };
+
+/// Línea de carga a todo el ancho bajo la barra (CA-009-06): avanza con el
+/// progreso de la página; con reducir movimiento, salta (CA-009-20). Para el
+/// lector, "Cargando página" (CA-009-18).
+class _LoadingLine extends StatelessWidget {
+  const _LoadingLine({required this.progress});
+
+  /// De 0 a 100.
+  final int progress;
+
+  /// Lo mínimo que se ve nada más empezar, antes del primer progreso.
+  static const _minFraction = 0.1;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    return Semantics(
+      key: const ValueKey('web-loading'),
+      container: true,
+      label: AppLocalizations.of(context).urlLoadingA11y,
+      child: SizedBox(
+        height: UnaSizes.webLoadingHeight,
+        width: double.infinity,
+        child: AnimatedFractionallySizedBox(
+          alignment: AlignmentDirectional.centerStart,
+          duration: reduced ? Duration.zero : UnaMotion.webLoadingProgress,
+          widthFactor: math.max(progress / 100, _minFraction),
+          child: const ColoredBox(color: UnaColors.ink),
+        ),
+      ),
+    );
+  }
+}
+
+/// El aviso que sustituye a la página (spec 009 §5), con sus acciones: "Abrir
+/// en el navegador" y, después, "Reintentar".
+class _Notice extends StatelessWidget {
+  const _Notice({
+    required this.text,
+    required this.failure,
+    required this.onRetry,
+    required this.onOpenInBrowser,
+  });
+
+  final String text;
+  final WebLoadFailure failure;
+  final VoidCallback onRetry;
+  final VoidCallback onOpenInBrowser;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(UnaSpace.l),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              text,
+              style: const TextStyle(
+                fontFamily: UnaFonts.display,
+                fontSize: UnaFontSizes.heading,
+                fontWeight: UnaFontWeights.extrabold,
+                height: 1.1,
+                letterSpacing: UnaLetterSpacing.tight * UnaFontSizes.heading,
+                color: UnaColors.ink,
+              ),
+            ),
+            if (failure.canOpenInBrowser) ...[
+              const SizedBox(height: UnaSpace.ml),
+              BrutalButton(
+                label: l10n.urlOpenInBrowser,
+                onPressed: onOpenInBrowser,
+              ),
+            ],
+            if (failure.canRetry) ...[
+              const SizedBox(height: UnaSpace.ml),
+              BrutalButton(label: l10n.retry, onPressed: onRetry),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -26,6 +26,7 @@ import '../../support/app_harness.dart';
 import '../../support/fake_image_importer.dart';
 import '../../support/fake_pdf_importer.dart';
 import '../../support/fake_pdf_view.dart';
+import '../../support/fake_web_page_driver.dart';
 import '../../support/pump_app.dart';
 import '../task_list/list_harness.dart';
 
@@ -90,6 +91,8 @@ void main() {
       imageImporterProvider.overrideWithValue(images),
       pdfImporterProvider.overrideWithValue(pdfs),
       ...fakePdfViews,
+      // La tarea web actual, con WebViews falsas (T-009-11).
+      ...FakeWebPages().overrides,
     ];
   });
 

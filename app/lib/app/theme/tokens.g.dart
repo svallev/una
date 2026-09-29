@@ -238,6 +238,7 @@ abstract final class UnaSizes {
   static const double urlField = 60.0;
   static const double urlFieldPadX = 14.0;
   static const double webLoadingHeight = 3.0;
+  static const double webBarIcon = 12.0;
   static const double removeAttachmentIcon = 14.0;
   static const double removeAttachmentStroke = 3.4;
 }

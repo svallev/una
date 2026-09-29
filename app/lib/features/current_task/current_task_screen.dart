@@ -40,6 +40,7 @@ import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
 import '../task_list/task_list_screen.dart';
 import '../web/edit_web_task.dart';
+import '../web/task_web.dart';
 import 'pdf_face_snapshot.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
@@ -126,7 +127,10 @@ class CurrentTaskScreen extends ConsumerWidget {
     final leaving = ref.watch(
       completionProvider.select((c) => c.busy && c.task?.id == task.id),
     );
-    final health = attachment != null && !faceOnly && !chromeOnly && !leaving
+    final isWeb = attachment?.isWeb ?? false;
+    // La web no tiene archivos que comprobar (ADR-0016).
+    final health =
+        attachment != null && !isWeb && !faceOnly && !chromeOnly && !leaving
         ? ref.watch(attachmentHealthProvider(attachment)).health
         : null;
     final missing = health == AttachmentHealth.missing;
@@ -134,20 +138,23 @@ class CurrentTaskScreen extends ConsumerWidget {
     // gira nunca, ni un momento (CA-008-18, CA-007-19).
     final canRotate = !faceOnly && health != AttachmentHealth.checking;
     final isPdf = attachment?.isPdf ?? false;
-    final showImage = attachment != null && !isPdf && !missing;
+    final showImage = attachment != null && !isPdf && !isWeb && !missing;
     // Con PDF: franja, banda del texto y páginas entre la cabecera y el botón
     // (CA-008-08).
     final showPdf = isPdf && !missing;
-    final withAttachment = showImage || showPdf;
+    // Web: barra y página en vivo entre la cabecera y el botón (CA-009-06).
+    final showWeb = isWeb;
+    final withAttachment = showImage || showPdf || showWeb;
     final pdfTitle = pdfName(l10n, attachment?.originalName);
     final pdfBytes = pdfSize(l10n, attachment?.byteSize ?? 0);
     // En horizontal (solo gira la tarea con imagen o PDF), lo mismo con los
     // dos: el adjunto a todo el ancho y el logotipo; sin menú, botón, franja
     // ni texto (CA-008-11). Se vuelve a vertical girando el móvil (sin botón:
     // propietario, 2026-09-28). La web de pruebas no gira (CL-008-12).
+    // [Pendiente, T-009-15] La web aún no gira.
     final landscape =
         ref.watch(attachmentRotatesProvider) &&
-        withAttachment &&
+        (showImage || showPdf) &&
         !faceOnly &&
         !chromeOnly &&
         mq.orientation == Orientation.landscape;
@@ -159,7 +166,11 @@ class CurrentTaskScreen extends ConsumerWidget {
 
     /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
     /// y sin decir "imagen" dos veces (CA-007-21).
-    Widget taskNode(Widget child, {_ImageScroll? scroll}) => FocusOnSignal(
+    Widget taskNode(
+      Widget child, {
+      _ImageScroll? scroll,
+      String? webHost,
+    }) => FocusOnSignal(
       signal: focusSignal,
       child: Semantics(
         // Una imagen más alta que la pantalla se desplaza también con las
@@ -168,6 +179,8 @@ class CurrentTaskScreen extends ConsumerWidget {
         onScrollDown: scroll?.canBack ?? false ? scroll!.back : null,
         label: l10n.currentTaskSemantics(switch (attachment) {
           null => text,
+          // Web (CA-009-18): "Página web de {dominio}", el de la barra.
+          _ when isWeb => l10n.urlA11yBar(webHost ?? taskLabel(l10n, task)),
           _ when missing => l10n.a11yAttachmentMissing(
             text.isNotEmpty
                 ? readingText(text)
@@ -295,6 +308,16 @@ class CurrentTaskScreen extends ConsumerWidget {
               // Con imagen, la tarea está detrás, a sangre.
               child: showImage
                   ? const SizedBox.shrink()
+                  : showWeb
+                  ? TaskWeb(
+                      // Otra dirección (Editar, CA-009-05): otra página.
+                      key: ValueKey('web-${attachment!.id}'),
+                      address: attachment.url ?? '',
+                      live: !faceOnly && !chromeOnly,
+                      showBar: !chromeOnly,
+                      taskNode: (bar, host) =>
+                          faceOnly ? bar : taskNode(bar, webHost: host),
+                    )
                   : showPdf
                   ? _pdfZone(
                       context,
@@ -355,7 +378,8 @@ class CurrentTaskScreen extends ConsumerWidget {
                     ),
             ),
             // Separación entre el PDF y el botón (prototipo: ~18 px).
-            if (showPdf && !landscape) const SizedBox(height: UnaSpace.m),
+            if ((showPdf || showWeb) && !landscape)
+              const SizedBox(height: UnaSpace.m),
             // En horizontal se completa con la acción del lector (CA-003-07).
             if (!landscape)
               cta(
@@ -383,7 +407,10 @@ class CurrentTaskScreen extends ConsumerWidget {
             ? content
             : StickyNote(
                 colorKey: task.colorKey,
-                child: showPdf
+                child: showWeb
+                    // Con web, la nota es blanca, como con PDF (prototipo).
+                    ? ColoredBox(color: UnaColors.surface, child: content)
+                    : showPdf
                     // Con PDF la nota es blanca; su color queda en la banda
                     // del texto (prototipo `isDoc`).
                     ? _RotatesWithAttachment(
