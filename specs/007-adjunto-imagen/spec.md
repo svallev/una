@@ -101,7 +101,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - Respeta el bloqueo de rotación del sistema. El resto de la app (y la tarea sin imagen) queda solo en vertical.
   - En tablets y plegables, en horizontal usa todo el ancho de la pantalla aunque el resto de la app esté limitado a 600 px (CL-001-7).
 - **CA-007-12 Pantalla encendida, con límite (D10)**
-  - **Dado** que el ajuste "Mantener la pantalla encendida con adjuntos" está activo (por defecto sí; su pantalla llega con la spec 010)
+  - **Dado** que el ajuste "Mantener la pantalla encendida con adjuntos" está activo (por defecto sí; su pantalla llega con la spec futura de Configuración y perfil; en la beta está siempre activo, enmienda 2026-09-29)
   - **Cuando** se ve la tarea actual con imagen
   - **Entonces** la pantalla no se apaga por inactividad **mientras se use**: tras **10 minutos sin tocarla** vuelven el apagado y el bloqueo normales del teléfono.
   - Solo cuentan como uso los **toques** en la pantalla; las teclas de un teclado físico no reinician los 10 minutos (propietario, 2026-09-26).
@@ -146,7 +146,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Dado** que se completa una tarea con imagen
   - **Cuando** se consulta el almacenamiento
   - **Entonces** sus versiones se conservan y el barrido no las borra.
-  - **[Pendiente, spec 010]** "Borrar archivos de tareas completadas", con el espacio que ocupan, antes de la v1.0.
+  - ~~**[Pendiente, spec 010]**~~ *(Sin efecto: ver la enmienda del ADR-0012 justo debajo)* "Borrar archivos de tareas completadas", con el espacio que ocupan, antes de la v1.0.
   - *Enmienda (ADR-0012, aceptado 2026-09-26; implementada 2026-09-27):* **se sustituye:** al completar una tarea con imagen, sus archivos se borran (con el mismo borrado de CA-007-16) y el barrido ya no respeta completadas. Desaparece el pendiente de la 010. Se implementa en la rama del ADR-0012, después de cerrar esta spec.
 - **CA-007-18 Copia de seguridad (ADR-0004, R-10)**
   - **Dado** tareas con imágenes que ocupan más de 25 MB en total
@@ -229,7 +229,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 | CL-007-8 | Doble toque rápido en "Continuar" con imagen | Se crea una sola tarea |
 | CL-007-9 | Listado con 500 tareas, todas con imagen | Se cumple CA-006-20 |
 | CL-007-10 | Registros (logs) en *release* | No se registra ninguna dirección, nombre, ruta ni metadato de una imagen |
-| CL-007-11 | La miniatura de la app en "Recientes" | Muestra la imagen. **[Pendiente, spec 010]** Ocultarla mientras se ve un adjunto |
+| CL-007-11 | La miniatura de la app en "Recientes" | Muestra la imagen. **[Pendiente, F5]** Ocultarla mientras se ve un adjunto *(antes spec 010; enmienda 2026-09-29)* |
 | CL-007-12 | Web de pruebas (ADR-0010) | "Hacer foto" y "Subir imagen" usan el selector del navegador; las imágenes se guardan solo en memoria, como las tareas |
 
 ## 5. Estados vacíos y de error
@@ -294,7 +294,7 @@ Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction`
 
 - Brillo máximo (D10); editar o recortar la imagen; varias imágenes por tarea; visor a pantalla completa (retirado, ADR-0013); girar fuera de la tarea con imagen.
 - Descripción alternativa escrita por el usuario (P-5, v1.1).
-- La copia de las imágenes en la nube (tarea propia antes de la v1.0) y el ajuste de "Recientes" (spec 010).
+- La copia de las imágenes en la nube (tarea propia antes de la v1.0) y el ajuste de "Recientes" (F5; antes spec 010, enmienda 2026-09-29).
 
 ## 9. Preguntas abiertas
 
@@ -313,5 +313,5 @@ Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction`
   - P-5 en la v1.1;
   - tipos por contenido (sin AVIF, sin HEIC en Android 8);
   - completadas conservan la imagen, con borrado en la 010;
-  - "Recientes" en la 010;
+  - "Recientes" en F5 (antes en la 010; enmienda 2026-09-29);
   - errores con los componentes existentes.

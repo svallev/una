@@ -10,11 +10,13 @@ import 'package:app/features/menu/menu_sheet.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/sticky_note.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/app_harness.dart';
+import '../../support/l10n_leaks.dart' show semanticsTexts;
 
 class _Repo extends InMemoryTaskRepository {
   bool failInsert = false;
@@ -153,16 +155,42 @@ void main() {
       expect(find.text('1'), findsNothing);
     });
 
-    testWidgets(
-      'CA-005-09: Configuración cierra el menú (Eliminar, spec 004: ver delete_confirm_test)',
-      (tester) async {
-        await pumpUnaApp(tester, repo: _Repo(), tasks: ['Primera', 'Segunda']);
-        await _openMenu(tester);
-        await tester.tap(find.text('Configuración y perfil'));
-        await tester.pumpAndSettle();
-        expect(find.byType(MenuSheet), findsNothing);
-      },
-    );
+    for (final (languageCode, menuButton, newTask, settings) in [
+      ('es', 'Menú de la tarea', 'Nueva tarea', 'Configuración y perfil'),
+      ('en', 'Task menu', 'New task', 'Settings and profile'),
+    ]) {
+      testWidgets(
+        'CA-005-09 / CL-010-7 ($languageCode): "$settings" es solo texto: se lee tal cual, después de "$newTask", y pulsarlo no hace nada ni es un botón',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await pumpUnaApp(
+            tester,
+            repo: _Repo(),
+            locale: Locale(languageCode),
+            tasks: ['Primera', 'Segunda'],
+          );
+          await tester.tap(find.bySemanticsLabel(menuButton));
+          await tester.pumpAndSettle();
+          expect(find.byType(MenuSheet), findsOneWidget);
+          await tester.tap(find.text(settings));
+          await tester.pumpAndSettle();
+          expect(find.byType(MenuSheet), findsOneWidget);
+          final node = tester.getSemantics(find.text(settings));
+          expect(node.label, settings);
+          expect(node.flagsCollection.isButton, isFalse);
+          expect(
+            node.getSemanticsData().hasAction(SemanticsAction.tap),
+            isFalse,
+          );
+          // Orden semántico (el que recorre el lector): después de "Nueva tarea".
+          final reads = semanticsTexts(tester);
+          expect(reads, contains(newTask));
+          expect(reads, contains(settings));
+          expect(reads.indexOf(settings), greaterThan(reads.indexOf(newTask)));
+          handle.dispose();
+        },
+      );
+    }
   });
 
   group('Nueva tarea (spec 002)', () {

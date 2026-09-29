@@ -12,21 +12,30 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'pump_app.dart';
 
-/// Monta la app completa (UnaApp) en español con un repositorio en memoria y
-/// las tareas indicadas (la primera, la actual).
+/// Monta la app completa (UnaApp) con un repositorio en memoria y las tareas
+/// indicadas (la primera, la actual). El sistema está en [locale] (español
+/// por defecto); con [firstRunDone] a false, arranca en la bienvenida.
 Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   WidgetTester tester, {
   required T repo,
   List<String> tasks = const [],
+  Locale locale = const Locale('es'),
+  bool firstRunDone = true,
   bool screenReader = false,
   bool reduced = false,
+  double textScale = 1.0,
+  Size size = const Size(390, 844),
   Clock? clock,
   List<Override> overrides = const [],
 }) async {
-  tester.platformDispatcher.localesTestValue = const [Locale('es')];
+  tester.platformDispatcher.localesTestValue = [locale];
   addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+  if (textScale != 1.0) {
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+  }
   tester.view
-    ..physicalSize = const Size(390, 844)
+    ..physicalSize = size
     ..devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   if (screenReader || reduced) {
@@ -48,7 +57,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
       ),
     );
   }
-  await repo.setFirstRunDone();
+  if (firstRunDone) await repo.setFirstRunDone();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

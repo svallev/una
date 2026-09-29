@@ -44,7 +44,7 @@
   - Android 8.x: no hay cifrado de extremo a extremo, así que **no se copia nada** (`res/xml/backup_rules.xml` lo excluye todo).
   - La transferencia entre dispositivos (cable o Wi-Fi directo) no cambia.
   - El futuro `BackupAgent` (F4) respeta la misma condición (`BackupDataOutput.getTransportFlags()`).
-- **Consecuencia:** quien no tenga bloqueo de pantalla no tiene copia en la nube. El texto de "Acerca de" (spec 010) lo explica y recomienda activar el bloqueo.
+- **Consecuencia:** quien no tenga bloqueo de pantalla no tiene copia en la nube. El texto de "Acerca de" (spec futura de Configuración y perfil; antes spec 010, enmienda 2026-09-29: la beta no tiene esa pantalla) lo explica y recomienda activar el bloqueo.
 
 ## Revisión: imágenes de la spec 007 (2026-09-26)
 

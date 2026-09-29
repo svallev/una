@@ -10,7 +10,7 @@ flowchart TB
     S1[CurrentTaskScreen]:::ui
     S2[TaskEditorScreen]:::ui
     S3[TaskListScreen]:::ui
-    S4[SettingsScreen]:::ui
+    S4["SettingsScreen (futura)"]:::ui
     SH[Sheets: Menú · ¿Dónde? · Añadir · Cargar URL · Eliminar]:::ui
     V[Adjunto en la tarea: imagen · PDF · TaskWeb con WebBar]:::ui
     FX[Animaciones: HoldToComplete · Tear · Crumple · Intro]:::ui
@@ -142,7 +142,7 @@ erDiagram
 
 - **Índices:** `tasks(status, deletedAt, rank)`; `attachments(taskId)`; `tasks(parentId)` y `tasks(source, externalId)` único parcial (futuro).
 - **Invariantes (se prueban en el dominio):** una tarea tiene `text` no vacío **o** un adjunto (o ambos); una tarea web no lleva texto en la v1 (como el prototipo); `rank` es único entre las pendientes; desde el esquema v2 (ADR-0012) solo se guardan tareas pendientes: completar y eliminar las borran, y `status`, `completedAt` y `deletedAt` quedan sin uso.
-- **Ajustes v1:** `locale` (`system | es | en`), `keepScreenOn` (bool, true), `palette` (`classic`), `firstRunDone` (bool), `hasEverHadTasks` (bool: ya se guardó alguna tarea; decide entre "Todo hecho." y el editor de la primera tarea; lo activa `insert` en su transacción, ADR-0012), `notifications` (reservado). Las claves se versionan con el esquema.
+- **Ajustes v1:** `locale` (`system | es | en`) y `keepScreenOn` (bool, true) — *reservados para la spec futura de Configuración y perfil; en la beta no se usan: el idioma lo decide el sistema y la pantalla encendida está siempre activa (2026-09-29)* —, `palette` (`classic`), `firstRunDone` (bool), `hasEverHadTasks` (bool: ya se guardó alguna tarea; decide entre "Todo hecho." y el editor de la primera tarea; lo activa `insert` en su transacción, ADR-0012), `notifications` (reservado). Las claves se versionan con el esquema.
 - **Versionado:** `schemaVersion = 2` (v2, ADR-0012: la migración borra una vez las completadas y las marcas de borrado, y activa `hasEverHadTasks`; mismas tablas). Cada cambio → nueva versión, captura en `app/drift_schemas/`, paso de migración y **test de migración** generado (ADR-0002).
 
 ### Casos de uso ↔ reglas
@@ -265,6 +265,6 @@ Regla: nada detrás de un flag llega a producción sin su spec aprobada.
 ## 8. Internacionalización
 
 - `flutter gen-l10n` con ARB (`app_es.arb` como plantilla, `app_en.arb`); ICU para plurales y selectores; fechas con `intl` en el idioma activo.
-- Resolución: ajuste `locale` ≠ `system` → ese idioma. Si no: cualquier `es-*` del dispositivo → `es`; el resto → `en` (R15).
+- Resolución: el primer idioma de la lista del dispositivo que la app admite: cualquier `es-*` → `es`, `en-*` → `en`; si ninguno, `en` (R15, spec 010). *(Enmienda 2026-09-29: sin ajuste manual en la beta; volverá con la spec futura de Configuración y perfil.)*
 - El nombre de la app es la clave `appName` + `AppIdentity`. El nombre nativo va en InfoPlist.strings (es/en) y `strings.xml` (values, values-es), generados desde una única fuente (`app/identity.yaml`).
 - CI: test que compara las claves de ES y EN (sin huecos) y lint que prohíbe literales de texto en los widgets (`custom_lint` o un script).

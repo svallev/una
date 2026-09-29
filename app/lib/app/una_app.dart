@@ -314,5 +314,11 @@ Widget appFrame(BuildContext context, Widget? child) {
       child: child,
     ),
   );
-  return kIsWeb ? WebPreviewBanner(child: centered) : centered;
+  // Marca de idioma del contenido: el lector de pantalla usa la voz del
+  // idioma de la app (español o inglés) y no la del sistema, también con el
+  // texto del usuario (CA-010-10).
+  return Semantics(
+    localeForSubtree: Localizations.maybeLocaleOf(context),
+    child: kIsWeb ? WebPreviewBanner(child: centered) : centered,
+  );
 }
