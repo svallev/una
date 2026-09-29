@@ -18,6 +18,12 @@ Todas terminan con `fvm dart format .`, `fvm flutter analyze --fatal-infos` y `f
 | T-010-10 | **Verificación manual en el emulador (coordinador).** (a) Idiomas del sistema `fr-FR` + `es-ES` → español (suposición de CA-010-02). (b) TalkBack con fr-FR, ca-ES, es-MX y en-GB: voz de la interfaz y de una tarea, anuncios, menú de acciones y título de hoja. (c) CA-010-06 con TalkBack: foco en la nota, con el menú abierto y con el editor a medias; cambio es → en. (d) Orden de las acciones. (e) Switch Access y teclado físico tras el cambio. (f) Texto al máximo en inglés. (g) CL-010-5: el sistema cierra la app en Ajustes. (h) CL-010-7: dónde queda el foco al pulsar "Configuración y perfil". Anotar los resultados aquí | T-010-01 a 09 | Tabla de resultados en este archivo; el propietario la confirma | 02, 06, 10, 11, 12, CL-010-3, 5, 7 |
 | T-010-11 | Cierre: `/i18n-check`, `/security-check`, `a11y-reviewer` sobre el diff, `spec-reviewer` (cumplimiento), lista CA → test, DoD, spec en **Implementada**, `PLAN.md` y `CLAUDE.md` al día, descripción de la PR (sin push hasta el sí del propietario) | T-010-10 | Checklist de cierre completa | todos |
 
+## Estado
+
+| Tarea | Estado | Notas |
+|---|---|---|
+| T-010-01 | [Hecho] 2026-09-29 | `resolveAppLocale` sin `setting`; fuera `supportedAppLocales` y el test de CA-010-03. Tests nuevos: `es-419` y `es-Latn` con subetiquetas, `en-GB`, lista sin admitidos y vacía → en, `ar`/`he` → en (CL-010-4). `locale_resolution_test.dart` 5/5; suite completa 1072 en verde; el grep sale vacío. Sin emulador (no se pedía) |
+
 ## Resultados de T-010-10
 
 *(Pendiente)*
