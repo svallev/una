@@ -108,6 +108,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     - **no pasa nada**: la tarea sigue en la misma página, sin cargar otra, sin abrir el navegador ni otra app y sin preguntar. Da igual que sea del mismo sitio o de otro, que abra una ventana nueva (`target=_blank`, `window.open`), que sea `mailto:`, `tel:` o cualquier otro esquema, o una redirección de la propia página (JavaScript, `meta refresh`);
     - **excepción:** un enlace a otra parte de **la misma página** (un ancla, `#seccion`) desplaza dentro de ella, como en un navegador;
     - lo que la página hace sin cambiar de dirección (pestañas, desplegables, contenido que carga con JavaScript) funciona dentro de la página;
+    - si aun así empieza a cargarse otra página (p. ej. un formulario que envía datos, que Android no deja bloquear de antemano), se para y se vuelve a cargar la dirección guardada (propietario, 2026-09-29);
     - la barra muestra siempre el dominio de esa página (CA-009-14).
 - **CA-009-12 Atrás**
   - **Dado** la tarea actual web

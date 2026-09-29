@@ -43,6 +43,7 @@ Del ADR-0007 y el ADR-0016 **se mantiene todo lo demás**: validación, WebView 
   - Un enlace útil (un "Ver más", el teléfono de la página de contacto) no hace nada: hay que abrir la dirección en el navegador del móvil. Se acepta: es la intención.
   - **[Hecho]** Una página que cambia su contenido sin cargar otra dirección (una aplicación de una sola página con `history.pushState`, pestañas o desplegables hechos con JavaScript) sigue funcionando dentro de la página: la WebView no avisa de esos cambios y no hay forma fiable de impedirlos. Siempre es la misma página y el mismo dominio.
   - Un acortador o una página que redirige con JavaScript (no con el servidor) se queda en esa primera página: la tarea muestra lo que el servidor devuelve para la dirección guardada.
+  - **[Hecho, T-009-10]** Android no deja interceptar antes el envío de un formulario con POST. Decisión del propietario (2026-09-29): si, ya vista la página, empieza a cargarse otra, se para y se vuelve a cargar la dirección guardada. Para el usuario, enviar el formulario no hace nada (como mucho, la página se recarga).
   - El aviso de redirección puede salir entre subdominios del mismo sitio (sin la PSL). Se acepta: informa de dónde se está.
 - **Hecho al aceptarlo (2026-09-29):**
   - spec, plan y tareas de la 009 actualizados (CA-009-10, 11, 12, 19; CL-009-1, CL-009-12, CL-009-13; §5, §7, §8, §9);
