@@ -175,12 +175,13 @@ void main() {
       // como una imagen y el importador falso le regenera una versión.
       expect(await store.stagingIds(), isEmpty);
       expect(await store.storedIds(), isNot(contains(pdfs.picks.single)));
-      // CA-009-19: "Abrir" no se anuncia.
+      // CA-009-19: en la pantalla principal, "Abrir" no se anuncia.
       expect(announcements, isEmpty);
     });
 
     testWidgets('desde el listado: vuelve con la fila en la posición 1, '
-        'resaltada y con el foco, sin anuncio (CA-009-19)', (tester) async {
+        'resaltada, con el foco y "Ahora es la tarea actual", como imagen y '
+        'PDF (CA-009-19)', (tester) async {
       final announcements = listenAnnouncements(tester);
       final repo = await openList(
         tester,
@@ -219,7 +220,7 @@ void main() {
       final focused = FocusManager.instance.primaryFocus?.context
           ?.findAncestorWidgetOfExactType<TaskListRow>();
       expect(focused?.task.attachment?.isWeb, isTrue);
-      expect(announcements, isEmpty);
+      expect(announcements, ['Ahora es la tarea actual']);
     });
 
     testWidgets('un doble toque rápido en "Abrir" crea una sola tarea', (

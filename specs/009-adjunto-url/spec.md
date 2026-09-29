@@ -173,7 +173,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     |---|---|---|
     | Se abre "Cargar URL" | El campo | El título de la hoja |
     | Error de validación | El campo | El texto del error |
-    | "Abrir" | Como CA-008-05 (la tarea o la fila del listado) | Ninguno |
+    | "Abrir" | Como CA-008-05 (la tarea o la fila del listado) | Como con imagen y PDF: ninguno en la pantalla principal; desde el listado, "Ahora es la tarea actual" (propietario, 2026-09-29) |
     | Se cierra "Cargar URL" | El botón (+) del editor | Ninguno |
     | Aviso sin conexión, sin https o de certificado | Donde estaba | El texto del aviso |
     | "Reintentar" | Donde estaba | "Cargando página" |
