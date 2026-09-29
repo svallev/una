@@ -49,7 +49,7 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Hoja inferior | Bottom sheet | `*Sheet` | Panel que sube desde abajo. |
 | Primera vez / bienvenida | First run / welcome | `FirstRun`, `WelcomeIntro` | Animación inicial y creación obligatoria de la primera tarea. |
 | Estado vacío | Empty state | `EmptyState` | "Todo hecho.": no queda ninguna tarea pendiente (tras completar o eliminar la última). No existe "Nada pendiente." |
-| Configuración | Settings | `Settings` | Idioma, pantalla encendida, Acerca de, licencias. |
+| Configuración | Settings | `Settings` | Idioma, pantalla encendida, Acerca de, licencias. No existe en la beta: spec futura de Configuración y perfil (2026-09-29). |
 | Pantalla encendida | Keep screen on | `keepScreenOn` | Impide el bloqueo mientras se ve una tarea con adjunto. |
 | Indicador de función | Feature flag | `FeatureFlag` | Interruptor local para funcionalidades a medio hacer. |
 | Fecha límite *(futuro)* | Due date | `dueDate` | Bloque 1 de la hoja de ruta. |

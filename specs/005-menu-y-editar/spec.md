@@ -1,6 +1,6 @@
 # Spec 005: Menú de la tarea y editar
 
-- **Estado:** Implementada (2026-09-25; aprobada por el propietario tras probarla en el móvil). Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009, eliminar 004, configuración 010)
+- **Estado:** Implementada (2026-09-25; aprobada por el propietario tras probarla en el móvil). Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009, eliminar 004, configuración: spec futura de Configuración y perfil, enmienda 2026-09-29)
 - **Reglas de producto:** R7 (primer paso), R11
 - **Pantallas del prototipo:** 2 "Menú", 3 "Nueva tarea" (modo editar)
 - **Decisiones y ADR:** D13, DEV-05 (revocada), DEV-11, DEV-17, DEV-18, DEV-21
@@ -52,7 +52,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 - **CA-005-09 Nueva tarea y Configuración**
   - **Dado** el menú
   - **Cuando** elige "Nueva tarea" o "Configuración"
-  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" cierra el menú (como el prototipo) hasta que exista la spec 010.
+  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" cierra el menú (como el prototipo) hasta que exista la spec futura de Configuración y perfil (enmienda 2026-09-29: ya no es la 010).
 - **CA-005-12 Total de tareas (añadido por el propietario, DEV-22)**
   - **Dado** el menú con más de una tarea pendiente
   - **Cuando** se muestra

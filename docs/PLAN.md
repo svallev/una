@@ -23,7 +23,7 @@ App móvil (iOS + Android) local y sin conexión que muestra **una tarea a la ve
 | D10 | Imagen: **pantalla encendida** (hasta 10 min sin tocar); sin brillo máximo. **Sin visor** (ADR-0013): la imagen al ancho con desplazamiento vertical en la tarea y pellizco que vuelve al soltar; **solo gira la tarea actual con imagen**, que en horizontal muestra solo la imagen y el logotipo (enmiendas del propietario, 2026-09-26 y 2026-09-27, spec 007). **También gira la tarea actual con PDF, exactamente igual**: en horizontal, el adjunto y el logotipo (~~y el botón "Volver a vertical"~~: quitado por el propietario el 2026-09-28, ADR-0015); el zoom del PDF se queda puesto (ADR-0014, spec 008). Pantalla encendida también con PDF |
 | D11 | Sin biometría en la v1 |
 | D12 | Mínimos: **iOS 16 / Android 8 (API 26)** |
-| D13 | Menú: **"Configuración"** mínima, sin perfil |
+| D13 | Menú: **"Configuración"** mínima, sin perfil. **Aplazada (propietario, 2026-09-29):** en la beta no hay pantalla de Configuración; la entrada "Configuración y perfil" se queda en el menú (DEV-05 revocada, DEV-18 abierta) y la pantalla irá en una spec futura con diseño del propietario |
 | D14 | Backups del sistema **incluidos** |
 | D15 | Bundle ID con un dominio neutro que se comprará → **[Pendiente]** |
 | D16 | Código en inglés; documentación en español |
@@ -43,7 +43,7 @@ flowchart LR
   F1 -->|no-go| ALT[Replanificar con Expo · ADR nuevo]
   F2 --> F3[F3 Núcleo 002–006 · L]
   F3 --> F4[F4 Adjuntos 007–009 · XL]
-  F3 --> F5a[010 Configuración · S]
+  F3 --> F5a[010 Idioma automático · S]
   F4 --> F5[F5 Endurecimiento y tiendas · M]
   F5a --> F5
   F5 --> F6[F6 Beta Android y v1.0 · M + 14 días de Play]
@@ -56,9 +56,9 @@ flowchart LR
 | **F1 Spikes (Android + web)** | S1 arranque (Android) · S2 animaciones · S3 PDF y visor del sistema (Android: intent) · S4 captura web (Android) · S5 importación y backup (Android) · S6 web + Vercel. Las partes iOS de S1, S3, S4 y S5 pasan a F-iOS (D17). Código **desechable** en `spikes/` (rama propia, no se fusiona). **Requiere aprobación.** | M | F0 | Criterios de ADR-0001 cumplidos en Android → ADR-0001 **Aceptado para Android**, provisional para iOS; si no → ADR de cambio a Expo |
 | **F2 Esqueleto + 001** *(✅ completada el 2026-09-25, PR #3)* | `app/` + identidad + l10n + tokens + BD v1 + repositorio + CI + web + la spec 001 completa | L | F1 | CA-001 en verde; arranque p50 < 1 s medido; preview en Vercel por PR |
 | **F3 Núcleo** ✅ *(002, 003 y 005 el 2026-09-25; 004 y 006 el 2026-09-26)* | 002 crear y posición → 003 completar → 004 eliminar → 005 menú y editar → 006 listado | L | F2 | CA de 002–006 en verde; *goldens* frente al prototipo aprobados |
-| **F4 Adjuntos** *(en curso: 007 y ADR-0012 fusionadas en `main`, PR svallev/una#11 y #12, 2026-09-27; 008 fusionada en `main`, PR svallev/una#14, 2026-09-28; 009 implementada, PR svallev/una#17, 2026-09-29: F4 completa al fusionarla; siguiente: 010, que cierra DEV-18)* | 007 imagen (canal de importación; sin visor, ADR-0013) → 008 PDF (solo PDF en la v1, ADR-0014) → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; WebView endurecida en producción (ADR-0007/0016; sin captura) |
-| **010** | Idioma y Configuración (tras diseñar la pantalla) | S | F3 (se puede hacer en paralelo con F4) | CA-010 en verde |
-| **F5 Endurecimiento** | Auditoría de accesibilidad (VoiceOver, TalkBack, Switch, texto grande; incluye las excepciones de ADR-0013: lupa del sistema en Android 8–11 y 12+, con teclado y conmutadores, y Switch Access en horizontal; y la limitación de foco de TalkBack de CA-007-22), pruebas MASTG, presupuesto de rendimiento y tamaño, política de privacidad, fichas de tienda, capturas, manifiesto de privacidad y Data Safety, iconos | M | F4, 010 | Checklist de publicación completa; 0 hallazgos altos |
+| **F4 Adjuntos** *(en curso: 007 y ADR-0012 fusionadas en `main`, PR svallev/una#11 y #12, 2026-09-27; 008 fusionada en `main`, PR svallev/una#14, 2026-09-28; 009 fusionada en `main`, PR svallev/una#17, 2026-09-29: F4 completa; siguiente: 010, idioma automático)* | 007 imagen (canal de importación; sin visor, ADR-0013) → 008 PDF (solo PDF en la v1, ADR-0014) → 009 URL | XL | F3 | CA de 007–009; revisión de seguridad T-3 a T-6 superada; WebView endurecida en producción (ADR-0007/0016; sin captura) |
+| **010** | Idioma automático: solo ES/EN, lo decide el sistema, sin selector. **Alcance reducido (propietario, 2026-09-29):** sin pantalla de Configuración en la beta (spec futura; cierra DEV-18) | S | F3 | CA-010-01, 02, 04–07 y 10–12 en verde |
+| **F5 Endurecimiento** | Auditoría de accesibilidad (VoiceOver, TalkBack, Switch, texto grande; incluye las excepciones de ADR-0013: lupa del sistema en Android 8–11 y 12+, con teclado y conmutadores, y Switch Access en horizontal; y la limitación de foco de TalkBack de CA-007-22), pruebas MASTG, presupuesto de rendimiento y tamaño, política de privacidad, fichas de tienda, capturas, manifiesto de privacidad y Data Safety, iconos. *Añadido el 2026-09-29 (alcance de la 010):* avisos de licencias de código abierto en la app (requisito de publicación; antes CA-010-09), ocultar el contenido en la miniatura de "Recientes" (antes pendiente de la 010: CL-007-11, CL-008-13, CL-009-10) y anuncios de TalkBack con la voz del sistema (CA-010-10) | M | F4, 010 | Checklist de publicación completa; 0 hallazgos altos |
 | **F6 Beta Android y v1.0** | Play: Internal testing y prueba cerrada con **12 testers durante 14 días** (cuenta personal nueva), corrección de errores, v1.0 en Google Play | M + 14 días | F5 + cuenta de Play | Aprobación en Google Play; feedback de los testers (sin telemetría: formulario o correo) |
 | **F-iOS** *(si PD-7 = sí)* | Instalar Xcode; partes iOS de los spikes (S1 arranque < 0,6 s, S3 QuickLook, S4 captura con WKWebView, S5 backup iCloud y Data Protection); ajustes de plataforma (Info.plist, PrivacyInfo.xcprivacy, permisos, splash); tests de integración en simulador; auditoría VoiceOver; cuenta de Apple Developer; TestFlight → App Store | L | F6 (o antes, en paralelo con F5, si se decide) | Criterios iOS de ADR-0001; CA de todas las specs en verde en iOS; aprobación en App Store |
 
@@ -98,7 +98,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R-15 | Web de pruebas poco representativa (canvas, accesibilidad) | Alta | Baja | Los criterios de accesibilidad y rendimiento se verifican solo en dispositivo | — |
 | R-16 | Deriva entre prototipo e implementación | Media | Media | `screen-map.md`, `prototype-deviations.md` y *goldens* | Cada PR de UI |
 | R-18 | **iOS aplazado (D17):** problemas propios de iOS (arranque, captura con WKWebView, QuickLook, Data Protection, revisión de App Store) se descubren tarde y obligan a rehacer trabajo | Media | Media | Toda la integración nativa detrás de puertos (`SystemViewer`, `WebSnapshotter`, `ImageSanitizer`) con implementación Android primero; nada de APIs solo de Android en el dominio; **CI compila iOS sin firmar desde F2** (macOS runner, gratis en repo público) para detectar roturas de compilación; F-iOS empieza por los spikes iOS | Cada PR (job iOS de CI); inicio de F-iOS |
-| R-17 | Pantallas sin diseño (Configuración, visor de documentos, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (010, 007–009) | Antes de F3/F4 |
+| R-17 | Pantallas sin diseño (Configuración, visor de documentos, errores) | Alta | Media | Diseñarlas en Claude Design antes de su spec (007–009). Configuración: aplazada a una spec futura, que diseñará el propietario (2026-09-29) | Antes de F3/F4 |
 | R-19 | Tamaño del APK por encima del presupuesto (27,6 MB arm64 en el spike, con PDFium, SQLite y WebView) | Media | Baja | App bundle por ABI, sin símbolos, `--analyze-size` en CI; revisar dependencias | F2 |
 
 ## 6. Trazabilidad de reglas → specs
@@ -119,7 +119,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R12 estado vacío ("Todo hecho.") | 003, 004 | CA-003-05, CA-004-07/08 |
 | R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-04 a 16 |
 | R14 histórico | 003 | CA-003-06 — **retirada por el ADR-0012 (2026-09-26)** |
-| R15 idioma | 010 (y P7 en todas) | CA-010-01 a 05 |
+| R15 idioma | 010 (y P7 en todas) | CA-010-01, 02 y 04–07 |
 
 ## 7. Decisiones pendientes
 
@@ -131,7 +131,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | PD-4 | ~~Aprobación de los spikes S1–S6~~ **Aprobados y ejecutados (2026-09-24).** S1–S5 ✅ en Android (S1/S2 en Xiaomi 15T Pro); S6 ✅ en local, falta conectar Vercel | Propietario | — | — |
 | PD-8 | ~~¿TXT, CSV y MD dentro de la app?~~ **Resuelto: sí (D19)**; aplazado por el ADR-0014 (v1: solo PDF) | — | — | — |
 | PD-7 | ¿Se hace la versión de iOS? (D17) | Propietario | Al terminar F6 (o antes si se quiere adelantar) | Decidir con la beta de Android en la mano |
-| PD-5 | Diseño de las pantallas que faltan (R-17) | Propietario + Claude Design | Antes de F3 | — |
+| PD-5 | Diseño de las pantallas que faltan (R-17). Configuración y perfil: la diseñará el propietario para una spec futura, después de la beta (2026-09-29) | Propietario + Claude Design | Antes de F3 | — |
 | P-1 | ~~¿Guardar el borrador del editor?~~ **Resuelto: no en la v1** | — | — | — |
 | P-2 | ~~Vuelta desde segundo plano~~ **Resuelto: se conserva la pantalla si pasan < 10 min; si no, la tarea actual** | — | — | — |
 | P-3 | ¿Confirmar al cancelar con texto? | Producto | Spec 002 | No |
@@ -149,7 +149,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | 2 | Creación en bloque, subtareas | `parentId`, `rank` por nivel |
 | 3 | Importar de Todoist, Google Keep, Google Tasks, Microsoft To Do y Any.do | `source`, `externalId`, flag `imports`, T-14 |
 | 4 | ~~Histórico visible y borrable~~ (retirado por el ADR-0012), theming (paletas), alertas (notificaciones locales) | `palette.*`, flag `notifications` |
-| 5 | Configuración completa, páginas legales, ayuda, exportar/importar `.zip` | Pantalla Configuración, ADR-0004 |
+| 5 | Configuración completa (spec futura de Configuración y perfil; cierra DEV-18), páginas legales, ayuda, exportar/importar `.zip` | Pantalla Configuración, ADR-0004 |
 | — | Landing | ADR-0009 (`landing/`) |
 | — | Widgets de pantalla de inicio y bloqueo | ADR-0001 (home_widget), ADR-0005 (clase de protección) |
 | Mucho después | Cuentas, sincronización, compartir | UUIDv7, `updatedAt`, tombstones, `TaskRepository` |

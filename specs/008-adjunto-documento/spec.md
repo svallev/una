@@ -233,7 +233,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
 | CL-008-10 | Páginas de tamaños u orientaciones distintas | Cada página, al ancho, con su proporción |
 | CL-008-11 | Registros (logs) en *release* | No se registra ningún nombre, ruta, dirección, enlace ni contenido de un PDF |
 | CL-008-12 | Web de pruebas (ADR-0010) | "Subir archivo" usa el selector del navegador; el PDF se guarda solo en memoria; no hay giro, ni con PDF ni con imagen (enmienda del propietario, 2026-09-28, por CA-008-11) |
-| CL-008-13 | La miniatura de la app en "Recientes" | Muestra el PDF. **[Pendiente, spec 010]** Ocultarla, como en CL-007-11 |
+| CL-008-13 | La miniatura de la app en "Recientes" | Muestra el PDF. **[Pendiente, F5]** Ocultarla, como en CL-007-11 *(antes spec 010; enmienda 2026-09-29)* |
 
 ## 5. Estados vacíos y de error
 
@@ -298,7 +298,7 @@ Se reutilizan `currentTaskSemantics` ("Tarea actual: {text}", prefijo en horizon
 - Indicador de página visible.
 - Anotar, firmar, rellenar formularios, buscar, seleccionar o copiar texto, imprimir, compartir o exportar el PDF.
 - Varios PDF por tarea.
-- La copia de los PDF en la nube (con la tarea de las imágenes antes de la v1.0) y el ajuste de "Recientes" (spec 010).
+- La copia de los PDF en la nube (con la tarea de las imágenes antes de la v1.0) y el ajuste de "Recientes" (F5; antes spec 010, enmienda 2026-09-29).
 
 ## 9. Preguntas abiertas
 
