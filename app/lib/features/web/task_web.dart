@@ -12,7 +12,7 @@ import '../../domain/entities/link_target.dart';
 import '../../domain/entities/web_load_failure.dart';
 import '../../domain/services/host_display.dart';
 import '../../l10n/generated/app_localizations.dart';
-import '../../ui/brutal_button.dart';
+import '../../ui/una_sheet.dart';
 import 'web_bar.dart';
 import 'web_page_controller.dart';
 import 'web_page_driver_factory.dart';
@@ -330,16 +330,28 @@ class _Notice extends StatelessWidget {
                 color: UnaColors.ink,
               ),
             ),
+            // Enlaces, no botones: el botón negro es de la tarea ("Completar").
             if (failure.canOpenInBrowser) ...[
               const SizedBox(height: UnaSpace.ml),
-              BrutalButton(
-                label: l10n.urlOpenInBrowser,
-                onPressed: onOpenInBrowser,
+              Center(
+                child: UnaLinkButton(
+                  label: l10n.urlOpenInBrowser,
+                  height: kMinInteractiveDimension,
+                  onPressed: onOpenInBrowser,
+                ),
               ),
             ],
             if (failure.canRetry) ...[
-              const SizedBox(height: UnaSpace.ml),
-              BrutalButton(label: l10n.retry, onPressed: onRetry),
+              SizedBox(
+                height: failure.canOpenInBrowser ? UnaSpace.s : UnaSpace.ml,
+              ),
+              Center(
+                child: UnaLinkButton(
+                  label: l10n.retry,
+                  height: kMinInteractiveDimension,
+                  onPressed: onRetry,
+                ),
+              ),
             ],
           ],
         ),
