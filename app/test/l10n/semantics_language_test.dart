@@ -62,16 +62,12 @@ import '../support/pump_app.dart';
 /// 2.ª parte (T-010-06): PDF, web, hojas y listado (se añade al final de
 /// [main], con los mismos ayudantes).
 ///
-/// CA-010-10, límite de estos tests: solo se comprueba que **ningún nodo lleva
-/// un idioma ajeno** (negativo). La comprobación positiva (que el nodo de la
-/// tarea, el de una fila o el del campo del editor lleven `SemanticsData.locale`
-/// = idioma de la app) no es posible aquí: con Flutter 3.47 el framework no
-/// marca ningún nodo con `locale` (probado: todos salen `null` en la tarea
-/// actual, el menú y el editor; solo lo pone quien use
-/// `Semantics(localeForSubtree: …)` y la app no lo usa). Un test positivo
-/// fallaría; uno que aceptara `null` pasaría en vacío. Por eso la voz del
-/// contenido del usuario solo se verifica a mano (T-010-10 b; el detector de
-/// abajo se prueba con una marca `ca` puesta a mano).
+/// CA-010-10: la app marca su contenido con `Semantics(localeForSubtree: …)`
+/// (`appFrame`), así que el lector usa la voz del idioma de la app y no la del
+/// sistema. Un test lo comprueba en positivo (el nodo de la tarea, el de una
+/// fila y el del campo del editor llevan `SemanticsData.locale` = idioma de
+/// la app) y otro en negativo (ningún nodo lleva un idioma ajeno). La voz real
+/// solo se oye a mano.
 
 const _frame = Duration(milliseconds: 16);
 
@@ -410,6 +406,31 @@ void main() {
         expect(find.text(_catalan), findsOneWidget);
         _expectNoForeignLocale(tester, lang);
       });
+
+      testWidgets(
+        'la tarea actual, el menú y el campo del editor llevan el idioma de la app (positivo)',
+        (tester) async {
+          await pumpUnaApp(
+            tester,
+            repo: InMemoryTaskRepository(),
+            locale: locale,
+            tasks: [_catalan, _neutral.first],
+          );
+          String? localeOf(Finder f) =>
+              tester.getSemantics(f).getSemanticsData().locale?.languageCode;
+          expect(
+            localeOf(
+              find.bySemanticsLabel(l10n.currentTaskSemantics(_catalan)),
+            ),
+            lang,
+          );
+          await _openMenu(tester, l10n);
+          expect(localeOf(find.bySemanticsLabel(l10n.menuEdit)), lang);
+          await tester.tap(find.text(l10n.menuEdit));
+          await tester.pumpAndSettle();
+          expect(localeOf(find.byType(EditableText)), lang);
+        },
+      );
 
       testWidgets('tarea en catalán con imagen', (tester) async {
         final store = MemoryAttachmentStore();

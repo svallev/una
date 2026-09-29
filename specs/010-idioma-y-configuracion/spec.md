@@ -67,7 +67,8 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
   - **Dado** TalkBack activo con un motor de voz que tenga español e inglés
   - **Cuando** lee la interfaz **y el contenido del usuario** (el texto de la tarea, las filas del listado, el campo del editor y el nombre del PDF)
   - **Entonces** lo lee con la voz del idioma de la app: español si el sistema está en `es-*` y, si no, inglés.
-  - **Verificación:** un test comprueba que ningún nodo del contenido del usuario lleva un idioma distinto del de la app; la voz se comprueba a mano en el emulador (§6).
+  - **Cómo se cumple:** `appFrame` envuelve la app en `Semantics(localeForSubtree: idioma de la app)` (decisión del propietario, 2026-09-30), para que TalkBack use la voz del idioma de la app y no la del sistema (p. ej. sistema en catalán o francés).
+  - **Verificación:** un test comprueba que los nodos de la tarea, el menú y el campo del editor llevan el idioma de la app y que ninguno lleva otro; la voz se comprueba a mano (§6).
   - Excepción aceptada en la beta: los anuncios, los nombres de las acciones y los títulos de las hojas se oyen con la voz del sistema. Se revisa en la auditoría de accesibilidad de F5.
 - **CA-010-11 Orden de las acciones tras el cambio**
   - **Dado** CA-010-06
