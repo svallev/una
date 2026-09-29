@@ -30,6 +30,10 @@ enum WebPageStatus {
 
   /// La dirección es un archivo, no una página (CL-009-4).
   notAPage,
+
+  /// La página intenta ir a otra dos veces seguidas: se deja de recargar
+  /// (CA-009-11; propietario, 2026-09-29).
+  keepsLeaving,
 }
 
 /// Estado de la página de una tarea web.
@@ -70,6 +74,7 @@ class WebPageState {
     WebPageStatus.insecure => WebLoadFailure.insecure,
     WebPageStatus.certificate => WebLoadFailure.certificate,
     WebPageStatus.notAPage => WebLoadFailure.notAPage,
+    WebPageStatus.keepsLeaving => WebLoadFailure.keepsLeaving,
     WebPageStatus.loading || WebPageStatus.shown => null,
   };
 
@@ -117,7 +122,9 @@ class WebPageState {
 ///   vista la página, el marco principal empieza a cargar otra (su
 ///   `onPageStarted` o su error), se vuelve a cargar la dirección guardada; la
 ///   barra nunca muestra el dominio de esa otra (CA-009-11; propietario,
-///   2026-09-29).
+///   2026-09-29). **A la segunda vez seguida** (sin que la dirección guardada
+///   se haya visto [webPageSettled] entre medias) se deja de recargar y se
+///   avisa; "Reintentar" o volver a la tarea empiezan de cero.
 /// - "Reintentar" ([retry]); al volver a la app con un aviso se reintenta
 ///   solo; de segundo plano en menos de 10 minutos se conserva y, con 10 o
 ///   más, se carga desde cero (CA-009-07).
@@ -183,6 +190,16 @@ class WebPageController extends ValueNotifier<WebPageState> {
   /// dirección guardada: lo que llegue de ella después no cuenta.
   Uri? _detour;
 
+  /// Recargas seguidas por otra carga de la página (CA-009-11): a la segunda
+  /// se avisa en lugar de recargar. Vuelve a 0 con "Reintentar", al volver a
+  /// la tarea o si la dirección guardada se ha visto de forma estable.
+  int _detourReloads = 0;
+
+  /// Desde cuándo se ve de forma estable la dirección guardada: su
+  /// `onPageStarted` o, si llega después, su `onPageFinished`; null mientras
+  /// no se ve.
+  DateTime? _settlingSince;
+
   /// Aumenta con cada carga: lo que quede de una anterior no cuenta.
   int _load = 0;
 
@@ -246,6 +263,7 @@ class WebPageController extends ValueNotifier<WebPageState> {
   Future<void> _attachAndLoad() async {
     final driver = _driver;
     final load = _begin();
+    _detourReloads = 0;
     if (!_attached) {
       final hardened = await _safe(
         () => driver.attach(_DriverListener(this, driver)),
@@ -271,6 +289,7 @@ class WebPageController extends ValueNotifier<WebPageState> {
     final load = ++_load;
     _shownPage = null;
     _detour = null;
+    _settlingSince = null;
     _upgradedFromHttp = address.scheme.toLowerCase() == 'http';
     _set(
       value.copyWith(
@@ -317,6 +336,7 @@ class WebPageController extends ValueNotifier<WebPageState> {
           WebLoadFailure.insecure => WebPageStatus.insecure,
           WebLoadFailure.certificate => WebPageStatus.certificate,
           WebLoadFailure.notAPage => WebPageStatus.notAPage,
+          WebLoadFailure.keepsLeaving => WebPageStatus.keepsLeaving,
         },
         pageLoading: false,
       ),
@@ -415,9 +435,23 @@ class WebPageController extends ValueNotifier<WebPageState> {
   /// formulario POST, que Android no pasa por `onNavigationRequest`): se
   /// vuelve a cargar la dirección guardada, y la barra vuelve a su dominio
   /// (CA-009-11). La marca de datos ya está escrita (CA-009-13).
+  ///
+  /// Si es la segunda vez seguida (una página que envía un formulario sola al
+  /// cargar), en lugar de recargar se para y se avisa (propietario,
+  /// 2026-09-29).
   void _reloadSaved(WebPageDriver driver, Uri other) {
     final shown = _shownPage;
+    final since = _settlingSince;
+    if (since != null && _time.now().difference(since) >= webPageSettled) {
+      _detourReloads = 0;
+    }
+    if (_detourReloads >= 1) {
+      _fail(WebLoadFailure.keepsLeaving);
+      unawaited(_safe(driver.stop, null));
+      return;
+    }
     _begin();
+    _detourReloads++;
     if (shown != null && !isSamePage(other, shown)) _detour = other;
     unawaited(_safe(() => driver.load(_first(address)), null));
   }
@@ -443,6 +477,7 @@ class WebPageController extends ValueNotifier<WebPageState> {
     _timer?.cancel();
     _timer = null;
     _shownPage = url;
+    _settlingSince = _time.now();
     String? notice;
     if (!_redirectNoticed) {
       notice = redirectNoticeHost(saved: address, started: url);
@@ -460,6 +495,7 @@ class WebPageController extends ValueNotifier<WebPageState> {
 
   void _onPageFinished(WebPageDriver driver) {
     if (!_isLive(driver) || value.status != WebPageStatus.shown) return;
+    _settlingSince = _time.now();
     _set(value.copyWith(pageLoading: false, progress: 100));
   }
 
@@ -476,8 +512,9 @@ class WebPageController extends ValueNotifier<WebPageState> {
   }) {
     if (!_isLive(driver) || !_loadingOrShown) return;
     if (isMainFrame && url != null) {
-      // El de la otra página por la que ya se ha vuelto a cargar.
-      if (url == _detour) return;
+      // El de la otra página por la que se está volviendo a cargar. Ya vista
+      // otra vez la dirección guardada, sí cuenta: es otro envío (CA-009-11).
+      if (url == _detour && value.status == WebPageStatus.loading) return;
       // Ya vista la página, el error de otra (un formulario POST que no
       // llega a cargarse) tampoco es un aviso: se vuelve a cargar la
       // dirección guardada.
@@ -513,6 +550,7 @@ class WebPageController extends ValueNotifier<WebPageState> {
     _driver = fresh;
     _attached = false;
     _shownPage = null;
+    _settlingSince = null;
     _set(
       value.copyWith(
         status: WebPageStatus.loading,

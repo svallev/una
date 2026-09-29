@@ -956,6 +956,12 @@ abstract class AppLocalizations {
   /// **'certificado no válido'**
   String get urlReasonCertificate;
 
+  /// Motivo de urlLoadFailed: la página intenta ir a otra dos veces seguidas y se deja de recargar (propietario, 2026-09-29). CA-009-11
+  ///
+  /// In es, this message translates to:
+  /// **'intenta abrir otra página'**
+  String get urlReasonKeepsLeaving;
+
   /// Aviso de la tarea web cuando la dirección descarga un archivo (p. ej. un PDF). CL-009-4
   ///
   /// In es, this message translates to:

@@ -1,6 +1,6 @@
 # Spec 009: Tareas con una página web (URL)
 
-- **Estado:** **Aprobada** (propietario, 2026-09-28), con las propuestas de §9. Reescrita ese día con sus decisiones: **se guarda solo la dirección y la página se carga en vivo cada vez; nada de la página se guarda en el móvil** (ADR-0016). Sin revisión de `spec-reviewer` (aprobada directamente por el propietario). **Enmendada el 2026-09-29 (ADR-0018): sin navegación; solo se ve la página de la dirección guardada**. Enmendada también el 2026-09-29 (propietario): sin candado con el aviso de conexión no segura (CA-009-06) y ese aviso cuando una dirección `http://` intenta, mientras carga, ir a otra `http://` (CA-009-09, CA-009-11)
+- **Estado:** **Aprobada** (propietario, 2026-09-28), con las propuestas de §9. Reescrita ese día con sus decisiones: **se guarda solo la dirección y la página se carga en vivo cada vez; nada de la página se guarda en el móvil** (ADR-0016). Sin revisión de `spec-reviewer` (aprobada directamente por el propietario). **Enmendada el 2026-09-29 (ADR-0018): sin navegación; solo se ve la página de la dirección guardada**. Enmendada también el 2026-09-29 (propietario): sin candado con el aviso de conexión no segura (CA-009-06) y ese aviso cuando una dirección `http://` intenta, mientras carga, ir a otra `http://` (CA-009-09, CA-009-11); y el límite de recargas: a la segunda vez seguida que la página intenta ir a otra, aviso en lugar de recargar (CA-009-11, §5, §7)
 - **Reglas de producto:** R3 (URL), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido). La propuesta de valor 2 **sin conexión no aplica** a la tarea web (ADR-0016)
 - **Pantallas del prototipo:** 9 "Añadir (+)", 11 "Tarea web (URL)", hoja "Cargar URL", 5 "Todas las tareas" (insignia). Los errores, el estado de carga y el horizontal no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
 - **Decisiones y ADR:** **ADR-0016 (web sin copia local; sustituye a D9 y enmienda el ADR-0007)**, **ADR-0018 (sin navegación; enmienda el ADR-0007 y el ADR-0016)**, ADR-0007 (validación y WebView endurecida: se mantienen), D10 y ADR-0013/0014/0015 (giro y excepción del horizontal), ADR-0012 (completar y eliminar borran la tarea del todo), DEV-04 (cambia), DEV-18; modelo de amenazas T-4, T-5, T-6
@@ -109,7 +109,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     - **no pasa nada**: la tarea sigue en la misma página, sin cargar otra, sin abrir el navegador ni otra app y sin preguntar. Da igual que sea del mismo sitio o de otro, que abra una ventana nueva (`target=_blank`, `window.open`), que sea `mailto:`, `tel:` o cualquier otro esquema, o una redirección de la propia página (JavaScript, `meta refresh`);
     - **excepción:** un enlace a otra parte de **la misma página** (un ancla, `#seccion`) desplaza dentro de ella, como en un navegador;
     - lo que la página hace sin cambiar de dirección (pestañas, desplegables, contenido que carga con JavaScript) funciona dentro de la página;
-    - si aun así empieza a cargarse otra página (p. ej. un formulario que envía datos, que Android no deja bloquear de antemano), se para y se vuelve a cargar la dirección guardada (propietario, 2026-09-29);
+    - si aun así empieza a cargarse otra página (p. ej. un formulario que envía datos, que Android no deja bloquear de antemano), se para y se vuelve a cargar la dirección guardada (propietario, 2026-09-29). **A la segunda vez seguida** (sin que la dirección guardada se haya visto de forma estable entre medias; p. ej. una página que envía un formulario sola al cargar), ya no se recarga: se para y se ve "No se ha podido cargar la página (intenta abrir otra página)." con "Abrir en el navegador" y "Reintentar", que vuelve a cargar y empieza a contar de cero (propietario, 2026-09-29, enmienda);
     - **excepción (propietario, 2026-09-29):** con una dirección guardada `http://` (que se carga como `https://`), si durante la carga inicial la página intenta ir a otra dirección `http://`, no se queda en blanco: se ve el aviso de conexión no segura (CA-009-09). Después de terminar la carga inicial, un intento así no hace nada, como cualquier otro;
     - la barra muestra siempre el dominio de esa página (CA-009-14).
 - **CA-009-12 Atrás**
@@ -223,6 +223,7 @@ Los errores de validación aparecen bajo el campo de la hoja. Los de la página,
 | Sin https (la barra, sin candado: CA-009-06) | "Esta página no usa conexión segura. Ábrela en el navegador." | "Abrir en el navegador" |
 | Certificado no válido | "No se ha podido cargar la página (certificado no válido)." | "Abrir en el navegador", "Reintentar" |
 | No es una página | "Esta dirección no es una página web. Ábrela en el navegador." | "Abrir en el navegador" |
+| La página intenta ir a otra dos veces seguidas (CA-009-11; propietario, 2026-09-29) | "No se ha podido cargar la página (intenta abrir otra página)." | "Abrir en el navegador", "Reintentar" |
 
 "Abrir en el navegador" abre la dirección guardada en el navegador del sistema. No pide confirmación, porque el botón ya dice lo que hace.
 
@@ -250,6 +251,7 @@ Los errores de validación aparecen bajo el campo de la hoja. Los de la página,
 | `urlInsecure` | Esta página no usa conexión segura. Ábrela en el navegador. | This page doesn't use a secure connection. Open it in the browser. | |
 | `urlLoadFailed` | No se ha podido cargar la página ({reason}). | Couldn't load the page ({reason}). | |
 | `urlReasonCertificate` | certificado no válido | invalid certificate | |
+| `urlReasonKeepsLeaving` | intenta abrir otra página | it keeps trying to open another page | CA-009-11. Enmienda del propietario, 2026-09-29 (límite de recargas) |
 | `urlNotAPage` | Esta dirección no es una página web. Ábrela en el navegador. | This address isn't a web page. Open it in the browser. | CL-009-4 |
 | `urlRedirected` | Esta dirección te ha llevado a {host}. | This address took you to {host}. | CL-009-1 |
 | `urlOpenInBrowser` | Abrir en el navegador | Open in browser | |

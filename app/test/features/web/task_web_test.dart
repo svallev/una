@@ -404,6 +404,43 @@ void main() {
       expect(web.last.loads, [_saved, _saved]);
     });
 
+    testWidgets('CA-009-11: si la página intenta ir a otra dos veces '
+        'seguidas, aviso con "Abrir en el navegador" y "Reintentar" '
+        '(propietario, 2026-09-29); "Reintentar" vuelve a cargar', (
+      tester,
+    ) async {
+      listen(tester);
+      await pumpWeb(tester);
+      const post = 'https://formularios.otro.org/enviar';
+      web.last.started(_address);
+      web.last.started(post);
+      web.last.started(_address);
+      web.last.started(post);
+      await tester.pumpAndSettle();
+      const text =
+          'No se ha podido cargar la página (intenta abrir otra página).';
+      expect(notice(text), findsOneWidget);
+      expect(announcements, [text]);
+      final open = tester.getRect(find.text('Abrir en el navegador'));
+      final retry = tester.getRect(find.text('Reintentar'));
+      expect(open.top, lessThan(retry.top));
+      // La barra sigue con el candado y el dominio guardado.
+      expect(
+        find.descendant(
+          of: find.byType(WebBar),
+          matching: find.byType(UnaIcon),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<WebBar>(find.byType(WebBar)).host,
+        'congreso.ejemplo.com',
+      );
+      await tester.tap(find.text('Reintentar'));
+      await tester.pumpAndSettle();
+      expect(web.last.loads, [_saved, _saved, _saved]);
+    });
+
     testWidgets('CA-009-06, CA-009-09: con el aviso de conexión no segura la '
         'barra no muestra el candado (propietario, 2026-09-29); con los '
         'demás estados, sí; el dominio, "WEB" y la lectura no cambian', (

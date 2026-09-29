@@ -533,6 +533,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get urlReasonCertificate => 'certificado no válido';
 
   @override
+  String get urlReasonKeepsLeaving => 'intenta abrir otra página';
+
+  @override
   String get urlNotAPage =>
       'Esta dirección no es una página web. Ábrela en el navegador.';
 

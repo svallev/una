@@ -271,15 +271,16 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
   }
 }
 
-String _failureText(AppLocalizations l10n, WebLoadFailure failure) =>
-    switch (failure) {
-      WebLoadFailure.offline => l10n.urlNeedsConnection,
-      WebLoadFailure.insecure => l10n.urlInsecure,
-      WebLoadFailure.certificate => l10n.urlLoadFailed(
-        l10n.urlReasonCertificate,
-      ),
-      WebLoadFailure.notAPage => l10n.urlNotAPage,
-    };
+String _failureText(
+  AppLocalizations l10n,
+  WebLoadFailure failure,
+) => switch (failure) {
+  WebLoadFailure.offline => l10n.urlNeedsConnection,
+  WebLoadFailure.insecure => l10n.urlInsecure,
+  WebLoadFailure.certificate => l10n.urlLoadFailed(l10n.urlReasonCertificate),
+  WebLoadFailure.notAPage => l10n.urlNotAPage,
+  WebLoadFailure.keepsLeaving => l10n.urlLoadFailed(l10n.urlReasonKeepsLeaving),
+};
 
 /// Línea de carga a todo el ancho bajo la barra (CA-009-06): avanza con el
 /// progreso de la página; con reducir movimiento, salta (CA-009-20). Para el

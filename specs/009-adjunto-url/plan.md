@@ -23,7 +23,7 @@
     - `mixedContentMode = NEVER_ALLOW`, Safe Browsing activado y `supportMultipleWindows` a `false`;
     - un **`DownloadListener`** que no descarga y avisa a Dart (→ "no es una página", CL-009-4; sin él, un PDF dejaba la página en blanco);
     - `setWebContentsDebuggingEnabled(false)` en *release*;
-    - un **envoltorio del `WebViewClient` del paquete** que le reenvía todos los callbacks y solo añade `onRenderProcessGone` (devuelve `true` y avisa a Dart para recrear la WebView), aplicado después de `setNavigationDelegate` y comprobado (ADR-0017).
+    - un **envoltorio del `WebViewClient` del paquete** que le reenvía todos los callbacks y añade `onRenderProcessGone` (devuelve `true` y avisa a Dart para recrear la WebView), aplicado después de `setNavigationDelegate` y comprobado (ADR-0017). Desde T-009-12 (2026-09-29, nota del ADR-0017) también avisa a Dart de `WebResourceRequest.isRedirect` de cada petición del marco principal, sin la dirección ni cambiar lo que hace el paquete.
 - **Nada de la página se queda en el móvil** (CA-009-13, ADR-0016):
   - **al salir de la tarea** (otra pantalla, otra tarea, completar, eliminar): se borran las cookies (`WebViewCookieManager.clearCookies`), el almacenamiento web (`clearLocalStorage`, que en Android es `WebStorage.deleteAllData`: localStorage, IndexedDB y el resto) y la caché (`clearCache`);
   - **al usar la web por primera vez** se escribe una marca (`files/web_used`). Si la app se cerró sin borrar, **después del primer fotograma** del arranque siguiente se borra lo mismo desde Kotlin: `CookieManager.removeAllCookies`, `WebStorage.deleteAllData` y la caché de la WebView. Solo se hace si existe la marca, así que no cuesta nada a quien no usa la web;

@@ -13,7 +13,12 @@ enum WebLoadFailure {
   certificate(canRetry: true, canOpenInBrowser: true),
 
   /// La dirección es un PDF u otro archivo (CL-009-4): `urlNotAPage`.
-  notAPage(canRetry: false, canOpenInBrowser: true);
+  notAPage(canRetry: false, canOpenInBrowser: true),
+
+  /// La página intenta ir a otra (un formulario que se envía solo al cargar)
+  /// dos veces seguidas y se deja de recargar la dirección guardada (CA-009-11;
+  /// propietario, 2026-09-29): `urlLoadFailed` con `urlReasonKeepsLeaving`.
+  keepsLeaving(canRetry: true, canOpenInBrowser: true);
 
   const WebLoadFailure({
     required this.canRetry,
@@ -62,6 +67,13 @@ enum WebLoadError {
 /// Tiempo sin que la página empiece a verse (`onPageStarted`) tras el que se
 /// da por "sin conexión" (CA-009-08, CL-009-7).
 const Duration webLoadTimeout = Duration(seconds: 20);
+
+/// Tiempo que la dirección guardada tiene que verse, sin que la página intente
+/// ir a otra, para que la siguiente vez ya no sea "seguida" (CA-009-11): desde
+/// su `onPageStarted` o, si termina de cargar después, desde su
+/// `onPageFinished`. **[Suposición]** 5 s: un formulario que se envía solo al
+/// cargar lo hace mucho antes; una persona que envía dos, mucho después.
+const Duration webPageSettled = Duration(seconds: 5);
 
 /// Qué aviso corresponde a [error] (plan §1, "Estado de la página").
 ///

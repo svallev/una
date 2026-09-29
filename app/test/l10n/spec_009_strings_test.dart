@@ -38,6 +38,11 @@ const _spec009 = <String, (String, String)>{
     "Couldn't load the page ({reason}).",
   ),
   'urlReasonCertificate': ('certificado no válido', 'invalid certificate'),
+  // CA-009-11 (propietario, 2026-09-29): límite de recargas.
+  'urlReasonKeepsLeaving': (
+    'intenta abrir otra página',
+    'it keeps trying to open another page',
+  ),
   'urlNotAPage': (
     'Esta dirección no es una página web. Ábrela en el navegador.',
     "This address isn't a web page. Open it in the browser.",

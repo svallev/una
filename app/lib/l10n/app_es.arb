@@ -286,6 +286,8 @@
   "@urlLoadFailed": { "description": "Aviso de la tarea web con el motivo (p. ej. urlReasonCertificate). CA-009-10", "placeholders": { "reason": { "type": "String", "example": "certificado no válido" } } },
   "urlReasonCertificate": "certificado no válido",
   "@urlReasonCertificate": { "description": "Motivo de urlLoadFailed: certificado no válido. CA-009-10" },
+  "urlReasonKeepsLeaving": "intenta abrir otra página",
+  "@urlReasonKeepsLeaving": { "description": "Motivo de urlLoadFailed: la página intenta ir a otra dos veces seguidas y se deja de recargar (propietario, 2026-09-29). CA-009-11" },
   "urlNotAPage": "Esta dirección no es una página web. Ábrela en el navegador.",
   "@urlNotAPage": { "description": "Aviso de la tarea web cuando la dirección descarga un archivo (p. ej. un PDF). CL-009-4" },
   "urlRedirected": "Esta dirección te ha llevado a {host}.",

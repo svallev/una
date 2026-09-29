@@ -324,6 +324,9 @@ void main() {
       expect(WebLoadFailure.certificate.canOpenInBrowser, isTrue);
       expect(WebLoadFailure.notAPage.canRetry, isFalse);
       expect(WebLoadFailure.notAPage.canOpenInBrowser, isTrue);
+      // CA-009-11: la página intenta ir a otra una y otra vez.
+      expect(WebLoadFailure.keepsLeaving.canRetry, isTrue);
+      expect(WebLoadFailure.keepsLeaving.canOpenInBrowser, isTrue);
     });
   });
 }

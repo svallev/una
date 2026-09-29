@@ -709,6 +709,137 @@ void main() {
     });
   });
 
+  group('Límite de recargas (CA-009-11; propietario, 2026-09-29)', () {
+    const saved = 'https://congreso.ejemplo.com/programa';
+    const post = 'https://formularios.otro.org/enviar';
+
+    testWidgets('CA-009-11: una página que envía un formulario sola al '
+        'cargar: a la segunda vez seguida no se recarga más; se para y se '
+        've el aviso, con "Reintentar" y "Abrir en el navegador"', (
+      tester,
+    ) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started(saved);
+      h.driver.finished(saved);
+      h.driver.started(post);
+      expect(h.driver.loads, hasLength(2));
+      expect(h.state.failure, isNull);
+      // Vuelve a verse la dirección guardada y, al terminar, otra vez.
+      h.driver.started(saved);
+      h.driver.finished(saved);
+      final stopsBefore = h.driver.stops;
+      h.driver.started(post);
+      expect(h.driver.loads, hasLength(2), reason: 'no se recarga otra vez');
+      expect(h.state.failure, WebLoadFailure.keepsLeaving);
+      expect(h.state.status, WebPageStatus.keepsLeaving);
+      expect(h.state.pageLoading, isFalse);
+      expect(h.state.pageUrl.host, 'congreso.ejemplo.com');
+      expect(h.driver.stops, stopsBefore + 1);
+      expect(WebLoadFailure.keepsLeaving.canRetry, isTrue);
+      expect(WebLoadFailure.keepsLeaving.canOpenInBrowser, isTrue);
+      // Lo que llegue después de esa otra carga no cuenta.
+      h.driver.error(WebLoadError.hostLookup, url: post);
+      h.driver.started(saved);
+      expect(h.state.failure, WebLoadFailure.keepsLeaving);
+      expect(h.driver.loads, hasLength(2));
+    });
+
+    testWidgets('CA-009-11: también cuenta la otra carga que llega como '
+        'error (un formulario que no llega a cargarse)', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started(saved);
+      h.driver.error(WebLoadError.hostLookup, url: post);
+      expect(h.driver.loads, hasLength(2));
+      h.driver.started(saved);
+      h.driver.error(WebLoadError.hostLookup, url: post);
+      expect(h.driver.loads, hasLength(2));
+      expect(h.state.failure, WebLoadFailure.keepsLeaving);
+    });
+
+    testWidgets('CA-009-11 [Suposición]: si la dirección guardada se ha visto '
+        'de forma estable entre medias (5 s desde que empezó a verse o, si '
+        'terminó después, desde que terminó), no es "seguida": se vuelve a '
+        'recargar', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started(saved);
+      h.driver.started(post);
+      expect(h.driver.loads, hasLength(2));
+      h.driver.started(saved);
+      h.clock.value = h.clock.value.add(const Duration(seconds: 5));
+      h.driver.started(post);
+      expect(h.driver.loads, hasLength(3));
+      expect(h.state.failure, isNull);
+      // Y el contador vuelve a empezar: la siguiente seguida sí recarga una
+      // vez más; la otra, no.
+      h.driver.started(saved);
+      h.clock.value = h.clock.value.add(const Duration(seconds: 4));
+      h.driver.started(post);
+      expect(h.state.failure, WebLoadFailure.keepsLeaving);
+      expect(h.driver.loads, hasLength(3));
+    });
+
+    testWidgets('CA-009-11 [Suposición]: si la página termina de cargar más '
+        'tarde, los 5 s cuentan desde que termina (un formulario enviado al '
+        'terminar de cargar sigue siendo "seguido")', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started(saved);
+      h.driver.finished(saved);
+      h.driver.started(post);
+      h.driver.started(saved);
+      h.clock.value = h.clock.value.add(const Duration(seconds: 8));
+      h.driver.finished(saved);
+      h.clock.value = h.clock.value.add(const Duration(seconds: 1));
+      h.driver.started(post);
+      expect(h.state.failure, WebLoadFailure.keepsLeaving);
+      expect(h.driver.loads, hasLength(2));
+    });
+
+    testWidgets('CA-009-11: "Reintentar" vuelve a cargar y reinicia el '
+        'contador', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started(saved);
+      h.driver.started(post);
+      h.driver.started(saved);
+      h.driver.started(post);
+      expect(h.state.failure, WebLoadFailure.keepsLeaving);
+      await h.controller.retry();
+      expect(h.driver.loads, hasLength(3));
+      expect(h.state.status, WebPageStatus.loading);
+      h.driver.started(saved);
+      h.driver.started(post);
+      expect(
+        h.driver.loads,
+        hasLength(4),
+        reason: 'primera vez tras reintentar',
+      );
+      expect(h.state.failure, isNull);
+      h.driver.started(saved);
+      h.driver.started(post);
+      expect(h.state.failure, WebLoadFailure.keepsLeaving);
+    });
+
+    testWidgets('CA-009-11: volver a la tarea también empieza de cero', (
+      tester,
+    ) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started(saved);
+      h.driver.started(post);
+      h.controller.leave();
+      await h.controller.comeBack();
+      final loads = h.driver.loads.length;
+      h.driver.started(saved);
+      h.driver.started(post);
+      expect(h.driver.loads, hasLength(loads + 1));
+      expect(h.state.failure, isNull);
+    });
+  });
+
   group('Fallo del proceso de la página (ADR-0017)', () {
     testWidgets('ADR-0017: solo tras el aviso se crea otra WebView; la vieja '
         'se destruye fuera de la pantalla y se carga la dirección guardada', (
