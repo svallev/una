@@ -15,15 +15,17 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Eliminar | Delete | `delete()` | Quitar una tarea **sin** completarla. Es definitivo: no hay deshacer (ADR-0011). |
 | Marca de borrado | Tombstone | `deletedAt` | Registro mínimo de que una tarea se eliminó. Sirve para una futura sincronización. |
 | Histórico | History | `history` | Tareas completadas con su fecha. En la v1 se guarda pero no se muestra. **Retirado por el ADR-0012 (2026-09-26): no se guarda lo hecho.** |
-| Adjunto | Attachment | `Attachment` | Archivo copiado dentro de la app y asociado a una tarea: imagen, PDF, documento o captura de URL. |
+| Adjunto | Attachment | `Attachment` | Archivo copiado dentro de la app y asociado a una tarea: imagen, PDF o documento. La tarea web es un adjunto **sin archivos**: solo guarda la dirección (ADR-0016). |
 | Tipo de adjunto | Attachment kind | `AttachmentKind` | `image`, `pdf`, `web`; `document` (otros formatos) no se usa en la v1 (ADR-0014). |
 | Foto | Photo | `AttachmentKind.image` (origen `camera`) | Imagen hecha con la cámara desde la app. |
 | Imagen | Image | `AttachmentKind.image` (origen `gallery`) | Imagen elegida de la galería. |
 | Documento | Document | `AttachmentKind.pdf` (v1); `AttachmentKind.document` (futuro) | Archivo adjunto que no es una imagen ni una URL. **En la v1 solo PDF** (ADR-0014): se ve en la propia tarea, al ancho, con desplazamiento y zoom. |
-| Tarea web / URL | Web task / URL | `AttachmentKind.web` | Tarea que muestra una página web. |
-| Instantánea / captura | Snapshot | `snapshot` | Imagen de página completa de una URL, guardada al crearla, para verla sin conexión. |
+| Tarea web / URL | Web task / URL | `AttachmentKind.web` (origen `url`), `TaskWeb` | Tarea que muestra **una** página web, en vivo, a partir de la dirección guardada. Sin navegación: solo se siguen las redirecciones del servidor de la carga inicial y las anclas de la misma página; los enlaces, formularios, `mailto:` y `tel:` no hacen nada (ADR-0018). Necesita conexión: no se guarda nada de la página (ADR-0016). |
+| Dirección guardada | Saved address | `Attachment.url` (columna `sourceUrl`) | La URL de la tarea web, validada y normalizada al crearla o editarla (con `https://` si no lo llevaba). Es lo único que se guarda de la página y lo que se carga cada vez; "Reintentar" y "Abrir en el navegador" usan siempre esta dirección (spec 009). |
+| Barra del dominio | Domain bar | `WebBar` | Franja negra sobre la página de una tarea web: candado (sin él si la página no usa conexión segura), el dominio de la página que se ve (sin `www.`, recortado por el principio con "…" si no cabe) y "WEB". Es el nodo de la tarea para el lector; en horizontal no se ve (spec 009). |
+| Instantánea / captura | Snapshot | `snapshot` | ~~Imagen de página completa de una URL, guardada al crearla, para verla sin conexión.~~ **Retirado por el ADR-0016 (2026-09-28): la tarea web no guarda copia.** Las columnas `snapshotRelPath`/`snapshotAt` quedan nulas. |
 | Miniatura | Thumbnail | `thumbnail`, `thumb.jpg` | Versión pequeña de un adjunto para el listado: cuadrada y recortada, de 176 px (se ve a 44). |
-| Insignia | Badge | `TaskThumbnail` (`attachmentKindLabel`) | Recuadro negro de 44 px con el tipo ("PDF") en la fila del listado de una tarea con PDF, en lugar de la miniatura; decorativa para el lector (spec 008). |
+| Insignia | Badge | `TaskThumbnail` (`attachmentKindLabel`) | Recuadro negro de 44 px con el tipo ("PDF", "WEB") en la fila del listado de una tarea con PDF o web, en lugar de la miniatura; decorativa para el lector (specs 008 y 009). |
 | Versión completa | Full version | `relPath` (prefijo de las teselas) | Copia de la imagen que guarda la app: recodificada, sin metadatos y como mucho de 24 MP, sin límite de lado. |
 | Tesela | Tile | `ImageTiles`, `full-<fila>-<columna>.jpg` | Trozo de 4096 px como máximo de la versión completa. |
 | Versión de pantalla | Display version | `displayRelPath`, `screen.jpg` | Recorte al tamaño de la pantalla para pintar la tarea actual rápido al abrir (CA-001-09). Con PDF, lo que se ve desde la última posición (spec 008). |

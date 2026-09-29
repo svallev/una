@@ -11,6 +11,7 @@ import '../../ui/focus_ring.dart';
 import '../../ui/una_icons.dart';
 import '../attachments/task_labels.dart';
 import '../attachments/task_thumbnail.dart';
+import '../web/web_bar.dart' show HeadEllipsisText;
 
 /// Callbacks del arrastre de una fila (spec 006, CA-006-04/05/11).
 class RowDragCallbacks {
@@ -114,29 +115,35 @@ class TaskListRow extends StatelessWidget {
           );
     final l10n = AppLocalizations.of(context);
     final attachment = task.attachment;
-    final text = Text(
-      // Sin texto, "Foto"/"Imagen" (CA-007-20) o el nombre del PDF
-      // (CA-008-19).
-      taskLabel(l10n, task),
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
-      style: first
-          ? const TextStyle(
-              fontFamily: UnaFonts.display,
-              fontSize: UnaFontSizes.listFirst,
-              fontWeight: UnaFontWeights.extrabold,
-              height: 1.1,
-              letterSpacing: UnaLetterSpacing.tight * UnaFontSizes.listFirst,
-              color: UnaColors.ink,
-            )
-          : const TextStyle(
-              fontFamily: UnaFonts.display,
-              fontSize: UnaFontSizes.listItem,
-              fontWeight: UnaFontWeights.semibold,
-              height: 1.3,
-              color: UnaColors.ink,
-            ),
-    );
+    final style = first
+        ? const TextStyle(
+            fontFamily: UnaFonts.display,
+            fontSize: UnaFontSizes.listFirst,
+            fontWeight: UnaFontWeights.extrabold,
+            height: 1.1,
+            letterSpacing: UnaLetterSpacing.tight * UnaFontSizes.listFirst,
+            color: UnaColors.ink,
+          )
+        : const TextStyle(
+            fontFamily: UnaFonts.display,
+            fontSize: UnaFontSizes.listItem,
+            fontWeight: UnaFontWeights.semibold,
+            height: 1.3,
+            color: UnaColors.ink,
+          );
+    // Sin texto, "Foto"/"Imagen" (CA-007-20) o el nombre del PDF
+    // (CA-008-19): hasta 3 líneas. Una tarea web se nombra por su dominio: en
+    // una sola línea y, si no cabe, recortado por el principio, como en la
+    // barra, para que siempre se vea su final (CA-009-17, CA-009-14).
+    final label = taskLabel(l10n, task);
+    final text = attachment != null && attachment.isWeb
+        ? HeadEllipsisText(label, style: style)
+        : Text(
+            label,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          );
     Widget body = Container(
       decoration: BoxDecoration(
         color: palette[task.colorKey % palette.length],
@@ -248,12 +255,12 @@ class TaskListRow extends StatelessWidget {
       // (CA-006-11): se ve antes que el final que dan los reconocedores.
       body = Listener(onPointerCancel: (_) => drag.onCancel(), child: body);
     }
-    final label = semanticsLabel;
-    if (label == null) return ExcludeSemantics(child: body);
+    final reading = semanticsLabel;
+    if (reading == null) return ExcludeSemantics(child: body);
     return Semantics(
       key: semanticsKey,
       container: true,
-      label: label,
+      label: reading,
       onTap: onEdit,
       onTapHint: editHint,
       customSemanticsActions: actions,

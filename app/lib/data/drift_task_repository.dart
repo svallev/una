@@ -314,25 +314,41 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
     createdAt: _date(r.createdAt),
     originalName: r.originalName,
     pageCount: r.pageCount,
+    url: r.sourceUrl,
   );
 
+  /// Una página web no tiene archivos ni medidas: `relPath` vacío (es
+  /// obligatorio) y solo la dirección en `sourceUrl`; `sourceHost` y la
+  /// captura quedan nulos (plan §3, ADR-0016). Sin cambio de esquema.
   static AttachmentsCompanion _toAttachmentRow(String taskId, Attachment a) =>
-      AttachmentsCompanion.insert(
-        id: a.id,
-        taskId: taskId,
-        kind: a.kind.name,
-        origin: a.origin.name,
-        mime: a.mime,
-        byteSize: a.byteSize,
-        relPath: a.mainPath,
-        displayRelPath: Value(a.screenPath),
-        thumbRelPath: Value(a.thumbPath),
-        originalName: Value(a.originalName),
-        pageCount: Value(a.pageCount),
-        width: Value(a.width),
-        height: Value(a.height),
-        createdAt: a.createdAt.millisecondsSinceEpoch,
-      );
+      a.isWeb
+      ? AttachmentsCompanion.insert(
+          id: a.id,
+          taskId: taskId,
+          kind: a.kind.name,
+          origin: a.origin.name,
+          mime: a.mime,
+          byteSize: a.byteSize,
+          relPath: '',
+          sourceUrl: Value(a.url),
+          createdAt: a.createdAt.millisecondsSinceEpoch,
+        )
+      : AttachmentsCompanion.insert(
+          id: a.id,
+          taskId: taskId,
+          kind: a.kind.name,
+          origin: a.origin.name,
+          mime: a.mime,
+          byteSize: a.byteSize,
+          relPath: a.mainPath,
+          displayRelPath: Value(a.screenPath),
+          thumbRelPath: Value(a.thumbPath),
+          originalName: Value(a.originalName),
+          pageCount: Value(a.pageCount),
+          width: Value(a.width),
+          height: Value(a.height),
+          createdAt: a.createdAt.millisecondsSinceEpoch,
+        );
 
   static TasksCompanion _toRow(Task t) => TasksCompanion.insert(
     id: t.id,

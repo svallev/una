@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
 import '../data/links/native_link_opener.dart';
+import '../data/links/new_tab.dart';
+import '../data/web/web_data_janitor.dart';
+import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/attachment_store.dart';
@@ -96,8 +100,31 @@ final linkOpenerProvider = Provider<LinkOpener>(
   (ref) => const NativeLinkOpener(),
 );
 
-/// Si la tarea con imagen o PDF gira a horizontal (CA-008-11). La web de
-/// pruebas no gira (CL-008-12): con la ventana apaisada se ve como en vertical.
+/// Web de pruebas (ADR-0010): la tarea web no tiene WebView; se ve como la
+/// tarjeta del prototipo, con "Abrir página →" (CL-009-5).
+final webPreviewProvider = Provider<bool>((ref) => kIsWeb);
+
+/// Abre una dirección en una pestaña nueva, con `noopener` (solo la web de
+/// pruebas, CL-009-5); en los tests, uno falso.
+final newTabOpenerProvider = Provider<void Function(Uri address)>(
+  (ref) => openInNewTab,
+);
+
+/// Borrado de los datos de la WebView de la tarea web (CA-009-13): al salir y,
+/// con la marca `files/web_used`, después del primer fotograma del arranque.
+/// La web de pruebas no tiene WebView (CL-009-5).
+final webDataJanitorProvider = Provider<WebDataJanitor>(
+  (ref) => kIsWeb
+      ? WebDataJanitor.inactive()
+      : WebDataJanitor(
+          filesDir: getApplicationSupportDirectory,
+          cleaner: const ChannelWebViewHardening(),
+        ),
+);
+
+/// Si la tarea con imagen, PDF o web gira a horizontal (CA-008-11,
+/// CA-009-15). La web de pruebas no gira (CL-008-12, CL-009-5): con la ventana
+/// apaisada se ve como en vertical.
 final attachmentRotatesProvider = Provider<bool>((ref) => !kIsWeb);
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".

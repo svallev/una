@@ -2,6 +2,12 @@ import 'package:flutter/widgets.dart';
 
 import '../app/theme/tokens.g.dart';
 
+/// Si el foco se está mostrando (teclado o interruptores), no con el tacto:
+/// para los controles que siguen el foco con `onFocusChange` (`InkWell`), como
+/// hace `FocusableActionDetector.onShowFocusHighlight`.
+bool get showsFocusHighlight =>
+    FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+
 /// Anillo de foco del prototipo (`outline: 3px solid ink; outline-offset: 3px`)
 /// para quien navega con teclado o interruptores (WCAG 2.4.7). Lleva además un
 /// borde blanco por fuera, para verse también sobre una foto oscura (spec 007

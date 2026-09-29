@@ -6,6 +6,7 @@ import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/color_picker.dart';
 import 'package:app/domain/entities/queue_position.dart';
 import 'package:app/domain/entities/rank.dart';
+import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/domain/ports/id_generator.dart';
@@ -173,6 +174,53 @@ void main() {
         await failing.dispose();
       },
     );
+  });
+
+  group('Web (spec 009)', () {
+    const url = 'https://congreso.example.org/programa';
+
+    test('CA-009-03: se crea arriba del todo, sin texto (el del editor se '
+        'descarta) y sin archivos', () async {
+      await create('Primera');
+      await create('Segunda', position: QueuePosition.end);
+      final t = await create(
+        '  Texto del editor  ',
+        position: QueuePosition.end,
+        attachment: const StagedWeb(id: 'web', url: url),
+      );
+      expect(t.text, isNull);
+      expect((t.attachment!.id, t.attachment!.url), ('web', url));
+      expect(t.attachment!.kind, AttachmentKind.web);
+      expect(t.attachment!.origin, AttachmentOrigin.url);
+      final current = (await repo.currentTask())!;
+      expect((current.id, current.text), (t.id, null));
+      expect(current.attachment!.url, url);
+      expect(await store.storedIds(), isEmpty);
+      expect(await store.stagingIds(), isEmpty);
+      expect(registry.active, isEmpty);
+    });
+
+    test('CA-009-03: si falla al guardar, no queda nada y se puede '
+        'reintentar', () async {
+      final failing = _FailingInsertRepository();
+      final c = CreateTask(
+        repository: failing,
+        store: store,
+        janitor: janitorFor(failing, store, registry),
+        clock: _FixedClock(),
+        ids: _SeqIds(),
+      );
+      await expectLater(
+        c(
+          '',
+          attachment: const StagedWeb(id: 'web', url: url),
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(await store.storedIds(), isEmpty);
+      expect(await store.stagingIds(), isEmpty);
+      await failing.dispose();
+    });
   });
 }
 

@@ -495,4 +495,75 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get linkConfirmCancel => 'Cancel';
+
+  @override
+  String get urlSheetTitle => 'Load URL';
+
+  @override
+  String get urlPlaceholder => 'https://';
+
+  @override
+  String get urlHelp => 'It opens as a task, on top.';
+
+  @override
+  String get urlOpen => 'Open';
+
+  @override
+  String get urlErrEmpty => 'Enter a web address.';
+
+  @override
+  String get urlErrScheme =>
+      'Only web addresses (http or https) are supported.';
+
+  @override
+  String get urlErrInvalid => 'That address doesn\'t look valid.';
+
+  @override
+  String get urlNeedsConnection => 'You need a connection to view this page.';
+
+  @override
+  String get urlInsecure =>
+      'This page doesn\'t use a secure connection. Open it in the browser.';
+
+  @override
+  String urlLoadFailed(String reason) {
+    return 'Couldn\'t load the page ($reason).';
+  }
+
+  @override
+  String get urlReasonCertificate => 'invalid certificate';
+
+  @override
+  String get urlReasonKeepsLeaving => 'it keeps trying to open another page';
+
+  @override
+  String get urlNotAPage =>
+      'This address isn\'t a web page. Open it in the browser.';
+
+  @override
+  String urlRedirected(String host) {
+    return 'This address took you to $host.';
+  }
+
+  @override
+  String get urlOpenInBrowser => 'Open in browser';
+
+  @override
+  String get urlLoadingA11y => 'Loading page';
+
+  @override
+  String urlA11yBar(String host) {
+    return 'Web page from $host';
+  }
+
+  @override
+  String get attachmentWeb => 'WEB';
+
+  @override
+  String a11yRowWeb(String host) {
+    return '$host. Web page';
+  }
+
+  @override
+  String get urlOpenPageWeb => 'Open page →';
 }

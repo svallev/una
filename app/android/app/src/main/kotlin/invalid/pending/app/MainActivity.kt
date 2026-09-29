@@ -18,6 +18,9 @@ class MainActivity : FlutterActivity() {
         }
         // Enlaces de un PDF (spec 008).
         MethodChannel(messenger, LinkOpener.CHANNEL).setMethodCallHandler(LinkOpener(this))
+        // Endurecimiento y limpieza de la WebView de la tarea web (spec 009). Como
+        // plugin, para pedir la WebView al de `webview_flutter` (ya registrado).
+        flutterEngine.plugins.add(WebViewHardening())
         val attachmentRotation = AttachmentRotation(this).also { rotation = it }
         // Pantalla encendida mientras se ve un adjunto (spec 007, CA-007-12) y
         // giro de la tarea actual con imagen o PDF (CA-008-11).

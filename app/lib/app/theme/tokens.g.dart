@@ -164,6 +164,9 @@ abstract final class UnaFontSizes {
 
   /// Texto opcional del editor con adjunto (peso 800, interlineado 1,05, spec 007)
   static const double attachmentText = 24.0;
+
+  /// Texto del campo de la hoja "Cargar URL" (monoespaciada, prototipo `url-input`, spec 009)
+  static const double urlField = 16.0;
 }
 
 /// Interletrado en em (multiplicar por el tamaño de fuente).
@@ -232,6 +235,10 @@ abstract final class UnaSizes {
   static const double attachPreviewTop = 14.0;
   static const double removeAttachment = 48.0;
   static const double pdfStripGap = 10.0;
+  static const double urlField = 60.0;
+  static const double urlFieldPadX = 14.0;
+  static const double webLoadingHeight = 3.0;
+  static const double webBarIcon = 12.0;
   static const double removeAttachmentIcon = 14.0;
   static const double removeAttachmentStroke = 3.4;
 }
@@ -385,6 +392,9 @@ abstract final class UnaMotion {
 
   /// Cambio de zoom del PDF por doble toque, acción o tecla (CA-008-10); con reducir movimiento, salta
   static const Duration pdfZoom = Duration(milliseconds: 200);
+
+  /// Avance de la línea de carga de la tarea web entre dos valores de progreso (CA-009-06); con reducir movimiento, salta
+  static const Duration webLoadingProgress = Duration(milliseconds: 200);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);

@@ -38,6 +38,8 @@ class MemoryAttachmentStore implements AttachmentStore {
 
   @override
   Future<Attachment> commit(StagedAttachment staged, DateTime at) async {
+    // Una página web no tiene archivos que mover (ADR-0016).
+    if (staged is StagedWeb) return attachmentFrom(staged, at);
     final files = _staging.remove(staged.id);
     if (files == null) throw StateError('No hay preparación ${staged.id}');
     _stored[staged.id] = files;
@@ -65,6 +67,8 @@ class MemoryAttachmentStore implements AttachmentStore {
 
   @override
   Future<AttachmentFiles> check(Attachment attachment) async {
+    // Sin archivos, no puede faltar nada: nunca "Adjunto no disponible".
+    if (attachment.isWeb) return AttachmentFiles.ok;
     final files = _stored[attachment.id];
     bool present(String name) => (files?[name]?.length ?? 0) > 0;
     if (attachment.isPdf) {

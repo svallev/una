@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:app/app/font_licenses.dart';
+import 'package:app/app/bundled_licenses.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -22,7 +22,7 @@ void main() {
   );
 
   test('las licencias OFL de las fuentes quedan registradas', () async {
-    registerFontLicenses();
+    registerBundledLicenses();
     final packages = <String>{};
     await for (final l in LicenseRegistry.licenses) {
       packages.addAll(l.packages);

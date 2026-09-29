@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
-/// Giro de la tarea actual con imagen o con PDF (CA-008-11), las únicas
-/// pantallas que giran: el resto de la app queda en vertical. En Android, la
+/// Giro de la tarea actual con imagen, PDF o web (CA-008-11, CA-009-15), las
+/// únicas pantallas que giran: el resto de la app queda en vertical. En Android, la
 /// parte nativa lee el acelerómetro y fija la orientación, porque el sensor del
 /// sistema de HyperOS no avisa hasta el siguiente toque; respeta el bloqueo de
 /// rotación. Las orientaciones permitidas se piden además con `SystemChrome`.

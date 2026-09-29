@@ -2,15 +2,21 @@
 <!-- Android 12+ (ADR-0004, CA-007-18, CA-008-17). Nube: BD (app_flutter/) y preferencias; los
      adjuntos, imágenes y PDF (files/attachments/), no, hasta el BackupAgent con presupuesto (la cuota de 25 MB descarta
      toda la copia, spike S5). Solo si va cifrada de extremo a extremo (bloqueo de pantalla).
-     Transferencia entre dispositivos: todo, adjuntos incluidos. La caché no se copia nunca. -->
+     Transferencia entre dispositivos: todo, adjuntos incluidos. La caché no se copia nunca.
+     Nada de la WebView de la tarea web (CA-009-13): su perfil (app_webview/) y su caché quedan
+     fuera, y se excluyen sus dos preferencias (una guarda resúmenes de los orígenes visitados). -->
 <data-extraction-rules>
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="root" path="app_flutter/"/>
         <include domain="sharedpref" path="."/>
+        <exclude domain="sharedpref" path="AwOriginVisitLoggerPrefs.xml"/>
+        <exclude domain="sharedpref" path="WebViewChromiumPrefs.xml"/>
     </cloud-backup>
     <device-transfer>
         <include domain="root" path="app_flutter/"/>
         <include domain="sharedpref" path="."/>
         <include domain="file" path="."/>
+        <exclude domain="sharedpref" path="AwOriginVisitLoggerPrefs.xml"/>
+        <exclude domain="sharedpref" path="WebViewChromiumPrefs.xml"/>
     </device-transfer>
 </data-extraction-rules>

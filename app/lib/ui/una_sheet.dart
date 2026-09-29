@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme/tokens.g.dart';
+import 'focus_ring.dart';
 
 /// Hoja del prototipo (`.sheetbg` + `.sheetup`): fondo `scrim`, sube en
 /// `sheetIn` con la curva `sheet` y baja en `sheetOut`; color papel, borde
@@ -31,13 +32,19 @@ Future<T?> showUnaSheet<T>(
             curve: UnaMotion.sheetCurve,
             reverseCurve: UnaMotion.sheetOutCurve,
           ),
-    builder: (context) => SingleChildScrollView(child: builder(context)),
+    // La hoja sube sobre el teclado: la ruta no lo hace sola, y con Android 15+
+    // (a pantalla completa) `adjustResize` tampoco redimensiona la ventana.
+    builder: (context) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(child: builder(context)),
+    ),
   );
 }
 
 /// Enlace subrayado en monoespaciada del prototipo ("Cancelar",
-/// "Configuración", "Seguir editando").
-class UnaLinkButton extends StatelessWidget {
+/// "Configuración", "Seguir editando"). Con el foco del teclado o de un
+/// interruptor, anillo de foco (WCAG 2.4.7).
+class UnaLinkButton extends StatefulWidget {
   const UnaLinkButton({
     super.key,
     required this.label,
@@ -50,33 +57,44 @@ class UnaLinkButton extends StatelessWidget {
   final double height;
 
   @override
+  State<UnaLinkButton> createState() => _UnaLinkButtonState();
+}
+
+class _UnaLinkButtonState extends State<UnaLinkButton> {
+  bool _focused = false;
+
+  @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: label,
+      label: widget.label,
       excludeSemantics: true,
-      onTap: onPressed,
+      onTap: widget.onPressed,
       child: InkWell(
-        onTap: onPressed,
+        onTap: widget.onPressed,
+        onFocusChange: (v) => setState(() => _focused = v),
         splashFactory: NoSplash.splashFactory,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: height,
-            minWidth: UnaSizes.minTouchTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: UnaSpace.s),
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: UnaFonts.mono,
-                  fontSize: UnaFontSizes.link,
-                  fontWeight: UnaFontWeights.bold,
-                  color: UnaColors.ink,
-                  decoration: TextDecoration.underline,
-                  decorationThickness: 2,
+        child: FocusRing(
+          visible: _focused && showsFocusHighlight,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: widget.height,
+              minWidth: UnaSizes.minTouchTarget,
+            ),
+            child: Center(
+              widthFactor: 1,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: UnaSpace.s),
+                child: Text(
+                  widget.label,
+                  style: const TextStyle(
+                    fontFamily: UnaFonts.mono,
+                    fontSize: UnaFontSizes.link,
+                    fontWeight: UnaFontWeights.bold,
+                    color: UnaColors.ink,
+                    decoration: TextDecoration.underline,
+                    decorationThickness: 2,
+                  ),
                 ),
               ),
             ),

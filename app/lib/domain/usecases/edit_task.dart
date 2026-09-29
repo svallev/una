@@ -44,6 +44,9 @@ class EditTask {
   ///
   /// Si falla al guardar, la imagen nueva vuelve a la preparación para poder
   /// reintentar; la preparación la descarta el editor al cancelar.
+  ///
+  /// Una página web nueva deja la tarea sin texto; con la misma dirección que
+  /// ya tenía, no cambia nada (CA-009-05).
   Future<Task> call(
     Task task,
     String rawText, {
@@ -54,14 +57,27 @@ class EditTask {
       RemoveAttachment() => false,
       ReplaceAttachment() => true,
     };
-    final text = validateTaskContent(rawText, hasAttachment: hasAttachment);
+    final webUrl = switch (attachment) {
+      ReplaceAttachment(staged: StagedWeb(:final url)) => url,
+      _ => null,
+    };
+    final text = webUrl != null
+        ? null
+        : validateTaskContent(rawText, hasAttachment: hasAttachment);
+    final old = task.attachment;
+    if (webUrl != null &&
+        text == task.text &&
+        old != null &&
+        old.isWeb &&
+        old.url == webUrl) {
+      return task;
+    }
     if (text == task.text &&
         (attachment is KeepAttachment ||
             (attachment is RemoveAttachment && task.attachment == null))) {
       return task;
     }
     final at = clock.now();
-    final old = task.attachment;
     final next = switch (attachment) {
       KeepAttachment() => old,
       RemoveAttachment() => null,
@@ -72,7 +88,8 @@ class EditTask {
     try {
       saved = await repository.updateContent(task.id, text, next, at);
     } on Object {
-      if (isNew) await janitor.restage(next!.id);
+      // Una web no tiene preparación: no queda nada que devolver.
+      if (isNew && !next!.isWeb) await janitor.restage(next.id);
       rethrow;
     }
     if (isNew) janitor.release(next!.id);

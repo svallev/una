@@ -63,6 +63,8 @@ class FileAttachmentStore implements AttachmentStore {
 
   @override
   Future<Attachment> commit(StagedAttachment staged, DateTime at) async {
+    // Una página web no tiene archivos que mover (ADR-0016).
+    if (staged is StagedWeb) return attachmentFrom(staged, at);
     final from = _staging(staged.id);
     final to = _stored(staged.id);
     await _attachmentsDir.create(recursive: true);
@@ -121,6 +123,8 @@ class FileAttachmentStore implements AttachmentStore {
 
   @override
   Future<AttachmentFiles> check(Attachment attachment) async {
+    // Sin archivos, no puede faltar nada: nunca "Adjunto no disponible".
+    if (attachment.isWeb) return AttachmentFiles.ok;
     Future<bool> present(String rel) async {
       final f = file(rel);
       return f.existsSync() && f.lengthSync() > 0;

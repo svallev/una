@@ -27,6 +27,7 @@ import '../attachments/pdf_labels.dart';
 import '../attachments/pdf_pages.dart';
 import '../attachments/pdf_strip.dart';
 import '../current_task/current_task_screen.dart';
+import '../web/url_sheet.dart';
 import 'placement_sheet.dart';
 
 /// Modos del editor.
@@ -179,17 +180,23 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   /// nada, sin verse desactivado (CA-007-15, DEV-17).
   Future<void> _attach() async {
     if (_saving || ref.read(attachmentImportProvider).preparing) return;
-    final choice = await showAttachSheet(context);
+    final choice = await showAttachSheet(
+      context,
+      // Una tarea no se convierte en web al editarla (CA-009-01).
+      withUrl: widget.mode != EditorMode.edit,
+    );
     if (!mounted) return;
     if (choice == null) {
       // Cerrada sin elegir: el foco vuelve a (+) (CA-007-22).
       _focusPlus();
       return;
     }
+    // "Cargar URL" no prepara nada: abre su hoja (CA-009-01).
+    if (choice == AttachChoice.url) return _loadUrl();
     final origin = switch (choice) {
       AttachChoice.camera => AttachmentOrigin.camera,
       AttachChoice.gallery => AttachmentOrigin.gallery,
-      AttachChoice.file => AttachmentOrigin.file,
+      AttachChoice.file || AttachChoice.url => AttachmentOrigin.file,
     };
     final outcome = await ref
         .read(attachmentImportProvider.notifier)
@@ -205,12 +212,43 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         _announce(switch (origin) {
           AttachmentOrigin.camera => l10n.a11yPhotoAdded,
           AttachmentOrigin.gallery => l10n.a11yImageAdded,
-          AttachmentOrigin.file => l10n.a11yPdfAdded,
+          AttachmentOrigin.file || AttachmentOrigin.url => l10n.a11yPdfAdded,
         });
       case ImportOutcome.unchanged:
         _focusPlus();
       case ImportOutcome.failed:
         break; // El aviso lo muestra `_onImportChanged`.
+    }
+  }
+
+  /// "Cargar URL" (CA-009-01): cerrar la hoja deja el editor como estaba, con
+  /// el foco en (+); "Abrir" crea la tarea web al momento (CA-009-03).
+  Future<void> _loadUrl() async {
+    final url = await showUrlSheet(context);
+    if (!mounted) return;
+    if (url == null) {
+      _focusPlus();
+      return;
+    }
+    await _createWeb(url);
+  }
+
+  /// Crea la tarea web sin texto, arriba y sin preguntar la posición. El
+  /// texto del editor y el adjunto preparado se descartan, sin dejar archivos
+  /// (CA-009-03). Se vuelve al origen como con un PDF (CA-008-05).
+  Future<void> _createWeb(String url) async {
+    if (_saving) return;
+    _saving = true;
+    await ref.read(attachmentImportProvider.notifier).remove();
+    if (!mounted) return;
+    final web = StagedWeb(id: ref.read(idGeneratorProvider).newId(), url: url);
+    if (await _write(
+      () => ref
+          .read(createTaskProvider)
+          .call('', colorKey: _colorKey, attachment: web),
+      retry: () => _createWeb(url),
+    )) {
+      _created();
     }
   }
 
@@ -372,7 +410,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   /// Escribe en la BD. Si sale bien, cierra el editor (si es una ruta) y la
   /// tarea actual recupera el foco; si falla, se conserva el texto y se
   /// ofrece reintentar (spec 001 §5, spec 002 §5, spec 005 §5).
-  Future<bool> _write(Future<Object?> Function() write) async {
+  Future<bool> _write(
+    Future<Object?> Function() write, {
+    VoidCallback? retry,
+  }) async {
     setState(() => _saving = true);
     try {
       final saved = await write();
@@ -394,7 +435,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
           content: Text(
             isNoSpaceError(e) ? l10n.storageErrorNoSpace : l10n.editorSaveError,
           ),
-          action: SnackBarAction(label: l10n.retry, onPressed: _save),
+          action: SnackBarAction(label: l10n.retry, onPressed: retry ?? _save),
           persist: true,
         ),
       );
@@ -456,10 +497,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     // Una imagen (la nueva o la que ya tenía la tarea): su versión de pantalla.
     final ImageProvider? previewImage = switch (staged) {
       StagedImage(:final id) => images.staged(id, 'screen.jpg'),
-      StagedPdf() => null,
-      null when existing != null && !existing.isPdf => images.stored(
-        existing.screenPath,
-      ),
+      StagedPdf() || StagedWeb() => null,
+      null when existing != null && existing.kind == AttachmentKind.image =>
+        images.stored(existing.screenPath),
       null => null,
     };
     // Un PDF: franja y páginas (CA-008-04).
@@ -469,7 +509,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         name: pdfName(l10n, originalName),
         size: pdfSize(l10n, byteSize),
       ),
-      StagedImage() => null,
+      StagedImage() || StagedWeb() => null,
       null when existing != null && existing.isPdf => (
         source: images.storedPdf(existing.documentPath),
         name: pdfName(l10n, existing.originalName),

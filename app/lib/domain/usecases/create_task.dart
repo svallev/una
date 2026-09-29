@@ -11,7 +11,9 @@ import '../services/attachment_janitor.dart';
 
 /// Crea una tarea (R3) en la posición indicada (R4). Si no hay ninguna
 /// pendiente, la posición es indiferente: pasa a ser la actual. Con imagen, va
-/// siempre arriba del todo (R5, CA-007-05) y el texto es opcional.
+/// siempre arriba del todo (R5, CA-007-05) y el texto es opcional. Una página
+/// web también va arriba y nunca tiene texto: el del editor se descarta
+/// (CA-009-03).
 class CreateTask {
   CreateTask({
     required this.repository,
@@ -38,7 +40,9 @@ class CreateTask {
     StagedAttachment? attachment,
   }) async {
     final staged = attachment;
-    final text = validateTaskContent(rawText, hasAttachment: staged != null);
+    final text = staged is StagedWeb
+        ? null
+        : validateTaskContent(rawText, hasAttachment: staged != null);
     // Los adjuntos van siempre arriba (R5, CA-007-05, CA-008-05).
     if (staged != null) position = QueuePosition.top;
     final current = await repository.currentTask();
@@ -67,7 +71,8 @@ class CreateTask {
     try {
       await repository.insert(task);
     } on Object {
-      if (saved != null) await janitor.restage(saved.id);
+      // Una web no tiene preparación: no queda nada que devolver.
+      if (saved != null && !saved.isWeb) await janitor.restage(saved.id);
       rethrow;
     }
     if (saved != null) janitor.release(saved.id);

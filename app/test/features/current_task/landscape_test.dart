@@ -4,11 +4,15 @@ import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
+import 'package:app/domain/entities/web_load_failure.dart';
+import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/pdf_strip.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
+import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/web/web_bar.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/wordmark.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +24,7 @@ import '../../support/app_harness.dart';
 import '../../support/attachments.dart';
 import '../../support/fake_pdf_importer.dart';
 import '../../support/fake_pdf_view.dart';
+import '../../support/fake_web_page_driver.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
@@ -33,9 +38,14 @@ void main() {
   late MemoryAttachmentStore store;
   late List<List<String>> orientations;
   late List<String> calls;
+  late FakeWebPages web;
 
   setUp(() {
     store = MemoryAttachmentStore();
+    web = FakeWebPages();
+    // Un test que acaba con la confirmación de un enlace abierta la deja
+    // marcada (se desmonta sin cerrarse).
+    linkConfirmOpen.value = false;
     taskPdfCalls.clear();
   });
 
@@ -130,6 +140,7 @@ void main() {
         pdfImporterProvider.overrideWithValue(FakePdfImporter(store)),
         attachmentRotatesProvider.overrideWithValue(rotates),
         ...fakePdfViews,
+        ...web.overrides,
       ],
     );
     await tester.pumpAndSettle();
@@ -358,6 +369,245 @@ void main() {
       expect(find.text('Sin adjunto'), findsOneWidget);
       expect(rotating(), isFalse);
       handle.dispose();
+    });
+  });
+
+  group('CA-009-15: la tarea web gira como la imagen y el PDF', () {
+    const address = 'https://www.congreso.ejemplo.com/programa';
+    const nodeLabel = 'Tarea actual: Página web de congreso.ejemplo.com';
+    // Mientras carga, la vista está montada pero fuera del escenario.
+    final view = find.byKey(const ValueKey('web-view-0'), skipOffstage: false);
+
+    Task webTask({String id = 'w', String rank = 'MA'}) {
+      final at = DateTime.utc(2026, 9, 29, 9);
+      return Task(
+        id: id,
+        text: null,
+        status: TaskStatus.pending,
+        rank: rank,
+        colorKey: 3,
+        createdAt: at,
+        updatedAt: at,
+        attachment: attachmentFrom(StagedWeb(id: 'a-$id', url: address), at),
+      );
+    }
+
+    /// La página se ve: ha empezado y terminado de cargar.
+    Future<void> shown(WidgetTester tester) async {
+      web.last
+        ..started(address)
+        ..finished(address);
+      await tester.pumpAndSettle();
+    }
+
+    void performOnNode(WidgetTester tester, String action) {
+      final node = tester.getSemantics(find.bySemanticsLabel(nodeLabel));
+      final id = node.getSemanticsData().customSemanticsActionIds!.firstWhere(
+        (id) => CustomSemanticsAction.getAction(id)!.label == action,
+      );
+      node.owner!.performAction(node.id, SemanticsAction.customAction, id);
+    }
+
+    testWidgets('con la tarea a la vista gira; con el menú abierto, solo en '
+        'vertical', (tester) async {
+      await pumpApp(tester, [webTask()]);
+      expect(orientations.last, contains('DeviceOrientation.landscapeLeft'));
+      expect(rotating(), isTrue);
+
+      await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+      await tester.pumpAndSettle();
+      expect(rotating(), isFalse);
+      await tester.tapAt(const Offset(20, 60)); // Fuera de la hoja.
+      await tester.pumpAndSettle();
+      expect(rotating(), isTrue);
+    });
+
+    testWidgets('en horizontal: la página a todo el ancho y el logotipo; sin '
+        'barra, menú ni botón', (tester) async {
+      await pumpApp(tester, [webTask()]);
+      addTearDown(tester.view.reset);
+      await shown(tester);
+      await turn(tester, landscape: true);
+
+      expect(find.byType(Wordmark), findsOneWidget);
+      expect(find.byType(WebBar), findsNothing);
+      expect(find.bySemanticsLabel('Menú de la tarea'), findsNothing);
+      expect(find.byType(HoldToCompleteButton), findsNothing);
+      // La página ocupa toda la pantalla, detrás del logotipo.
+      expect(tester.getRect(view), const Rect.fromLTWH(0, 0, 844, 390));
+      expect(
+        tester.getRect(find.byType(Wordmark)).top,
+        greaterThanOrEqualTo(0),
+      );
+
+      await turn(tester, landscape: false);
+      expect(find.byType(WebBar), findsOneWidget);
+      expect(find.byType(HoldToCompleteButton), findsOneWidget);
+      expect(tester.getRect(view).width, 390);
+    });
+
+    testWidgets('al girar y volver, la WebView es la misma y la página no se '
+        'recarga', (tester) async {
+      await pumpApp(tester, [webTask()]);
+      addTearDown(tester.view.reset);
+      await shown(tester);
+      final before = tester.element(view);
+      await turn(tester, landscape: true);
+      expect(tester.element(view), same(before));
+      await turn(tester, landscape: false);
+      expect(tester.element(view), same(before));
+      expect(web.drivers, hasLength(1));
+      expect(web.last.loads, [Uri.parse(address)]);
+      expect(web.last.stops, 0);
+      expect(web.janitor.cleared, isEmpty);
+    });
+
+    testWidgets('CA-009-18: en horizontal, el logotipo es el nodo de la tarea, '
+        'con Completar y Eliminar', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpApp(tester, [webTask()]);
+      addTearDown(tester.view.reset);
+      await shown(tester);
+      await turn(tester, landscape: true);
+      expect(find.bySemanticsLabel(nodeLabel), findsOneWidget);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel(nodeLabel)),
+        isSemantics(
+          label: nodeLabel,
+          customActions: const [
+            CustomSemanticsAction(label: 'Completar tarea'),
+            CustomSemanticsAction(label: 'Eliminar tarea'),
+          ],
+        ),
+      );
+      // Es el logotipo.
+      final node = tester.getRect(find.bySemanticsLabel(nodeLabel));
+      final logo = tester.getRect(find.byType(Wordmark));
+      expect(node.overlaps(logo), isTrue);
+      expect(node.height, lessThan(390 / 2));
+      handle.dispose();
+    });
+
+    testWidgets('no gira con un aviso; tras "Reintentar", sí', (tester) async {
+      await pumpApp(tester, [webTask()]);
+      web.last
+        ..started(address)
+        ..error(WebLoadError.hostLookup);
+      await tester.pumpAndSettle();
+      expect(find.text('Reintentar'), findsOneWidget);
+      expect(rotating(), isFalse);
+      expect(orientations.last, ['DeviceOrientation.portraitUp']);
+
+      await tester.tap(find.text('Reintentar'));
+      await tester.pumpAndSettle();
+      expect(rotating(), isTrue);
+    });
+
+    for (final (name, fail) in <(String, void Function(FakeWebPageDriver))>[
+      ('sin conexión', (d) => d.error(WebLoadError.hostLookup)),
+      ('certificado', (d) => d.certificate()),
+      ('no es una página', (d) => d.download()),
+      // [Suposición] También el de CA-009-11 (enmienda posterior a CA-009-15).
+      (
+        'intenta abrir otra página',
+        (d) => d
+          ..started(address)
+          ..started('https://formularios.otro.org/enviar')
+          ..started(address)
+          ..started('https://formularios.otro.org/enviar'),
+      ),
+    ]) {
+      testWidgets('con el aviso ($name) en horizontal, vuelve a vertical '
+          'con la barra, el aviso y el botón; la WebView es la misma', (
+        tester,
+      ) async {
+        await pumpApp(tester, [webTask()]);
+        addTearDown(tester.view.reset);
+        // Mientras carga, gira.
+        await turn(tester, landscape: true);
+        expect(rotating(), isTrue);
+        expect(find.byType(WebBar), findsNothing);
+        final before = tester.element(view);
+
+        fail(web.last);
+        await tester.pumpAndSettle();
+        expect(rotating(), isFalse);
+        expect(orientations.last, ['DeviceOrientation.portraitUp']);
+        // Aunque la ventana siga apaisada, se ve como en vertical.
+        expect(find.byType(WebBar), findsOneWidget);
+        expect(find.byType(HoldToCompleteButton), findsOneWidget);
+        expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
+        // Bajo el aviso, fuera del escenario.
+        expect(
+          tester.element(
+            find.byKey(const ValueKey('web-view-0'), skipOffstage: false),
+          ),
+          same(before),
+        );
+      });
+    }
+
+    testWidgets('completar en horizontal con la acción del lector: si la '
+        'siguiente no tiene adjunto, vuelve a vertical', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpApp(tester, [
+        webTask(rank: 'B'),
+        sampleTask(id: 't2', text: 'Sin adjunto', rank: 'C'),
+      ], screenReader: true);
+      addTearDown(tester.view.reset);
+      await shown(tester);
+      await turn(tester, landscape: true);
+      expect(rotating(), isTrue);
+      performOnNode(tester, 'Completar tarea');
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      expect(find.text('Sin adjunto'), findsOneWidget);
+      expect(rotating(), isFalse);
+      expect(orientations.last, ['DeviceOrientation.portraitUp']);
+      handle.dispose();
+    });
+
+    testWidgets('eliminar en horizontal: sale la confirmación y, sin más '
+        'tareas con adjunto, vuelve a vertical', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpApp(tester, [
+        webTask(rank: 'B'),
+        sampleTask(id: 't2', text: 'Sin adjunto', rank: 'C'),
+      ], screenReader: true);
+      addTearDown(tester.view.reset);
+      await shown(tester);
+      await turn(tester, landscape: true);
+      performOnNode(tester, 'Eliminar tarea');
+      await tester.pumpAndSettle();
+      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
+      await tester.tap(find.text('Eliminar'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      expect(find.text('Sin adjunto'), findsOneWidget);
+      expect(rotating(), isFalse);
+      handle.dispose();
+    });
+
+    testWidgets('CA-009-20: en horizontal y con el texto al 200 %, nada se '
+        'corta', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpApp(tester, [webTask()]);
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      await shown(tester);
+      await turn(tester, landscape: true);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Wordmark), findsOneWidget);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      handle.dispose();
+    });
+
+    testWidgets('CL-009-5: donde no gira (web de pruebas), la ventana '
+        'apaisada se ve como en vertical', (tester) async {
+      await pumpApp(tester, [webTask()], rotates: false);
+      addTearDown(tester.view.reset);
+      await turn(tester, landscape: true);
+      expect(find.byType(WebBar), findsOneWidget);
+      expect(find.byType(HoldToCompleteButton), findsOneWidget);
     });
   });
 

@@ -495,4 +495,74 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get linkConfirmCancel => 'Cancelar';
+
+  @override
+  String get urlSheetTitle => 'Cargar URL';
+
+  @override
+  String get urlPlaceholder => 'https://';
+
+  @override
+  String get urlHelp => 'Se abre como tarea, arriba del todo.';
+
+  @override
+  String get urlOpen => 'Abrir';
+
+  @override
+  String get urlErrEmpty => 'Escribe una dirección web.';
+
+  @override
+  String get urlErrScheme => 'Solo se admiten direcciones web (http o https).';
+
+  @override
+  String get urlErrInvalid => 'Esa dirección no parece válida.';
+
+  @override
+  String get urlNeedsConnection => 'Necesitas conexión para ver esta página.';
+
+  @override
+  String get urlInsecure =>
+      'Esta página no usa conexión segura. Ábrela en el navegador.';
+
+  @override
+  String urlLoadFailed(String reason) {
+    return 'No se ha podido cargar la página ($reason).';
+  }
+
+  @override
+  String get urlReasonCertificate => 'certificado no válido';
+
+  @override
+  String get urlReasonKeepsLeaving => 'intenta abrir otra página';
+
+  @override
+  String get urlNotAPage =>
+      'Esta dirección no es una página web. Ábrela en el navegador.';
+
+  @override
+  String urlRedirected(String host) {
+    return 'Esta dirección te ha llevado a $host.';
+  }
+
+  @override
+  String get urlOpenInBrowser => 'Abrir en el navegador';
+
+  @override
+  String get urlLoadingA11y => 'Cargando página';
+
+  @override
+  String urlA11yBar(String host) {
+    return 'Página web de $host';
+  }
+
+  @override
+  String get attachmentWeb => 'WEB';
+
+  @override
+  String a11yRowWeb(String host) {
+    return '$host. Página web';
+  }
+
+  @override
+  String get urlOpenPageWeb => 'Abrir página →';
 }
