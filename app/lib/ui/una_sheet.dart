@@ -42,7 +42,7 @@ Future<T?> showUnaSheet<T>(
 }
 
 /// Enlace subrayado en monoespaciada del prototipo ("Cancelar",
-/// "Configuración", "Seguir editando"). Con el foco del teclado o de un
+/// "Seguir editando"). Con el foco del teclado o de un
 /// interruptor, anillo de foco (WCAG 2.4.7).
 class UnaLinkButton extends StatefulWidget {
   const UnaLinkButton({

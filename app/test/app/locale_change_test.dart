@@ -32,7 +32,8 @@ import '../support/fake_image_importer.dart';
 import '../support/fake_pdf_importer.dart';
 import '../support/fake_pdf_view.dart';
 import '../support/fake_web_page_driver.dart';
-import '../support/l10n_leaks.dart' show semanticsTexts;
+import '../support/l10n_leaks.dart'
+    show expectNoL10nLeaks, findL10nLeaks, semanticsTexts;
 import '../support/pdfrx.dart';
 import '../support/pump_app.dart' show sampleTask;
 
@@ -58,6 +59,42 @@ AppLocalizations _current(WidgetTester tester) =>
 Future<void> _switchTo(WidgetTester tester, List<Locale> locales) async {
   tester.platformDispatcher.localesTestValue = locales;
   await tester.pumpAndSettle();
+}
+
+/// Textos del fondo modal de una hoja abierta, en el idioma actual de Flutter
+/// (`MaterialLocalizations`): "Sombreado", "Cerrar Hoja inferior"… No salen de
+/// los ARB y la ruta de la hoja los fija al abrirse, así que con una hoja
+/// abierta durante el cambio de idioma se quedan en el idioma anterior hasta
+/// cerrarla. Excepción aceptada por el propietario (spec 010 §6, H-010-1).
+Set<String> _modalBarrierTexts(WidgetTester tester) {
+  final material = MaterialLocalizations.of(
+    tester.element(find.byType(Scaffold).first),
+  );
+  return {
+    material.scrimLabel,
+    material.scrimOnTapHint(material.bottomSheetLabel),
+    material.modalBarrierDismissLabel,
+  };
+}
+
+/// CA-010-07 tras CA-010-06: ningún texto de los ARB en el otro idioma. Con
+/// una hoja abierta al cambiar, [staleBarrier] son los textos del fondo modal
+/// (ver [_modalBarrierTexts], calculados **antes** del cambio) y solo esos
+/// se dan por buenos.
+void _expectNoLeaksAfterSwitch(
+  WidgetTester tester,
+  String languageCode, {
+  Set<String> staleBarrier = const {},
+}) {
+  final found = [
+    for (final leak in findL10nLeaks(tester, languageCode: languageCode))
+      if (!staleBarrier.any((text) => leak.contains('"$text"'))) leak,
+  ];
+  expect(
+    found,
+    isEmpty,
+    reason: 'Fugas de idioma en la app en "$languageCode" (CA-010-07)',
+  );
 }
 
 /// Sale de la app, cambia el idioma del sistema mientras está fuera y vuelve
@@ -280,6 +317,7 @@ void main() {
         final field = tester.widget<EditableText>(find.byType(EditableText));
         expect(field.controller.text, 'Zxq borrador');
         expect(field.focusNode.hasFocus, isTrue);
+        expectNoL10nLeaks(tester, languageCode: to);
       });
 
       testWidgets(
@@ -307,6 +345,7 @@ void main() {
           expect(find.text(after.editorSaveChanges), findsOneWidget);
           // Nada se ha guardado por el camino.
           expect((await repo.currentTask())!.text, _tasks.first);
+          expectNoL10nLeaks(tester, languageCode: to);
         },
       );
 
@@ -326,6 +365,7 @@ void main() {
         expect(find.text(before.menuEdit), findsOneWidget);
         expect(find.text(before.menuAllTasks), findsOneWidget);
 
+        final stale = _modalBarrierTexts(tester);
         await _switchTo(tester, [Locale(to)]);
 
         expect(find.byType(MenuSheet), findsOneWidget);
@@ -338,6 +378,9 @@ void main() {
         expect(reads, isNot(contains(before.menuAllTasksCount(_tasks.length))));
         // Sigue en la misma tarea.
         expect(find.text(_tasks.first), findsOneWidget);
+        // CA-010-07: tampoco después del cambio. La etiqueta del fondo modal
+        // (`scrimLabel`) no sale de los ARB y ya está aceptada (spec §6).
+        _expectNoLeaksAfterSwitch(tester, to, staleBarrier: stale);
         semantics.dispose();
       });
 
@@ -358,6 +401,7 @@ void main() {
         expect(find.byType(DeleteConfirmSheet), findsOneWidget);
         expect(find.text(before.deleteTitle), findsOneWidget);
 
+        final stale = _modalBarrierTexts(tester);
         await _switchTo(tester, [Locale(to)]);
 
         expect(find.byType(DeleteConfirmSheet), findsOneWidget);
@@ -365,6 +409,7 @@ void main() {
         expect(find.text(before.deleteTitle), findsNothing);
         expect(find.text(after.deleteBody(_tasks.first)), findsOneWidget);
         expect((await repo.pendingTasks()).length, _tasks.length);
+        _expectNoLeaksAfterSwitch(tester, to, staleBarrier: stale);
       });
 
       testWidgets('el listado abierto sigue abierto, con sus filas', (
@@ -391,6 +436,7 @@ void main() {
         for (final t in _tasks) {
           expect(find.text(t), findsOneWidget);
         }
+        expectNoL10nLeaks(tester, languageCode: to);
       });
 
       testWidgets(
