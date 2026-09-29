@@ -205,6 +205,7 @@ void main() {
         WebLoadError.connect,
         WebLoadError.secureHandshake,
         WebLoadError.timeout,
+        WebLoadError.noResponse,
         WebLoadError.other,
       ]) {
         expect(classify(e), WebLoadFailure.offline, reason: '$e');
@@ -224,6 +225,11 @@ void main() {
       );
       expect(
         classify(WebLoadError.secureHandshake, fromHttp: true),
+        WebLoadFailure.insecure,
+      );
+      // Respuesta vacía o conexión cortada por https (neverssl.com).
+      expect(
+        classify(WebLoadError.noResponse, fromHttp: true),
         WebLoadFailure.insecure,
       );
       expect(

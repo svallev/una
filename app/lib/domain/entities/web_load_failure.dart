@@ -39,6 +39,12 @@ enum WebLoadError {
   /// Ha fallado la negociación TLS (sin llegar al certificado).
   secureHandshake,
 
+  /// El servidor ha cortado la conexión o no ha respondido nada: Android da
+  /// `ERR_EMPTY_RESPONSE` como error desconocido y un corte de la conexión,
+  /// como error de E/S (comprobado en el emulador con neverssl.com y con un
+  /// servidor local que cierra sin responder).
+  noResponse,
+
   /// El certificado no es válido (se ha cancelado).
   certificate,
 
@@ -64,8 +70,9 @@ const Duration webLoadTimeout = Duration(seconds: 20);
 /// - Un certificado no válido es siempre [WebLoadFailure.certificate], y una
 ///   descarga, [WebLoadFailure.notAPage].
 /// - Si la dirección guardada era `http://` y se ha intentado como `https://`
-///   ([upgradedFromHttp]), un fallo de conexión o de TLS significa que el
-///   servidor no admite https: [WebLoadFailure.insecure].
+///   ([upgradedFromHttp]), un fallo de conexión o de TLS, o una respuesta
+///   vacía o cortada, significa que el servidor no admite https:
+///   [WebLoadFailure.insecure].
 /// - El resto (incluido el DNS, que es lo que falla sin red aunque antes llegue
 ///   `onPageStarted`) es [WebLoadFailure.offline].
 WebLoadFailure? classifyLoadError(
@@ -77,9 +84,9 @@ WebLoadFailure? classifyLoadError(
   return switch (error) {
     WebLoadError.certificate => WebLoadFailure.certificate,
     WebLoadError.download => WebLoadFailure.notAPage,
-    WebLoadError.connect || WebLoadError.secureHandshake
-        when upgradedFromHttp =>
-      WebLoadFailure.insecure,
+    WebLoadError.connect ||
+    WebLoadError.secureHandshake ||
+    WebLoadError.noResponse when upgradedFromHttp => WebLoadFailure.insecure,
     _ => WebLoadFailure.offline,
   };
 }

@@ -157,6 +157,34 @@ void main() {
     await _unmount(tester);
   });
 
+  // Un servidor en el propio dispositivo que corta la conexión sin responder
+  // (al aceptarla o tras leer el saludo TLS): nunca la página en blanco.
+  // La respuesta vacía tras el TLS (ERR_EMPTY_RESPONSE, neverssl.com) no se
+  // puede servir aquí sin un certificado válido; su traducción la cubren
+  // `webview_page_driver_test` y `web_page_controller_test`.
+  for (final readFirst in [false, true]) {
+    testWidgets('CA-009-08/09: el servidor corta la conexión sin responder '
+        '(${readFirst ? 'tras leer' : 'al aceptar'}): https es "sin '
+        'conexión" y http, "sin conexión segura"', (tester) async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((socket) {
+        if (!readFirst) {
+          socket.destroy();
+          return;
+        }
+        socket.listen((_) => socket.destroy(), onError: (_) {});
+      });
+      addTearDown(server.close);
+      final port = server.port;
+      var c = await _mount(tester, 'https://127.0.0.1:$port/');
+      await _until(tester, () => c.value.status == WebPageStatus.offline);
+      await _unmount(tester);
+      c = await _mount(tester, 'http://127.0.0.1:$port/');
+      await _until(tester, () => c.value.status == WebPageStatus.insecure);
+      await _unmount(tester);
+    });
+  }
+
   testWidgets('CL-009-4: una dirección que es una descarga es "no es una '
       'página"', (tester) async {
     final pdf = base64.encode(utf8.encode('%PDF-1.4\n%%EOF\n'));

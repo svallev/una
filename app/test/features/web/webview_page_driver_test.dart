@@ -16,11 +16,16 @@ void main() {
       WebLoadError.secureHandshake,
     );
     expect(webLoadErrorOf(WebResourceErrorType.timeout), WebLoadError.timeout);
+    // Respuesta vacía (ERR_EMPTY_RESPONSE llega como `unknown`, comprobado en
+    // el emulador) o conexión cortada (`io`).
+    expect(
+      webLoadErrorOf(WebResourceErrorType.unknown),
+      WebLoadError.noResponse,
+    );
+    expect(webLoadErrorOf(WebResourceErrorType.io), WebLoadError.noResponse);
     for (final other in [
       null,
-      WebResourceErrorType.unknown,
       WebResourceErrorType.unsafeResource,
-      WebResourceErrorType.io,
       WebResourceErrorType.badUrl,
     ]) {
       expect(webLoadErrorOf(other), WebLoadError.other, reason: '$other');
@@ -40,5 +45,27 @@ void main() {
       WebLoadFailure.insecure,
     );
     expect(classify(WebResourceErrorType.hostLookup), WebLoadFailure.offline);
+  });
+
+  test('CA-009-09: con http:// y el intento https, una respuesta vacía o una '
+      'conexión cortada también es "sin conexión segura" (neverssl.com); '
+      'Safe Browsing no', () {
+    WebLoadFailure? classify(WebResourceErrorType type, {bool http = true}) =>
+        classifyLoadError(
+          webLoadErrorOf(type),
+          isMainFrame: true,
+          upgradedFromHttp: http,
+        );
+    expect(classify(WebResourceErrorType.unknown), WebLoadFailure.insecure);
+    expect(classify(WebResourceErrorType.io), WebLoadFailure.insecure);
+    expect(
+      classify(WebResourceErrorType.unsafeResource),
+      WebLoadFailure.offline,
+    );
+    // Con https:// guardada, "sin conexión" (con "Reintentar").
+    expect(
+      classify(WebResourceErrorType.unknown, http: false),
+      WebLoadFailure.offline,
+    );
   });
 }

@@ -156,6 +156,9 @@ WebLoadError webLoadErrorOf(WebResourceErrorType? type) => switch (type) {
   WebResourceErrorType.connect => WebLoadError.connect,
   WebResourceErrorType.failedSslHandshake => WebLoadError.secureHandshake,
   WebResourceErrorType.timeout => WebLoadError.timeout,
+  // `ERR_EMPTY_RESPONSE` llega como `unknown`; un corte, como `io`.
+  WebResourceErrorType.unknown ||
+  WebResourceErrorType.io => WebLoadError.noResponse,
   _ => WebLoadError.other,
 };
 

@@ -326,6 +326,41 @@ void main() {
       }
     });
 
+    // Lo que llega de verdad (emulador, neverssl.com y un servidor local que
+    // cierra la conexión): onPageStarted, el error del marco principal y
+    // después onPageFinished con la página de error de Chromium.
+    for (final (name, events) in <(String, List<String>)>[
+      ('antes de empezar a verse', ['error', 'started', 'finished']),
+      ('ya empezada', ['started', 'error', 'finished']),
+      ('ya terminada', ['started', 'finished', 'error']),
+    ]) {
+      for (final error in [WebLoadError.noResponse, WebLoadError.connect]) {
+        for (final (address, expected) in [
+          ('http://congreso.ejemplo.com/', WebPageStatus.insecure),
+          ('https://congreso.ejemplo.com/', WebPageStatus.offline),
+        ]) {
+          testWidgets('CA-009-08/09: $error del marco principal en la carga '
+              'inicial ($name) con $address nunca deja la página en blanco: '
+              '$expected', (tester) async {
+            final h = await _mount(tester, _Harness(address: address));
+            await h.start(tester);
+            for (final e in events) {
+              switch (e) {
+                case 'error':
+                  h.driver.error(error);
+                case 'started':
+                  h.driver.started('https://congreso.ejemplo.com/');
+                case 'finished':
+                  h.driver.finished('https://congreso.ejemplo.com/');
+              }
+            }
+            expect(h.state.status, expected);
+            expect(h.state.pageLoading, isFalse);
+          });
+        }
+      }
+    }
+
     testWidgets('CA-009-09: sin red, una dirección http:// es "sin conexión" '
         '(DNS)', (tester) async {
       final h = await _mount(
