@@ -64,6 +64,7 @@ void main() {
     double textScale = 1.0,
     Size size = const Size(390, 844),
     bool reduced = false,
+    EdgeInsets viewInsets = EdgeInsets.zero,
   }) async {
     listen(tester);
     await pumpWithApp(
@@ -73,6 +74,7 @@ void main() {
       textScale: textScale,
       size: size,
       disableAnimations: reduced,
+      viewInsets: viewInsets,
     );
     await tester.tap(find.text('abrir-hoja'));
     await tester.pumpAndSettle();
@@ -88,6 +90,18 @@ void main() {
     await tester.tap(find.text('Abrir'));
     await tester.pumpAndSettle();
   }
+
+  group('CA-009-20: con el teclado', () {
+    testWidgets('la hoja sube sobre el teclado: campo y "Abrir" a la vista', (
+      tester,
+    ) async {
+      const keyboard = 320.0;
+      await open(tester, viewInsets: const EdgeInsets.only(bottom: keyboard));
+      final top = 844 - keyboard;
+      expect(tester.getRect(find.byType(TextField)).bottom, lessThan(top));
+      expect(tester.getRect(find.byType(BrutalButton)).bottom, lessThan(top));
+    });
+  });
 
   group('CA-009-01: la hoja "Cargar URL"', () {
     testWidgets('título, X, campo, ayuda y botón, con el foco en el campo', (

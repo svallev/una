@@ -31,7 +31,12 @@ Future<T?> showUnaSheet<T>(
             curve: UnaMotion.sheetCurve,
             reverseCurve: UnaMotion.sheetOutCurve,
           ),
-    builder: (context) => SingleChildScrollView(child: builder(context)),
+    // La hoja sube sobre el teclado: la ruta no lo hace sola, y con Android 15+
+    // (a pantalla completa) `adjustResize` tampoco redimensiona la ventana.
+    builder: (context) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(child: builder(context)),
+    ),
   );
 }
 
