@@ -21,6 +21,7 @@ import 'package:app/features/web/web_bar.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -155,7 +156,13 @@ void main() {
       expect(label.style!.color, UnaColors.onInk);
       // El texto de la fila es el dominio (CA-009-14), no la dirección.
       final row = find.byWidget(rowFor(tester, 'w'));
-      final text = find.descendant(of: row, matching: find.text(_host));
+      // En una línea, recortado por el principio si no cabe (CA-009-14).
+      final text = find.descendant(
+        of: row,
+        matching: find.byWidgetPredicate(
+          (w) => w is HeadEllipsisText && w.text == _host,
+        ),
+      );
       expect(text, findsOneWidget);
       expect(
         find.descendant(of: row, matching: find.textContaining('https')),
@@ -169,6 +176,82 @@ void main() {
       expect(web.drivers, isEmpty);
       expect(tester.takeException(), isNull);
     });
+
+    for (final scale in const [1.0, 2.0]) {
+      testWidgets('CA-009-17 / CA-009-14: al ${(scale * 100).round()} %, el '
+          'dominio va en una sola línea, recortado por el principio con "…"; '
+          'el texto propio de una tarea sigue en hasta 3 líneas', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final handle = tester.ensureSemantics();
+        const longHost =
+            'agenda.del.congreso.internacional.de.ejemplos.ejemplo.com';
+        await pumpWith(tester, [
+          _webTask('w0', 'https://www.$longHost/programa', rank: 'A'),
+          _webTask('w1', 'https://www.$longHost/lunes', rank: 'B'),
+          sampleTask(
+            id: 't2',
+            text:
+                'Una tarea con un texto largo que ocupa varias líneas '
+                'en el listado y se corta al final',
+            rank: 'C',
+          ),
+        ]);
+        await openList(tester);
+
+        for (final id in ['w0', 'w1']) {
+          final row = find.byWidget(rowFor(tester, id));
+          final shown = find.descendant(
+            of: row,
+            matching: find.byType(HeadEllipsisText),
+          );
+          expect(shown, findsOneWidget, reason: id);
+          final text = tester.widget<Text>(
+            find.descendant(of: shown, matching: find.byType(Text)),
+          );
+          expect(text.maxLines, 1, reason: id);
+          expect(text.data, startsWith(headEllipsisMark), reason: id);
+          // Siempre se ve el final del dominio. Al 100 %, el registrable
+          // entero; al 200 %, en un móvil de 390 dp, puede quedar solo ".com"
+          // en la primera fila.
+          expect(
+            text.data,
+            endsWith(scale == 1.0 ? 'ejemplo.com' : '.com'),
+            reason: id,
+          );
+          expect(
+            longHost.endsWith(text.data!.substring(1)),
+            isTrue,
+            reason: id,
+          );
+          // Una línea: no más alta que una línea de su estilo.
+          final paragraph = tester.renderObject<RenderParagraph>(
+            find.descendant(of: shown, matching: find.byType(RichText)),
+          );
+          expect(paragraph.didExceedMaxLines, isFalse, reason: id);
+          final lineHeight =
+              scale * text.style!.fontSize! * (text.style!.height ?? 1.2);
+          expect(paragraph.size.height, lessThan(lineHeight * 1.5));
+        }
+        // El lector sigue leyendo el dominio entero.
+        expect(
+          find.bySemanticsLabel('2 de 3: $longHost. Página web'),
+          findsOneWidget,
+        );
+
+        // El texto propio: hasta 3 líneas, con "…" al final (sin cambios).
+        final own = find.descendant(
+          of: find.byWidget(rowFor(tester, 't2')),
+          matching: find.textContaining('Una tarea con un texto largo'),
+        );
+        expect(tester.widget<Text>(own).maxLines, 3);
+        expect(find.byType(HeadEllipsisText), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+        handle.dispose();
+      });
+    }
 
     testWidgets('CA-009-18: el lector lee "{n} de {total}: {dominio}. Página '
         'web"; la insignia es decorativa', (tester) async {

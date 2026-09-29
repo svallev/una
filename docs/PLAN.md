@@ -139,6 +139,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | P-5 | ¿Descripción alternativa de las imágenes escrita por el usuario? | Producto | Spec 007 | Sí, opcional, en la v1.1 |
 | PD-9 | Safe Browsing de la WebView (activado, spec 009) frente a la ficha Data Safety de Play: confirmar que no hay que declarar nada | Propietario | F5, antes de publicar | **[Suposición]** No se declara: lo hace la WebView del sistema (Google Play Services), no la app; revisarlo con la guía de Play vigente |
 | P-6 | ~~¿Una URL que apunta a un PDF se guarda como documento?~~ **Resuelto (2026-09-28): fuera de la v1** (spec 009, CL-009-4) | — | — | — |
+| TD-1 | **Tarea registrada (2026-09-29, propietario):** token de interlineado (`lineHeight.*`) en `design/tokens.json` → `tokens.g.dart`, y sustituir los 19 `height: 1.x` escritos a mano en `app/lib` (hallazgo de `/tokens-validate` en T-009-21; no es nuevo de la 009) | Claude Code | **[Suposición]** Tarea propia, antes de F5 | PR aparte; regenerar los *goldens* que cambien |
 
 ## 8. Hoja de ruta posterior (no se desarrolla ahora; la arquitectura la admite)
 
