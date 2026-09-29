@@ -1,6 +1,6 @@
 # Spec 009: Tareas con una página web (URL)
 
-- **Estado:** **Aprobada** (propietario, 2026-09-28), con las propuestas de §9. Reescrita ese día con sus decisiones: **se guarda solo la dirección y la página se carga en vivo cada vez; nada de la página se guarda en el móvil** (ADR-0016). Sin revisión de `spec-reviewer` (aprobada directamente por el propietario). **Enmendada el 2026-09-29 (ADR-0018): sin navegación; solo se ve la página de la dirección guardada**
+- **Estado:** **Aprobada** (propietario, 2026-09-28), con las propuestas de §9. Reescrita ese día con sus decisiones: **se guarda solo la dirección y la página se carga en vivo cada vez; nada de la página se guarda en el móvil** (ADR-0016). Sin revisión de `spec-reviewer` (aprobada directamente por el propietario). **Enmendada el 2026-09-29 (ADR-0018): sin navegación; solo se ve la página de la dirección guardada**. Enmendada también el 2026-09-29 (propietario): sin candado con el aviso de conexión no segura (CA-009-06) y ese aviso cuando una dirección `http://` intenta, mientras carga, ir a otra `http://` (CA-009-09, CA-009-11)
 - **Reglas de producto:** R3 (URL), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido). La propuesta de valor 2 **sin conexión no aplica** a la tarea web (ADR-0016)
 - **Pantallas del prototipo:** 9 "Añadir (+)", 11 "Tarea web (URL)", hoja "Cargar URL", 5 "Todas las tareas" (insignia). Los errores, el estado de carga y el horizontal no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
 - **Decisiones y ADR:** **ADR-0016 (web sin copia local; sustituye a D9 y enmienda el ADR-0007)**, **ADR-0018 (sin navegación; enmienda el ADR-0007 y el ADR-0016)**, ADR-0007 (validación y WebView endurecida: se mantienen), D10 y ADR-0013/0014/0015 (giro y excepción del horizontal), ADR-0012 (completar y eliminar borran la tarea del todo), DEV-04 (cambia), DEV-18; modelo de amenazas T-4, T-5, T-6
@@ -79,7 +79,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
   - **Cuando** se abre la app en frío
   - **Entonces**, sin ningún toque y en el tiempo de CA-001-09 (< 1 s p50, dispositivo de referencia, *release*), se ve la tarea:
     - arriba, el logotipo y el menú; abajo, el botón de completar, como en cualquier tarea;
-    - entre ellos, con borde negro arriba y abajo, la **barra negra** con el candado, el **dominio real** (CA-009-14) y la insignia "WEB", como en el prototipo (pantalla 11);
+    - entre ellos, con borde negro arriba y abajo, la **barra negra** con el candado, el **dominio real** (CA-009-14) y la insignia "WEB", como en el prototipo (pantalla 11). **Con el aviso de conexión no segura (CA-009-09) no se ve el candado**; su hueco se queda, así el dominio y "WEB" no se mueven (propietario, 2026-09-29);
     - debajo, la página **en vivo**, al ancho, con su propio desplazamiento y el zoom que permita el sitio (la app no añade zoom propio). Solo esa página: sin navegación (CA-009-11).
   - Mientras la página carga se ve un indicador de carga. El tiempo de la página depende de la red y no cuenta para CA-001-09 (ADR-0016).
 - **CA-009-07 Se carga cada vez**
@@ -96,7 +96,8 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
 - **CA-009-09 Solo conexión segura (T-6)**
   - **Dado** una dirección `http://`
   - **Cuando** se carga
-  - **Entonces** se intenta como `https://`. Si el servidor no admite https, se ve "Esta página no usa conexión segura. Ábrela en el navegador." con el botón "Abrir en el navegador". Nunca se carga nada sin cifrar, tampoco recursos sueltos dentro de una página https (contenido mixto).
+  - **Entonces** se intenta como `https://`. Si el servidor no admite https (no conecta, falla el TLS o no responde nada), se ve "Esta página no usa conexión segura. Ábrela en el navegador." con el botón "Abrir en el navegador", y la barra sin candado (CA-009-06). Nunca se carga nada sin cifrar, tampoco recursos sueltos dentro de una página https (contenido mixto).
+  - También se ve ese aviso si la página de `https://`, **mientras hace la carga inicial** (antes de terminar de cargar), intenta ir a otra dirección `http://` (p. ej. neverssl.com, que por https solo redirige a http con JavaScript): en lugar de quedarse en blanco (propietario, 2026-09-29; excepción de CA-009-11).
 - **CA-009-10 Certificado no válido (T-6)**
   - **Dado** un sitio cuyo certificado no es válido (caducado, autofirmado, de otro dominio…)
   - **Cuando** se carga la página
@@ -109,6 +110,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     - **excepción:** un enlace a otra parte de **la misma página** (un ancla, `#seccion`) desplaza dentro de ella, como en un navegador;
     - lo que la página hace sin cambiar de dirección (pestañas, desplegables, contenido que carga con JavaScript) funciona dentro de la página;
     - si aun así empieza a cargarse otra página (p. ej. un formulario que envía datos, que Android no deja bloquear de antemano), se para y se vuelve a cargar la dirección guardada (propietario, 2026-09-29);
+    - **excepción (propietario, 2026-09-29):** con una dirección guardada `http://` (que se carga como `https://`), si durante la carga inicial la página intenta ir a otra dirección `http://`, no se queda en blanco: se ve el aviso de conexión no segura (CA-009-09). Después de terminar la carga inicial, un intento así no hace nada, como cualquier otro;
     - la barra muestra siempre el dominio de esa página (CA-009-14).
 - **CA-009-12 Atrás**
   - **Dado** la tarea actual web
@@ -218,7 +220,7 @@ Los errores de validación aparecen bajo el campo de la hoja. Los de la página,
 | Esquema no permitido | "Solo se admiten direcciones web (http o https)." | — |
 | Dirección no válida | "Esa dirección no parece válida." | — |
 | Sin conexión o tiempo agotado | "Necesitas conexión para ver esta página." | "Reintentar" |
-| Sin https | "Esta página no usa conexión segura. Ábrela en el navegador." | "Abrir en el navegador" |
+| Sin https (la barra, sin candado: CA-009-06) | "Esta página no usa conexión segura. Ábrela en el navegador." | "Abrir en el navegador" |
 | Certificado no válido | "No se ha podido cargar la página (certificado no válido)." | "Abrir en el navegador", "Reintentar" |
 | No es una página | "Esta dirección no es una página web. Ábrela en el navegador." | "Abrir en el navegador" |
 
