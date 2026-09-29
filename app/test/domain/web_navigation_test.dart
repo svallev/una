@@ -164,6 +164,24 @@ void main() {
       }
     });
 
+    test('T-009-21 (propietario, 2026-09-29): una redirección del servidor '
+        'a una IP privada, loopback o un nombre local no se sigue: aviso "no '
+        'es una página"', () {
+      for (final url in [
+        'https://192.168.1.1/',
+        'http://10.0.0.1/admin',
+        'https://10.20.30.40:8443/',
+        'https://127.0.0.1/',
+        'http://localhost:8080/',
+        'https://[::1]/',
+        'https://[fe80::1]/',
+        'https://impresora.local/',
+        'https://intranet/',
+      ]) {
+        expect(initial(url), const BlockLocalAddress(), reason: url);
+      }
+    });
+
     test('pero no a otros esquemas ni con usuario en la dirección', () {
       expect(initial('intent://x#Intent;end'), const BlockNavigation());
       expect(initial('mailto:ana@ejemplo.com'), const BlockNavigation());

@@ -109,14 +109,22 @@ WebAddressCheck validateWebAddress(String input) {
   }
   if (uri.hasPort && (uri.port < 1 || uri.port > 65535)) return _invalid;
 
-  final host = uri.host.contains(':')
-      ? _ipv6Host(uri.host)
-      : _namedHost(uri.host);
+  final host = publicWebHost(uri.host);
   if (host == null) return _invalid;
 
   final url = (host == uri.host ? uri : uri.replace(host: host)).toString();
   if (url.length > maxWebAddressLength) return _invalid;
   return ValidWebAddress(url);
+}
+
+/// El dominio o la IP de una dirección web ([Uri.host], una IPv6 sin
+/// corchetes), normalizado como en [validateWebAddress]; null si no vale, no
+/// tiene punto o es una IP privada, *loopback* o de enlace local o un nombre
+/// local. También lo usa la tarea web para no seguir una redirección del
+/// servidor hacia la red local (T-009-21; propietario, 2026-09-29).
+String? publicWebHost(String host) {
+  if (host.isEmpty) return null;
+  return host.contains(':') ? _ipv6Host(host) : _namedHost(host);
 }
 
 /// Un dominio o una IPv4, normalizados; null si no vale o es privado o local.

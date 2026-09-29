@@ -679,6 +679,26 @@ void main() {
       expect(find.text(text), findsNothing);
     });
 
+    testWidgets('CL-009-1 / CL-009-4 (propietario, 2026-09-29): si redirige '
+        'a una IP privada, se ve "no es una página web" con "Abrir en el '
+        'navegador", sin aviso de redirección', (tester) async {
+      await pumpWeb(tester);
+      expect(
+        web.last.navigate('https://192.168.1.1/', redirect: true),
+        isFalse,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Esta dirección no es una página web. Ábrela en el navegador.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Abrir en el navegador'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(tester.widget<WebBar>(find.byType(WebBar)).host, _host);
+    });
+
     testWidgets('en el mismo dominio (con o sin "www.") no se avisa', (
       tester,
     ) async {

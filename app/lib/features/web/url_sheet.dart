@@ -132,9 +132,15 @@ class _UrlSheetState extends State<UrlSheet> {
                   ),
                 ),
               ),
+              // El error va también en el nodo del campo: al volver a él, el
+              // lector lo dice (WCAG 1.3.1, 3.3.1).
               child: MergeSemantics(
                 child: Semantics(
                   label: l10n.urlSheetTitle,
+                  hint: error == null ? null : _message(l10n, error),
+                  validationResult: error == null
+                      ? SemanticsValidationResult.none
+                      : SemanticsValidationResult.invalid,
                   child: TextField(
                     controller: _controller,
                     focusNode: _focus,
@@ -167,12 +173,16 @@ class _UrlSheetState extends State<UrlSheet> {
             ),
             if (error != null) ...[
               const SizedBox(height: UnaSpace.sm),
-              Text(
-                _message(l10n, error),
-                style: const TextStyle(
-                  fontFamily: UnaFonts.mono,
-                  fontSize: UnaFontSizes.tag,
-                  color: UnaColors.error,
+              // Ya lo lee el campo (y se anuncia al pulsar "Abrir"): aquí,
+              // solo a la vista, para no leerlo dos veces.
+              ExcludeSemantics(
+                child: Text(
+                  _message(l10n, error),
+                  style: const TextStyle(
+                    fontFamily: UnaFonts.mono,
+                    fontSize: UnaFontSizes.tag,
+                    color: UnaColors.error,
+                  ),
                 ),
               ),
             ],

@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/fake_web_page_driver.dart';
+import '../../support/focus.dart';
 import '../../support/fonts.dart';
 
 const _address = 'https://www.congreso.ejemplo.com/programa?dia=2';
@@ -131,6 +132,12 @@ void main() {
       await tester.pump();
       expect(tabs, [Uri.parse(_address)]);
       expect(links.opened, isEmpty);
+    });
+
+    testWidgets('CA-009-20 / spec §6 (WCAG 2.4.7): con Tab, "Abrir página →" '
+        'muestra el anillo de foco', (tester) async {
+      await pumpPreview(tester);
+      expect(await tabUntilRing(tester, 'Abrir página →'), isTrue);
     });
 
     testWidgets('"Abrir página →" es un botón para el lector (como '

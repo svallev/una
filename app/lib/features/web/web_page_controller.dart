@@ -115,7 +115,8 @@ class WebPageState {
 ///   ve (la del primer `onPageStarted`); en la carga inicial se siguen solo
 ///   las redirecciones **del servidor** (una navegación de la página que llega
 ///   antes de `onPageStarted` no) y, si acaba en otro dominio, se avisa una
-///   vez (CL-009-1). Excepción: con la dirección guardada `http://`, si la
+///   vez (CL-009-1); una hacia la red local (IP privada o nombre local) no se
+///   sigue: aviso "no es una página" (propietario, 2026-09-29). Excepción: con la dirección guardada `http://`, si la
 ///   página intenta ir a otra `http://` antes de terminar la carga inicial,
 ///   aviso "no segura" (CA-009-09, CA-009-11).
 /// - **Formularios POST** (Android no los pasa por `onNavigationRequest`): si,
@@ -409,6 +410,12 @@ class WebPageController extends ValueNotifier<WebPageState> {
           _fail(WebLoadFailure.insecure);
           unawaited(_safe(driver.stop, null));
         }
+        return false;
+      case BlockLocalAddress():
+        // Redirección del servidor hacia la red local: no se sigue (CL-009-4;
+        // propietario, 2026-09-29).
+        _fail(WebLoadFailure.notAPage);
+        unawaited(_safe(driver.stop, null));
         return false;
       case StayInTask(:final upgraded?):
         // Redirección a `http://` en la carga inicial: se pide con https.

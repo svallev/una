@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_web_page_driver.dart';
+import '../../support/focus.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
@@ -363,6 +364,18 @@ void main() {
         handle.dispose();
       });
     }
+  });
+
+  group('CA-009-20 / spec §6 (WCAG 2.4.7): anillo de foco con teclado', () {
+    testWidgets('con Tab, "Abrir en el navegador" y "Reintentar" del aviso '
+        'muestran el anillo de foco', (tester) async {
+      await pumpWeb(tester);
+      web.last.certificate();
+      await tester.pumpAndSettle();
+      for (final label in ['Abrir en el navegador', 'Reintentar']) {
+        expect(await tabUntilRing(tester, label), isTrue, reason: label);
+      }
+    });
   });
 
   group('CA-009-20: texto al 200 % en 360 dp', () {

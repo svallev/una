@@ -3,9 +3,11 @@ import 'package:app/features/web/url_sheet.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/sheet_row.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/focus.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
 
@@ -92,6 +94,12 @@ void main() {
   }
 
   group('CA-009-20: con el teclado', () {
+    testWidgets('spec §6 (WCAG 2.4.7): con Tab, la X de la hoja muestra el '
+        'anillo de foco', (tester) async {
+      await open(tester);
+      expect(await tabUntilRing(tester, 'Cerrar'), isTrue);
+    });
+
     testWidgets('la hoja sube sobre el teclado: campo y "Abrir" a la vista', (
       tester,
     ) async {
@@ -243,16 +251,34 @@ void main() {
       );
     }
 
-    testWidgets('el error es un nodo con su texto, bajo el campo', (
+    testWidgets('WCAG 1.3.1 / 3.3.1: el error se lee con el campo (al volver '
+        'a él, el lector lo dice) y una sola vez al recorrer la hoja', (
       tester,
     ) async {
       final handle = tester.ensureSemantics();
       await open(tester);
+      final before = tester.getSemantics(find.byType(TextField));
+      expect(before.hint, isEmpty);
       await submit(tester, '');
+      const message = 'Escribe una dirección web.';
+      // Se ve bajo el campo.
+      expect(find.text(message), findsOneWidget);
+      final node = tester.getSemantics(find.byType(TextField));
+      expect(node.label, startsWith('Cargar URL'));
+      expect(node.hint, message);
       expect(
-        find.bySemanticsLabel('Escribe una dirección web.'),
-        findsOneWidget,
+        node.getSemanticsData().validationResult,
+        SemanticsValidationResult.invalid,
       );
+      final read = [
+        for (final n in tester.semantics.simulatedAccessibilityTraversal())
+          ...[n.label, n.value, n.hint].where((t) => t.contains(message)),
+      ];
+      expect(read, [message]);
+      // Al escribir, el campo deja de decirlo.
+      await tester.enterText(find.byType(TextField), 'e');
+      await tester.pump();
+      expect(tester.getSemantics(find.byType(TextField)).hint, isEmpty);
       handle.dispose();
     });
 

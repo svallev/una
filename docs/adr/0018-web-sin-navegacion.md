@@ -45,6 +45,7 @@ Del ADR-0007 y el ADR-0016 **se mantiene todo lo demás**: validación, WebView 
   - Un acortador o una página que redirige con JavaScript (no con el servidor) se queda en esa primera página: la tarea muestra lo que el servidor devuelve para la dirección guardada.
   - **[Hecho, T-009-10]** Android no deja interceptar antes el envío de un formulario con POST. Decisión del propietario (2026-09-29): si, ya vista la página, empieza a cargarse otra, se para y se vuelve a cargar la dirección guardada. Para el usuario, enviar el formulario no hace nada (como mucho, la página se recarga).
   - El aviso de redirección puede salir entre subdominios del mismo sitio (sin la PSL). Se acepta: informa de dónde se está.
+  - **Enmienda (T-009-21, 2026-09-29, propietario):** una redirección del servidor en la carga inicial hacia una IP privada, *loopback* o un nombre local (el filtro de `validateWebAddress`, `publicWebHost`) no se sigue: aviso "no es una página" (CL-009-4); los iframes no se filtran (riesgo aceptado, `threat-model.md` §7).
 - **Hecho al aceptarlo (2026-09-29):**
   - spec, plan y tareas de la 009 actualizados (CA-009-10, 11, 12, 19; CL-009-1, CL-009-12, CL-009-13; §5, §7, §8, §9);
   - T-009-03 revertida y T-009-05 rehecha (`decideWebNavigation` sin sitio de referencia ni PSL);

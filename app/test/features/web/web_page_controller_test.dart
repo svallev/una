@@ -415,6 +415,29 @@ void main() {
       expect(h.state.failure!.canOpenInBrowser, isTrue);
     });
 
+    testWidgets('CL-009-1 / CL-009-4 (propietario, 2026-09-29): una '
+        'redirección del servidor a una IP privada o un nombre local no se '
+        'sigue: se para y "no es una página web"', (tester) async {
+      for (final url in [
+        'http://192.168.1.1/',
+        'https://127.0.0.1/',
+        'https://impresora.local/',
+      ]) {
+        final h = await _mount(tester, _Harness());
+        await h.start(tester);
+        final stops = h.driver.stops;
+        expect(h.driver.navigate(url, redirect: true), isFalse, reason: url);
+        expect(h.state.status, WebPageStatus.notAPage, reason: url);
+        expect(h.driver.stops, stops + 1, reason: url);
+        // Ni se pide con https ni llega a verse.
+        expect(h.driver.loads, hasLength(1), reason: url);
+        h.driver.started(url);
+        expect(h.state.status, WebPageStatus.notAPage, reason: url);
+        // Suelta el controlador antes del siguiente.
+        await tester.pumpWidget(const SizedBox());
+      }
+    });
+
     testWidgets('CA-009-13: una descarga desde una página ya visible no hace '
         'nada: la página sigue', (tester) async {
       final h = await _mount(tester, _Harness());

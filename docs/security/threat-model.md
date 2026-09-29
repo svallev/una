@@ -83,6 +83,7 @@ Mantenida (release en los últimos 12 meses o estable y sin issues de seguridad 
 - JS de terceros ejecutándose en la WebView en vivo (mitigado por el aislamiento; es inherente a mostrar webs).
 - En Android, los documentos no PDF se abren con apps de terceros elegidas por el usuario (reciben el archivo en solo lectura).
 - Tarea web (spec 009, propietario, 2026-09-29): el servicio de autorrelleno del sistema (p. ej. Google) puede actuar en los campos de la página; la app no puede desactivarlo en la WebView. Y la WebView deja rastros que ninguna API borra: el origen visitado en `app_webview/Default/Preferences` y hash de los orígenes en `shared_prefs/AwOriginVisitLoggerPrefs.xml`, ambos fuera de la copia en la nube y de la transferencia.
+- Tarea web (T-009-21, 2026-09-29, decisión del propietario): una redirección del servidor en la carga inicial hacia una IP privada, *loopback* o un nombre local se bloquea (aviso "no es una página"), pero los marcos internos (iframes) de la página no pasan por Dart y pueden cargar direcciones de la red local.
 
 ## 8. Verificación
 

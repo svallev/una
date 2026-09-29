@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme/tokens.g.dart';
+import 'focus_ring.dart';
 import 'una_icons.dart';
 
 /// Cabecera de una hoja: etiqueta en monoespaciada (encabezado) y la X para
@@ -35,27 +36,51 @@ class SheetHeader extends StatelessWidget {
         ),
         Transform.translate(
           offset: const Offset(UnaSpace.m - 2, 0),
-          child: Semantics(
-            button: true,
-            label: closeLabel,
-            excludeSemantics: true,
-            onTap: () => Navigator.of(context).pop(),
-            child: InkResponse(
-              onTap: () => Navigator.of(context).pop(),
-              child: const SizedBox.square(
-                dimension: kMinInteractiveDimension,
-                child: Center(
-                  child: UnaIcon(
-                    UnaIcons.close,
-                    size: UnaSizes.iconS,
-                    strokeWidth: UnaSizes.iconStrokeBold,
-                  ),
-                ),
+          child: _CloseButton(label: closeLabel),
+        ),
+      ],
+    );
+  }
+}
+
+/// La X de la cabecera: cierra la hoja. Con el foco del teclado o de un
+/// interruptor, anillo de foco (WCAG 2.4.7).
+class _CloseButton extends StatefulWidget {
+  const _CloseButton({required this.label});
+
+  final String label;
+
+  @override
+  State<_CloseButton> createState() => _CloseButtonState();
+}
+
+class _CloseButtonState extends State<_CloseButton> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: widget.label,
+      excludeSemantics: true,
+      onTap: () => Navigator.of(context).pop(),
+      child: InkResponse(
+        onTap: () => Navigator.of(context).pop(),
+        onFocusChange: (v) => setState(() => _focused = v),
+        child: FocusRing(
+          visible: _focused && showsFocusHighlight,
+          child: const SizedBox.square(
+            dimension: kMinInteractiveDimension,
+            child: Center(
+              child: UnaIcon(
+                UnaIcons.close,
+                size: UnaSizes.iconS,
+                strokeWidth: UnaSizes.iconStrokeBold,
               ),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

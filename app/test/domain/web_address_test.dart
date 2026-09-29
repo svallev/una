@@ -126,6 +126,35 @@ void main() {
       }
     });
 
+    test(
+      'publicWebHost: el mismo filtro de dominio para las redirecciones '
+      '(T-009-21): privado, loopback o local → null; público, normalizado',
+      () {
+        for (final host in [
+          '192.168.1.1',
+          '10.0.0.1',
+          '10.20.30.40',
+          '127.0.0.1',
+          '172.16.0.1',
+          '169.254.169.254',
+          'localhost',
+          'LOCALHOST.',
+          'impresora.local',
+          'intranet',
+          '::1',
+          'fe80::1',
+          'fd00::1',
+          '::ffff:192.168.0.1',
+          '',
+        ]) {
+          expect(publicWebHost(host), isNull, reason: host);
+        }
+        expect(publicWebHost('WWW.Ejemplo.COM.'), 'www.ejemplo.com');
+        expect(publicWebHost('8.8.8.8'), '8.8.8.8');
+        expect(publicWebHost('2001:4860:4860::8888'), '2001:4860:4860::8888');
+      },
+    );
+
     test('una IP pública se admite (en su forma normal)', () {
       expect(_valid('8.8.8.8'), 'https://8.8.8.8');
       expect(_valid('172.32.0.1/x'), 'https://172.32.0.1/x');

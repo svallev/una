@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'host_display.dart';
+import 'web_address.dart' show publicWebHost;
 
 /// Qué hace una petición de navegación de la página de una tarea web
 /// (CA-009-11, ADR-0018; `decideWebNavigation`).
@@ -38,6 +39,21 @@ final class BlockNavigation extends WebNavigation {
   String toString() => 'BlockNavigation()';
 }
 
+/// Una redirección del servidor, en la carga inicial, hacia una IP privada,
+/// *loopback* o de enlace local o un nombre local (`publicWebHost`): no se
+/// sigue y se avisa como si no fuera una página (CL-009-4; propietario,
+/// 2026-09-29).
+final class BlockLocalAddress extends WebNavigation {
+  const BlockLocalAddress();
+
+  @override
+  bool operator ==(Object other) => other is BlockLocalAddress;
+  @override
+  int get hashCode => 1;
+  @override
+  String toString() => 'BlockLocalAddress()';
+}
+
 /// Decide qué hace la petición de navegar a [url] (CA-009-11, CL-009-1,
 /// ADR-0018). La tarea web muestra **solo** la página de su dirección
 /// guardada: no es un navegador.
@@ -47,7 +63,9 @@ final class BlockNavigation extends WebNavigation {
 ///   servidor ([isServerRedirect]), también a otro sitio (CL-009-1). Una
 ///   navegación de la propia página que llega antes del primer
 ///   `onPageStarted` (un `location.href` en el `<head>`) no es una
-///   redirección del servidor y no se sigue (T-009-12).
+///   redirección del servidor y no se sigue (T-009-12). Una redirección
+///   hacia la red local (una IP privada o un nombre local) tampoco:
+///   [BlockLocalAddress] (propietario, 2026-09-29).
 /// - Un marco interno ([isMainFrame] a false) es parte de la página: se carga
 ///   si es web, de cualquier sitio (o `about:blank`/`about:srcdoc`).
 /// - En el marco principal, ya vista la página, solo se admite un enlace a
@@ -76,6 +94,7 @@ WebNavigation decideWebNavigation(
   if (!isWeb) return const BlockNavigation();
   if (shownPage == null) {
     if (!isServerRedirect) return const BlockNavigation();
+    if (publicWebHost(url.host) == null) return const BlockLocalAddress();
     return StayInTask(scheme == 'http' ? httpsVersion(url) : null);
   }
   return url.hasFragment && isSamePage(url, shownPage)
