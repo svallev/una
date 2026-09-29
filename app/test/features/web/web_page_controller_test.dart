@@ -485,6 +485,60 @@ void main() {
       expect(h.state.pageUrl.path, '/programa');
     });
 
+    testWidgets('CA-009-09, CA-009-11: con http:// guardada, si la página '
+        'intenta ir a otra http:// durante la carga inicial (neverssl.com), '
+        'aviso "no segura" en lugar de la página en blanco', (tester) async {
+      final h = await _mount(
+        tester,
+        _Harness(address: 'http://neverssl.ejemplo.com/'),
+      );
+      await h.start(tester);
+      // Lo que llega de verdad: la página empieza a verse, su JavaScript
+      // intenta ir a http:// y después termina (sin cuerpo).
+      h.driver.started('https://neverssl.ejemplo.com/');
+      final stopsBefore = h.driver.stops;
+      expect(
+        h.driver.navigate('http://abc.neverssl.ejemplo.com/online'),
+        isFalse,
+      );
+      expect(h.state.status, WebPageStatus.insecure);
+      expect(h.state.pageLoading, isFalse);
+      expect(h.driver.stops, stopsBefore + 1);
+      h.driver.finished('https://neverssl.ejemplo.com/');
+      expect(h.state.status, WebPageStatus.insecure);
+      // Nada más se carga.
+      expect(h.driver.loads, [Uri.parse('https://neverssl.ejemplo.com/')]);
+    });
+
+    testWidgets('CA-009-11: fuera de esa excepción, ir a otra dirección no '
+        'hace nada', (tester) async {
+      Future<_Harness> shown(String address) async {
+        final h = await _mount(tester, _Harness(address: address));
+        await h.start(tester);
+        h.driver.started('https://congreso.ejemplo.com/');
+        return h;
+      }
+
+      // Terminada la carga inicial.
+      var h = await shown('http://congreso.ejemplo.com/');
+      h.driver.finished('https://congreso.ejemplo.com/');
+      expect(h.driver.navigate('http://otro.ejemplo.com/'), isFalse);
+      expect(h.state.status, WebPageStatus.shown);
+      h.controller.dispose();
+      // Con https:// guardada.
+      h = await shown('https://congreso.ejemplo.com/');
+      expect(h.driver.navigate('http://otro.ejemplo.com/'), isFalse);
+      expect(h.state.status, WebPageStatus.shown);
+      h.controller.dispose();
+      // A otra https://, o desde un marco interno.
+      h = await shown('http://congreso.ejemplo.com/');
+      expect(h.driver.navigate('https://otro.ejemplo.com/'), isFalse);
+      // (Un marco interno sigue su propia regla, T-009-05: no es el aviso.)
+      h.driver.navigate('http://anuncio.ejemplo.com/', mainFrame: false);
+      expect(h.state.status, WebPageStatus.shown);
+      expect(h.driver.loads, hasLength(1));
+    });
+
     testWidgets('CA-009-11: con un aviso a la vista, ninguna petición carga', (
       tester,
     ) async {

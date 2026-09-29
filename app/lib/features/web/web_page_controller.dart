@@ -109,7 +109,9 @@ class WebPageState {
 /// - **Sin navegación** (ADR-0018): `decideWebNavigation` con la página que se
 ///   ve (la del primer `onPageStarted`); en la carga inicial se siguen las
 ///   redirecciones del servidor y, si acaba en otro dominio, se avisa una vez
-///   (CL-009-1).
+///   (CL-009-1). Excepción: con la dirección guardada `http://`, si la página
+///   intenta ir a otra `http://` antes de terminar la carga inicial, aviso
+///   "no segura" (CA-009-09, CA-009-11).
 /// - "Reintentar" ([retry]); al volver a la app con un aviso se reintenta
 ///   solo; de segundo plano en menos de 10 minutos se conserva y, con 10 o
 ///   más, se carga desde cero (CA-009-07).
@@ -366,6 +368,13 @@ class WebPageController extends ValueNotifier<WebPageState> {
     );
     switch (decision) {
       case BlockNavigation():
+        if (isMainFrame && _leavesForHttpWhileLoading(url)) {
+          // Una dirección http:// cuyo https solo manda a otra http://
+          // (neverssl.com): sin el aviso se quedaría en blanco (CA-009-09,
+          // excepción de CA-009-11; propietario, 2026-09-29).
+          _fail(WebLoadFailure.insecure);
+          unawaited(_safe(driver.stop, null));
+        }
         return false;
       case StayInTask(:final upgraded?):
         // Redirección a `http://` en la carga inicial: se pide con https.
@@ -376,6 +385,16 @@ class WebPageController extends ValueNotifier<WebPageState> {
         return true;
     }
   }
+
+  /// Si, con la dirección guardada `http://` (cargada como `https://`), la
+  /// página que ya se ve intenta ir a [url] `http://` antes de terminar la
+  /// carga inicial.
+  bool _leavesForHttpWhileLoading(Uri url) =>
+      address.scheme.toLowerCase() == 'http' &&
+      url.scheme.toLowerCase() == 'http' &&
+      _shownPage != null &&
+      value.status == WebPageStatus.shown &&
+      value.pageLoading;
 
   void _onPageStarted(WebPageDriver driver, Uri url) {
     if (!_isLive(driver) || value.status != WebPageStatus.loading) return;

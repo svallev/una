@@ -26,11 +26,14 @@ const _page = '''
 <body><h1>Una</h1><div style="height:3000px"></div><h2 id="b">B</h2></body></html>
 ''';
 
+/// Si no es null, la página de `una.test` (en lugar de [_page]).
+String? _pageOverride;
+
 /// La WebView real, pero las páginas de `una.test` salen de [_page].
 class _LocalPageDriver extends WebViewPageDriver {
   @override
   Future<void> load(Uri url) => url.host == 'una.test'
-      ? webView.loadHtmlString(_page, baseUrl: url.toString())
+      ? webView.loadHtmlString(_pageOverride ?? _page, baseUrl: url.toString())
       : super.load(url);
 }
 
@@ -108,7 +111,10 @@ Future<void> _unmount(WidgetTester tester) async {
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  setUp(_drivers.clear);
+  setUp(() {
+    _drivers.clear();
+    _pageOverride = null;
+  });
 
   testWidgets('CA-009-07, CA-009-13: carga la dirección guardada en una '
       'WebView endurecida, con la marca escrita', (tester) async {
@@ -184,6 +190,45 @@ void main() {
       await _unmount(tester);
     });
   }
+
+  testWidgets('CA-009-09, CA-009-11: con http:// guardada, si la página '
+      'intenta ir a otra http:// antes de terminar de cargar (neverssl.com), '
+      'aviso "no segura"; ya cargada, no hace nada', (tester) async {
+    // Una imagen de un servidor que no responde mantiene abierta la carga.
+    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final held = <Socket>[];
+    server.listen(held.add);
+    addTearDown(() async {
+      for (final s in held) {
+        s.destroy();
+      }
+      await server.close();
+    });
+    String page(String when) =>
+        '<!doctype html><html><body><h1>Una</h1>'
+        '<img src="https://127.0.0.1:${server.port}/x.png">'
+        '<script>$when</script></body></html>';
+    const jump = "location.href = 'http://abc.una.test/online';";
+    _pageOverride = page('setTimeout(function () { $jump }, 300);');
+    var c = await _mount(tester, 'http://una.test/');
+    await _until(tester, () => c.value.status == WebPageStatus.insecure);
+    await _unmount(tester);
+    // Terminada la carga (sin la imagen; 3 s después del `load`, para que
+    // haya llegado `onPageFinished`), el mismo intento no hace nada.
+    _pageOverride =
+        '<!doctype html><html><body><h1>Una</h1><script>'
+        "addEventListener('load', function () { setTimeout(function () { "
+        '$jump }, 3000); });</script></body></html>';
+    c = await _mount(tester, 'http://una.test/');
+    await _until(tester, () => _loaded(c));
+    final end = DateTime.now().add(const Duration(seconds: 5));
+    while (DateTime.now().isBefore(end)) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(c.value.status, WebPageStatus.shown);
+    expect(c.value.pageUrl.host, 'una.test');
+    await _unmount(tester);
+  });
 
   testWidgets('CL-009-4: una dirección que es una descarga es "no es una '
       'página"', (tester) async {

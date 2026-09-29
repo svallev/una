@@ -437,6 +437,26 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('CA-009-09, CA-009-11: con http:// guardada, si la página '
+        'intenta ir a otra http:// mientras carga, aviso "no segura" sin '
+        'candado', (tester) async {
+      await pumpWeb(tester, task: _webTask(url: 'http://viejo.ejemplo.com/'));
+      web.last.started('https://viejo.ejemplo.com/');
+      expect(web.last.navigate('http://x.viejo.ejemplo.com/online'), isFalse);
+      await tester.pumpAndSettle();
+      expect(
+        notice('Esta página no usa conexión segura. Ábrela en el navegador.'),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(WebBar),
+          matching: find.byType(UnaIcon),
+        ),
+        findsNothing,
+      );
+    });
+
     for (final (name, fail) in <(String, void Function(FakeWebPageDriver))>[
       ('sin conexión', (d) => d.error(WebLoadError.hostLookup)),
       ('certificado', (d) => d.certificate()),
