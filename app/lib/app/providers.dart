@@ -101,7 +101,7 @@ final linkOpenerProvider = Provider<LinkOpener>(
 );
 
 /// Web de pruebas (ADR-0010): la tarea web no tiene WebView; se ve como la
-/// tarjeta del prototipo, con "Abrir página ↗" (CL-009-5).
+/// tarjeta del prototipo, con "Abrir página →" (CL-009-5).
 final webPreviewProvider = Provider<bool>((ref) => kIsWeb);
 
 /// Abre una dirección en una pestaña nueva, con `noopener` (solo la web de

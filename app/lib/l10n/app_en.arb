@@ -151,5 +151,5 @@
   "urlA11yBar": "Web page from {host}",
   "attachmentWeb": "WEB",
   "a11yRowWeb": "{host}. Web page",
-  "urlOpenPageWeb": "Open page ↗"
+  "urlOpenPageWeb": "Open page →"
 }

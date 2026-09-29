@@ -271,7 +271,7 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
     unawaited(ref.read(linkOpenerProvider).open(WebLink(_address, host)));
   }
 
-  /// "Abrir página ↗" de la web de pruebas: la dirección guardada en una
+  /// "Abrir página →" de la web de pruebas: la dirección guardada en una
   /// pestaña nueva (CL-009-5).
   void _openInNewTab() => ref.read(newTabOpenerProvider)(_address);
 

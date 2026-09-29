@@ -302,6 +302,6 @@
   "@attachmentWeb": { "description": "Insignia de la barra y del listado de una tarea web. Spec 009 §7" },
   "a11yRowWeb": "{host}. Página web",
   "@a11yRowWeb": { "description": "Lectura de la fila del listado de una tarea web. CA-009-17/18", "placeholders": { "host": { "type": "String", "example": "es.wikipedia.org" } } },
-  "urlOpenPageWeb": "Abrir página ↗",
+  "urlOpenPageWeb": "Abrir página →",
   "@urlOpenPageWeb": { "description": "Solo web de pruebas: abre la dirección en una pestaña nueva. CL-009-5" }
 }

@@ -56,7 +56,7 @@ const _spec009 = <String, (String, String)>{
   'urlA11yBar': ('Página web de {host}', 'Web page from {host}'),
   'attachmentWeb': ('WEB', 'WEB'),
   'a11yRowWeb': ('{host}. Página web', '{host}. Web page'),
-  'urlOpenPageWeb': ('Abrir página ↗', 'Open page ↗'),
+  'urlOpenPageWeb': ('Abrir página →', 'Open page →'),
 };
 
 /// Claves quitadas de la spec al pasar a "sin copia local" (ADR-0016).

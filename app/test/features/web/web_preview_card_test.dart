@@ -1,4 +1,5 @@
 import 'package:app/app/providers.dart';
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
@@ -7,7 +8,9 @@ import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/web/web_bar.dart';
+import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/square_icon_button.dart';
+import 'package:app/ui/una_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -73,11 +76,11 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  final openPage = find.text('Abrir página ↗');
+  final openPage = find.text('Abrir página →');
 
   group('CL-009-5: web de pruebas, tarjeta del prototipo', () {
     testWidgets('la barra con el dominio y "WEB"; debajo, el dominio, la '
-        'dirección entera y "Abrir página ↗"; el menú y el botón de '
+        'dirección entera y "Abrir página →"; el menú y el botón de '
         'completar como siempre', (tester) async {
       await pumpPreview(tester);
       final bar = tester.widget<WebBar>(find.byType(WebBar));
@@ -121,7 +124,7 @@ void main() {
       );
     });
 
-    testWidgets('"Abrir página ↗" abre la dirección guardada en una pestaña '
+    testWidgets('"Abrir página →" abre la dirección guardada en una pestaña '
         'nueva (no el enlace nativo)', (tester) async {
       await pumpPreview(tester);
       await tester.tap(openPage);
@@ -130,19 +133,16 @@ void main() {
       expect(links.opened, isEmpty);
     });
 
-    testWidgets('"Abrir página ↗" es un botón para el lector, ≥ 48 dp', (
-      tester,
-    ) async {
+    testWidgets('"Abrir página →" es un botón para el lector (como '
+        'todo UnaLinkButton), ≥ 48 dp', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpPreview(tester);
       expect(
         tester.getSemantics(openPage),
         isSemantics(
-          label: 'Abrir página ↗',
+          label: 'Abrir página →',
           isButton: true,
           hasTapAction: true,
-          hasEnabledState: true,
-          isEnabled: true,
         ),
       );
       expect(
@@ -150,6 +150,47 @@ void main() {
         greaterThanOrEqualTo(48),
       );
       handle.dispose();
+    });
+
+    testWidgets('"Abrir página →" es un enlace de texto (UnaLinkButton, como '
+        'los avisos, DEV-48): sin caja ni el estilo del botón principal, '
+        'ajustado al texto, bajo la dirección y a la izquierda', (
+      tester,
+    ) async {
+      await pumpPreview(tester);
+      final card = find.byKey(const ValueKey('web-preview-card'));
+      final link = find.ancestor(
+        of: openPage,
+        matching: find.byType(UnaLinkButton),
+      );
+      expect(link, findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.byType(BrutalButton)),
+        findsNothing,
+      );
+      final linkRect = tester.getRect(link);
+      final cardRect = tester.getRect(card);
+      final addressRect = tester.getRect(
+        find.descendant(of: card, matching: find.text(_address)),
+      );
+      // Ajustado al texto: mucho más estrecho que la tarjeta.
+      expect(linkRect.width, lessThan(cardRect.width / 2));
+      expect(
+        linkRect.width,
+        lessThanOrEqualTo(tester.getSize(openPage).width + 2 * UnaSpace.s),
+      );
+      // A la izquierda, como la dirección (el enlace lleva su margen).
+      expect(
+        (linkRect.left - addressRect.left).abs(),
+        lessThanOrEqualTo(UnaSpace.s),
+      );
+      // Justo bajo la dirección, no al fondo de la tarjeta.
+      expect(linkRect.top, greaterThanOrEqualTo(addressRect.bottom));
+      expect(linkRect.top - addressRect.bottom, lessThanOrEqualTo(UnaSpace.l));
+      expect(linkRect.height, greaterThanOrEqualTo(kMinInteractiveDimension));
+      final style = tester.widget<Text>(openPage).style!;
+      expect(style.decoration, TextDecoration.underline);
+      expect(style.fontFamily, UnaFonts.mono);
     });
 
     // Que no pide la orientación lo decide `AttachmentRotation` con `kIsWeb`
@@ -182,6 +223,14 @@ void main() {
         ),
       );
       expect(tester.getSize(openPage).height, greaterThan(0));
+      expect(
+        tester
+            .getSize(
+              find.ancestor(of: openPage, matching: find.byType(UnaLinkButton)),
+            )
+            .height,
+        greaterThanOrEqualTo(kMinInteractiveDimension),
+      );
       await tester.tap(openPage);
       await tester.pump();
       expect(tabs, [Uri.parse(_address)]);

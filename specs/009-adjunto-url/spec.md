@@ -201,7 +201,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
 | CL-009-2 | Banner de cookies o muro de registro | Se ve tal cual (no se manipula el contenido de terceros). Sin cookies guardadas, puede volver a salir cada vez (ADR-0016) |
 | CL-009-3 | Sitio que exige iniciar sesión | No se conserva la sesión entre visitas (CA-009-13) |
 | CL-009-4 | La dirección es un PDF u otro archivo, no una página (P-6: **fuera de la v1**, propietario 2026-09-28) | "Esta dirección no es una página web. Ábrela en el navegador." con "Abrir en el navegador". No se descarga nada |
-| CL-009-5 | Web de pruebas (ADR-0010) | Sin página en vivo: tarjeta con el dominio, la dirección y "Abrir página ↗" (pestaña nueva), como el prototipo. Sin giro |
+| CL-009-5 | Web de pruebas (ADR-0010) | Sin página en vivo: tarjeta con el dominio, la dirección y "Abrir página →" (pestaña nueva), como el prototipo. Sin giro. **Enmienda (propietario, 2026-09-29, T-009-17):** "→" en lugar de "↗" (el botón usaba Archivo, que no tiene "↗", y la web de pruebas no tiene fuentes de reserva: salía un cuadro vacío); y es un enlace de texto (`UnaLinkButton`, 48 dp de alto) bajo la dirección, a la izquierda y ajustado al texto, no un botón a todo el ancho que compita con "Completar" (DEV-48) |
 | CL-009-6 | La página responde con un error del sitio (404, 500…) | Se ve la página de error del sitio, como en un navegador (propietario, 2026-09-28: sin captura, ya no hace falta tratarlo como fallo) |
 | CL-009-7 | Página que nunca termina de cargar (anuncios, conexiones abiertas) | Se ve lo que haya llegado. Los 20 s de CA-009-08 cuentan solo si no se ha visto nada |
 | CL-009-8 | Dirección muy larga, con espacios internos o caracteres internacionales en la ruta | Más de 2048 caracteres: no válida. El resto se normaliza (se codifica) como haría un navegador |
@@ -260,7 +260,7 @@ Los errores de validación aparecen bajo el campo de la hoja. Los de la página,
 | `urlA11yBar` | Página web de {host} | Web page from {host} | Con el prefijo `currentTaskSemantics` |
 | `attachmentWeb` | WEB | WEB | Insignia |
 | `a11yRowWeb` | {host}. Página web | {host}. Web page | Fila del listado |
-| `urlOpenPageWeb` | Abrir página ↗ | Open page ↗ | Solo web de pruebas |
+| `urlOpenPageWeb` | Abrir página → | Open page → | Solo web de pruebas (enmienda 2026-09-29: antes "↗", CL-009-5) |
 
 Se reutilizan `attachUrl` ("Cargar URL"), `attachUrlHint`, `attachSheetClose`, `retry`, `currentTaskSemantics` y las lecturas de las specs 001, 003, 004 y 006 con `{text}` = dominio.
 

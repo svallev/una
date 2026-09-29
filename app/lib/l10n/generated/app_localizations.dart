@@ -1007,7 +1007,7 @@ abstract class AppLocalizations {
   /// Solo web de pruebas: abre la dirección en una pestaña nueva. CL-009-5
   ///
   /// In es, this message translates to:
-  /// **'Abrir página ↗'**
+  /// **'Abrir página →'**
   String get urlOpenPageWeb;
 }
 

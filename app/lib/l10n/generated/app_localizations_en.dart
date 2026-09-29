@@ -565,5 +565,5 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get urlOpenPageWeb => 'Open page ↗';
+  String get urlOpenPageWeb => 'Open page →';
 }
