@@ -29,12 +29,13 @@
   - **al usar la web por primera vez** se escribe una marca (`files/web_used`). Si la app se cerró sin borrar, **después del primer fotograma** del arranque siguiente se borra lo mismo desde Kotlin: `CookieManager.removeAllCookies`, `WebStorage.deleteAllData` y la caché de la WebView. Solo se hace si existe la marca, así que no cuesta nada a quien no usa la web;
   - los directorios de la WebView (`app_webview/`, `cache/`) ya quedan **fuera** de la copia en la nube y de la transferencia: las reglas solo incluyen `app_flutter/`, `shared_prefs/` y `files/`. Se añade un test que lo fija, y la marca va en `files/`, sin contenido.
 - **Sin navegación (CA-009-11, ADR-0018).** `decideWebNavigation` recibe la página que se ve (la del primer `onPageStarted`; null durante la carga inicial):
-  - durante la **carga inicial** se siguen las redirecciones del servidor (`http://` como `https://`), también a otro dominio (CL-009-1);
+  - durante la **carga inicial** se siguen solo las redirecciones **del servidor** (`isRedirect`, avisado por el envoltorio del ADR-0017; `http://` como `https://`), también a otro dominio (CL-009-1), **salvo hacia la red local** (mismo filtro que `validateWebAddress`, `publicWebHost`): aviso "no es una página" (enmienda de CL-009-1, ADR-0018). Una navegación de la propia página antes de `onPageStarted` se bloquea o, con `http://` guardada y destino `http://`, da el aviso "no segura" (T-009-12);
   - después, en el marco principal solo se admite un **ancla de la misma página** (misma dirección sin contar `#…`); cualquier otra petición (enlace, formulario, `target=_blank` con `supportMultipleWindows = false`, redirección de la página, `mailto:`, `tel:`, otros esquemas) devuelve `prevent` y no hace nada, **sin confirmaciones**;
   - los marcos internos se cargan si son web (son parte de la página);
   - **sin *Public Suffix List***: se quitó con T-009-03 revertida. El aviso de redirección compara el dominio como se ve en la barra (sin `www.`).
 - **Estado de la página** (`WebPageController`, capa de estado), sobre una interfaz `WebPageDriver` que en los tests se sustituye por un falso, como el visor del PDF:
-  - estados: `loading`, `shown`, `offline`, `insecure`, `certificate`, `notAPage`;
+  - estados: `loading`, `shown`, `offline`, `insecure`, `certificate`, `notAPage`, `keepsLeaving`;
+  - vista la página, otra carga del marco principal que no sea un ancla (p. ej. un POST) vuelve a cargar la dirección guardada; a la segunda vez seguida, `keepsLeaving` (aviso en lugar de recargar; CA-009-11, enmienda del 2026-09-29);
   - **se carga cada vez** que la tarea aparece (CA-009-07). Segundo plano de menos de 10 minutos: se conserva (CA-001-12). Si el sistema mató el proceso de la página, se recarga;
   - `http://` → se carga como `https://` (CA-009-09). Si falla con un error de conexión o de TLS, `insecure`; con cualquier otro error de red del marco principal, `offline`. Un error de certificado siempre es `certificate` y la carga se cancela;
   - **20 s** sin `onPageStarted` → `offline` (CA-009-08, CL-009-7);
@@ -48,7 +49,7 @@
   - en horizontal, la WebView a sangre con el logotipo, **sin recrearla** (clave estable, como el visor del PDF, CA-009-15).
 - **Accesibilidad:** la barra es el nodo de la tarea ("Tarea actual: Página web de {host}") con las acciones Completar y Eliminar. En horizontal no hay barra: el nodo pasa al logotipo, con la misma lectura y las mismas acciones. La WebView no admite acciones propias de Flutter, y en la 008 TalkBack no enfocaba un contenedor sin etiqueta. Se comprueba con TalkBack en el emulador.
 - **Cara de completar y eliminar (CA-009-17):** la barra y la zona de la página **en blanco**. Una vista nativa no se puede capturar de forma fiable con `toImageSync`.
-- **Web de pruebas (CL-009-5):** sin WebView. Tarjeta del prototipo con el dominio, la dirección y "Abrir página ↗", que abre la dirección en una pestaña nueva con `window.open(url, '_blank', 'noopener,noreferrer')` (`package:web`, ya presente). `webview_flutter` se importa solo en la variante nativa (importación condicional, como `repository_factory`). La CSP no cambia: no hay `connect-src` ni `frame-src` nuevos.
+- **Web de pruebas (CL-009-5):** sin WebView. Tarjeta del prototipo con el dominio, la dirección y "Abrir página →" (`UnaLinkButton`, enmienda de CL-009-5), que abre la dirección en una pestaña nueva con `window.open(url, '_blank', 'noopener,noreferrer')` (`dart:js_interop`). `webview_flutter` se importa solo en la variante nativa (importación condicional, como `repository_factory`). La CSP no cambia: no hay `connect-src` ni `frame-src` nuevos.
 
 ## 2. Cambios por capa
 

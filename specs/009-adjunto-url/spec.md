@@ -1,6 +1,6 @@
 # Spec 009: Tareas con una página web (URL)
 
-- **Estado:** **Aprobada** (propietario, 2026-09-28), con las propuestas de §9. Reescrita ese día con sus decisiones: **se guarda solo la dirección y la página se carga en vivo cada vez; nada de la página se guarda en el móvil** (ADR-0016). Sin revisión de `spec-reviewer` (aprobada directamente por el propietario). **Enmendada el 2026-09-29 (ADR-0018): sin navegación; solo se ve la página de la dirección guardada**. Enmendada también el 2026-09-29 (propietario): sin candado con el aviso de conexión no segura (CA-009-06) y ese aviso cuando una dirección `http://` intenta, mientras carga, ir a otra `http://` (CA-009-09, CA-009-11); y el límite de recargas: a la segunda vez seguida que la página intenta ir a otra, aviso en lugar de recargar (CA-009-11, §5, §7)
+- **Estado:** **Implementada** (2026-09-29, PR svallev/una#17). **Aprobada** (propietario, 2026-09-28), con las propuestas de §9. Reescrita ese día con sus decisiones: **se guarda solo la dirección y la página se carga en vivo cada vez; nada de la página se guarda en el móvil** (ADR-0016). Sin revisión de `spec-reviewer` (aprobada directamente por el propietario). **Enmendada el 2026-09-29 (ADR-0018): sin navegación; solo se ve la página de la dirección guardada**. Enmendada también el 2026-09-29 (propietario): sin candado con el aviso de conexión no segura (CA-009-06) y ese aviso cuando una dirección `http://` intenta, mientras carga, ir a otra `http://` (CA-009-09, CA-009-11); y el límite de recargas: a la segunda vez seguida que la página intenta ir a otra, aviso en lugar de recargar (CA-009-11, §5, §7). Enmendada al cerrar (2026-09-29, propietario): redirección del servidor hacia la red local bloqueada (CL-009-1, ADR-0018) y sin giro con el aviso de recargas seguidas (CA-009-15)
 - **Reglas de producto:** R3 (URL), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido). La propuesta de valor 2 **sin conexión no aplica** a la tarea web (ADR-0016)
 - **Pantallas del prototipo:** 9 "Añadir (+)", 11 "Tarea web (URL)", hoja "Cargar URL", 5 "Todas las tareas" (insignia). Los errores, el estado de carga y el horizontal no están en el prototipo (R-17): se hacen con los componentes existentes y se revisan en el móvil
 - **Decisiones y ADR:** **ADR-0016 (web sin copia local; sustituye a D9 y enmienda el ADR-0007)**, **ADR-0018 (sin navegación; enmienda el ADR-0007 y el ADR-0016)**, ADR-0007 (validación y WebView endurecida: se mantienen), D10 y ADR-0013/0014/0015 (giro y excepción del horizontal), ADR-0012 (completar y eliminar borran la tarea del todo), DEV-04 (cambia), DEV-18; modelo de amenazas T-4, T-5, T-6
@@ -139,7 +139,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
   - **Dado** la tarea actual web a la vista (sin el menú, una confirmación ni el listado encima)
   - **Cuando** gira el móvil a horizontal
   - **Entonces** la pantalla gira sola y en horizontal se ven **la página al ancho y el logotipo**, sin barra, menú, botón de completar ni pie, como con imagen y PDF (propietario, 2026-09-28). La página no se recarga al girar.
-  - **No gira** con los avisos de CA-009-08, 09, 10 ni CL-009-4 (como "Adjunto no disponible").
+  - **No gira** con los avisos de CA-009-08, 09, 10, CL-009-4 ni el de recargas seguidas de CA-009-11 (como "Adjunto no disponible"; este último, enmienda del propietario, 2026-09-29).
   - El resto es como CA-008-11: vuelve a vertical al poner el móvil en vertical, respeta el bloqueo de rotación, sigue pudiendo completar o eliminar con las acciones del lector, y si se completa o se elimina en horizontal y la siguiente tarea no tiene adjunto, vuelve a vertical. Si gira con una confirmación abierta, la confirmación sigue abierta.
 - **CA-009-16 Pantalla encendida**
   - **Dado** el ajuste "Mantener la pantalla encendida con adjuntos" activo
@@ -197,7 +197,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
 
 | ID | Situación | Comportamiento |
 |---|---|---|
-| CL-009-1 | Redirecciones del servidor al cargar la dirección guardada, también a otro dominio | Se siguen durante esa carga inicial. La barra muestra el dominio final. Si el dominio final (sin `www.`) no es el de la dirección guardada, se avisa una vez: "Esta dirección te ha llevado a {host}." (también entre subdominios, p. ej. `m.ejemplo.com`: sin lista de sufijos públicos, ADR-0018). Una redirección de la propia página (JavaScript, `meta refresh`) no se sigue (CA-009-11) |
+| CL-009-1 | Redirecciones del servidor al cargar la dirección guardada, también a otro dominio | Se siguen durante esa carga inicial. La barra muestra el dominio final. Si el dominio final (sin `www.`) no es el de la dirección guardada, se avisa una vez: "Esta dirección te ha llevado a {host}." (también entre subdominios, p. ej. `m.ejemplo.com`: sin lista de sufijos públicos, ADR-0018). Una redirección de la propia página (JavaScript, `meta refresh`) no se sigue (CA-009-11). **Enmienda (ADR-0018, 2026-09-29, propietario):** una redirección del servidor hacia la red local (IP privada, *loopback* o nombre local, el mismo filtro que la validación de CA-009-02) no se sigue: aviso "no es una página" (CL-009-4, §5) |
 | CL-009-2 | Banner de cookies o muro de registro | Se ve tal cual (no se manipula el contenido de terceros). Sin cookies guardadas, puede volver a salir cada vez (ADR-0016) |
 | CL-009-3 | Sitio que exige iniciar sesión | No se conserva la sesión entre visitas (CA-009-13) |
 | CL-009-4 | La dirección es un PDF u otro archivo, no una página (P-6: **fuera de la v1**, propietario 2026-09-28) | "Esta dirección no es una página web. Ábrela en el navegador." con "Abrir en el navegador". No se descarga nada |
@@ -223,7 +223,7 @@ Los errores de validación aparecen bajo el campo de la hoja. Los de la página,
 | Sin conexión o tiempo agotado | "Necesitas conexión para ver esta página." | "Reintentar" |
 | Sin https (la barra, sin candado: CA-009-06) | "Esta página no usa conexión segura. Ábrela en el navegador." | "Abrir en el navegador" |
 | Certificado no válido | "No se ha podido cargar la página (certificado no válido)." | "Abrir en el navegador", "Reintentar" |
-| No es una página | "Esta dirección no es una página web. Ábrela en el navegador." | "Abrir en el navegador" |
+| No es una página (también una redirección del servidor hacia la red local, CL-009-1) | "Esta dirección no es una página web. Ábrela en el navegador." | "Abrir en el navegador" |
 | La página intenta ir a otra dos veces seguidas (CA-009-11; propietario, 2026-09-29) | "No se ha podido cargar la página (intenta abrir otra página)." | "Abrir en el navegador", "Reintentar" |
 
 "Abrir en el navegador" abre la dirección guardada en el navegador del sistema. No pide confirmación, porque el botón ya dice lo que hace.
