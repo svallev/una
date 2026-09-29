@@ -19,6 +19,7 @@ Future<void> _pumpBar(
   String host, {
   double width = 390,
   double textScale = 1,
+  bool secure = true,
 }) async {
   tester.view
     ..physicalSize = Size(width, 200)
@@ -34,7 +35,7 @@ Future<void> _pumpBar(
         textDirection: TextDirection.ltr,
         child: Align(
           alignment: Alignment.topCenter,
-          child: WebBar(host: host, badge: 'WEB'),
+          child: WebBar(host: host, badge: 'WEB', secure: secure),
         ),
       ),
     ),
@@ -77,6 +78,21 @@ void main() {
         tester.getRect(find.text('WEB')).left,
         greaterThan(tester.getRect(find.byType(HeadEllipsisText)).right - 1),
       );
+    });
+
+    testWidgets('CA-009-06, CA-009-09: con el aviso de conexión no segura, '
+        'sin candado (propietario, 2026-09-29); el dominio y "WEB" no se '
+        'mueven', (tester) async {
+      await _pumpBar(tester, 'viejo.ejemplo.com');
+      final hostWith = tester.getRect(find.byType(HeadEllipsisText));
+      final webWith = tester.getRect(find.text('WEB'));
+      final barWith = tester.getSize(find.byType(WebBar));
+      await _pumpBar(tester, 'viejo.ejemplo.com', secure: false);
+      expect(find.byType(UnaIcon), findsNothing);
+      expect(_shown(tester), 'viejo.ejemplo.com');
+      expect(tester.getRect(find.byType(HeadEllipsisText)), hostWith);
+      expect(tester.getRect(find.text('WEB')), webWith);
+      expect(tester.getSize(find.byType(WebBar)), barWith);
     });
 
     testWidgets('CA-009-18: decorativa para el lector (la lee la tarea)', (

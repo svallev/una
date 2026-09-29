@@ -211,7 +211,13 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
           children: [
             if (widget.showBar)
               widget.taskNode(
-                WebBar(host: host, badge: l10n.attachmentWeb),
+                WebBar(
+                  host: host,
+                  badge: l10n.attachmentWeb,
+                  // Sin candado con el aviso de conexión no segura
+                  // (propietario, 2026-09-29).
+                  secure: failure != WebLoadFailure.insecure,
+                ),
                 host,
               ),
             Expanded(

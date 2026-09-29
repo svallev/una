@@ -18,6 +18,7 @@ import 'package:app/features/web/task_web.dart';
 import 'package:app/features/web/url_sheet.dart';
 import 'package:app/features/web/web_bar.dart';
 import 'package:app/ui/square_icon_button.dart';
+import 'package:app/ui/una_icons.dart';
 import 'package:app/ui/wordmark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -402,6 +403,61 @@ void main() {
       await tester.pumpAndSettle();
       expect(web.last.loads, [_saved, _saved]);
     });
+
+    testWidgets('CA-009-06, CA-009-09: con el aviso de conexión no segura la '
+        'barra no muestra el candado (propietario, 2026-09-29); con los '
+        'demás estados, sí; el dominio, "WEB" y la lectura no cambian', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      Finder lock() => find.descendant(
+        of: find.byType(WebBar),
+        matching: find.byType(UnaIcon),
+      );
+      const label = 'Tarea actual: Página web de viejo.ejemplo.com';
+      await pumpWeb(tester, task: _webTask(url: 'http://viejo.ejemplo.com/'));
+      // Cargando: con candado.
+      expect(lock(), findsOneWidget);
+      final hostRect = tester.getRect(find.byType(HeadEllipsisText));
+      web.last.error(WebLoadError.connect);
+      await tester.pumpAndSettle();
+      expect(
+        notice('Esta página no usa conexión segura. Ábrela en el navegador.'),
+        findsOneWidget,
+      );
+      expect(lock(), findsNothing);
+      final bar = tester.widget<WebBar>(find.byType(WebBar));
+      expect((bar.host, bar.badge), ('viejo.ejemplo.com', 'WEB'));
+      expect(tester.getRect(find.byType(HeadEllipsisText)), hostRect);
+      expect(find.bySemanticsLabel(label), findsOneWidget);
+      expect(
+        tester.getRect(find.bySemanticsLabel(label)),
+        tester.getRect(find.byType(WebBar)),
+      );
+      handle.dispose();
+    });
+
+    for (final (name, fail) in <(String, void Function(FakeWebPageDriver))>[
+      ('sin conexión', (d) => d.error(WebLoadError.hostLookup)),
+      ('certificado', (d) => d.certificate()),
+      ('no es una página', (d) => d.download()),
+      ('página vista', (d) => d.started(_address)),
+    ]) {
+      testWidgets('CA-009-06: con "$name", la barra sigue con el candado', (
+        tester,
+      ) async {
+        await pumpWeb(tester);
+        fail(web.last);
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: find.byType(WebBar),
+            matching: find.byType(UnaIcon),
+          ),
+          findsOneWidget,
+        );
+      });
+    }
 
     testWidgets('CL-009-4: no es una página → aviso y "Abrir en el '
         'navegador"', (tester) async {

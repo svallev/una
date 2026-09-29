@@ -11,14 +11,26 @@ import '../../ui/una_icons.dart';
 ///
 /// Si el dominio no cabe, se recorta **por el principio** ("…ejemplo.com"),
 /// para que siempre se vea su final (CA-009-14).
+///
+/// Sin [secure] (el aviso de conexión no segura, CA-009-09) no se pinta el
+/// candado (propietario, 2026-09-29), pero su hueco se queda: el dominio y
+/// "WEB" no se mueven al cambiar de estado.
 class WebBar extends StatelessWidget {
-  const WebBar({super.key, required this.host, required this.badge});
+  const WebBar({
+    super.key,
+    required this.host,
+    required this.badge,
+    this.secure = true,
+  });
 
   /// El dominio, ya saneado (`displayHost`).
   final String host;
 
   /// "WEB".
   final String badge;
+
+  /// Con el candado: todo salvo el aviso de conexión no segura.
+  final bool secure;
 
   @override
   Widget build(BuildContext context) {
@@ -36,12 +48,15 @@ class WebBar extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const UnaIcon(
-                UnaIcons.lock,
-                size: UnaSizes.webBarIcon,
-                strokeWidth: UnaSizes.iconStrokeBold,
-                color: UnaColors.onInk,
-              ),
+              if (secure)
+                const UnaIcon(
+                  UnaIcons.lock,
+                  size: UnaSizes.webBarIcon,
+                  strokeWidth: UnaSizes.iconStrokeBold,
+                  color: UnaColors.onInk,
+                )
+              else
+                const SizedBox.square(dimension: UnaSizes.webBarIcon),
               const SizedBox(width: UnaSpace.s),
               Expanded(child: HeadEllipsisText(host, style: style)),
               const SizedBox(width: UnaSpace.s),
