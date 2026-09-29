@@ -39,6 +39,7 @@ import '../delete/deletion_controller.dart';
 import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
 import '../task_list/task_list_screen.dart';
+import '../web/edit_web_task.dart';
 import 'pdf_face_snapshot.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
@@ -567,6 +568,16 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
   if (!context.mounted) return;
   final action = await showMenuSheet(context, pendingCount: pending);
   if (!context.mounted || action == null) return;
+  // Una tarea web se edita en la hoja "Cargar URL", no en el editor
+  // (CA-009-05). Al guardar, el foco vuelve a la tarea, como con el editor.
+  if (action == MenuAction.edit && (task.attachment?.isWeb ?? false)) {
+    return editWebTask(
+      context,
+      ref,
+      task,
+      onSaved: ref.read(screenFocusProvider.notifier).signal,
+    );
+  }
   final editor = switch (action) {
     MenuAction.edit => TaskEditorScreen(mode: EditorMode.edit, task: task),
     // Color al azar, distinto del de la tarea visible (CA-001-08, CA-002-01).

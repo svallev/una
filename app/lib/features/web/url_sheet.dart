@@ -13,21 +13,37 @@ import '../../ui/una_sheet.dart';
 
 /// Abre la hoja "Cargar URL" (CA-009-01; prototipo "HOJA: cargar una URL").
 /// Devuelve la dirección ya validada y normalizada (CA-009-02), o null si se
-/// cierra sin abrir nada.
-Future<String?> showUrlSheet(BuildContext context) =>
-    showUnaSheet<String>(context, builder: (_) => const UrlSheet());
+/// cierra sin abrir nada. Al editar una tarea web, [initialUrl] es la
+/// dirección que tiene (CA-009-05).
+Future<String?> showUrlSheet(BuildContext context, {String? initialUrl}) =>
+    showUnaSheet<String>(
+      context,
+      builder: (_) => UrlSheet(initialUrl: initialUrl),
+    );
 
 /// Hoja "Cargar URL": título con la X, un campo, la ayuda y "Abrir". La
-/// validación y el error viven aquí; crear la tarea es cosa del editor.
+/// validación y el error viven aquí; crear o editar la tarea es cosa de quien
+/// la abre.
 class UrlSheet extends StatefulWidget {
-  const UrlSheet({super.key});
+  const UrlSheet({super.key, this.initialUrl});
+
+  /// Texto inicial del campo, con el cursor al final (como en el editor,
+  /// CA-005-04).
+  final String? initialUrl;
 
   @override
   State<UrlSheet> createState() => _UrlSheetState();
 }
 
 class _UrlSheetState extends State<UrlSheet> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController.fromValue(
+    TextEditingValue(
+      text: widget.initialUrl ?? '',
+      selection: TextSelection.collapsed(
+        offset: widget.initialUrl?.length ?? 0,
+      ),
+    ),
+  );
   final _focus = FocusNode();
   WebAddressError? _error;
 

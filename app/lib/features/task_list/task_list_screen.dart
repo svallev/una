@@ -18,6 +18,7 @@ import '../../ui/una_icons.dart';
 import '../attachments/task_labels.dart';
 import '../delete/delete_confirm_sheet.dart';
 import '../editor/task_editor_screen.dart';
+import '../web/edit_web_task.dart';
 import 'move_sheet.dart';
 import 'task_list_controller.dart';
 import 'task_list_row.dart';
@@ -457,9 +458,14 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     _tapTimer = Timer(UnaMotion.doubleTapWindow, () => _tapId = null);
   }
 
-  /// Editor de la spec 005; al volver, el foco en la fila (CA-006-13).
+  /// Editor de la spec 005; al volver, el foco en la fila (CA-006-13). Una
+  /// tarea web se edita en la hoja "Cargar URL" (CA-009-05).
   Future<void> _edit(Task task) async {
     if (_drag != null) return;
+    if (task.attachment?.isWeb ?? false) {
+      void back() => _focusRow(task.id, after: _sheetClosed);
+      return editWebTask(context, ref, task, onSaved: back, onClosed: back);
+    }
     await Navigator.of(context).push(
       TaskEditorScreen.route(
         context,
