@@ -157,6 +157,26 @@ adb -s $S install -r /tmp/app-profile.apk
 - `measure-cold-start.sh` lanza `$PKG/.MainActivity`; con `.profile` la actividad es `invalid.pending.app.MainActivity`: `am start -W -S -n invalid.pending.app.profile/invalid.pending.app.MainActivity`.
 - La app `.profile` queda instalada al terminar; se quita a mano (`adb uninstall invalid.pending.app.profile`, **solo** ese paquete).
 
+## Tarea actual con página web (spec 009, T-009-18)
+
+- **Fecha:** 2026-09-29 · **Rama:** `feat/009-adjunto-url` · **Dispositivo:** Xiaomi 15T Pro (WebView del sistema, LTE), app `.profile` aparte (la app real no se tocó).
+- **Estado:** `integration_test/web_perf_test.dart` deja una tarea con texto y, encima (actual), la tarea web `https://example.org/`. El propietario usaba el móvil a la vez (las mediciones lo interrumpieron).
+
+| Compilación | En disco | Comprimido (`gzip -9`) | Nota |
+|---|---|---|---|
+| `flutter build apk --release --split-per-abi --target-platform android-arm64` | 28,7 MB (28 697 621 B) | 13,4 MB | 28,2 MB en la 008: +0,5 MB (`webview_flutter`, `WebViewHardening.kt` y la web) |
+
+| Medida (Xiaomi, `.profile`) | Solo texto | Con la web a la vista | Diferencia |
+|---|---|---|---|
+| PSS del proceso en el test (smaps, sin GPU ni la WebView, que es otro proceso) | 143 MB | 208 MB (10 s después de crearla, ya cargada) | +65 MB |
+| `dumpsys meminfo`, proceso nuevo (PSS total / Graphics) | — | 440 / 252 MB | los procesos de la WebView del sistema (`sandboxed_process`) no cuentan aquí |
+| Arranque en frío (`am start -W -S`, 20 veces; primer fotograma) | p50 399 ms · p90 443 ms (008, 2026-09-28) | p50 478 ms · p90 547 ms (mín. 436, máx. 694) | +79 ms |
+
+- **[Hecho]** CA-009-07/CA-001-09: el primer fotograma con la tarea web llega en p50 478 ms (< 1 s). La WebView se crea después del primer fotograma (T-009-11), así que ese tiempo es el de la barra del dominio y la línea de carga, no el de la página.
+- **[Suposición]** El +79 ms frente al arranque con texto se debe al camino de la tarea web (lectura de la tarea, barra, plugin `una/webview`); la referencia de texto es de otro día y de otra compilación.
+- **[Pendiente]** No se midió el tiempo hasta ver la página (depende de la red) ni la memoria de los procesos de la WebView; no se capturó pantalla del móvil (el propietario lo usaba).
+- **[Hecho]** El APK sigue por debajo de 25 MB por ABI (comprimido).
+
 ## Cómo repetir la medición
 
 ```bash
