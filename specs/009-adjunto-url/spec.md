@@ -123,9 +123,10 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     - no tiene ningún puente con la app ni acceso a sus archivos o a los del móvil;
     - no puede pedir cámara, micrófono, ubicación ni notificaciones: todo se deniega sin preguntar;
     - no descarga archivos: una descarga iniciada desde la página no hace nada;
-    - no muestra diálogos propios de la página (`alert`, `confirm`, `prompt`), no ofrece autorrellenado ni guarda contraseñas, y no pasa a pantalla completa;
+    - no muestra diálogos propios de la página (`alert`, `confirm`, `prompt`), no ofrece autorrellenado ni guarda contraseñas, y no pasa a pantalla completa. **Enmienda (propietario, 2026-09-29, T-009-14):** lo anterior vale para la WebView; el servicio de autorrelleno del sistema (p. ej. el de Google) sí puede actuar en los campos de la página y no se ha encontrado forma de evitarlo desde la app (`importantForAutofill` no tiene efecto): limitación aceptada (`threat-model.md §7`);
     - cookies, almacenamiento web y caché duran solo mientras se ve la tarea: se borran al salir de ella (otra pantalla, otra tarea, completar, eliminar) y, si la app se cerró sin borrarlos, en el siguiente arranque, después del primer fotograma;
     - no se puede depurar en *release*.
+  - **Residual aceptado (propietario, 2026-09-29, T-009-14):** la WebView deja el origen visitado en `app_webview/Default/Preferences` y resúmenes (hash) de los orígenes en `shared_prefs/AwOriginVisitLoggerPrefs.xml`; ninguna API los borra. Ambos quedan fuera de la copia en la nube y de la transferencia (`threat-model.md §7`).
 - **CA-009-14 Dominio visible e IDN (T-5)**
   - **Dado** la barra
   - **Cuando** muestra el dominio
