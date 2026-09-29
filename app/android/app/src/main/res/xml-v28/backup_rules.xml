@@ -4,4 +4,7 @@
 <full-backup-content>
     <include domain="root" path="app_flutter/" requireFlags="clientSideEncryption"/>
     <include domain="sharedpref" path="." requireFlags="clientSideEncryption"/>
+    <!-- Las preferencias de la WebView de la tarea web, no (CA-009-13). -->
+    <exclude domain="sharedpref" path="AwOriginVisitLoggerPrefs.xml"/>
+    <exclude domain="sharedpref" path="WebViewChromiumPrefs.xml"/>
 </full-backup-content>

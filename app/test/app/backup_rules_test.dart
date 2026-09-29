@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:app/data/web/web_data_janitor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Reglas de copia de Android (ADR-0004, CA-007-18). La BD está en
@@ -139,6 +140,62 @@ void main() {
       );
       for (final path in pdf) {
         expect(_copies(transfer, 'file', path), isTrue, reason: path);
+      }
+    });
+  });
+
+  group('CA-009-13: nada de la WebView en la copia ni en la transferencia', () {
+    // Lo que deja la WebView del sistema (visto en el emulador, T-009-14):
+    // su perfil en `app_webview/`, la caché en `cache/WebView/` y dos
+    // preferencias propias en `shared_prefs/`, una con resúmenes (hash) de
+    // los orígenes visitados.
+    const webView = [
+      (domain: 'root', path: 'app_webview/Default/Cookies'),
+      (domain: 'root', path: 'app_webview/Default/Local Storage/leveldb/x.ldb'),
+      (domain: 'root', path: 'app_webview/Default/Preferences'),
+      (domain: 'root', path: 'cache/WebView/Default/HTTP Cache/Cache_Data/x'),
+      (domain: 'sharedpref', path: 'AwOriginVisitLoggerPrefs.xml'),
+      (domain: 'sharedpref', path: 'WebViewChromiumPrefs.xml'),
+    ];
+    late List<_Rule> cloud, v28, v26, transfer;
+    setUpAll(() {
+      cloud = _rules(_read('xml/data_extraction_rules.xml'), 'cloud-backup');
+      v28 = _rules(_read('xml-v28/backup_rules.xml'));
+      v26 = _rules(_read('xml/backup_rules.xml'));
+      transfer = _rules(
+        _read('xml/data_extraction_rules.xml'),
+        'device-transfer',
+      );
+    });
+
+    test('los datos de la WebView no se copian ni se transfieren; las '
+        'tareas y los ajustes, sí', () {
+      for (final (name, rules) in [
+        ('nube 12+', cloud),
+        ('nube 9–11', v28),
+        ('Android 8', v26),
+        ('transferencia', transfer),
+      ]) {
+        for (final f in webView) {
+          expect(
+            _copies(rules, f.domain, f.path),
+            isFalse,
+            reason: '$name: ${f.path}',
+          );
+        }
+      }
+      for (final rules in [cloud, v28, transfer]) {
+        expect(_copies(rules, 'root', 'app_flutter/una.sqlite'), isTrue);
+        expect(
+          _copies(rules, 'sharedpref', 'FlutterSharedPreferences.xml'),
+          isTrue,
+        );
+      }
+    });
+
+    test('la marca de uso de la web (files/, vacía) no va a la nube', () {
+      for (final rules in [cloud, v28, v26]) {
+        expect(_copies(rules, 'file', WebDataJanitor.markerName), isFalse);
       }
     });
   });

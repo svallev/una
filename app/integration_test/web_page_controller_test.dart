@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:app/data/web/web_data_janitor.dart';
 import 'package:app/data/web/webview_hardening.dart';
+import 'package:app/domain/entities/web_load_failure.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/features/web/web_page_controller.dart';
 import 'package:app/features/web/webview_page_driver.dart';
@@ -250,7 +251,9 @@ void main() {
       loads++;
       await _until(tester, () => _drivers.last.loaded.length == loads);
       await _until(tester, () => _loaded(c));
-      await tester.pump(const Duration(seconds: 2));
+      // Vista de forma estable: el siguiente envío no cuenta como "seguido"
+      // (límite de recargas, T-009-12).
+      await tester.pump(webPageSettled + const Duration(seconds: 1));
       expect(c.value.status, WebPageStatus.shown, reason: form);
       expect(c.value.pageUrl, Uri.parse('https://una.test/programa'));
       expect(
@@ -262,6 +265,21 @@ void main() {
       _drivers.last.loaded,
       everyElement(Uri.parse('https://una.test/programa')),
     );
+    expect(hosts, {'una.test'});
+
+    // Dos envíos seguidos (sin que se vea de forma estable entre medias):
+    // aviso en lugar de recargar otra vez (CA-009-11, enmienda).
+    await _drivers.last.webView.runJavaScript(
+      "document.getElementById('a').submit();",
+    );
+    loads++;
+    await _until(tester, () => _drivers.last.loaded.length == loads);
+    await _until(tester, () => _loaded(c));
+    await _drivers.last.webView.runJavaScript(
+      "document.getElementById('b').submit();",
+    );
+    await _until(tester, () => c.value.status == WebPageStatus.keepsLeaving);
+    expect(_drivers.last.loaded, hasLength(loads));
     expect(hosts, {'una.test'});
     await _unmount(tester);
   });
