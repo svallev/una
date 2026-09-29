@@ -123,8 +123,10 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
     }
   }
 
-  /// Cada aviso nuevo se anuncia una vez (CA-009-19).
+  /// Cada aviso nuevo se anuncia una vez (CA-009-19), y la redirección de la
+  /// carga inicial a otro dominio se avisa una vez (CL-009-1).
   void _onPage() {
+    _showRedirectNotice();
     final failure = _page?.value.failure;
     if (failure == _announced) return;
     _announced = failure;
@@ -135,6 +137,18 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
         _failureText(AppLocalizations.of(context), failure),
         Directionality.of(context),
       ),
+    );
+  }
+
+  /// "Esta dirección te ha llevado a {host}." como los demás avisos
+  /// pasajeros de la app (un `SnackBar`, que se anuncia solo).
+  void _showRedirectNotice() {
+    final page = _page;
+    final host = page?.value.redirectNotice;
+    if (page == null || host == null || !mounted) return;
+    page.redirectNoticeShown();
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).urlRedirected(host))),
     );
   }
 

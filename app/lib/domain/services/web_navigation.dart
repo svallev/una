@@ -44,7 +44,10 @@ final class BlockNavigation extends WebNavigation {
 ///
 /// - [shownPage] es la página que se ve (la del primer `onPageStarted`); null
 ///   durante la **carga inicial**, en la que se siguen las redirecciones del
-///   servidor, también a otro sitio (CL-009-1).
+///   servidor ([isServerRedirect]), también a otro sitio (CL-009-1). Una
+///   navegación de la propia página que llega antes del primer
+///   `onPageStarted` (un `location.href` en el `<head>`) no es una
+///   redirección del servidor y no se sigue (T-009-12).
 /// - Un marco interno ([isMainFrame] a false) es parte de la página: se carga
 ///   si es web, de cualquier sitio (o `about:blank`/`about:srcdoc`).
 /// - En el marco principal, ya vista la página, solo se admite un enlace a
@@ -58,6 +61,7 @@ WebNavigation decideWebNavigation(
   Uri url, {
   required Uri? shownPage,
   required bool isMainFrame,
+  required bool isServerRedirect,
 }) {
   final scheme = url.scheme.toLowerCase();
   final isWeb = scheme == 'http' || scheme == 'https';
@@ -71,9 +75,10 @@ WebNavigation decideWebNavigation(
   }
   if (!isWeb) return const BlockNavigation();
   if (shownPage == null) {
+    if (!isServerRedirect) return const BlockNavigation();
     return StayInTask(scheme == 'http' ? httpsVersion(url) : null);
   }
-  return url.hasFragment && _samePage(url, shownPage)
+  return url.hasFragment && isSamePage(url, shownPage)
       ? const StayInTask()
       : const BlockNavigation();
 }
@@ -114,7 +119,7 @@ String _host(Uri url) {
 
 /// Si [a] y [b] son la misma página sin contar el ancla (`#…`), con `http://`
 /// como `https://`.
-bool _samePage(Uri a, Uri b) {
+bool isSamePage(Uri a, Uri b) {
   final x = httpsVersion(a);
   final y = httpsVersion(b);
   String path(Uri u) => u.path.isEmpty ? '/' : u.path;

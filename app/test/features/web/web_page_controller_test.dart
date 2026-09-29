@@ -430,8 +430,14 @@ void main() {
         'del servidor; las de http se cargan como https', (tester) async {
       final h = await _mount(tester, _Harness(address: 'https://ejemplo.com/'));
       await h.start(tester);
-      expect(h.driver.navigate('https://www.ejemplo.com/'), isTrue);
-      expect(h.driver.navigate('http://m.ejemplo.com/'), isFalse);
+      expect(
+        h.driver.navigate('https://www.ejemplo.com/', redirect: true),
+        isTrue,
+      );
+      expect(
+        h.driver.navigate('http://m.ejemplo.com/', redirect: true),
+        isFalse,
+      );
       expect(h.driver.loads.last, Uri.parse('https://m.ejemplo.com/'));
       // El intento https de una redirección a http también es "sin https".
       h.driver.error(WebLoadError.secureHandshake);
@@ -442,7 +448,7 @@ void main() {
         'avisa una sola vez', (tester) async {
       final h = await _mount(tester, _Harness(address: 'https://ejemplo.com/'));
       await h.start(tester);
-      h.driver.navigate('https://m.ejemplo.com/');
+      h.driver.navigate('https://m.ejemplo.com/', redirect: true);
       h.driver.started('https://m.ejemplo.com/');
       expect(h.state.pageUrl, Uri.parse('https://m.ejemplo.com/'));
       expect(h.state.redirectNotice, 'm.ejemplo.com');
@@ -546,6 +552,160 @@ void main() {
       await h.start(tester);
       h.driver.error(WebLoadError.hostLookup);
       expect(h.driver.navigate('https://congreso.ejemplo.com/'), isFalse);
+    });
+  });
+
+  group('Sin navegación (T-009-12, CA-009-11, ADR-0018)', () {
+    testWidgets('CA-009-11: una navegación de la propia página que llega '
+        'antes del primer onPageStarted (location.href en el <head>) no se '
+        'sigue: no es una redirección del servidor', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      expect(h.driver.navigate('https://otro.ejemplo.org/x'), isFalse);
+      expect(h.driver.navigate('https://congreso.ejemplo.com/otra'), isFalse);
+      // Sin aviso: sigue cargando la dirección guardada.
+      expect(h.state.status, WebPageStatus.loading);
+      expect(h.driver.loads, [
+        Uri.parse('https://congreso.ejemplo.com/programa'),
+      ]);
+      h.driver.started('https://congreso.ejemplo.com/programa');
+      expect(h.state.status, WebPageStatus.shown);
+      expect(h.state.pageUrl.path, '/programa');
+      expect(h.state.redirectNotice, isNull);
+    });
+
+    testWidgets('CA-009-09, CA-009-11: con http:// guardada, si la página '
+        'intenta ir a otra http:// antes del primer onPageStarted, aviso "no '
+        'segura" y se para la carga', (tester) async {
+      final h = await _mount(
+        tester,
+        _Harness(address: 'http://neverssl.ejemplo.com/'),
+      );
+      await h.start(tester);
+      final stopsBefore = h.driver.stops;
+      expect(
+        h.driver.navigate('http://abc.neverssl.ejemplo.com/online'),
+        isFalse,
+      );
+      expect(h.state.status, WebPageStatus.insecure);
+      expect(h.driver.stops, stopsBefore + 1);
+      // Lo que llega después de esa carga ya no cuenta.
+      h.driver.started('https://neverssl.ejemplo.com/');
+      h.driver.finished('https://neverssl.ejemplo.com/');
+      expect(h.state.status, WebPageStatus.insecure);
+      expect(h.driver.loads, [Uri.parse('https://neverssl.ejemplo.com/')]);
+    });
+
+    testWidgets('CA-009-11: con https:// guardada, o a otra https://, antes '
+        'del primer onPageStarted solo se bloquea, sin aviso', (tester) async {
+      var h = await _mount(tester, _Harness(address: 'https://ejemplo.com/'));
+      await h.start(tester);
+      expect(h.driver.navigate('http://otro.ejemplo.com/'), isFalse);
+      expect(h.state.status, WebPageStatus.loading);
+      h.controller.dispose();
+      h = await _mount(tester, _Harness(address: 'http://ejemplo.com/'));
+      await h.start(tester);
+      expect(h.driver.navigate('https://otro.ejemplo.com/'), isFalse);
+      expect(h.state.status, WebPageStatus.loading);
+      expect(h.driver.loads, hasLength(1));
+    });
+
+    testWidgets('CA-009-11: ya vista la página, una redirección del servidor '
+        '(la respuesta de un formulario) no se sigue', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started('https://congreso.ejemplo.com/programa');
+      expect(
+        h.driver.navigate('https://pagos.ejemplo.org/ok', redirect: true),
+        isFalse,
+      );
+      expect(h.driver.loads, hasLength(1));
+      expect(h.state.status, WebPageStatus.shown);
+    });
+
+    testWidgets('CA-009-11: un formulario POST (Android no lo pasa por '
+        'onNavigationRequest): si, vista la página, empieza a cargarse otra, '
+        'se vuelve a cargar la dirección guardada; la barra nunca muestra el '
+        'otro dominio', (tester) async {
+      final h = await _mount(tester, _Harness());
+      final hosts = <String>{};
+      h.controller.addListener(() => hosts.add(h.state.pageUrl.host));
+      await h.start(tester);
+      h.driver.started('https://congreso.ejemplo.com/programa');
+      h.driver.finished('https://congreso.ejemplo.com/programa');
+      h.driver.started('https://formularios.otro.org/enviar');
+      expect(h.driver.loads, [
+        Uri.parse('https://congreso.ejemplo.com/programa'),
+        Uri.parse('https://congreso.ejemplo.com/programa'),
+      ]);
+      expect(h.state.status, WebPageStatus.loading);
+      expect(h.state.pageUrl.host, 'congreso.ejemplo.com');
+      // El error de esa otra carga, si llega, no tapa nada.
+      h.driver.error(
+        WebLoadError.hostLookup,
+        url: 'https://formularios.otro.org/enviar',
+      );
+      expect(h.state.failure, isNull);
+      h.driver.started('https://congreso.ejemplo.com/programa');
+      expect(h.state.status, WebPageStatus.shown);
+      expect(hosts, {'congreso.ejemplo.com'});
+      expect(h.state.redirectNotice, isNull);
+    });
+
+    testWidgets('CA-009-11: un formulario POST a la misma dirección también '
+        'vuelve a cargar la dirección guardada', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started('https://congreso.ejemplo.com/programa');
+      h.driver.started('https://congreso.ejemplo.com/programa');
+      expect(h.driver.loads, hasLength(2));
+      expect(h.state.status, WebPageStatus.loading);
+    });
+
+    testWidgets('CA-009-11: si del formulario llega antes el error de la otra '
+        'página, tampoco hay aviso: se vuelve a cargar la dirección '
+        'guardada', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started('https://congreso.ejemplo.com/programa');
+      h.driver.error(
+        WebLoadError.hostLookup,
+        url: 'https://formularios.otro.org/enviar',
+      );
+      expect(h.state.failure, isNull);
+      expect(h.driver.loads, hasLength(2));
+      h.driver.started('https://formularios.otro.org/enviar');
+      expect(h.driver.loads, hasLength(2), reason: 'ya se está recargando');
+      expect(h.state.pageUrl.host, 'congreso.ejemplo.com');
+    });
+
+    testWidgets('CA-009-11: un ancla de la misma página no recarga nada, '
+        'aunque llegara onPageStarted', (tester) async {
+      final h = await _mount(tester, _Harness());
+      await h.start(tester);
+      h.driver.started('https://congreso.ejemplo.com/programa');
+      expect(
+        h.driver.navigate('https://congreso.ejemplo.com/programa#martes'),
+        isTrue,
+      );
+      h.driver.started('https://congreso.ejemplo.com/programa#martes');
+      expect(h.driver.loads, hasLength(1));
+      expect(h.state.status, WebPageStatus.shown);
+    });
+
+    testWidgets('CL-009-1: tras volver a cargar por un formulario, el aviso '
+        'de redirección no se repite', (tester) async {
+      final h = await _mount(tester, _Harness(address: 'https://ejemplo.com/'));
+      await h.start(tester);
+      h.driver.navigate('https://m.ejemplo.com/', redirect: true);
+      h.driver.started('https://m.ejemplo.com/');
+      expect(h.state.redirectNotice, 'm.ejemplo.com');
+      h.controller.redirectNoticeShown();
+      h.driver.started('https://m.ejemplo.com/buscar');
+      h.driver.navigate('https://m.ejemplo.com/', redirect: true);
+      h.driver.started('https://m.ejemplo.com/');
+      expect(h.state.redirectNotice, isNull);
+      expect(h.state.pageUrl.host, 'm.ejemplo.com');
     });
   });
 

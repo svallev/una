@@ -79,6 +79,23 @@ void main() {
     expect(calls.single.arguments, {'id': 9});
   });
 
+  test('CA-009-11, CL-009-1 (T-009-12): lo nativo dice, antes de cada '
+      'petición del marco principal, si es una redirección del servidor; '
+      'se consulta una vez y sin la dirección', () async {
+    final sub = hardening.events.listen((_) {});
+    addTearDown(sub.cancel);
+    expect(hardening.takeServerRedirect(4), isFalse); // sin aviso
+    await nativeSays('mainFrameRequest', {'id': 4, 'redirect': true});
+    expect(hardening.takeServerRedirect(7), isFalse); // otra WebView
+    expect(hardening.takeServerRedirect(4), isTrue);
+    expect(hardening.takeServerRedirect(4), isFalse); // ya consultada
+    await nativeSays('mainFrameRequest', {'id': 4, 'redirect': true});
+    await nativeSays('mainFrameRequest', {'id': 4, 'redirect': false});
+    expect(hardening.takeServerRedirect(4), isFalse); // la última manda
+    await nativeSays('mainFrameRequest', {'id': 5});
+    expect(hardening.takeServerRedirect(5), isFalse);
+  });
+
   test('ADR-0017 y CL-009-4: los avisos nativos llegan como eventos', () async {
     final events = <WebViewNativeEvent>[];
     final sub = hardening.events.listen(events.add);

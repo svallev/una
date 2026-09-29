@@ -107,11 +107,17 @@ class WebPageState {
 ///   válido o una descarga solo cuentan mientras no se ve la página (después
 ///   son de un recurso o de la página: no hacen nada).
 /// - **Sin navegación** (ADR-0018): `decideWebNavigation` con la página que se
-///   ve (la del primer `onPageStarted`); en la carga inicial se siguen las
-///   redirecciones del servidor y, si acaba en otro dominio, se avisa una vez
-///   (CL-009-1). Excepción: con la dirección guardada `http://`, si la página
-///   intenta ir a otra `http://` antes de terminar la carga inicial, aviso
-///   "no segura" (CA-009-09, CA-009-11).
+///   ve (la del primer `onPageStarted`); en la carga inicial se siguen solo
+///   las redirecciones **del servidor** (una navegación de la página que llega
+///   antes de `onPageStarted` no) y, si acaba en otro dominio, se avisa una
+///   vez (CL-009-1). Excepción: con la dirección guardada `http://`, si la
+///   página intenta ir a otra `http://` antes de terminar la carga inicial,
+///   aviso "no segura" (CA-009-09, CA-009-11).
+/// - **Formularios POST** (Android no los pasa por `onNavigationRequest`): si,
+///   vista la página, el marco principal empieza a cargar otra (su
+///   `onPageStarted` o su error), se vuelve a cargar la dirección guardada; la
+///   barra nunca muestra el dominio de esa otra (CA-009-11; propietario,
+///   2026-09-29).
 /// - "Reintentar" ([retry]); al volver a la app con un aviso se reintenta
 ///   solo; de segundo plano en menos de 10 minutos se conserva y, con 10 o
 ///   más, se carga desde cero (CA-009-07).
@@ -171,6 +177,11 @@ class WebPageController extends ValueNotifier<WebPageState> {
 
   /// Si ya se ha avisado de la redirección (CL-009-1: una vez).
   bool _redirectNoticed = false;
+
+  /// La otra página (de otra dirección) que empezó a cargarse ya vista la
+  /// página (un formulario POST) y por la que se ha vuelto a cargar la
+  /// dirección guardada: lo que llegue de ella después no cuenta.
+  Uri? _detour;
 
   /// Aumenta con cada carga: lo que quede de una anterior no cuenta.
   int _load = 0;
@@ -259,6 +270,7 @@ class WebPageController extends ValueNotifier<WebPageState> {
     _abandon();
     final load = ++_load;
     _shownPage = null;
+    _detour = null;
     _upgradedFromHttp = address.scheme.toLowerCase() == 'http';
     _set(
       value.copyWith(
@@ -359,12 +371,14 @@ class WebPageController extends ValueNotifier<WebPageState> {
     WebPageDriver driver,
     Uri? url, {
     required bool isMainFrame,
+    required bool isServerRedirect,
   }) {
     if (url == null || !_isLive(driver) || !_loadingOrShown) return false;
     final decision = decideWebNavigation(
       url,
       shownPage: _shownPage,
       isMainFrame: isMainFrame,
+      isServerRedirect: isServerRedirect,
     );
     switch (decision) {
       case BlockNavigation():
@@ -387,19 +401,45 @@ class WebPageController extends ValueNotifier<WebPageState> {
   }
 
   /// Si, con la dirección guardada `http://` (cargada como `https://`), la
-  /// página que ya se ve intenta ir a [url] `http://` antes de terminar la
-  /// carga inicial.
+  /// página intenta ir a [url] `http://` antes de terminar la carga inicial:
+  /// ya vista o antes de su `onPageStarted` (un `location.href` en el
+  /// `<head>` puede llegar antes, T-009-12). Una redirección del servidor no
+  /// llega aquí: se sigue con `https://`.
   bool _leavesForHttpWhileLoading(Uri url) =>
       address.scheme.toLowerCase() == 'http' &&
       url.scheme.toLowerCase() == 'http' &&
-      _shownPage != null &&
-      value.status == WebPageStatus.shown &&
+      _loadingOrShown &&
       value.pageLoading;
 
+  /// Ya vista la página, el marco principal empieza a cargar [other] (un
+  /// formulario POST, que Android no pasa por `onNavigationRequest`): se
+  /// vuelve a cargar la dirección guardada, y la barra vuelve a su dominio
+  /// (CA-009-11). La marca de datos ya está escrita (CA-009-13).
+  void _reloadSaved(WebPageDriver driver, Uri other) {
+    final shown = _shownPage;
+    _begin();
+    if (shown != null && !isSamePage(other, shown)) _detour = other;
+    unawaited(_safe(() => driver.load(_first(address)), null));
+  }
+
+  /// Si [url], que empieza a cargarse con la página ya vista, es otra carga
+  /// y no un ancla de la misma página.
+  bool _isAnotherLoad(Uri url) {
+    final shown = _shownPage;
+    if (shown == null) return false;
+    final anchor = url.hasFragment && url != shown && isSamePage(url, shown);
+    return !anchor;
+  }
+
   void _onPageStarted(WebPageDriver driver, Uri url) {
-    if (!_isLive(driver) || value.status != WebPageStatus.loading) return;
+    if (!_isLive(driver)) return;
     // El about:blank de una carga abandonada.
     if (url.scheme == 'about') return;
+    if (value.status == WebPageStatus.shown) {
+      if (_isAnotherLoad(url)) _reloadSaved(driver, url);
+      return;
+    }
+    if (value.status != WebPageStatus.loading || url == _detour) return;
     _timer?.cancel();
     _timer = null;
     _shownPage = url;
@@ -432,8 +472,23 @@ class WebPageController extends ValueNotifier<WebPageState> {
     WebPageDriver driver,
     WebLoadError error, {
     required bool isMainFrame,
+    Uri? url,
   }) {
     if (!_isLive(driver) || !_loadingOrShown) return;
+    if (isMainFrame && url != null) {
+      // El de la otra página por la que ya se ha vuelto a cargar.
+      if (url == _detour) return;
+      // Ya vista la página, el error de otra (un formulario POST que no
+      // llega a cargarse) tampoco es un aviso: se vuelve a cargar la
+      // dirección guardada.
+      final shown = _shownPage;
+      if (value.status == WebPageStatus.shown &&
+          shown != null &&
+          !isSamePage(url, shown)) {
+        _reloadSaved(driver, url);
+        return;
+      }
+    }
     final failure = classifyLoadError(
       error,
       isMainFrame: isMainFrame,
@@ -490,8 +545,16 @@ class _DriverListener implements WebPageListener {
   final WebPageDriver _driver;
 
   @override
-  bool onNavigationRequest(Uri? url, {required bool isMainFrame}) =>
-      _controller._onNavigationRequest(_driver, url, isMainFrame: isMainFrame);
+  bool onNavigationRequest(
+    Uri? url, {
+    required bool isMainFrame,
+    required bool isServerRedirect,
+  }) => _controller._onNavigationRequest(
+    _driver,
+    url,
+    isMainFrame: isMainFrame,
+    isServerRedirect: isServerRedirect,
+  );
 
   @override
   void onPageStarted(Uri url) => _controller._onPageStarted(_driver, url);
@@ -503,8 +566,13 @@ class _DriverListener implements WebPageListener {
   void onProgress(int percent) => _controller._onProgress(_driver, percent);
 
   @override
-  void onLoadError(WebLoadError error, {required bool isMainFrame}) =>
-      _controller._onLoadError(_driver, error, isMainFrame: isMainFrame);
+  void onLoadError(WebLoadError error, {required bool isMainFrame, Uri? url}) =>
+      _controller._onLoadError(
+        _driver,
+        error,
+        isMainFrame: isMainFrame,
+        url: url,
+      );
 
   @override
   void onCertificateError() =>

@@ -89,13 +89,19 @@ class WebViewPageDriver implements WebPageDriver {
   }
 
   NavigationDelegate _delegate(WebPageListener listener) => NavigationDelegate(
-    onNavigationRequest: (request) =>
-        listener.onNavigationRequest(
-          Uri.tryParse(request.url),
-          isMainFrame: request.isMainFrame,
-        )
-        ? NavigationDecision.navigate
-        : NavigationDecision.prevent,
+    onNavigationRequest: (request) {
+      // El paquete no dice si es una redirección del servidor: lo avisa
+      // justo antes el envoltorio del cliente (T-009-12).
+      final id = nativeId;
+      final serverRedirect = id != null && _native.takeServerRedirect(id);
+      return listener.onNavigationRequest(
+            Uri.tryParse(request.url),
+            isMainFrame: request.isMainFrame,
+            isServerRedirect: serverRedirect,
+          )
+          ? NavigationDecision.navigate
+          : NavigationDecision.prevent;
+    },
     onPageStarted: (url) {
       final uri = Uri.tryParse(url);
       if (uri != null) listener.onPageStarted(uri);
@@ -109,6 +115,7 @@ class WebViewPageDriver implements WebPageDriver {
       webLoadErrorOf(error.errorType),
       // Android siempre lo dice; si no, se trata como de la página.
       isMainFrame: error.isForMainFrame ?? true,
+      url: error.url == null ? null : Uri.tryParse(error.url!),
     ),
     onSslAuthError: (error) {
       // Nunca se acepta (CA-009-10).

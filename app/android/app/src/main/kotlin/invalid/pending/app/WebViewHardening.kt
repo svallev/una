@@ -41,8 +41,10 @@ import io.flutter.plugins.webviewflutter.WebViewFlutterAndroidExternalApi
  * - `clearData`: cookies, almacenamiento web y caché (CA-009-13).
  * - `destroy`: destruye la WebView tras el fallo de su proceso (ADR-0017).
  *
- * Avisa a Dart con `renderProcessGone` y `downloadBlocked`. Nunca envía ni
- * registra direcciones ni contenido de páginas (CL-009-9).
+ * Avisa a Dart con `renderProcessGone`, `downloadBlocked` y, antes de cada
+ * petición de navegación del marco principal, `mainFrameRequest` (si es una
+ * redirección del servidor, T-009-12). Nunca envía ni registra direcciones ni
+ * contenido de páginas (CL-009-9).
  */
 class WebViewHardening : FlutterPlugin, MethodChannel.MethodCallHandler {
     companion object {
@@ -110,9 +112,21 @@ class WebViewHardening : FlutterPlugin, MethodChannel.MethodCallHandler {
         if (!isDebuggable(view.context)) WebView.setWebContentsDebuggingEnabled(false)
         val client = view.webViewClient
         if (client !is RenderGoneClient) {
-            view.webViewClient = RenderGoneClient(client) { crashed ->
-                channel?.invokeMethod("renderProcessGone", mapOf("id" to id, "crashed" to crashed))
-            }
+            view.webViewClient = RenderGoneClient(
+                client,
+                onGone = { crashed ->
+                    channel?.invokeMethod(
+                        "renderProcessGone",
+                        mapOf("id" to id, "crashed" to crashed),
+                    )
+                },
+                onMainFrameRequest = { redirect ->
+                    channel?.invokeMethod(
+                        "mainFrameRequest",
+                        mapOf("id" to id, "redirect" to redirect),
+                    )
+                },
+            )
         }
         return state(view).values.all { it }
     }
@@ -174,10 +188,18 @@ class WebViewHardening : FlutterPlugin, MethodChannel.MethodCallHandler {
  * app cuando muere el proceso de la página). Devuelve `true` y avisa para que
  * Dart destruya esta WebView y cree otra. Si el paquete pasa a usar métodos
  * nuevos del cliente, hay que reenviarlos aquí (R-21).
+ *
+ * Además, sin cambiar nada de lo que hace el paquete, avisa **antes** de
+ * pasarle cada petición del marco principal si es una redirección del servidor
+ * (`WebResourceRequest.isRedirect`), que el paquete no da a Dart: así la carga
+ * inicial sigue las del servidor y no una navegación de la página que llegue
+ * antes de `onPageStarted` (T-009-12, ADR-0018). El aviso sale por el mismo
+ * hilo y antes que el del paquete, así que llega antes a Dart.
  */
 class RenderGoneClient(
     private val inner: WebViewClient,
     private val onGone: (crashed: Boolean) -> Unit,
+    private val onMainFrameRequest: (redirect: Boolean) -> Unit,
 ) : WebViewClient() {
     override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
         onGone(detail.didCrash())
@@ -189,8 +211,10 @@ class RenderGoneClient(
     override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean =
         inner.shouldOverrideUrlLoading(view, url)
 
-    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
-        inner.shouldOverrideUrlLoading(view, request)
+    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+        if (request.isForMainFrame) onMainFrameRequest(request.isRedirect)
+        return inner.shouldOverrideUrlLoading(view, request)
+    }
 
     override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) =
         inner.onPageStarted(view, url, favicon)

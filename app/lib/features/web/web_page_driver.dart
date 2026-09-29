@@ -8,7 +8,11 @@ import '../../domain/entities/web_load_failure.dart';
 abstract interface class WebPageListener {
   /// Petición de navegar a [url] (null si no se puede analizar). `true` la
   /// deja cargar; `false` no hace nada (CA-009-11, ADR-0018).
-  bool onNavigationRequest(Uri? url, {required bool isMainFrame});
+  bool onNavigationRequest(
+    Uri? url, {
+    required bool isMainFrame,
+    required bool isServerRedirect,
+  });
 
   /// Empieza a verse la página de [url] (`onPageStarted`).
   void onPageStarted(Uri url);
@@ -20,7 +24,7 @@ abstract interface class WebPageListener {
   void onProgress(int percent);
 
   /// Error de red al cargar un recurso ([isMainFrame]: el de la página).
-  void onLoadError(WebLoadError error, {required bool isMainFrame});
+  void onLoadError(WebLoadError error, {required bool isMainFrame, Uri? url});
 
   /// Certificado no válido. El driver ya lo ha cancelado: nunca se acepta
   /// (CA-009-10).

@@ -54,13 +54,23 @@ class FakeWebPageDriver implements WebPageDriver {
 
   // Eventos del paquete.
 
-  bool navigate(String url, {bool mainFrame = true}) =>
-      listener!.onNavigationRequest(Uri.parse(url), isMainFrame: mainFrame);
+  /// Petición de navegar a [url]: de la propia página (enlace, JavaScript,
+  /// formulario) o, con [redirect], una redirección del servidor.
+  bool navigate(String url, {bool mainFrame = true, bool redirect = false}) =>
+      listener!.onNavigationRequest(
+        Uri.parse(url),
+        isMainFrame: mainFrame,
+        isServerRedirect: redirect,
+      );
   void started(String url) => listener!.onPageStarted(Uri.parse(url));
   void finished(String url) => listener!.onPageFinished(Uri.parse(url));
   void progress(int percent) => listener!.onProgress(percent);
-  void error(WebLoadError error, {bool mainFrame = true}) =>
-      listener!.onLoadError(error, isMainFrame: mainFrame);
+  void error(WebLoadError error, {bool mainFrame = true, String? url}) =>
+      listener!.onLoadError(
+        error,
+        isMainFrame: mainFrame,
+        url: url == null ? null : Uri.parse(url),
+      );
   void certificate() => listener!.onCertificateError();
   void download() => listener!.onDownloadBlocked();
   void processGone({bool crashed = true}) =>

@@ -6,16 +6,34 @@ void main() {
   const shown = 'https://www.ejemplo.com/carta?dia=hoy';
 
   /// Decisión para un enlace del marco principal, ya vista la página [page].
-  WebNavigation follow(String url, {String page = shown}) =>
-      decideWebNavigation(
-        Uri.parse(url),
-        shownPage: Uri.parse(page),
-        isMainFrame: true,
-      );
+  WebNavigation follow(
+    String url, {
+    String page = shown,
+    bool serverRedirect = false,
+  }) => decideWebNavigation(
+    Uri.parse(url),
+    shownPage: Uri.parse(page),
+    isMainFrame: true,
+    isServerRedirect: serverRedirect,
+  );
 
-  /// Decisión durante la carga inicial (antes del primer `onPageStarted`).
-  WebNavigation initial(String url) =>
-      decideWebNavigation(Uri.parse(url), shownPage: null, isMainFrame: true);
+  /// Redirección del servidor durante la carga inicial (antes del primer
+  /// `onPageStarted`).
+  WebNavigation initial(String url) => decideWebNavigation(
+    Uri.parse(url),
+    shownPage: null,
+    isMainFrame: true,
+    isServerRedirect: true,
+  );
+
+  /// Navegación de la propia página (enlace, JavaScript, `meta refresh`) que
+  /// llega durante la carga inicial, antes del primer `onPageStarted`.
+  WebNavigation initialFromPage(String url) => decideWebNavigation(
+    Uri.parse(url),
+    shownPage: null,
+    isMainFrame: true,
+    isServerRedirect: false,
+  );
 
   group('CA-009-11: solo la página de la dirección guardada (ADR-0018)', () {
     test('un ancla de la misma página se sigue dentro de la página', () {
@@ -52,6 +70,19 @@ void main() {
       ]) {
         expect(follow(url), const BlockNavigation(), reason: url);
       }
+    });
+
+    test('ya vista la página, una redirección del servidor (la respuesta de '
+        'un formulario) tampoco', () {
+      expect(
+        follow('https://www.ejemplo.com/gracias', serverRedirect: true),
+        const BlockNavigation(),
+      );
+      expect(
+        follow('$shown#a', serverRedirect: true),
+        const StayInTask(),
+        reason: 'el ancla de la misma página sigue valiendo',
+      );
     });
 
     test('mailto: y tel: no hacen nada', () {
@@ -91,6 +122,7 @@ void main() {
       Uri.parse(url),
       shownPage: Uri.parse(shown),
       isMainFrame: false,
+      isServerRedirect: false,
     );
 
     test('un marco interno web se carga dentro de la página, de cualquier '
@@ -117,6 +149,19 @@ void main() {
         initial('http://otro.org/'),
         StayInTask(Uri.parse('https://otro.org/')),
       );
+    });
+
+    test('T-009-12: una navegación de la propia página que llega antes del '
+        'primer onPageStarted (location.href en el <head>) no es una '
+        'redirección del servidor: no se sigue (ADR-0018)', () {
+      for (final url in [
+        'https://ejemplo.com/otra',
+        'https://www.otro.org/final',
+        'http://otro.org/',
+        'http://abc.ejemplo.com/online',
+      ]) {
+        expect(initialFromPage(url), const BlockNavigation(), reason: url);
+      }
     });
 
     test('pero no a otros esquemas ni con usuario en la dirección', () {
@@ -153,6 +198,19 @@ void main() {
         ),
         isNull,
       );
+    });
+  });
+
+  group('CA-009-11: misma página sin contar el ancla (isSamePage)', () {
+    test('igual con otra ancla, con http:// como https:// y sin distinguir '
+        'mayúsculas del dominio', () {
+      bool same(String a, String b) => isSamePage(Uri.parse(a), Uri.parse(b));
+      expect(same('$shown#a', shown), isTrue);
+      expect(same('https://ejemplo.com', 'https://EJEMPLO.com/#x'), isTrue);
+      expect(same('http://ejemplo.com/a', 'https://ejemplo.com/a'), isTrue);
+      expect(same('https://ejemplo.com/a', 'https://ejemplo.com/b'), isFalse);
+      expect(same('https://ejemplo.com/?a', 'https://ejemplo.com/?b'), isFalse);
+      expect(same('https://ejemplo.com/', 'https://m.ejemplo.com/'), isFalse);
     });
   });
 

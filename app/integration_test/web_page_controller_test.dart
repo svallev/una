@@ -31,10 +31,19 @@ String? _pageOverride;
 
 /// La WebView real, pero las páginas de `una.test` salen de [_page].
 class _LocalPageDriver extends WebViewPageDriver {
+  /// Lo que ha pedido cargar el controlador.
+  final loaded = <Uri>[];
+
   @override
-  Future<void> load(Uri url) => url.host == 'una.test'
-      ? webView.loadHtmlString(_pageOverride ?? _page, baseUrl: url.toString())
-      : super.load(url);
+  Future<void> load(Uri url) {
+    loaded.add(url);
+    return url.host == 'una.test'
+        ? webView.loadHtmlString(
+            _pageOverride ?? _page,
+            baseUrl: url.toString(),
+          )
+        : super.load(url);
+  }
 }
 
 /// Monta la vista de la WebView actual (con la clave de su generación) y la
@@ -150,6 +159,110 @@ void main() {
     expect(await js('location.href'), '"https://una.test/programa#b"');
     expect(await js('window.una'), '7');
     expect(c.value.status, WebPageStatus.shown);
+    await _unmount(tester);
+  });
+
+  testWidgets('CA-009-11 (T-009-12): tocar un enlace del mismo sitio, de '
+      'otro, tel:, mailto:, target=_blank o un formulario GET no cambia la '
+      'página; un ancla sí desplaza', (tester) async {
+    _pageOverride = '''
+<!doctype html><html><head><meta name="viewport" content="width=device-width">
+</head><body>
+<a id="mismo" href="/ponentes">Ponentes</a>
+<a id="otro" href="https://otro.una.test/">Otro</a>
+<a id="tel" href="tel:+34600000000">Tel</a>
+<a id="mail" href="mailto:info@una.test">Mail</a>
+<a id="nueva" href="https://una.test/nueva" target="_blank">Nueva</a>
+<a id="ancla" href="#b">B</a>
+<form id="get" action="https://una.test/buscar"><input name="q" value="x"></form>
+<div style="height:3000px"></div><h2 id="b">B</h2></body></html>
+''';
+    final c = await _mount(tester, 'https://una.test/programa');
+    await _until(tester, () => _loaded(c));
+    final hosts = <String>{};
+    c.addListener(() => hosts.add(c.value.pageUrl.host));
+    final web = _drivers.last.webView;
+    Future<String> js(String script) async =>
+        '${await web.runJavaScriptReturningResult(script)}';
+    await web.runJavaScript('window.una = 7;');
+    for (final id in ['mismo', 'otro', 'tel', 'mail', 'nueva']) {
+      await web.runJavaScript("document.getElementById('$id').click();");
+      await tester.pump(const Duration(milliseconds: 800));
+    }
+    await web.runJavaScript("document.getElementById('get').submit();");
+    await tester.pump(const Duration(seconds: 2));
+    expect(await js('window.una'), '7');
+    expect(await js('location.href'), '"https://una.test/programa"');
+    expect(c.value.status, WebPageStatus.shown);
+    expect(_drivers.last.loaded, [Uri.parse('https://una.test/programa')]);
+    await web.runJavaScript("document.getElementById('ancla').click();");
+    await tester.pump(const Duration(seconds: 1));
+    expect(await js('location.href'), '"https://una.test/programa#b"');
+    expect(await js('window.scrollY > 1000'), 'true');
+    expect(await js('window.una'), '7');
+    expect(_drivers.last.loaded, hasLength(1));
+    expect(hosts, everyElement('una.test'));
+    await _unmount(tester);
+  });
+
+  testWidgets('CA-009-11 (T-009-12): un location.href en el <head> (puede '
+      'llegar antes de onPageStarted) no se sigue; con http:// guardada y a '
+      'otra http://, aviso "no segura"', (tester) async {
+    _pageOverride =
+        '<!doctype html><html><head><script>'
+        "location.href = 'https://otro.una.test/destino';"
+        '</script></head><body><h1>Una</h1></body></html>';
+    var c = await _mount(tester, 'https://una.test/programa');
+    await _until(tester, () => _loaded(c));
+    await tester.pump(const Duration(seconds: 2));
+    expect(c.value.status, WebPageStatus.shown);
+    expect(c.value.pageUrl, Uri.parse('https://una.test/programa'));
+    expect(_drivers.last.loaded, [Uri.parse('https://una.test/programa')]);
+    await _unmount(tester);
+    _pageOverride =
+        '<!doctype html><html><head><script>'
+        "location.href = 'http://abc.una.test/online';"
+        '</script></head><body><h1>Una</h1></body></html>';
+    c = await _mount(tester, 'http://una.test/');
+    await _until(tester, () => c.value.status == WebPageStatus.insecure);
+    expect(_drivers.last.loaded, [Uri.parse('https://una.test/')]);
+    await _unmount(tester);
+  });
+
+  testWidgets('CA-009-11 (T-009-12): un formulario POST (a otra página o a '
+      'otro dominio) vuelve a cargar la dirección guardada, sin aviso y sin '
+      'que la barra muestre otro dominio', (tester) async {
+    _pageOverride = '''
+<!doctype html><html><body><h1>Una</h1>
+<form id="a" method="post" action="https://una.test/enviar"><input name="q" value="x"></form>
+<form id="b" method="post" action="https://otro.una.test/enviar"><input name="q" value="x"></form>
+</body></html>
+''';
+    final c = await _mount(tester, 'https://una.test/programa');
+    await _until(tester, () => _loaded(c));
+    final hosts = <String>{};
+    c.addListener(() => hosts.add(c.value.pageUrl.host));
+    var loads = 1;
+    for (final form in ['a', 'b']) {
+      await _drivers.last.webView.runJavaScript(
+        "document.getElementById('$form').submit();",
+      );
+      loads++;
+      await _until(tester, () => _drivers.last.loaded.length == loads);
+      await _until(tester, () => _loaded(c));
+      await tester.pump(const Duration(seconds: 2));
+      expect(c.value.status, WebPageStatus.shown, reason: form);
+      expect(c.value.pageUrl, Uri.parse('https://una.test/programa'));
+      expect(
+        '${await _drivers.last.webView.runJavaScriptReturningResult('location.href')}',
+        '"https://una.test/programa"',
+      );
+    }
+    expect(
+      _drivers.last.loaded,
+      everyElement(Uri.parse('https://una.test/programa')),
+    );
+    expect(hosts, {'una.test'});
     await _unmount(tester);
   });
 

@@ -560,6 +560,89 @@ void main() {
     });
   });
 
+  group('CA-009-11: sin navegación (T-009-12)', () {
+    testWidgets('tocar un enlace (del mismo sitio, de otro, tel:, mailto:, '
+        'ventana nueva) no carga nada, no abre nada ni pregunta', (
+      tester,
+    ) async {
+      await pumpWeb(tester);
+      listen(tester);
+      web.last.started(_address);
+      await tester.pumpAndSettle();
+      for (final url in [
+        'https://www.congreso.ejemplo.com/ponentes',
+        'https://otro.example/',
+        'tel:+34600000000',
+        'mailto:info@congreso.ejemplo.com',
+        'intent://x#Intent;end',
+      ]) {
+        expect(web.last.navigate(url), isFalse, reason: url);
+      }
+      await tester.pumpAndSettle();
+      expect(web.last.loads, [_saved]);
+      expect(opener.opened, isEmpty);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(announcements, isEmpty);
+      expect(tester.widget<WebBar>(find.byType(WebBar)).host, _host);
+    });
+
+    testWidgets('un ancla de la misma página sí se sigue', (tester) async {
+      await pumpWeb(tester);
+      web.last.started(_address);
+      await tester.pumpAndSettle();
+      expect(web.last.navigate('$_address#martes'), isTrue);
+      expect(web.last.loads, [_saved]);
+    });
+
+    testWidgets('un formulario POST: se vuelve a cargar la dirección guardada '
+        'y la barra no muestra el otro dominio', (tester) async {
+      await pumpWeb(tester);
+      web.last.started(_address);
+      await tester.pumpAndSettle();
+      web.last.started('https://formularios.otro.example/enviar');
+      await tester.pump();
+      expect(tester.widget<WebBar>(find.byType(WebBar)).host, _host);
+      expect(web.last.loads, [_saved, _saved]);
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  });
+
+  group('CL-009-1: aviso de redirección', () {
+    testWidgets('si la carga inicial acaba en otro dominio, se avisa una vez '
+        'con "Esta dirección te ha llevado a {host}."', (tester) async {
+      await pumpWeb(tester);
+      expect(
+        web.last.navigate('https://m.otro-sitio.example/', redirect: true),
+        isTrue,
+      );
+      web.last.started('https://m.otro-sitio.example/');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      const text = 'Esta dirección te ha llevado a m.otro-sitio.example.';
+      expect(find.text(text), findsOneWidget);
+      expect(find.byType(SnackBar), findsOneWidget);
+      // Se va sola; al volver a cargar (un formulario) no se repite.
+      await tester.pumpAndSettle(const Duration(seconds: 10));
+      expect(find.text(text), findsNothing);
+      web.last.started('https://m.otro-sitio.example/buscar');
+      web.last.navigate('https://m.otro-sitio.example/', redirect: true);
+      web.last.started('https://m.otro-sitio.example/');
+      await tester.pumpAndSettle();
+      expect(find.text(text), findsNothing);
+    });
+
+    testWidgets('en el mismo dominio (con o sin "www.") no se avisa', (
+      tester,
+    ) async {
+      await pumpWeb(tester);
+      web.last.started('https://congreso.ejemplo.com/programa');
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  });
+
   group('CA-009-12: atrás', () {
     testWidgets('hace lo mismo que en cualquier tarea (cierra la app) y no '
         'toca la página', (tester) async {
