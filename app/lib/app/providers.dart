@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
 import '../data/links/native_link_opener.dart';
+import '../data/links/new_tab.dart';
 import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
@@ -97,6 +98,16 @@ final importPdfProvider = Provider<ImportPdf>(
 /// falso.
 final linkOpenerProvider = Provider<LinkOpener>(
   (ref) => const NativeLinkOpener(),
+);
+
+/// Web de pruebas (ADR-0010): la tarea web no tiene WebView; se ve como la
+/// tarjeta del prototipo, con "Abrir página ↗" (CL-009-5).
+final webPreviewProvider = Provider<bool>((ref) => kIsWeb);
+
+/// Abre una dirección en una pestaña nueva, con `noopener` (solo la web de
+/// pruebas, CL-009-5); en los tests, uno falso.
+final newTabOpenerProvider = Provider<void Function(Uri address)>(
+  (ref) => openInNewTab,
 );
 
 /// Borrado de los datos de la WebView de la tarea web (CA-009-13): al salir y,

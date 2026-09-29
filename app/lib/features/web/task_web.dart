@@ -17,6 +17,7 @@ import '../../ui/una_sheet.dart';
 import 'web_bar.dart';
 import 'web_page_controller.dart';
 import 'web_page_driver_factory.dart';
+import 'web_preview_card.dart';
 
 /// Si la tarea web (por el id de su adjunto) muestra un aviso en lugar de la
 /// página (spec 009 §5). Con aviso no gira, como con "Adjunto no disponible"
@@ -132,6 +133,8 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
   /// con la vista ya puesta.
   void _create() {
     if (!mounted || !widget.live || _page != null) return;
+    // La web de pruebas no tiene WebView (CL-009-5).
+    if (ref.read(webPreviewProvider)) return;
     final page = WebPageController(
       address: _address,
       createDriver: ref.read(webPageDriverFactoryProvider),
@@ -268,6 +271,10 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
     unawaited(ref.read(linkOpenerProvider).open(WebLink(_address, host)));
   }
 
+  /// "Abrir página ↗" de la web de pruebas: la dirección guardada en una
+  /// pestaña nueva (CL-009-5).
+  void _openInNewTab() => ref.read(newTabOpenerProvider)(_address);
+
   /// El dominio de la barra: el de la página que se ve (o se carga).
   String _host(AppLocalizations l10n, Uri? pageUrl) {
     final shown = pageUrl == null || pageUrl.host.isEmpty
@@ -294,8 +301,11 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
     final host = _host(l10n, shown?.pageUrl);
     // Soltada la página, sin aviso: la zona en blanco.
     final failure = state?.failure;
+    // La web de pruebas, sin WebView: la tarjeta del prototipo (CL-009-5).
+    final preview = widget.live && ref.watch(webPreviewProvider);
     // Antes de crear la WebView ya se está cargando.
-    final loading = widget.live && (state == null || state.pageLoading);
+    final loading =
+        widget.live && !preview && (state == null || state.pageLoading);
     final logo = widget.landscapeLogo;
     // En horizontal, a sangre: sin bordes ni barra (CA-009-15). Mismo árbol en
     // las dos orientaciones, para no volver a crear la WebView.
@@ -337,6 +347,13 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
+                    if (preview)
+                      WebPreviewCard(
+                        key: const ValueKey('web-preview-card'),
+                        host: host,
+                        address: widget.address,
+                        onOpen: _openInNewTab,
+                      ),
                     if (page != null && state != null)
                       // Bajo un aviso, la página no se ve ni la lee el lector.
                       Offstage(
