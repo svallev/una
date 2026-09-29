@@ -53,7 +53,7 @@ Reglas de la casa: cada test cita su CA; sin red; relojes inyectables; los que m
 | CA-010-10 | Widget | ídem | En ES y EN, con una tarea escrita en catalán: ningún `SemanticsData.locale` es distinto de null o del idioma de la app, y ningún `attributedLabel`/`attributedValue`/`attributedHint` lleva `LocaleStringAttribute`. La voz se comprueba a mano (T-010-10) |
 | CA-010-11 | Widget (app completa) | `test/app/locale_change_test.dart` | Se leen los nombres de `customSemanticsActions` en ES; se cambia a EN; se comprueba que el orden es el mismo (traducido) en la tarea solo texto, con imagen, con PDF, con web y en una fila del listado. También arrancando en EN y cambiando a ES |
 | CA-010-12 | Widget | `test/l10n/large_text_en_test.dart` (nuevo) | `setUpAll(loadAppFonts)`; `textScale: 2` en EN y 360 × 640; sin excepciones de desbordamiento en las pantallas y hojas de CA-010-07. Se reutilizan los *pumps* de los tests al 200 % que ya existen en ES |
-| CL-010-5, CL-010-7 | Manual | T-010-10 | Arranque normal tras cierre; foco al cerrar el menú con "Configuración y perfil" |
+| CL-010-5, CL-010-7 | Manual | T-010-10 | Arranque normal tras cierre; "Configuración y perfil" es solo texto: sin acción (test `menu_create_edit_test.dart`) |
 
 ## 6. Seguridad, accesibilidad y rendimiento
 

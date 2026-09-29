@@ -23,8 +23,6 @@ Future<MenuAction?> showMenuSheet(
     onDelete: () => Navigator.of(sheet).pop(MenuAction.delete),
     onAllTasks: () => Navigator.of(sheet).pop(MenuAction.allTasks),
     onNewTask: () => Navigator.of(sheet).pop(MenuAction.newTask),
-    // Como el prototipo: cierra el menú (hasta la spec 010).
-    onSettings: () => Navigator.of(sheet).pop(),
   ),
 );
 
@@ -39,7 +37,6 @@ class MenuSheet extends StatelessWidget {
     required this.onDelete,
     required this.onAllTasks,
     required this.onNewTask,
-    required this.onSettings,
   });
 
   /// Tareas pendientes. Con una sola, "Todas mis tareas" se ve desactivado
@@ -51,7 +48,6 @@ class MenuSheet extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onAllTasks;
   final VoidCallback onNewTask;
-  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -134,16 +130,47 @@ class MenuSheet extends StatelessWidget {
                   onPressed: onNewTask,
                 ),
                 const SizedBox(height: UnaSpace.sm + 2),
-                Center(
-                  child: UnaLinkButton(
-                    label: l10n.menuSettings,
-                    onPressed: onSettings,
-                  ),
-                ),
+                Center(child: _SettingsText(label: l10n.menuSettings)),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Configuración y perfil": solo texto, sin interacción ni rol de botón
+/// (propietario, 2026-09-29). Se ve como el enlace del prototipo hasta que
+/// exista la spec futura de Configuración y perfil.
+class _SettingsText extends StatelessWidget {
+  const _SettingsText({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: UnaSizes.linkButton,
+        minWidth: UnaSizes.minTouchTarget,
+      ),
+      child: Center(
+        widthFactor: 1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: UnaSpace.s),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontFamily: UnaFonts.mono,
+              fontSize: UnaFontSizes.link,
+              fontWeight: UnaFontWeights.bold,
+              color: UnaColors.ink,
+              decoration: TextDecoration.underline,
+              decorationThickness: 2,
+            ),
+          ),
+        ),
       ),
     );
   }

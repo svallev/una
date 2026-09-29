@@ -10,6 +10,7 @@ import 'package:app/features/menu/menu_sheet.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/sticky_note.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -154,13 +155,18 @@ void main() {
     });
 
     testWidgets(
-      'CA-005-09: Configuración cierra el menú (Eliminar, spec 004: ver delete_confirm_test)',
+      'CA-005-09 / CL-010-7: "Configuración y perfil" es solo texto: pulsarlo no hace nada y no es un botón',
       (tester) async {
+        final handle = tester.ensureSemantics();
         await pumpUnaApp(tester, repo: _Repo(), tasks: ['Primera', 'Segunda']);
         await _openMenu(tester);
         await tester.tap(find.text('Configuración y perfil'));
         await tester.pumpAndSettle();
-        expect(find.byType(MenuSheet), findsNothing);
+        expect(find.byType(MenuSheet), findsOneWidget);
+        final node = tester.getSemantics(find.text('Configuración y perfil'));
+        expect(node.flagsCollection.isButton, isFalse);
+        expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isFalse);
+        handle.dispose();
       },
     );
   });

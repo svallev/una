@@ -1,7 +1,7 @@
 # Spec 010: Idioma automático
 
 - **Estado:** Aprobada (propietario, 2026-09-29)
-- **Alcance reducido (propietario, 2026-09-29):** la v1 es una beta de pruebas y **no tiene pantalla de Configuración**. La entrada "Configuración y perfil" del menú se queda como está (DEV-18: cierra el menú) hasta una spec futura que diseñará el propietario. Solo dos idiomas, español e inglés, **sin selector**: lo decide el sistema. Solo Android (D17). La carpeta conserva el nombre `010-idioma-y-configuracion` para no romper enlaces ni la rama.
+- **Alcance reducido (propietario, 2026-09-29):** la v1 es una beta de pruebas y **no tiene pantalla de Configuración**. La entrada "Configuración y perfil" del menú se queda **solo como texto**, sin interacción (propietario, 2026-09-29; DEV-18) hasta una spec futura que diseñará el propietario. Solo dos idiomas, español e inglés, **sin selector**: lo decide el sistema. Solo Android (D17). La carpeta conserva el nombre `010-idioma-y-configuracion` para no romper enlaces ni la rama.
 - **Reglas de producto:** R15. D13 y D14 están aplazadas junto con la pantalla de Configuración (§8)
 - **Pantallas del prototipo:** ninguna nueva. La entrada "Configuración y perfil" ya existe (DEV-05 revocada; DEV-18, abierta)
 - **Decisiones y ADR relacionados:** D13 (aplazada), D17; constitución P6, P7, P10
@@ -88,7 +88,7 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
 | CL-010-4 | Sistema en un idioma de derecha a izquierda (árabe, hebreo) | App en inglés, de izquierda a derecha; al cambiarlo con la app abierta, se comporta como en CA-010-06 |
 | CL-010-5 | El sistema cierra la app mientras el usuario está en Ajustes | Arranque normal, ya en el idioma nuevo |
 | CL-010-6 | Ajustes › Idiomas de la app (Android 13+) | La app no aparece en esa lista: el idioma solo lo decide el sistema (§8) |
-| CL-010-7 | Pulsar "Configuración y perfil" en el menú | Sin cambios: cierra el menú (DEV-18, abierta hasta la spec futura). Con TalkBack o Switch Access se cierra sin anunciar nada. **Limitación conocida de la beta.** El foco vuelve al botón del menú, no al primer nodo |
+| CL-010-7 | Pulsar "Configuración y perfil" en el menú | No pasa nada: es solo texto (subrayado, como el enlace del prototipo), sin acción y sin rol de botón. No cierra el menú ni mueve el foco (propietario, 2026-09-29; enmienda de CL-010-7). Lo sustituye la spec futura de Configuración y perfil |
 
 ## 5. Estados vacíos y de error
 
@@ -101,7 +101,8 @@ No aplica: no hay UI nueva.
   - un cambio de idioma con el menú abierto y con el editor a medio escribir;
   - Switch Access y teclado físico tras el cambio (el recorrido y el foco no se pierden);
   - texto del sistema al máximo en inglés.
-- Limitación conocida hasta la spec futura: CL-010-7 ("Configuración y perfil" no hace nada).
+- CL-010-7: "Configuración y perfil" es solo texto hasta la spec futura (no es un botón para el lector de pantalla).
+- Aceptado por el propietario (2026-09-29): si se cambia el idioma con una hoja abierta, la etiqueta del fondo modal (`scrimLabel` de Flutter, p. ej. "Sombreado") se queda en el idioma anterior hasta cerrar la hoja. No es una limitación a corregir.
 
 ## 7. Textos (ES / EN)
 
