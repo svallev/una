@@ -111,8 +111,9 @@ final webDataJanitorProvider = Provider<WebDataJanitor>(
         ),
 );
 
-/// Si la tarea con imagen o PDF gira a horizontal (CA-008-11). La web de
-/// pruebas no gira (CL-008-12): con la ventana apaisada se ve como en vertical.
+/// Si la tarea con imagen, PDF o web gira a horizontal (CA-008-11,
+/// CA-009-15). La web de pruebas no gira (CL-008-12, CL-009-5): con la ventana
+/// apaisada se ve como en vertical.
 final attachmentRotatesProvider = Provider<bool>((ref) => !kIsWeb);
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".

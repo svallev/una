@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,6 +17,23 @@ import '../../ui/una_sheet.dart';
 import 'web_bar.dart';
 import 'web_page_controller.dart';
 import 'web_page_driver_factory.dart';
+
+/// Si la tarea web (por el id de su adjunto) muestra un aviso en lugar de la
+/// página (spec 009 §5). Con aviso no gira, como con "Adjunto no disponible"
+/// (CA-009-15).
+final webNoticeProvider = NotifierProvider.autoDispose
+    .family<WebNoticeShown, bool, String>(WebNoticeShown.new);
+
+class WebNoticeShown extends Notifier<bool> {
+  WebNoticeShown(this.attachmentId);
+
+  final String attachmentId;
+
+  @override
+  bool build() => false;
+
+  void report(bool shown) => state = shown;
+}
 
 /// La zona de la tarea web en la pantalla principal (CA-009-06): borde negro
 /// arriba y abajo, la barra del dominio (que es el nodo de la tarea para el
@@ -35,14 +53,23 @@ import 'web_page_driver_factory.dart';
 ///
 /// Sin [live] (las caras de completar y eliminar, CA-009-17), solo la barra y
 /// la zona en blanco, sin WebView.
+///
+/// En horizontal ([landscapeLogo], CA-009-15), la página a sangre, sin barra
+/// ni bordes, con el logotipo encima, que pasa a ser el nodo de la tarea. La
+/// WebView es la misma: al girar no se vuelve a crear ni se recarga.
 class TaskWeb extends ConsumerStatefulWidget {
   const TaskWeb({
     super.key,
+    required this.attachmentId,
     required this.address,
     required this.taskNode,
     this.live = true,
     this.showBar = true,
+    this.landscapeLogo,
   });
+
+  /// El adjunto: con él se avisa de si hay un aviso ([webNoticeProvider]).
+  final String attachmentId;
 
   /// La dirección guardada.
   final String address;
@@ -57,6 +84,10 @@ class TaskWeb extends ConsumerStatefulWidget {
   /// Sin la barra (lo que queda encima mientras se arruga).
   final bool showBar;
 
+  /// En horizontal: el logotipo, ya colocado, que va encima de la página, con
+  /// el nodo de la tarea para el dominio que se ve.
+  final Widget Function(String host)? landscapeLogo;
+
   @override
   ConsumerState<TaskWeb> createState() => _TaskWebState();
 }
@@ -67,6 +98,7 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
   bool _covered = false;
   ValueListenable<TickerModeData>? _onStage;
   WebLoadFailure? _announced;
+  bool _noticeReported = false;
 
   late final Uri _address = Uri.parse(widget.address);
 
@@ -128,6 +160,7 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
   void _onPage() {
     _showRedirectNotice();
     final failure = _page?.value.failure;
+    _reportNotice(failure != null);
     if (failure == _announced) return;
     _announced = failure;
     if (failure == null || !mounted) return;
@@ -138,6 +171,25 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
         Directionality.of(context),
       ),
     );
+  }
+
+  /// Con aviso, la pantalla principal no gira (CA-009-15). El controlador
+  /// puede cambiar mientras se construye (al quedar tapada): entonces, al
+  /// acabar el fotograma.
+  void _reportNotice(bool shown) {
+    if (shown == _noticeReported) return;
+    _noticeReported = shown;
+    void report() {
+      if (!mounted) return;
+      ref.read(webNoticeProvider(widget.attachmentId).notifier).report(shown);
+    }
+
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => report());
+    } else {
+      report();
+    }
   }
 
   /// "Esta dirección te ha llevado a {host}." como los demás avisos
@@ -208,22 +260,30 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
     final failure = state?.failure;
     // Antes de crear la WebView ya se está cargando.
     final loading = widget.live && (state == null || state.pageLoading);
+    final logo = widget.landscapeLogo;
+    // En horizontal, a sangre: sin bordes ni barra (CA-009-15). Mismo árbol en
+    // las dos orientaciones, para no volver a crear la WebView.
+    final landscape = logo != null;
     return DecoratedBox(
       position: DecorationPosition.foreground,
-      decoration: const BoxDecoration(
-        border: Border.symmetric(
-          horizontal: BorderSide(
-            color: UnaColors.ink,
-            width: UnaBorders.strongWidth,
-          ),
-        ),
-      ),
+      decoration: landscape
+          ? const BoxDecoration()
+          : const BoxDecoration(
+              border: Border.symmetric(
+                horizontal: BorderSide(
+                  color: UnaColors.ink,
+                  width: UnaBorders.strongWidth,
+                ),
+              ),
+            ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: UnaBorders.strongWidth),
+        padding: EdgeInsets.symmetric(
+          vertical: landscape ? 0 : UnaBorders.strongWidth,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (widget.showBar)
+            if (widget.showBar && !landscape)
               widget.taskNode(
                 WebBar(
                   host: host,
@@ -235,6 +295,7 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
                 host,
               ),
             Expanded(
+              key: const ValueKey('web-page'),
               child: ColoredBox(
                 color: UnaColors.surface,
                 child: Stack(
@@ -259,6 +320,12 @@ class _TaskWebState extends ConsumerState<TaskWeb> {
                       Align(
                         alignment: Alignment.topCenter,
                         child: _LoadingLine(progress: state?.progress ?? 0),
+                      ),
+                    // El logotipo, encima de la página.
+                    if (logo != null)
+                      KeyedSubtree(
+                        key: const ValueKey('web-logo'),
+                        child: logo(host),
                       ),
                   ],
                 ),

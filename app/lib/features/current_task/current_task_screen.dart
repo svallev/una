@@ -145,22 +145,29 @@ class CurrentTaskScreen extends ConsumerWidget {
     // Web: barra y página en vivo entre la cabecera y el botón (CA-009-06).
     final showWeb = isWeb;
     final withAttachment = showImage || showPdf || showWeb;
+    // Con un aviso en lugar de la página, la web no gira (CA-009-15).
+    final webNotice =
+        showWeb &&
+        !faceOnly &&
+        !chromeOnly &&
+        ref.watch(webNoticeProvider(attachment!.id));
     final pdfTitle = pdfName(l10n, attachment?.originalName);
     final pdfBytes = pdfSize(l10n, attachment?.byteSize ?? 0);
-    // En horizontal (solo gira la tarea con imagen o PDF), lo mismo con los
-    // dos: el adjunto a todo el ancho y el logotipo; sin menú, botón, franja
-    // ni texto (CA-008-11). Se vuelve a vertical girando el móvil (sin botón:
-    // propietario, 2026-09-28). La web de pruebas no gira (CL-008-12).
-    // [Pendiente, T-009-15] La web aún no gira.
+    // En horizontal (solo gira la tarea con imagen, PDF o web), lo mismo con
+    // los tres: el adjunto a todo el ancho y el logotipo; sin menú, botón,
+    // franja, barra ni texto (CA-008-11, CA-009-15). Se vuelve a vertical
+    // girando el móvil (sin botón: propietario, 2026-09-28). La web de pruebas
+    // no gira (CL-008-12, CL-009-5).
     final landscape =
         ref.watch(attachmentRotatesProvider) &&
-        (showImage || showPdf) &&
+        (showImage || showPdf || (showWeb && !webNotice)) &&
         !faceOnly &&
         !chromeOnly &&
         mq.orientation == Orientation.landscape;
-    // Con PDF, en horizontal el visor ocupa toda la pantalla y el logotipo va
-    // encima, como con la imagen.
+    // Con PDF o web, en horizontal el visor o la página ocupan toda la
+    // pantalla y el logotipo va encima, como con la imagen.
     final pdfLandscape = showPdf && landscape;
+    final bleed = (showPdf || showWeb) && landscape;
 
     final kind = isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage;
 
@@ -289,18 +296,29 @@ class CurrentTaskScreen extends ConsumerWidget {
       top: UnaSpace.l,
       bottom: UnaSpace.xxl,
     );
-    final content = SafeArea(
-      // Con PDF en horizontal, el visor llega a los bordes.
-      left: !pdfLandscape,
-      top: !pdfLandscape,
-      right: !pdfLandscape,
-      bottom: !pdfLandscape,
+    // En horizontal con web, el logotipo encima de la página: es el nodo de
+    // la tarea, con el dominio que se ve (plan §3, CA-009-18).
+    Widget webLandscapeLogo(String host) => SafeArea(
       child: Padding(
-        padding: pdfLandscape ? EdgeInsets.zero : contentPadding,
+        padding: const EdgeInsets.only(top: UnaSpace.l),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: side(Row(children: [taskNode(wordmark, webHost: host)])),
+        ),
+      ),
+    );
+    final content = SafeArea(
+      // Con PDF o web en horizontal, el visor o la página llegan a los bordes.
+      left: !bleed,
+      top: !bleed,
+      right: !bleed,
+      bottom: !bleed,
+      child: Padding(
+        padding: bleed ? EdgeInsets.zero : contentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!pdfLandscape) headerRow,
+            if (!bleed) headerRow,
             Expanded(
               // Con clave: la cabecera va y viene al girar y el visor del PDF
               // no se vuelve a crear (se conservan la posición y el zoom).
@@ -312,7 +330,9 @@ class CurrentTaskScreen extends ConsumerWidget {
                   ? TaskWeb(
                       // Otra dirección (Editar, CA-009-05): otra página.
                       key: ValueKey('web-${attachment!.id}'),
+                      attachmentId: attachment.id,
                       address: attachment.url ?? '',
+                      landscapeLogo: landscape ? webLandscapeLogo : null,
                       live: !faceOnly && !chromeOnly,
                       showBar: !chromeOnly,
                       taskNode: (bar, host) =>
@@ -408,8 +428,16 @@ class CurrentTaskScreen extends ConsumerWidget {
             : StickyNote(
                 colorKey: task.colorKey,
                 child: showWeb
-                    // Con web, la nota es blanca, como con PDF (prototipo).
-                    ? ColoredBox(color: UnaColors.surface, child: content)
+                    // Con web, la nota es blanca, como con PDF (prototipo), y
+                    // gira salvo con un aviso (CA-009-15).
+                    ? _RotatesWithAttachment(
+                        enabled: canRotate && !webNotice,
+                        fullWidth: landscape,
+                        builder: (_) => ColoredBox(
+                          color: UnaColors.surface,
+                          child: content,
+                        ),
+                      )
                     : showPdf
                     // Con PDF la nota es blanca; su color queda en la banda
                     // del texto (prototipo `isDoc`).
@@ -467,10 +495,10 @@ class CurrentTaskScreen extends ConsumerWidget {
       ),
     );
     if (faceOnly || chromeOnly) return ExcludeSemantics(child: screen);
-    // Con imagen o PDF, en vertical y en horizontal, la pantalla no se apaga
-    // mientras se usa (CA-007-12, CA-008-13).
+    // Con imagen, PDF o web, en vertical y en horizontal, la pantalla no se
+    // apaga mientras se usa (CA-007-12, CA-008-13, CA-009-16).
     return KeepScreenOnWhileVisible(
-      enabled: showImage || showPdf,
+      enabled: showImage || showPdf || showWeb,
       child: screen,
     );
   }
@@ -745,13 +773,14 @@ class _ImageScroll {
   }
 }
 
-/// Mientras se ve la tarea actual con imagen o con PDF (y es la pantalla de
+/// Mientras se ve la tarea actual con imagen, PDF o web (y es la pantalla de
 /// arriba, no bajo el menú, el editor o el listado; la confirmación de un
-/// enlace sí la deja girar), la app gira con el móvil (CA-008-11); si no,
+/// enlace sí la deja girar), la app gira con el móvil (CA-008-11,
+/// CA-009-15); si no,
 /// solo en vertical. En horizontal pide todo el ancho aunque el marco de la
 /// app lo limite en tablets (CL-001-7). Con imagen, también es la dueña del
 /// desplazamiento: acciones del lector y Av Pág / Re Pág con teclado
-/// (CA-007-09, WCAG 2.1.1); el PDF lleva el suyo.
+/// (CA-007-09, WCAG 2.1.1); el PDF y la página web llevan el suyo.
 class _RotatesWithAttachment extends StatefulWidget {
   const _RotatesWithAttachment({
     required this.enabled,

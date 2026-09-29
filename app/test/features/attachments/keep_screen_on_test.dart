@@ -4,6 +4,8 @@ import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/data/platform/screen_awake.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
+import 'package:app/domain/entities/web_load_failure.dart';
+import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/features/attachments/keep_screen_on_controller.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:flutter/gestures.dart';
@@ -15,6 +17,7 @@ import '../../support/app_harness.dart';
 import '../../support/attachments.dart';
 import '../../support/fake_pdf_importer.dart';
 import '../../support/fake_pdf_view.dart';
+import '../../support/fake_web_page_driver.dart';
 import '../../support/pump_app.dart';
 
 class _FakeAwake implements ScreenAwake {
@@ -29,8 +32,10 @@ void main() {
   late MemoryAttachmentStore store;
   late _FakeAwake awake;
   late InMemoryTaskRepository repo;
+  late FakeWebPages web;
 
   setUp(() {
+    web = FakeWebPages();
     store = MemoryAttachmentStore();
     awake = _FakeAwake();
     repo = InMemoryTaskRepository();
@@ -79,6 +84,7 @@ void main() {
           screenAwakeProvider.overrideWithValue(awake),
           pdfImporterProvider.overrideWithValue(FakePdfImporter(store)),
           ...fakePdfViews,
+          ...web.overrides,
         ],
       ).then((_) => tester.pump());
 
@@ -324,6 +330,136 @@ void main() {
       tester,
     ) async {
       await repo.insert(await pdfTask());
+      await repo.setKeepScreenOn(false);
+      await pump(tester);
+      addTearDown(tester.view.reset);
+      await turn(tester, landscape: true);
+      await tester.pump();
+      expect(awake.calls, isEmpty);
+    });
+  });
+
+  group('CA-009-16: pantalla encendida con la web', () {
+    const address = 'https://www.congreso.ejemplo.com/programa';
+    final view = find.byKey(const ValueKey('web-view-0'));
+
+    Task webTask({String rank = 'M'}) {
+      final at = DateTime.utc(2026, 9, 29, 9);
+      return Task(
+        id: 'w',
+        text: null,
+        status: TaskStatus.pending,
+        rank: rank,
+        colorKey: 3,
+        createdAt: at,
+        updatedAt: at,
+        attachment: attachmentFrom(StagedWeb(id: 'a-w', url: address), at),
+      );
+    }
+
+    testWidgets('en vertical, la pantalla no se apaga; tras 10 minutos sin '
+        'tocarla, sí', (tester) async {
+      await repo.insert(webTask());
+      await pump(tester);
+      await tester.pump();
+      expect(view, findsOneWidget);
+      expect(awake.calls, [true]);
+
+      await tester.pump(const Duration(minutes: 9, seconds: 59));
+      expect(awake.on, isTrue);
+      await tester.pump(const Duration(seconds: 1));
+      expect(awake.calls, [true, false]);
+    });
+
+    testWidgets('en horizontal, igual; girar no la apaga un momento, y un '
+        'toque en la página reinicia los 10 minutos', (tester) async {
+      await repo.insert(webTask());
+      await pump(tester);
+      addTearDown(tester.view.reset);
+      await tester.pump();
+      web.last
+        ..started(address)
+        ..finished(address);
+      await tester.pump(const Duration(minutes: 5));
+
+      await turn(tester, landscape: true);
+      expect(view, findsOneWidget);
+      expect(find.bySemanticsLabel('Menú de la tarea'), findsNothing);
+      expect(awake.calls, [true]);
+      await tester.pump(const Duration(minutes: 4));
+      await tester.tapAt(tester.getCenter(view));
+      await tester.pump(const Duration(minutes: 9));
+      expect(awake.calls, [true]);
+      await tester.pump(const Duration(minutes: 1));
+      expect(awake.calls, [true, false]);
+    });
+
+    testWidgets('al abrir el menú, apagado normal; al cerrarlo, encendida', (
+      tester,
+    ) async {
+      await repo.insert(webTask());
+      await pump(tester);
+      expect(awake.on, isTrue);
+      await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+      await tester.pumpAndSettle();
+      expect(awake.on, isFalse);
+      await tester.tapAt(const Offset(20, 60)); // Fuera de la hoja.
+      await tester.pumpAndSettle();
+      expect(awake.on, isTrue);
+      await tester.pump(const Duration(minutes: 10));
+    });
+
+    testWidgets('en segundo plano, apagado normal; al volver, encendida', (
+      tester,
+    ) async {
+      await repo.insert(webTask());
+      await pump(tester);
+      setLifecycle(tester, [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+      ]);
+      await tester.pump();
+      expect(awake.on, isFalse);
+      setLifecycle(tester, [
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]);
+      await tester.pump();
+      expect(awake.on, isTrue);
+      await tester.pump(const Duration(minutes: 10));
+    });
+
+    testWidgets('con un aviso en lugar de la página, sigue encendida (se ve '
+        'la tarea web)', (tester) async {
+      await repo.insert(webTask());
+      await pump(tester);
+      await tester.pump();
+      web.last
+        ..started(address)
+        ..error(WebLoadError.hostLookup);
+      await tester.pumpAndSettle();
+      expect(find.text('Reintentar'), findsOneWidget);
+      expect(awake.on, isTrue);
+      await tester.pump(const Duration(minutes: 10));
+    });
+
+    testWidgets('al completar y pasar a una tarea sin adjunto, vuelve el '
+        'apagado normal', (tester) async {
+      await repo.insert(webTask(rank: 'A'));
+      await pump(tester, tasks: ['Siguiente']);
+      expect(awake.on, isTrue);
+      await repo.remove('w');
+      await tester.pumpAndSettle();
+      expect(view, findsNothing);
+      expect(awake.on, isFalse);
+    });
+
+    testWidgets('con el ajuste desactivado, nunca, tampoco en horizontal', (
+      tester,
+    ) async {
+      await repo.insert(webTask());
       await repo.setKeepScreenOn(false);
       await pump(tester);
       addTearDown(tester.view.reset);

@@ -10,10 +10,10 @@ final screenAwakeProvider = Provider<ScreenAwake>(
   (ref) => const ChannelScreenAwake(),
 );
 
-/// Pantalla encendida con adjuntos (CA-007-12, CA-008-13): mientras se ve la
-/// tarea actual con imagen o con PDF (en vertical o en horizontal), con el
-/// ajuste activo, la app en primer plano y menos de 10 minutos sin tocar la
-/// pantalla. El estado es si está encendida.
+/// Pantalla encendida con adjuntos (CA-007-12, CA-008-13, CA-009-16): mientras
+/// se ve la tarea actual con imagen, PDF o web (en vertical o en horizontal),
+/// con el ajuste activo, la app en primer plano y menos de 10 minutos sin tocar
+/// la pantalla. El estado es si está encendida.
 final keepScreenOnProvider = NotifierProvider<KeepScreenOnController, bool>(
   KeepScreenOnController.new,
 );
@@ -46,7 +46,7 @@ class KeepScreenOnController extends Notifier<bool> {
     return false;
   }
 
-  /// [owner] (la tarea actual con imagen o con PDF) se ve o deja de verse.
+  /// [owner] (la tarea actual con imagen, PDF o web) se ve o deja de verse.
   void showing(Object owner, {required bool visible}) {
     if (!ref.mounted) return;
     final wasEmpty = _showing.isEmpty;
