@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
 import '../data/links/native_link_opener.dart';
+import '../data/web/web_data_janitor.dart';
+import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/attachment_store.dart';
@@ -94,6 +97,18 @@ final importPdfProvider = Provider<ImportPdf>(
 /// falso.
 final linkOpenerProvider = Provider<LinkOpener>(
   (ref) => const NativeLinkOpener(),
+);
+
+/// Borrado de los datos de la WebView de la tarea web (CA-009-13): al salir y,
+/// con la marca `files/web_used`, después del primer fotograma del arranque.
+/// La web de pruebas no tiene WebView (CL-009-5).
+final webDataJanitorProvider = Provider<WebDataJanitor>(
+  (ref) => kIsWeb
+      ? WebDataJanitor.inactive()
+      : WebDataJanitor(
+          filesDir: getApplicationSupportDirectory,
+          cleaner: const ChannelWebViewHardening(),
+        ),
 );
 
 /// Si la tarea con imagen o PDF gira a horizontal (CA-008-11). La web de

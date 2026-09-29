@@ -54,6 +54,9 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       onShow: _onShow,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Datos de páginas que quedaron si la app se cerró sin borrarlos
+      // (CA-009-13): solo con la marca, y sin retrasar el primer fotograma.
+      unawaited(ref.read(webDataJanitorProvider).clearAfterLaunch());
       _sweep = Timer(UnaApp.sweepDelay, () async {
         if (!mounted) return;
         try {
