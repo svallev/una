@@ -374,3 +374,82 @@ Hallazgos bajos del `security-reviewer` sobre el script (T-011-08 sigue pendient
 - Dispositivo físico: `secure` con `ALLOW_PHYSICAL=1`; el resto exige además `ALLOW_PHYSICAL_SCREENSHOTS=1` (mensaje sobre que capturan "Recientes" entera). Probado solo el rechazo con un serial ficticio (`FAKE123`); no se conectó nada al Xiaomi.
 - Salida por defecto en un directorio de `mktemp -d`, impreso al terminar (`Capturas en: ...`); `compare` exige el directorio. Patrones de capturas sueltas en `.gitignore` sin excluir `capturas/` (`git check-ignore`: ninguna de las 21 versionadas queda ignorada).
 - **Corrección de `record`:** el cálculo de fotogramas lisos usaba todo el cuerpo (10-100 %) y no contaba como liso un fotograma blanco con la píldora de gestos; ahora usa la zona central (15-85 %). Antes `record` daba a veces `blancos_aceptados=[]` con blancos visibles en la tira; ahora los cuenta (`[8]` en las 3 vueltas).
+
+## 7. T-011-08: cierre (2026-09-30)
+
+Hecho desde la rama `feat/011-ocultar-recientes` (HEAD antes de esta tarea: `8f0dfe0`). No se ha tocado la app (`app/lib`, Kotlin), ni dependencias, ni ningún dispositivo físico; el emulador no se ha usado en esta tarea. Los revisores `security-reviewer` y `a11y-reviewer` ya pasaron antes (0 altos; sus correcciones son §6); aquí se anotan `/security-check`, `/i18n-check`, la tabla CA → prueba y las comprobaciones de código.
+
+### 7.1 `/security-check` (a mano, siguiendo `.claude/skills/security-check/SKILL.md`)
+
+**Alcance.** `git diff main...HEAD`: Kotlin (`MainActivity.kt` +8, `RecentsPrivacy.kt` nuevo), un test de Dart, `tools/check-recents.sh`, `.gitignore`, documentación y las capturas de `capturas/` (21 PNG reducidos con las tareas "uno" y "dos"). La rama arrastra además el commit `9e215b3` de la spec 012 (spec y borrador de la política de privacidad, solo documentación); no es de la 011. Sin cambios en `app/lib`, ARB, `pubspec.yaml`, `pubspec.lock`, `drift_schemas/`, manifiestos, `.github/`, `.mcp.json` ni `skills-lock.json`. Superficie: **nativo (T-8)** y **fugas laterales (T-2)**, que cierra. No hay T-3 a T-6 ni T-10 a T-13: no hacía falta lanzar de nuevo `security-reviewer` (ya revisó el diff y el ADR, 0 altos).
+
+| Punto | Resultado | Evidencia |
+|---|---|---|
+| Sin secretos, claves ni archivos de firma | ✅ | `git diff main...HEAD \| grep -nE '(api[_-]?key\|secret\|token\|password\|BEGIN ... PRIVATE KEY)'` (sin las capturas): solo coincidencias de prosa en docs (specs 011/012, política de privacidad: "token" de diseño, "passwords" de la WebView); ninguna en código. `git ls-files \| grep -E '\.(jks\|keystore\|p8\|p12\|pem\|mobileprovision)$\|key\.properties\|\.env$'`: vacío |
+| Sin logs de contenido | ✅ | `RecentsPrivacy.kt` (38 líneas) no registra nada y no lee contenido |
+| Sin red nueva | ✅ | Ningún cambio en `app/lib` ni en el manifiesto; `tools/check-recents.sh` solo usa `adb` local (`grep -nE 'curl\|wget\|nc \|ssh\|rm -rf\|eval \|sudo'` sin resultados) |
+| Sin permisos nuevos | ✅ | Sin diff de manifiestos; `check-android-permissions.sh release` en verde y `aapt2 dump permissions` idéntico al de `main` (§3c) |
+| Entradas validadas (10 000 caracteres) | N/A | Sin entradas de usuario nuevas |
+| Dependencias (T-10) | N/A | Sin diff de `pubspec.yaml` ni `pubspec.lock`; sin dependencias de Gradle |
+| Importación, URL y WebView, almacenamiento y esquema | N/A | No se toca. Riesgo R-4 (`FLAG_SECURE` en B y WebView): solo puesta en pausa; la fila "web" de la matriz pasa con A en API 37; B sin verificar (PD-10). Sin archivos nuevos (`run-as`, §3c) |
+| Integración nativa (T-8) | ✅ | Ningún componente exportado ni esquema de URL nuevos; `MainActivity` sigue igual salvo tres llamadas |
+| "Recientes" (checklist, sección propia) | ✅ en API 37; **[Pendiente]** lo demás | Punto 1 ✅ (A en 13+; sin `FLAG_SECURE` fija; matriz de 14 filas). Punto 2 (pasar `tools/check-recents.sh` antes de cada entrega a testers) **[Pendiente]**: se hace al entregar; ya está en `/release-checklist`. Punto 3 (Android 8 y 12L) **[Pendiente, PD-10]**. Punto 4: los límites están documentados; **[Pendiente]** copiarlos a las notas de la beta |
+| CI, workflows, web | N/A | Sin cambios; solo `.gitignore` (patrones de capturas sueltas, sin excluir `capturas/`) |
+| Skills, plugins y MCP | ✅ | Ninguno nuevo. Solo cambia el texto de una skill propia, `.claude/skills/release-checklist/SKILL.md` (un paso más), sin contenido de terceros ni instalación |
+
+**Resultado: sin hallazgos que fallen.**
+
+### 7.2 `/i18n-check` (a mano, siguiendo `.claude/skills/i18n-check/SKILL.md`)
+
+| Paso | Resultado |
+|---|---|
+| Claves ES y EN | ✅ 152 y 152 claves, `set()` de diferencias, ningún valor vacío. **La 011 no toca las ARB** (`git diff main...HEAD --name-only -- '*.arb' app/lib` da 0 archivos) |
+| Plurales, fechas y números | N/A (sin textos ni fechas nuevos) |
+| Textos incrustados | ✅ Sin cambios en `app/lib`. La búsqueda de la skill da un único resultado, `placement_sheet.dart:139` (`label: '${widget.title}. ${widget.hint}'`), que interpola dos textos ya traducidos y **no viene de esta rama**. El nombre de la app solo sale de `app_identity.g.dart` (generado desde `identity.yaml`); la otra coincidencia de "Una" es el artículo español de `attachUrlHint` |
+| Specs ↔ ARB | ✅ La spec 011 §7 dice "Ninguno nuevo" y no hay claves nuevas |
+| Glosario | ✅ El término **Recientes / Recents (app switcher)** ya está en `docs/glossary.md` (`recents`); la spec y los documentos lo usan tal cual |
+| Resolución de idioma | ✅ Existen `test/app/locale_resolution_test.dart`, `locale_change_test.dart` y `test/l10n/semantics_language_test.dart` (spec 010); pasan dentro del `flutter test` completo |
+
+**Resultado: confirmado que la 011 no añade ni cambia ningún texto.** (La lectura de la tarjeta de "Recientes" por TalkBack usa el nombre de la app de `identity.yaml`, sin texto propio.)
+
+### 7.3 Comprobaciones de código (desde `app/`, sistema, sin `fvm`)
+
+- `dart format lib test integration_test`: 277 archivos, **0 cambios**.
+- `flutter analyze --fatal-infos`: **No issues found!**
+- `flutter test` (completo): **+1207 ~49: All tests passed!** (49 omitidos, los de siempre).
+- `node tools/validate-tokens.mjs`: `tokens.json válido (28 combinaciones de contraste AA comprobadas)`.
+
+### 7.4 Tabla CA → prueba
+
+Entornos: **Emu** = emulador `Pixel_6a`, Android 16 (API 37), `emulator-5554`; **Xiaomi** = Xiaomi 15T Pro, Android 16 (API 36), HyperOS OS3.0, paquete `.profile` (T-011-07, en parte); **test** = `flutter test`; **adb** = `tools/check-recents.sh` y comandos de `adb`/`dumpsys`. **API 26 y 32 no se han probado nunca (PD-10, T-011-09)**, así que todo lo que dependa del mecanismo B (Android 8-12) sigue siendo **[Suposición]**.
+
+| CA | Qué se verificó | Dónde / cómo | Sin verificar |
+|---|---|---|---|
+| **CA-011-01** sin contenido en "Recientes" | Tarjeta en blanco e idéntica con A y con B, sin rastro del contenido | **Emu, adb:** `capture` + `compare` en las 14 filas (§3.2), 0 % de píxeles distintos, parecido < 0,1. **Xiaomi:** el lanzador respeta la señal (CL-011-9): tarjeta blanca con la franja negra, igual que el emulador; 10 de 10 medidas con "dos" (zona interior 100 % blanca), "uno" a ojo (§5.11) | API 26-32 (B); Android 13-35; ruta directa (CL-011-14, fuera del criterio) |
+| **CA-011-02** matriz | 14 filas de la spec, cada una con A y B | **Emu, adb** (§3.2); web con páginas reales; error de almacenamiento con BD corrupta (`run-as`) | Fila de la spec 012 ("Configuración y perfil", licencias, texto de una licencia, confirmación de enlace): **no aplica todavía, la 012 no está implementada** |
+| **CA-011-03** vuelta sin parpadeo | 0 fotogramas negros y 0 de otro color; blanco liso al volver con `am start` o icono (0,4-1,25 s con el emulador cargado, §3.3; 0,01-0,12 s en reposo y en modo oscuro, §6), casi nada al tocar la tarjeta | **Emu, adb:** mp4 con `AVAssetReader` (10 vueltas por tarjeta, 10 `am start`, 5 icono) y `record 10`; **test:** `home_router_test.dart` `'CA-011-03: …'` con el reloj en 9:59 y 10:00 | **Xiaomi:** duración del blanco sin medir (el USB se corta al grabar; ningún negro visto en las capturas). Arranque en frío en modo oscuro (negro ≈ 0,5 s): anterior a la 011, fuera de este criterio, **aplazado a F5** (decisión del propietario) |
+| **CA-011-04** capturas y grabaciones | Con la app delante sale con contenido, sin `SECURE`: arranque en frío, tras "Recientes", tras el icono, tras la cámara y tras el selector | **Emu, adb:** `screencap`, `screenrecord`, `dumpsys window`; captura del sistema (encendido + volumen, `capturas/captura-sistema.png`) (§3.4). **Xiaomi:** `screencap` de `adb` con contenido, también tras arranque en frío (§5.11) | **Xiaomi:** captura y grabación del propio sistema; API 26-32 |
+| **CA-011-05** arranque | p50 < 1 s y aumento dentro de la diferencia entre líneas base: base 384/385 ms, nueva 387/385 ms (p50; alternadas, n = 20) | **Emu, `measure-cold-start.sh`** (T-011-04, `docs/perf/baseline.md`); el margen es la resolución de la medida (±3 ms) | **Xiaomi:** cifra real de P2 (con permiso del propietario) |
+| **CA-011-06** sin datos, permisos ni dependencias | Permisos idénticos a `main`, `pubspec*`/`drift_schemas/`/`schemaVersion` sin cambios, `files/` sin archivos nuevos (17 entradas idénticas) | **adb** y `git diff` (§3c), `aapt2`, `run-as` | Almacenamiento externo (la app no lo usa) |
+| **CA-011-07** otras plataformas | Nada de Dart de la app cambia; `flutter test` completo y `flutter build web` correctos | **test** (T-011-05 y de nuevo en T-011-08: +1207 ~49), `flutter build web` | iOS no se compila (D17) |
+| **CA-011-08** ciclo completo | Tarjeta en blanco y captura con contenido: 10 de 10 el básico y 10 de 10 con la cámara; con el selector de fotos 10 de 10 la captura sale con contenido y la tarjeta enseña la app (excepción aceptada, CL-011-15) | **Emu, adb** (§3.3); **Xiaomi:** ciclo básico 10 de 10 (tarjeta en blanco, app de vuelta) (§5.11) | **Xiaomi:** cámara y selector; API 26-32 |
+
+Casos límite relevantes:
+
+| CL | Estado | Dónde |
+|---|---|---|
+| CL-011-1 (actualizar) | **Hecho, confirmado** (la tarjeta antigua sigue hasta la próxima vez que se va a segundo plano); aceptado | Emu, §3.1 |
+| CL-011-2 (el sistema cierra la app) | **Hecho, pasa** | Emu, `am kill` |
+| CL-011-3 (cámara y selectores) | Cámara y archivos: pasa. Selector de fotos: la tarjeta enseña lo que queda a la vista (**aceptado**, CL-011-15) | Emu; Xiaomi **sin hacer** |
+| CL-011-4 (superposiciones) | Selector parcial: igual que la línea base. Bandeja: sin comparación posible (opaca). Menú de apagado: **no verificado** (apagó el emulador) | Emu, §3.5 |
+| CL-011-5 (pantalla dividida) | **[Pendiente, PD-10]** (8-9 frente a 10+) | — |
+| CL-011-6 (gesto de cambio) | Ventana en vivo con contenido; **aceptado** (propietario) | Emu, §3.5 |
+| CL-011-7 (captura desde "Recientes") | No probado aparte; coincide con lo que ve el usuario | — |
+| CL-011-8 | Fuera de alcance | — |
+| CL-011-9 (HyperOS) | **Hecho, el lanzador respeta la señal** | Xiaomi, §5.11 |
+| CL-011-10, 11, 12 | **Hecho, pasan** (bloqueo y desbloqueo; teclado y texto, que no reaparece igual que en la línea base; giro con PDF) | Emu, §3.1 |
+| CL-011-13 (fallo silencioso) | Mitigado: `check-recents.sh` antes de cada entrega (checklist, testing.md y `/release-checklist`); sin test de CI, por decisión del propietario | — |
+| CL-011-14 (ruta directa) | Ventana en vivo, fuera de CA-011-01; **aceptado**. Xiaomi: no probado | Emu, §2 |
+| CL-011-15 (hoja del selector de fotos) | Igual que antes de la 011; **aceptado** | Emu, §3.5 |
+
+Accesibilidad de la spec §6: TalkBack lee la tarjeta con solo el nombre de la app ("Una.. 4 of 4") **[Hecho, emulador, en inglés]**. Lupa del sistema, TalkBack al volver, TalkBack en español y en HyperOS, Switch Access y teclado: **no verificados**, en la auditoría de F5 (`docs/PLAN.md`).
