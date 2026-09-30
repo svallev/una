@@ -1009,6 +1009,60 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Abrir página →'**
   String get urlOpenPageWeb;
+
+  /// Icono del nivel 1 de Configuración y perfil. Propia, distinta de attachSheetClose y menuClose (cada una con su contexto). CA-012-01/11
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get settingsClose;
+
+  /// Opción del nivel 1 que abre la lista de licencias. CA-012-01/03
+  ///
+  /// In es, this message translates to:
+  /// **'Licencias de código abierto'**
+  String get settingsLicenses;
+
+  /// Opción del nivel 1 que abre la política en el navegador, tras confirmar. CA-012-01/04
+  ///
+  /// In es, this message translates to:
+  /// **'Política de privacidad'**
+  String get settingsPrivacy;
+
+  /// Pista del lector de pantalla de Política de privacidad. CA-012-11
+  ///
+  /// In es, this message translates to:
+  /// **'Abre una página web en el navegador'**
+  String get settingsPrivacyHint;
+
+  /// Encabezado del nivel 2 (lista de licencias). CA-012-03/11
+  ///
+  /// In es, this message translates to:
+  /// **'Licencias de código abierto'**
+  String get licensesTitle;
+
+  /// Estado de carga del nivel 2; se anuncia al lector. CA-012-15
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando licencias…'**
+  String get licensesLoading;
+
+  /// Bajo el nombre de cada elemento de la lista de licencias; el lector dice "nombre, N licencias". CA-012-03/11
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{1 licencia} other{{count} licencias}}'**
+  String licensesCount(int count);
+
+  /// Botón de volver de los niveles 2 y 3. CA-012-02/11
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get licensesBack;
+
+  /// Error de lectura de las licencias, con Reintentar. CA-012-15
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las licencias.'**
+  String get licensesError;
 }
 
 class _AppLocalizationsDelegate

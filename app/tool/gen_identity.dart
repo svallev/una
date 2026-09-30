@@ -12,6 +12,7 @@ void main(List<String> args) {
   final yaml = loadYaml(File('identity.yaml').readAsStringSync()) as YamlMap;
   final displayName = yaml['displayName'] as String;
   final wordmark = yaml['wordmark'] as String;
+  final privacyPolicyUrl = yaml['privacyPolicyUrl'] as String;
 
   final outputs = <String, String Function(String? current)>{
     'lib/app/app_identity.g.dart': (_) =>
@@ -25,6 +26,10 @@ abstract final class AppIdentity {
 
   /// Logotipo que se muestra dentro de la app.
   static const String wordmark = ${_dartString(wordmark)};
+
+  /// Dirección de la política de privacidad (una sola para ES y EN). Solo `https`; se abre en el
+  /// navegador del sistema. Es un marcador hasta que exista la web (spec 012, CA-012-05).
+  static const String privacyPolicyUrl = ${_dartString(privacyPolicyUrl)};
 }
 ''',
     'android/app/src/main/res/values/strings.xml': (_) =>

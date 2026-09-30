@@ -61,6 +61,33 @@ void main() {
     expect(AppIdentity.wordmark, identity['wordmark']);
   });
 
+  test('CA-012-05: privacyPolicyUrl sale de identity.yaml, es https y es una '
+      'sola dirección para los dos idiomas', () {
+    expect(identity['privacyPolicyUrl'], isA<String>());
+    expect(AppIdentity.privacyPolicyUrl, identity['privacyPolicyUrl']);
+    final uri = Uri.parse(AppIdentity.privacyPolicyUrl);
+    expect(uri.scheme, 'https');
+    expect(uri.host, isNotEmpty);
+    expect(uri.userInfo, isEmpty);
+  });
+
+  test('CA-012-05: la dirección de la política no está escrita en lib/ '
+      'fuera de lo generado', () {
+    final url = identity['privacyPolicyUrl'] as String;
+    final hits = [
+      for (final f in _scannedFiles())
+        if (f.readAsStringSync().contains(url)) f.path,
+    ];
+    expect(hits, isEmpty);
+  });
+
+  test('CA-012-05: CI ya comprueba lo generado y la marca del marcador '
+      'está documentada en identity.yaml', () {
+    final yaml = File('identity.yaml').readAsStringSync();
+    expect(yaml, contains('privacyPolicyUrl'));
+    expect(yaml, contains('PD-2'));
+  });
+
   test(
     'CA-010-05: el nombre no está escrito tal cual en lib/ ni en los ARB',
     () {

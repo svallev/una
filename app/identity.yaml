@@ -5,3 +5,9 @@
 # y se fija una sola vez al comprar el dominio neutro (ADR y android/app/build.gradle.kts).
 displayName: "Una."   # nombre bajo el icono y en el sistema
 wordmark: "una."      # logotipo dentro de la app
+
+# Dirección de la política de privacidad (spec 012, CA-012-04/05): una sola para ES y EN. Se abre en el
+# navegador del sistema, nunca dentro de la app. Solo `https`.
+# [Pendiente PD-2] MARCADOR: la web aún no existe. `tools/check-release-config.sh` impide publicar con
+# un dominio reservado (example.com…); cámbiala por la definitiva cuando exista.
+privacyPolicyUrl: "https://example.com/privacy"

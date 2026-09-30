@@ -1,6 +1,6 @@
 # Tareas — Spec 012: Pantalla temporal de "Configuración y perfil"
 
-**Siguiente:** T-012-01
+**Siguiente:** T-012-02
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden** (nada en paralelo). Rama `feat/012-configuracion-temporal` desde `main`. Cada tarea termina con `fvm dart format .`, `fvm flutter analyze --fatal-infos` y `fvm flutter test` en verde y un commit `feat(012): …` (o `test`/`docs`/`chore`). Emulador de API 37; nunca el Xiaomi sin permiso del propietario.
 
@@ -32,3 +32,4 @@ Una fila por tarea, **≤ 3 líneas**. El detalle va en el commit; lo que sirve 
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-012-01 | Hecha: 9 claves de la spec §7 en ARB ES/EN (`licensesCount` con plural ICU `one`/`other`; `settingsClose` propia) y `privacyPolicyUrl` (marcador `https://example.com/privacy`) en `identity.yaml` → `AppIdentity`. Verificado: `gen-l10n` sin avisos, `gen_identity --check`, format/analyze limpios, 1214 tests en verde (nuevos: `spec_012_strings_test`, 3 en `app_identity_test`). | (este commit) |
