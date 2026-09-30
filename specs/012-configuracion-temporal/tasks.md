@@ -18,7 +18,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 | T-012-10 | **Documentación.** `prototype-deviations.md` (DEV-18 cerrada por la 012, DEV-49 temporal), `screen-map.md`, `architecture.md`, `security/checklist.md`, `glossary.md`, enmiendas de 005 (CA-005-09) y 010 (CL-010-7, CA-010-07, CA-010-12, §6), `CLAUDE.md` y la memoria "beta congelada" | T-012-09 | `docs/…`, `specs/005-…`, `specs/010-…`, `CLAUDE.md` | Documentos al día y enlazados a la spec | — |
 | T-012-11 | **Cierre.** `security-reviewer` y `a11y-reviewer` sobre `git diff main...HEAD`; `/security-check`, `/i18n-check`, `/tokens-validate`; lista CA → prueba; DoD; `PLAN.md` (fila F5); spec **Implementada**; `pr-description.md` sin abrir la PR hasta que lo confirme el propietario | T-012-10 | `specs/012-…`, `docs/PLAN.md` | Informes sin hallazgos altos; tabla CA → prueba completa | todos |
 
-**[Pendiente, propietario]** CA-012-07: comprobar a oído, en el móvil, que el texto de las licencias se lee con la voz inglesa y el resto con la española.
+**[Hecho, propietario 2026-09-30]** CA-012-07: comprobado a oído en el Xiaomi (APK *release* de la rama, TalkBack): el texto de las licencias se lee con la voz inglesa y el resto con la española.
 
 ## Cierre
 
