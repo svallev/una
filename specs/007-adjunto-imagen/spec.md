@@ -229,7 +229,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 | CL-007-8 | Doble toque rápido en "Continuar" con imagen | Se crea una sola tarea |
 | CL-007-9 | Listado con 500 tareas, todas con imagen | Se cumple CA-006-20 |
 | CL-007-10 | Registros (logs) en *release* | No se registra ninguna dirección, nombre, ruta ni metadato de una imagen |
-| CL-007-11 | La miniatura de la app en "Recientes" | Muestra la imagen. **[Pendiente, F5]** Ocultarla mientras se ve un adjunto *(antes spec 010; enmienda 2026-09-29)* |
+| CL-007-11 | La miniatura de la app en "Recientes" | Muestra la imagen. **[Pendiente, spec 011]** Se oculta siempre, no solo con adjunto (propietario, 2026-09-30) *(antes spec 010; enmiendas 2026-09-29 y 2026-09-30)* |
 | CL-007-12 | Web de pruebas (ADR-0010) | "Hacer foto" y "Subir imagen" usan el selector del navegador; las imágenes se guardan solo en memoria, como las tareas |
 
 ## 5. Estados vacíos y de error
