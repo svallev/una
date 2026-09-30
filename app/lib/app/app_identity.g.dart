@@ -7,4 +7,8 @@ abstract final class AppIdentity {
 
   /// Logotipo que se muestra dentro de la app.
   static const String wordmark = 'una.';
+
+  /// Dirección de la política de privacidad (una sola para ES y EN). Solo `https`; se abre en el
+  /// navegador del sistema. Es un marcador hasta que exista la web (spec 012, CA-012-05).
+  static const String privacyPolicyUrl = 'https://example.com/privacy';
 }

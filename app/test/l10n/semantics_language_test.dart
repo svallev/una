@@ -903,6 +903,9 @@ Task _webTask(String id, {required String rank, String url = _webAddress}) {
 /// Abre enlaces sin salir de la prueba.
 class _Opener implements LinkOpener {
   @override
+  Future<bool> canOpen(LinkTarget target) async => true;
+
+  @override
   Future<bool> open(LinkTarget target) async => true;
 }
 

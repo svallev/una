@@ -45,6 +45,17 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 - [ ] Ningún componente exportado nuevo; FileProvider con permisos puntuales y solo de lectura (única excepción: la salida de la cámara, escritura sobre un solo archivo de `cache/import/` y revocada al volver, spec 007).
 - [ ] Sin esquemas de URL ni *deep links* nuevos sin su ADR.
 
+## Si abre enlaces externos o muestra licencias y política (T-4, T-13, spec 012)
+
+Aplica si la PR toca `LinkOpener.kt`, `link_confirm_sheet.dart`, `privacyLink`, `privacyPolicyUrl`, `assets/licenses/`, `bundled_licenses.dart` o `features/settings/`.
+
+- [ ] Solo se abren direcciones `https` (`privacyLink`: sin `usuario@`, espacios ni controles), siempre tras la confirmación con el dominio real; nada de esta pantalla pasa por la vista web de la tarea (ADR-0018 no aplica). La app no abre conexiones: lo hace el navegador (P4).
+- [ ] `LinkOpener.canOpen` solo comprueba (`resolveActivity`): sin `startActivity`, sin registrar ni guardar la dirección, y se pregunta en cada toque; `<queries>` y permisos sin cambios (`tools/check-android-permissions.sh release`: solo `INTERNET`).
+- [ ] Los textos de licencia son `Text` plano: sin enlaces activos (CA-012-03, CL-012-12).
+- [ ] `tools/check-licenses.sh` pasa sobre el APK *release* de cada ABI (paquetes Dart, cada `.so`, artefactos de Android, OFL de las fuentes). Un artefacto nuevo en `android.txt` tiene su licencia comprobada en el POM contra `threat-model.md §5` y anotada en la PR; al actualizar PDFium se regenera `pdfium.txt` (su línea de origen debe coincidir con `pdfium.lock`).
+- [ ] **Antes de publicar** (F6): `tools/check-release-config.sh` pasa (dirección `https` propia, sin dominios reservados, sin huecos ES/EN en `docs/legal/privacy-policy.md`) y coincide con la de la ficha de la tienda. **[Pendiente, PD-2]** la dirección real: hoy es el marcador `example.com`.
+- [ ] Toda pantalla o hoja nueva entra en la matriz de "Recientes" (CA-011-02; la 012 añadió los tres niveles y la confirmación de enlace).
+
 ## "Recientes": lo que el sistema enseña de la app (T-2, spec 011, ADR-0019)
 
 Aplica si la PR toca `MainActivity.kt`, `RecentsPrivacy.kt`, el tema de arranque (`LaunchTheme`, `launch_background.xml`), la ventana o `FLAG_SECURE`, o si actualiza Flutter o el SDK de Android.

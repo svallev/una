@@ -566,4 +566,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get urlOpenPageWeb => 'Open page →';
+
+  @override
+  String get settingsClose => 'Close';
+
+  @override
+  String get settingsLicenses => 'Open-source licenses';
+
+  @override
+  String get settingsPrivacy => 'Privacy policy';
+
+  @override
+  String get settingsPrivacyHint => 'Opens a web page in the browser';
+
+  @override
+  String get licensesTitle => 'Open-source licenses';
+
+  @override
+  String get licensesLoading => 'Loading licenses…';
+
+  @override
+  String licensesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count licenses',
+      one: '1 license',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get licensesBack => 'Back';
+
+  @override
+  String get licensesError => 'Couldn\'t load the licenses.';
+
+  @override
+  String licensesTextOf(int n, int total) {
+    return 'License $n of $total';
+  }
 }

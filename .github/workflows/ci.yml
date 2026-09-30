@@ -107,6 +107,10 @@ jobs:
       - name: PDFium fijado (tools/pdfium.lock, threat-model §5)
         working-directory: app
         run: bash ../tools/check-pdfium.sh
+      - name: Licencias completas (spec 012, CA-012-03; threat-model §5)
+        working-directory: app
+        # Tras compilar: usa la caché de Gradle (--offline) y lo que ya está instalado; no instala nada.
+        run: bash ../tools/check-licenses.sh
       - name: Tamaño de descarga (< 25 MB por ABI)
         working-directory: app
         # Las librerías nativas van sin comprimir dentro del APK (extractNativeLibs=false);

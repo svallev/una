@@ -13,6 +13,9 @@ import '../../support/fake_pdf_view.dart';
 import '../../support/pump_app.dart';
 
 class _Opener implements LinkOpener {
+  @override
+  Future<bool> canOpen(LinkTarget target) async => available;
+
   bool available = true;
   final opened = <LinkTarget>[];
   @override

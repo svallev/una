@@ -1,6 +1,6 @@
 # Spec 012: Pantalla temporal de "Configuración y perfil" (licencias y privacidad)
 
-- **Estado:** **Aprobada** (propietario, 2026-09-30). Revisada por `spec-reviewer` el 2026-09-30 con los hallazgos aplicados
+- **Estado:** **Implementada parcialmente** (2026-09-30: faltan las casillas de dispositivo de `dispositivo.md` §8 y los 3 *goldens* por generar en CI; ver `tasks.md` y §10). Aprobada por el propietario el 2026-09-30. Revisada por `spec-reviewer` el 2026-09-30 con los hallazgos aplicados
 - **Alcance (propietario, 2026-09-30):** pantalla **temporal**, "para que esté en algún sitio". Solo dos opciones: las licencias de código abierto y la política de privacidad. La Configuración completa llegará en una fase posterior, con diseño del propietario y alguna funcionalidad nueva. **Esto cambia el alcance de la beta** ("sin pantalla de Configuración", 2026-09-29): solo en lo que aquí se dice
 - **Reglas de producto:** R15 solo en CA-012-07 (idioma). Cubre parte de D13 (aplazada) y el requisito de publicación de las licencias (`docs/PLAN.md`, F5). Desarrolla P4 (privacidad), P6 y P7
 - **Pantallas del prototipo:** **ninguna: sin diseño** (`docs/design/screen-map.md`). Se hace con los tokens y componentes existentes y se registra como DEV-49 (temporal)
@@ -47,7 +47,8 @@ Que la app tenga, mientras no exista la Configuración completa, **un sitio dond
     - cada **fuente empaquetada**;
     - y cada **biblioteca nativa de terceros** que va en el paquete de la app (`.so` de cada arquitectura, p. ej. PDFium y SQLite)
     tiene su licencia en la lista. Un test enumera cada una de esas tres clases y falla si alguna no aparece.
-  - **[Pendiente, plan]** El motor de Flutter y las bibliotecas de Android (AndroidX, Kotlin): el plan comprueba si la lista de Flutter ya las recoge. Si no, **se pregunta** al propietario si entran o si basta con las tres clases de arriba.
+  - **El motor de Flutter y las bibliotecas de Android** *(propietario, 2026-09-30, P-012-3)*: el motor ya viene en la lista de Flutter; las bibliotecas de Android (AndroidX, Kotlin) no, y **entran** como una entrada propia, "Bibliotecas de Android (AndroidX, Kotlin)", con su licencia y la lista de bibliotecas. El test también la comprueba.
+  - **Paquetes de desarrollo** *(propietario, 2026-09-30)*: la lista de Flutter trae también algunos que no van en la app; **se muestran tal cual** (sobra algo, no falta nada). El test solo exige los de *release*.
   - Los textos de las licencias son **contenido de terceros, en inglés** (como el texto del usuario y las páginas web en CA-010-07: fuera de P7); el resto de la pantalla, en el idioma de la app.
   - **Los textos de licencia no llevan enlaces activos**: las direcciones que contienen son texto plano (P4, ADR-0018).
 - **CA-012-04 Política de privacidad**
@@ -107,7 +108,7 @@ Que la app tenga, mientras no exista la Configuración completa, **un sitio dond
 - **CA-012-14 La tarea de debajo no cambia (CA-009-07, CA-009-13)**
   - **Dado** una tarea con web, con PDF o con imagen, con el menú abierto
   - **Cuando** se abre esta pantalla y se vuelve (o se abre la política en el navegador y se vuelve en menos de 10 minutos)
-  - **Entonces** la página web **no se recarga** y no se borra su sesión, y el PDF conserva su página y su zoom. **[Suposición]** Como esta pantalla es una ruta completa y no una hoja, el plan comprueba que no cuenta como "salir de la página" (CA-009-13); si cuenta, se **para y se pregunta**.
+  - **Entonces** el PDF conserva su página y su zoom, y la imagen no cambia. La página web **se vuelve a cargar al volver**, como tras el editor o el listado (CA-009-07, CA-009-13): esta pantalla tapa la tarea y eso cuenta como salir de la página. *(Enmienda del propietario, 2026-09-30: el plan comprobó que la ruta a pantalla completa cuenta como "salir de la página"; se acepta la recarga en lugar de mantener la vista web viva debajo.)*
 - **CA-012-15 Estados de carga y error de las licencias**
   - **Dado** el nivel 1
   - **Cuando** se abre el nivel 2
@@ -166,6 +167,7 @@ Claves nuevas (camelCase; se añaden con `/strings-add`). Se reutilizan `menuSet
 | `licensesCount` | {count, plural, one{1 licencia} other{{count} licencias}} | {count, plural, one{1 license} other{{count} licenses}} | Bajo el nombre del elemento (CA-010-04) |
 | `licensesBack` | Volver | Back | Niveles 2 y 3 |
 | `licensesError` | No se pudieron cargar las licencias. | Couldn't load the licenses. | CA-012-15 |
+| `licensesTextOf` | Licencia {n} de {total} | License {n} of {total} | Encabezado de cada texto en el nivel 3 **solo si el elemento tiene varias licencias** *(propietario, 2026-09-30)*. El título del nivel 3 (encabezado y foco al llegar) es el **nombre del elemento**; con una sola licencia no hay más encabezado |
 
 ## 8. Fuera de alcance
 
@@ -180,14 +182,39 @@ Claves nuevas (camelCase; se añaden con `/strings-add`). Se reutilizan `menuSet
 
 - **P-012-1 [Resuelta, propietario, 2026-09-30]:** al cerrar se vuelve al menú tal como estaba (CA-012-02).
 - **P-012-2 [Resuelta, propietario, 2026-09-30]:** una sola dirección para los dos idiomas (por ahora, el marcador).
-- **P-012-3 [Pendiente, plan; puede llegar a ser del propietario]:** el motor de Flutter y las bibliotecas de Android (CA-012-03).
+- **P-012-3 [Resuelta, propietario, 2026-09-30]:** el motor ya está en la lista de Flutter; las bibliotecas de Android entran como una entrada propia (CA-012-03).
 - **P-012-4 [Pendiente, propietario, más adelante]:** los huecos del borrador de la política (responsable, contacto y fecha, y dónde se aloja la web), que dependen de PD-2 y PD-3.
+
+## 10. Verificación: CA → prueba (cierre, T-012-11)
+
+Rutas relativas a `app/` salvo las de `tools/`. Entorno: `flutter test` en local (1423 verdes), salvo lo que dice otra cosa. **Dispositivo** = `specs/012-configuracion-temporal/dispositivo.md` (emulador de API 37; §8 son las casillas **[Pendiente]**). Los *goldens* (`test/goldens/settings_golden_test.dart`) están **sin subir**: se generan en CI con la etiqueta `actualizar-goldens` **[Pendiente]**.
+
+| CA | Prueba automática | Dispositivo / otra | Estado |
+|---|---|---|---|
+| 01 Abrir | `test/features/settings/settings_screen_test.dart` ("botón de ≥ 44 que abre el nivel 1…", "el botón del menú mide al menos 44…"); `settings_over_task_test.dart` (desde texto, imagen, PDF y web); `test/features/menu/menu_create_edit_test.dart` | Dispositivo §1 (niveles) | Hecho; *golden* del nivel 1 **[Pendiente]** |
+| 02 Cerrar y volver | `settings_screen_test.dart` (Cerrar, atrás y Escape → menú tal como estaba, foco en la fila); `test/features/settings/licenses_screen_test.dart` (nivel 3 → 2, foco en la fila, con reducir movimiento) | Dispositivo §3 (Escape en los tres niveles) | Hecho; foco de TalkBack al volver **[Pendiente]** (§8) |
+| 03 Licencias | `test/app/bundled_licenses_test.dart` (5 entradas propias), `test/data/flutter_license_source_test.dart`, `test/app/licenses_provider_test.dart`, `licenses_screen_test.dart` (filas, varias licencias, sin enlaces); **completitud:** `tools/check-licenses.sh` (paquetes de *release*, fuentes y `.so`; paso de `ci.yml`, no de `flutter test`) | Dispositivo §1 (`check-licenses.sh` sobre el APK *release*: 84 paquetes, 46 artefactos, 5 `.so`) | Hecho; *goldens* de los niveles 2 y 3 **[Pendiente]** |
+| 04 Política de privacidad | `settings_screen_test.dart` (confirmación con el dominio, Cancelar, aviso por intento, `canOpen` true y `open` false, solo `https`), `test/domain/privacy_link_test.dart`, `test/data/native_link_opener_test.dart` | Dispositivo §1 (con Chrome y con Chrome desactivado) | Hecho |
+| 05 Enlace falso y puerta | `test/app/app_identity_test.dart`, `test/domain/privacy_link_test.dart`, `test/tool/check_release_config_test.dart` (con el script real: hoy falla, y pasa con valores de prueba) | `/release-checklist` (paso de la puerta) | Hecho; la puerta **no está en CI** (hasta F6, 012-S3) |
+| 06 Volver del navegador | `test/app/home_router_test.dart` (9:59 y 10:00 en los tres niveles y con la confirmación); `settings_over_task_test.dart` | Dispositivo §1 (Atrás con Chrome delante) | Hecho; 10 min con reloj real **[Pendiente]** (§8; lo cubre el reloj inyectado) |
+| 07 Idioma | `test/app/locale_change_test.dart` (ES↔EN en los tres niveles, texto de licencia intacto); `licenses_screen_test.dart` (solo los párrafos de licencia llevan `en`) | La voz: **propietario, a oído en el Xiaomi (2026-09-30)**; en caliente: dispositivo §1 | Hecho; `ca`/`gl`/`eu` y sistema en inglés con TalkBack **[Pendiente]** (casillas de cierre) |
+| 08 Sin datos, permisos ni ajustes nuevos | `test/drift/app/migration_test.dart` (esquema v2 sin cambios); `tools/check-licenses.sh` y `tools/check-android-permissions.sh release` (pasos de `ci.yml`) | Dispositivo §1 (permisos: solo `INTERNET`; `git diff main...HEAD` sin `drift_schemas/` ni `pubspec.lock`; `pubspec.yaml` solo con 3 assets) | Hecho (sin test propio de "sin datos": se comprueba por diferencia) |
+| 09 "Recientes" | — (lo dibuja el sistema; sin test de CI, como la 011) | Dispositivo §2 (`tools/check-recents.sh`, las 4 filas pasan) | Hecho en API 37; API 26 y 32 en PD-10 |
+| 10 Diseño con lo que hay | `node tools/validate-tokens.mjs` (paso de `ci.yml`: 28 combinaciones AA); en `lib/features/settings` no hay `Color(`, `Colors.` ni tamaños sueltos (solo `UnaColors`, `UnaTheme`…) | DEV-49 en `docs/design/prototype-deviations.md` | Hecho con una salvedad: 4 `height: 1.5` escritos a mano (TD-1, `PLAN.md`) |
+| 11 Lector de pantalla | `settings_screen_test.dart` y `licenses_screen_test.dart` (orden, encabezados, botones, pista, "nombre, N licencias", aviso, en inglés), `test/ui/sheet_row_test.dart`, `test/l10n/spec_012_strings_test.dart` | Dispositivo §1 y §4 (primer nodo = título y aviso con TalkBack; recuento leído del árbol) | Hecho; foco al volver, anuncio de carga y Reintentar, y oído **[Pendiente]** (§8) |
+| 12 Teclado y conmutadores | `settings_screen_test.dart` y `licenses_screen_test.dart` (orden Cerrar/Volver → título → filas, anillo con `FocusHighlightMode.traditional`, Intro, Escape, AvPág/Fin, acción de desplazar), `sheet_row_test.dart` | Dispositivo §3 (Tab, Intro, Escape, AvPág en el emulador) | Hecho; anillo con teclado real y Switch Access **[Pendiente]** (§8) |
+| 13 Texto grande y movimiento | `settings_screen_test.dart` y `licenses_screen_test.dart` (200 % ES y EN a 360 dp con `loadAppFonts`, ≥ 44, con la barra del sistema, fundido de 160 ms y 0 con reducir movimiento), `sheet_row_test.dart` | Dispositivo §1 (200 %, fundido ≈ 145-160 ms y 1 fotograma) | Hecho; 200 % con navegación de 3 botones **[Pendiente]** |
+| 14 La tarea de debajo no cambia | `test/features/settings/settings_over_task_test.dart` (web se recarga; PDF conserva página y zoom; imagen igual) | Dispositivo §1 (web recargada desde arriba) | Hecho |
+| 15 Carga y error | `licenses_screen_test.dart` (anuncio de carga tras el umbral, error con foco en Reintentar, vacío = error), `licenses_provider_test.dart`, `flutter_license_source_test.dart`, `test/ui/brutal_button_test.dart` | `integration_test/licenses_perf_test.dart` (nivel 2 en 48 ms; p90 de construcción 1,5 ms y de raster 17,1 ms en el emulador, igual que la 006); Dispositivo §6 | Hecho con salvedad; p90 en el Xiaomi, anuncio de carga y foco en Reintentar con TalkBack **[Pendiente]** (§8) |
+| 16 El arranque no empeora | `test/app/startup_licenses_test.dart` (con `bootstrap` real), `licenses_provider_test.dart`, `bundled_licenses_test.dart` (nada se lee antes de pedir las licencias) | Dispositivo §7 (p50 +14 ms de mediana, +3,7 % de media, dentro del ruido del emulador) | Hecho con salvedad; cifra real en el Xiaomi **[Pendiente]** (§8) |
+
+**Casos límite:** CL-012-1, 2, 3, 4, 5, 6, 8, 9, 10, 11 y 12 tienen test que los cita (`settings_over_task_test.dart`, `settings_screen_test.dart`, `licenses_screen_test.dart`, `licenses_provider_test.dart`, `privacy_link_test.dart`, `home_router_test.dart`); CL-012-3, CL-012-11 y CL-012-1 también en el emulador (dispositivo §1). **CL-012-7** (sin conexión al abrir la política) **no tiene test ni casilla**: no hay comportamiento de la app que probar (la abre el navegador); se da por cubierto por diseño, pendiente de que el propietario lo confirme.
 
 ## Anexo: notas para `plan.md` (no normativas)
 
 - El menú es la hoja de la spec 005; "Configuración y perfil" es hoy un texto sin acción (`menuSettings`, CA-005-09, CL-010-7): pasa a botón y abre una ruta a pantalla completa, no una hoja.
 - La lista de licencias puede apoyarse en el registro de licencias de Flutter (`LicenseRegistry`): `bundled_licenses.dart` ya añade las OFL de Archivo y Space Mono. La pantalla de Flutter (`LicensePage`) es de Material y no usa los tokens; se hace propia (P12). PDFium (`libpdfium.so`, en tres arquitecturas, `tools/pdfium.lock`; BSD-3 más los avisos de sus terceros) y SQLite (binario que descarga el paquete `sqlite3`) **no** pasan por `LicenseRegistry`: hay que añadirlos como las fuentes. `pubspec.lock` mezcla dependencias de desarrollo; el test las filtra. Los `.so` se enumeran del APK *release*.
-- La confirmación y la apertura del navegador ya existen (spec 008: canal `una/links`, `NativeLinkOpener`, hoja de confirmación): se reutilizan, sin canal nuevo. La comprobación de "hay app que lo abra" ya está en ese canal (`resolveActivity`).
+- La confirmación y la apertura del navegador ya existen (spec 008: canal `una/links`, `NativeLinkOpener`, hoja de confirmación): se reutilizan, sin canal nuevo. La comprobación de "hay app que lo abra" está en ese canal (`resolveActivity`), pero solo dentro de `open`: el plan añade al mismo canal un método para comprobarlo antes de la confirmación.
 - La dirección de la política debería ir junto a la identidad (`app/identity.yaml` → `AppIdentity`, P7) o en un archivo de configuración propio. La puerta de CA-012-05 es un script tipo `tools/check-android-permissions.sh` (p. ej. `tools/check-release-config.sh`), que también busca los huecos en el texto de la política.
 - **Puerta de publicación y compilaciones locales:** el script **no** se ejecuta en las compilaciones *release* locales (medir el arranque, probar en el Xiaomi); solo en la lista de publicación y en el trabajo de CI que genere el artefacto de publicación.
 - Documentos a actualizar al implementar: `docs/design/prototype-deviations.md` (DEV-18 y DEV-49), `screen-map.md`, `architecture.md`, `security/checklist.md`, `glossary.md`, specs 005, 010 y 011, `.claude/skills/release-checklist/SKILL.md` (punto de la puerta), CLAUDE.md y la memoria "beta congelada".

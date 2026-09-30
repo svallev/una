@@ -3,18 +3,29 @@ import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/color_picker.dart';
+import 'package:app/domain/entities/license_package.dart';
+import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/ports/clock.dart';
+import 'package:app/domain/ports/license_source.dart';
+import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
+import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
+import 'package:app/features/menu/menu_sheet.dart';
+import 'package:app/features/settings/license_detail_screen.dart';
+import 'package:app/features/settings/licenses_screen.dart';
+import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/sticky_note.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import '../features/task_list/list_harness.dart' show FakeClock, background;
 import '../support/pump_app.dart';
 
 class _FakeClock implements Clock {
@@ -23,15 +34,38 @@ class _FakeClock implements Clock {
   DateTime now() => value;
 }
 
+/// Fuente de licencias sin registro (spec 012): un elemento con un texto.
+class _LicenseSource implements LicenseSource {
+  @override
+  Future<List<LicensePackage>> load() async => const [
+    LicensePackage(
+      name: 'zxq_pkg',
+      texts: [
+        LicenseText([(text: 'Zxq licence text.', indent: 0)]),
+      ],
+    ),
+  ];
+}
+
+class _Opener implements LinkOpener {
+  @override
+  Future<bool> canOpen(LinkTarget target) async => true;
+
+  @override
+  Future<bool> open(LinkTarget target) async => true;
+}
+
 Future<InMemoryTaskRepository> _pumpApp(
   WidgetTester tester, {
   bool firstRunDone = false,
   bool withTask = false,
   Clock? clock,
+  InMemoryTaskRepository? existing,
+  List<Override> overrides = const [],
 }) async {
-  final repo = InMemoryTaskRepository();
+  final repo = existing ?? InMemoryTaskRepository();
   final task = withTask ? sampleTask() : null;
-  if (task != null) await repo.insert(task);
+  if (task != null && existing == null) await repo.insert(task);
   if (firstRunDone) await repo.setFirstRunDone();
   await tester.pumpWidget(
     ProviderScope(
@@ -42,6 +76,7 @@ Future<InMemoryTaskRepository> _pumpApp(
           BootState(currentTask: task, firstRunDone: firstRunDone),
         ),
         if (clock != null) clockProvider.overrideWithValue(clock),
+        ...overrides,
       ],
       child: const UnaApp(),
     ),
@@ -49,6 +84,47 @@ Future<InMemoryTaskRepository> _pumpApp(
   await tester.pump();
   return repo;
 }
+
+/// Los tres niveles de la Configuración (spec 012) y cómo llegar a cada uno
+/// desde la tarea actual (el sistema, en test, está en inglés).
+final _settingsLevels = <(String, Type, Future<void> Function(WidgetTester))>[
+  ('nivel 1', SettingsScreen, (tester) async {}),
+  (
+    'nivel 2',
+    LicensesScreen,
+    (tester) async {
+      await tester.tap(find.text('Open-source licenses'));
+      await tester.pumpAndSettle();
+    },
+  ),
+  (
+    'nivel 3',
+    LicenseDetailScreen,
+    (tester) async {
+      await tester.tap(find.text('Open-source licenses'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('zxq_pkg'));
+      await tester.pumpAndSettle();
+    },
+  ),
+];
+
+/// Abre el menú y "Settings and profile" sobre la tarea actual.
+Future<void> _openSettingsLevel(
+  WidgetTester tester,
+  Future<void> Function(WidgetTester) goTo,
+) async {
+  await tester.tap(find.bySemanticsLabel('Task menu'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Settings and profile'));
+  await tester.pumpAndSettle();
+  await goTo(tester);
+}
+
+List<Override> get _settingsOverrides => [
+  licenseSourceProvider.overrideWithValue(_LicenseSource()),
+  linkOpenerProvider.overrideWithValue(_Opener()),
+];
 
 void main() {
   testWidgets(
@@ -325,4 +401,99 @@ void main() {
       expect(find.byType(TaskEditorScreen), findsNothing);
     },
   );
+
+  for (final (name, level, goTo) in _settingsLevels) {
+    testWidgets(
+      'CA-012-06: con el reloj a 9:59 se ve el mismo nivel de la Configuración ($name) y a 10:00, la tarea actual sin menú',
+      (tester) async {
+        final clock = FakeClock();
+        await _pumpApp(
+          tester,
+          firstRunDone: true,
+          withTask: true,
+          clock: clock,
+          overrides: _settingsOverrides,
+        );
+        await _openSettingsLevel(tester, goTo);
+        expect(find.byType(level), findsOneWidget);
+
+        background(tester, clock, const Duration(minutes: 9, seconds: 59));
+        await tester.pumpAndSettle();
+        expect(find.byType(level), findsOneWidget);
+        expect(find.byType(CurrentTaskScreen), findsNothing);
+
+        background(tester, clock, UnaApp.resetAfter);
+        await tester.pumpAndSettle();
+        expect(find.byType(level), findsNothing);
+        expect(find.byType(SettingsScreen), findsNothing);
+        expect(find.byType(MenuSheet), findsNothing);
+        expect(find.byType(CurrentTaskScreen), findsOneWidget);
+        expect(find.text('Llamar a Marta'), findsOneWidget);
+      },
+    );
+  }
+
+  testWidgets(
+    'CA-012-06: con la confirmación de la política abierta, a 10:00 se cierra todo y se ve la tarea actual',
+    (tester) async {
+      final clock = FakeClock();
+      await _pumpApp(
+        tester,
+        firstRunDone: true,
+        withTask: true,
+        clock: clock,
+        overrides: _settingsOverrides,
+      );
+      await _openSettingsLevel(tester, (_) async {});
+      await tester.tap(find.text('Privacy policy'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LinkConfirmSheet), findsOneWidget);
+
+      background(tester, clock, const Duration(minutes: 9, seconds: 59));
+      await tester.pumpAndSettle();
+      expect(find.byType(LinkConfirmSheet), findsOneWidget);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+
+      background(tester, clock, UnaApp.resetAfter);
+      await tester.pumpAndSettle();
+      expect(find.byType(LinkConfirmSheet), findsNothing);
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.byType(MenuSheet), findsNothing);
+      expect(find.byType(CurrentTaskScreen), findsOneWidget);
+    },
+  );
+
+  for (final (name, level, goTo) in _settingsLevels) {
+    testWidgets(
+      'CL-012-11: si el sistema cierra la app con la Configuración abierta ($name), el siguiente arranque es normal, a la tarea actual: ni ella ni el menú se restauran',
+      (tester) async {
+        final repo = await _pumpApp(
+          tester,
+          firstRunDone: true,
+          withTask: true,
+          overrides: _settingsOverrides,
+        );
+        await _openSettingsLevel(tester, goTo);
+        expect(find.byType(level), findsOneWidget);
+
+        // El sistema mata el proceso: se descarta todo el árbol y se vuelve a
+        // arrancar con lo guardado.
+        await tester.pumpWidget(const SizedBox());
+        await _pumpApp(
+          tester,
+          firstRunDone: true,
+          withTask: true,
+          existing: repo,
+          overrides: _settingsOverrides,
+        );
+
+        expect(find.byType(CurrentTaskScreen), findsOneWidget);
+        expect(find.text('Llamar a Marta'), findsOneWidget);
+        expect(find.byType(SettingsScreen), findsNothing);
+        expect(find.byType(LicensesScreen), findsNothing);
+        expect(find.byType(LicenseDetailScreen), findsNothing);
+        expect(find.byType(MenuSheet), findsNothing);
+      },
+    );
+  }
 }

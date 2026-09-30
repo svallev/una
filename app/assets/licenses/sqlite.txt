@@ -1,0 +1,12 @@
+SQLite (libsqlite3.so)
+
+Origin: prebuilt library downloaded at build time by the sqlite3 package (github.com/simolus3/sqlite3.dart), which pins its sha256; it is built from the official SQLite amalgamation (sqlite.org), released into the public domain.
+
+SQLite is in the public domain. All of the code and documentation in SQLite has been dedicated to the public domain by the authors. The header of every source file says:
+
+The author disclaims copyright to this source code.  In place of
+a legal notice, here is a blessing:
+
+   May you do good and not evil.
+   May you find forgiveness for yourself and forgive others.
+   May you share freely, never taking more than you give.

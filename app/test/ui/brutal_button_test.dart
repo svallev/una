@@ -37,4 +37,19 @@ void main() {
     await tester.pump();
     expect(tester.widget<FocusRing>(find.byType(FocusRing)).visible, isFalse);
   });
+
+  testWidgets(
+    'CA-012-15: la pista (hint) llega al lector en el mismo nodo del botón',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpWithApp(
+        tester,
+        BrutalButton(label: 'Reintentar', hint: 'Falló', onPressed: () {}),
+      );
+      final node = tester.getSemantics(find.bySemanticsLabel('Reintentar'));
+      expect(node.hint, 'Falló');
+      expect(node.flagsCollection.isButton, isTrue);
+      handle.dispose();
+    },
+  );
 }

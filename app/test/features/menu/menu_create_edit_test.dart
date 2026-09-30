@@ -7,6 +7,7 @@ import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/placement_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/menu/menu_sheet.dart';
+import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/sticky_note.dart';
 import 'package:flutter/material.dart';
@@ -160,7 +161,7 @@ void main() {
       ('en', 'Task menu', 'New task', 'Settings and profile'),
     ]) {
       testWidgets(
-        'CA-005-09 / CL-010-7 ($languageCode): "$settings" es solo texto: se lee tal cual, después de "$newTask", y pulsarlo no hace nada ni es un botón',
+        'CA-005-09 / CL-010-7 / CA-012-01 ($languageCode): "$settings" es un botón (enmienda de la spec 012): se lee tras "$newTask", tiene acción de toque y abre la pantalla de Configuración',
         (tester) async {
           final handle = tester.ensureSemantics();
           await pumpUnaApp(
@@ -172,21 +173,21 @@ void main() {
           await tester.tap(find.bySemanticsLabel(menuButton));
           await tester.pumpAndSettle();
           expect(find.byType(MenuSheet), findsOneWidget);
-          await tester.tap(find.text(settings));
-          await tester.pumpAndSettle();
-          expect(find.byType(MenuSheet), findsOneWidget);
           final node = tester.getSemantics(find.text(settings));
           expect(node.label, settings);
-          expect(node.flagsCollection.isButton, isFalse);
+          expect(node.flagsCollection.isButton, isTrue);
           expect(
             node.getSemanticsData().hasAction(SemanticsAction.tap),
-            isFalse,
+            isTrue,
           );
           // Orden semántico (el que recorre el lector): después de "Nueva tarea".
           final reads = semanticsTexts(tester);
           expect(reads, contains(newTask));
           expect(reads, contains(settings));
           expect(reads.indexOf(settings), greaterThan(reads.indexOf(newTask)));
+          await tester.tap(find.text(settings));
+          await tester.pumpAndSettle();
+          expect(find.byType(SettingsScreen), findsOneWidget);
           handle.dispose();
         },
       );

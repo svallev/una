@@ -374,7 +374,7 @@ abstract class AppLocalizations {
   /// **'Nueva tarea'**
   String get menuNewTask;
 
-  /// Texto del menú, sin interacción hasta la spec de Configuración y perfil. CA-005-09, CL-010-7
+  /// Botón del menú que abre la pantalla de Configuración y perfil (nivel 1, spec 012) y título de esa pantalla. Antes solo texto (CA-005-09, CL-010-7). CA-012-01
   ///
   /// In es, this message translates to:
   /// **'Configuración y perfil'**
@@ -860,7 +860,7 @@ abstract class AppLocalizations {
   /// **'No hemos podido leer este PDF.'**
   String get errPdfUnreadable;
 
-  /// Enlace del PDF sin navegador ni app que lo abra. CA-008-12
+  /// Enlace sin navegador ni app que lo abra: en un PDF (CA-008-12) y en la Política de privacidad de la Configuración (CA-012-04)
   ///
   /// In es, this message translates to:
   /// **'No hay ninguna app para abrir este enlace.'**
@@ -1009,6 +1009,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Abrir página →'**
   String get urlOpenPageWeb;
+
+  /// Icono del nivel 1 de Configuración y perfil. Propia, distinta de attachSheetClose y menuClose (cada una con su contexto). CA-012-01/11
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get settingsClose;
+
+  /// Opción del nivel 1 que abre la lista de licencias. CA-012-01/03
+  ///
+  /// In es, this message translates to:
+  /// **'Licencias de código abierto'**
+  String get settingsLicenses;
+
+  /// Opción del nivel 1 que abre la política en el navegador, tras confirmar. CA-012-01/04
+  ///
+  /// In es, this message translates to:
+  /// **'Política de privacidad'**
+  String get settingsPrivacy;
+
+  /// Pista del lector de pantalla de Política de privacidad. CA-012-11
+  ///
+  /// In es, this message translates to:
+  /// **'Abre una página web en el navegador'**
+  String get settingsPrivacyHint;
+
+  /// Encabezado del nivel 2 (lista de licencias). CA-012-03/11
+  ///
+  /// In es, this message translates to:
+  /// **'Licencias de código abierto'**
+  String get licensesTitle;
+
+  /// Estado de carga del nivel 2; se anuncia al lector. CA-012-15
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando licencias…'**
+  String get licensesLoading;
+
+  /// Bajo el nombre de cada elemento de la lista de licencias; el lector dice "nombre, N licencias". CA-012-03/11
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{1 licencia} other{{count} licencias}}'**
+  String licensesCount(int count);
+
+  /// Botón de volver de los niveles 2 y 3. CA-012-02/11
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get licensesBack;
+
+  /// Error de lectura de las licencias, con Reintentar. CA-012-15
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las licencias.'**
+  String get licensesError;
+
+  /// Encabezado de cada texto de licencia en el nivel 3 cuando un elemento tiene varias (el título del nivel es el nombre del elemento). CA-012-03/11
+  ///
+  /// In es, this message translates to:
+  /// **'Licencia {n} de {total}'**
+  String licensesTextOf(int n, int total);
 }
 
 class _AppLocalizationsDelegate

@@ -50,11 +50,21 @@ class UnaLinkButton extends StatefulWidget {
     required this.label,
     required this.onPressed,
     this.height = UnaSizes.linkButton,
+    this.focusNode,
+    this.semanticsKey,
   });
 
   final String label;
   final VoidCallback onPressed;
   final double height;
+
+  /// Foco de teclado del enlace, para dárselo desde fuera (al volver de la
+  /// Configuración al menú, CA-012-02).
+  final FocusNode? focusNode;
+
+  /// Clave del nodo accesible del enlace, para enviar desde él el aviso de
+  /// foco del lector.
+  final GlobalKey? semanticsKey;
 
   @override
   State<UnaLinkButton> createState() => _UnaLinkButtonState();
@@ -66,12 +76,14 @@ class _UnaLinkButtonState extends State<UnaLinkButton> {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      key: widget.semanticsKey,
       button: true,
       label: widget.label,
       excludeSemantics: true,
       onTap: widget.onPressed,
       child: InkWell(
         onTap: widget.onPressed,
+        focusNode: widget.focusNode,
         onFocusChange: (v) => setState(() => _focused = v),
         splashFactory: NoSplash.splashFactory,
         child: FocusRing(

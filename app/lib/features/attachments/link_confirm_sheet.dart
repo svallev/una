@@ -11,18 +11,23 @@ import '../../ui/una_sheet.dart';
 /// Pregunta antes de abrir un enlace de un PDF (CA-008-12): "¿Abrir {host} en
 /// el navegador?" o "¿Abrir {destino} con otra app?". Devuelve true solo con
 /// "Abrir"; "Cancelar", tocar fuera, atrás, deslizar o Esc devuelven null.
+///
+/// Con [allowRotation] (por defecto), la tarea de debajo puede girar mientras
+/// está abierta (CA-008-11). Desde la Configuración (spec 012) se pasa false:
+/// la tarea queda tapada y no debe pedir girar (CL-012-3).
 Future<bool?> showLinkConfirmSheet(
   BuildContext context,
-  LinkTarget target,
-) async {
-  linkConfirmOpen.value = true;
+  LinkTarget target, {
+  bool allowRotation = true,
+}) async {
+  if (allowRotation) linkConfirmOpen.value = true;
   try {
     return await showUnaSheet<bool>(
       context,
       builder: (_) => LinkConfirmSheet(target: target),
     );
   } finally {
-    linkConfirmOpen.value = false;
+    if (allowRotation) linkConfirmOpen.value = false;
   }
 }
 

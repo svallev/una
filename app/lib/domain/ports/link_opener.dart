@@ -5,4 +5,8 @@ import '../entities/link_target.dart';
 /// el marcador (sin llamar). Devuelve false si no hay ninguna app para él.
 abstract interface class LinkOpener {
   Future<bool> open(LinkTarget target);
+
+  /// ¿Hay alguna app que atienda [target]? Solo lo comprueba: no abre nada ni
+  /// guarda la respuesta (CA-012-04). Se pregunta antes de la confirmación.
+  Future<bool> canOpen(LinkTarget target);
 }

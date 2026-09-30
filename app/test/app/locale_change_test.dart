@@ -4,10 +4,12 @@ import 'package:app/app/providers.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/license_package.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/attachment_store.dart';
+import 'package:app/domain/ports/license_source.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
@@ -15,6 +17,9 @@ import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/menu/menu_sheet.dart';
+import 'package:app/features/settings/license_detail_screen.dart';
+import 'package:app/features/settings/licenses_screen.dart';
+import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/features/web/web_bar.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
@@ -255,7 +260,31 @@ Task _webTask() {
 /// Abre enlaces sin salir de la prueba.
 class _Opener implements LinkOpener {
   @override
+  Future<bool> canOpen(LinkTarget target) async => true;
+
+  @override
   Future<bool> open(LinkTarget target) async => true;
+}
+
+/// Fuente de licencias sin registro (spec 012): un elemento con dos textos,
+/// neutros (ni ES ni EN) para no confundirlos con la interfaz. Cuenta las
+/// lecturas.
+class _LicenseSource implements LicenseSource {
+  int loads = 0;
+
+  @override
+  Future<List<LicensePackage>> load() async {
+    loads++;
+    return const [
+      LicensePackage(
+        name: 'zxq_pkg',
+        texts: [
+          LicenseText([(text: 'Zxq licence text one.', indent: 0)]),
+          LicenseText([(text: 'Zxq licence text two.', indent: 1)]),
+        ],
+      ),
+    ];
+  }
 }
 
 void main() {
@@ -841,6 +870,176 @@ void main() {
         expectRows(after);
         expect(tester.takeAnnouncements(), isEmpty);
         semantics.dispose();
+      });
+    });
+  }
+
+  // La Configuración (spec 012, CA-012-07): los tres niveles cambian de idioma
+  // sin cerrarse; el texto de las licencias no cambia y sigue marcado como
+  // inglés para el lector.
+  for (final (from, to) in [('es', 'en'), ('en', 'es')]) {
+    final before = _l10n(from);
+    final after = _l10n(to);
+
+    group('CA-012-07 ($from → $to): la Configuración en caliente', () {
+      late _LicenseSource source;
+
+      setUp(() => source = _LicenseSource());
+
+      /// Abre el menú, "Configuración y perfil" y, según [depth], los niveles
+      /// 2 (1) y 3 (2).
+      Future<void> openLevel(WidgetTester tester, int depth) async {
+        await pumpUnaApp(
+          tester,
+          repo: InMemoryTaskRepository(),
+          locale: Locale(from),
+          tasks: _tasks,
+          overrides: [
+            licenseSourceProvider.overrideWithValue(source),
+            linkOpenerProvider.overrideWithValue(_Opener()),
+          ],
+        );
+        await tester.tap(find.bySemanticsLabel(before.menuButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(before.menuSettings));
+        await tester.pumpAndSettle();
+        expect(find.byType(SettingsScreen), findsOneWidget);
+        if (depth >= 1) {
+          await tester.tap(find.text(before.settingsLicenses));
+          await tester.pumpAndSettle();
+          expect(find.byType(LicensesScreen), findsOneWidget);
+        }
+        if (depth >= 2) {
+          await tester.tap(find.text('zxq_pkg'));
+          await tester.pumpAndSettle();
+          expect(find.byType(LicenseDetailScreen), findsOneWidget);
+        }
+      }
+
+      Locale? localeOf(WidgetTester tester, Finder f) =>
+          tester.getSemantics(f).getSemanticsData().locale;
+
+      testWidgets('nivel 1: sigue abierto, con los textos y la pista del '
+          'lector en el idioma nuevo', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await openLevel(tester, 0);
+        expect(find.text(before.menuSettings), findsOneWidget);
+        expect(find.text(before.settingsPrivacy), findsOneWidget);
+        expect(find.bySemanticsLabel(before.settingsClose), findsOneWidget);
+        expect(semanticsTexts(tester), contains(before.settingsPrivacyHint));
+        tester.takeAnnouncements();
+
+        await _switchTo(tester, [Locale(to)]);
+
+        expect(find.byType(SettingsScreen), findsOneWidget);
+        expect(find.text(after.menuSettings), findsOneWidget);
+        expect(find.text(after.settingsLicenses), findsOneWidget);
+        expect(find.text(after.settingsPrivacy), findsOneWidget);
+        expect(find.text(before.settingsPrivacy), findsNothing);
+        expect(find.bySemanticsLabel(after.settingsClose), findsOneWidget);
+        expect(find.bySemanticsLabel(before.settingsClose), findsNothing);
+        final reads = semanticsTexts(tester);
+        expect(reads, contains(after.settingsPrivacyHint));
+        expect(reads, isNot(contains(before.settingsPrivacyHint)));
+        // El título dice lo mismo en el otro idioma (y no es el del sistema).
+        expect(
+          tester
+              .getSemantics(find.text(after.menuSettings))
+              .flagsCollection
+              .isHeader,
+          isTrue,
+        );
+        _expectNoLeaksAfterSwitch(tester, to);
+        semantics.dispose();
+      });
+
+      testWidgets('nivel 2: sigue abierto, con "N licencias" en el idioma '
+          'nuevo y sin volver a leer las licencias', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await openLevel(tester, 1);
+        expect(source.loads, 1);
+        expect(find.text(before.licensesTitle), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('zxq_pkg, ${before.licensesCount(2)}'),
+          findsOneWidget,
+        );
+        tester.takeAnnouncements();
+
+        await _switchTo(tester, [Locale(to)]);
+
+        expect(find.byType(LicensesScreen), findsOneWidget);
+        expect(find.text(after.licensesTitle), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('zxq_pkg, ${after.licensesCount(2)}'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('zxq_pkg, ${before.licensesCount(2)}'),
+          findsNothing,
+        );
+        expect(find.bySemanticsLabel(after.licensesBack), findsOneWidget);
+        expect(find.bySemanticsLabel(before.licensesBack), findsNothing);
+        expect(source.loads, 1, reason: 'no se vuelven a leer');
+        _expectNoLeaksAfterSwitch(tester, to);
+        semantics.dispose();
+      });
+
+      testWidgets('nivel 3: sigue abierto; el título, los encabezados y '
+          'Volver cambian; el texto de la licencia no, y sigue marcado como '
+          'inglés', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await openLevel(tester, 2);
+        final one = find.text('Zxq licence text one.');
+        final two = find.text('Zxq licence text two.');
+        expect(find.text(before.licensesTextOf(1, 2)), findsOneWidget);
+        expect(localeOf(tester, one), const Locale('en'));
+        tester.takeAnnouncements();
+
+        await _switchTo(tester, [Locale(to)]);
+
+        expect(find.byType(LicenseDetailScreen), findsOneWidget);
+        // El título es el nombre del elemento: no cambia.
+        expect(find.text('zxq_pkg'), findsOneWidget);
+        expect(find.text(after.licensesTextOf(1, 2)), findsOneWidget);
+        expect(find.text(after.licensesTextOf(2, 2)), findsOneWidget);
+        expect(find.text(before.licensesTextOf(1, 2)), findsNothing);
+        expect(find.bySemanticsLabel(after.licensesBack), findsOneWidget);
+        expect(find.bySemanticsLabel(before.licensesBack), findsNothing);
+        // El texto de la licencia, intacto y en inglés para el lector.
+        expect(one, findsOneWidget);
+        expect(two, findsOneWidget);
+        expect(localeOf(tester, one), const Locale('en'));
+        expect(localeOf(tester, two), const Locale('en'));
+        // Lo demás, en el idioma nuevo.
+        expect(
+          localeOf(tester, find.text(after.licensesTextOf(1, 2))),
+          Locale(to),
+        );
+        expect(
+          localeOf(tester, find.bySemanticsLabel(after.licensesBack)),
+          Locale(to),
+        );
+        _expectNoLeaksAfterSwitch(tester, to);
+        semantics.dispose();
+      });
+
+      testWidgets('los tres niveles siguen apilados: atrás sube de uno en '
+          'uno tras el cambio', (tester) async {
+        await openLevel(tester, 2);
+        await _switchTo(tester, [Locale(to)]);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.byType(LicensesScreen), findsOneWidget);
+        expect(find.text(after.licensesTitle), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.byType(SettingsScreen), findsOneWidget);
+        expect(find.text(after.settingsLicenses), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.byType(SettingsScreen), findsNothing);
+        expect(find.byType(MenuSheet), findsOneWidget);
+        expect(find.text(after.menuAllTasks), findsOneWidget);
       });
     });
   }

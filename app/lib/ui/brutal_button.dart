@@ -25,6 +25,7 @@ class BrutalButton extends StatefulWidget {
     this.autofocus = false,
     this.focusNode,
     this.semanticsKey,
+    this.hint,
   }) : iconOnly = false;
 
   /// Botón cuadrado solo con icono (p. ej. "+"). [label] es su nombre accesible.
@@ -39,6 +40,7 @@ class BrutalButton extends StatefulWidget {
     this.background = UnaColors.surface,
     this.focusNode,
     this.semanticsKey,
+    this.hint,
   }) : trailingIcon = null,
        fontSize = UnaFontSizes.bodyL,
        expand = false,
@@ -57,6 +59,10 @@ class BrutalButton extends StatefulWidget {
   /// Clave del nodo accesible del botón, para enviar desde él el aviso de
   /// foco del lector.
   final GlobalKey? semanticsKey;
+
+  /// Pista del lector de pantalla (p. ej., el error que explica por qué se
+  /// ofrece "Reintentar", CA-012-15).
+  final String? hint;
 
   /// Icono delante del texto (completar: ✓).
   final UnaIconData? icon;
@@ -207,6 +213,7 @@ class _BrutalButtonState extends State<BrutalButton> {
       button: true,
       enabled: enabled,
       label: widget.label,
+      hint: widget.hint,
       excludeSemantics: true,
       onTap: widget.onPressed,
       child: GestureDetector(
