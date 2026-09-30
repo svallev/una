@@ -11,17 +11,21 @@
 - Una clase pequeña, `RecentsPrivacy.kt`, con dos mecanismos y un único punto de entrada desde `MainActivity` (`onCreate`, `onPause`, `onResume`):
   - **Mecanismo A (Android 13+, API 33):** `Activity.setRecentsScreenshotEnabled(false)`, una sola vez al crear la actividad. Es la petición explícita al sistema de que no haga la miniatura. No toca la ventana, así que las capturas con la app abierta no se ven afectadas (CA-011-04).
   - **Mecanismo B (Android 8–12, API 26–32):** marcar la ventana como segura (`FLAG_SECURE`) en `onPause` y quitarla en `onResume`. Con la app en primer plano no hay marca, así que las capturas funcionan.
-- **[Suposición] a validar primero (T-011-01, emulador API 37):** que A oculta la miniatura sin parpadeo al volver. Si no, se usa **B en todas las versiones** (un solo camino, más fácil de verificar ahora que Android 8–12 está aplazado, PD-10).
+- **[Hecho] (T-011-01, API 37):** A oculta la miniatura; deja un fotograma blanco al volver desde "Recientes", que el propietario acepta (ver el resultado de abajo). Se mantiene A en 13+ y B en 8–12.
 - **Cómo se verifica:** no hay tests unitarios de Kotlin en el proyecto ni se añade JUnit (P11: dependencia nueva). La verificación es un script con `adb` (`tools/check-recents.sh`) y una guía manual (`specs/011-ocultar-recientes/dispositivo.md`), como en la 007. Ver §5 y el riesgo R-3.
 
-### Resultado de T-011-01 (2026-09-30, emulador API 37) — **decisión pendiente del propietario**
+### Resultado de T-011-01 y decisión definitiva (propietario, 2026-09-30)
 
 Detalle, capturas y cifras en `dispositivo.md` §2.
 
-- **[Hecho]** `setRecentsScreenshotEnabled` existe y compila (`compileSdk` de Flutter 3.47.5 ≥ 33). **A y B ocultan la instantánea** cuando se llega a "Recientes" por el escritorio (tarjeta en blanco, idéntica con "uno" y con "dos"); ninguno pone `FLAG_SECURE` con la app delante ni estropea las capturas (CA-011-04).
-- **[Hecho] Ninguno oculta la tarjeta si "Recientes" se abre desde la propia app:** el lanzador enseña la ventana en vivo y la actividad no se pausa. Afecta por igual a A y a B y a la redacción de CA-011-01.
-- **[Hecho] Ninguno evita un fotograma blanco a pantalla completa al volver desde "Recientes"** (el sistema pinta el `windowBackground` blanco del `LaunchTheme`); sin mecanismo no ocurre. Es la condición de parada de CA-011-03 y de la regla de desempate: **no se elige mecanismo por ahora**; se pregunta al propietario (opciones en `dispositivo.md` §2).
-- **Recomendación si se acepta el blanco:** A en Android 13+ y B en 8–12 (lo previsto en este plan), por no tocar la ventana con la app viva.
+- **[Hecho]** `setRecentsScreenshotEnabled` existe y compila. **A y B ocultan la instantánea** cuando se llega a "Recientes" por el escritorio (tarjeta en blanco, idéntica con "uno" y con "dos"); ninguno pone `FLAG_SECURE` con la app delante ni estropea las capturas (CA-011-04).
+- **[Hecho] Ninguno oculta la tarjeta si "Recientes" se abre desde la propia app:** el lanzador enseña la ventana en vivo y la actividad no se pausa. Queda fuera de CA-011-01 (CL-011-14).
+- **[Hecho] Ninguno evita un fotograma blanco al volver desde "Recientes"** (el `windowBackground` blanco del `LaunchTheme`); sin mecanismo no ocurre.
+- **Decisión del propietario (2026-09-30):**
+  1. **Mecanismo definitivo: A en Android 13+ (`SDK_INT >= 33`) y B en Android 8-12 (`SDK_INT < 33`).** Sin constante `MODE`, sin variantes de prueba, sin canal y sin ajuste. Implementado en T-011-02 (`RecentsPrivacy.kt`).
+  2. **Se acepta el fotograma blanco** al volver desde "Recientes" (CA-011-03 enmendado). No se cambian `LaunchTheme` ni `launch_background.xml`.
+  3. Abrir "Recientes" directamente desde la app queda fuera de CA-011-01 (CL-011-14).
+- **[Hecho] (T-011-02):** la llamada de A compila con el `compileSdk` de Flutter (`flutter.compileSdkVersion` = 36 en Flutter 3.47.5, ≥ 33), protegida con `Build.VERSION.SDK_INT`. Queda cerrada la [Suposición] de la tabla de abajo.
 
 ### Lo que se sabe y lo que no
 
@@ -31,7 +35,7 @@ Detalle, capturas y cifras en `dispositivo.md` §2.
 | `setRecentsScreenshotEnabled` existe desde Android 13 y evita la miniatura de "Recientes" | **[Hecho en API 37]** (T-011-01): compila y oculta la instantánea; ver el resultado de arriba |
 | En Android 8–12, poner `FLAG_SECURE` en `onPause` llega antes de que el sistema haga la miniatura | **[Suposición]** Es lo que usan varios plugins, pero depende de la versión y del fabricante. **No se puede verificar ahora** (PD-10): por eso la regla de desempate de la spec acepta la miniatura visible en Android 8–12 en la beta |
 | Quitar o poner `FLAG_SECURE` con la app viva no reconstruye la superficie de Flutter ni parpadea | **[Suposición]** Se mide en T-011-03 (CA-011-03) |
-| `compileSdk` de Flutter 3.47.5 es ≥ 33 (hace falta para compilar la llamada de A) | **[Suposición]** Se ve al compilar en T-011-02; la llamada va protegida por `Build.VERSION.SDK_INT` |
+| `compileSdk` de Flutter 3.47.5 es ≥ 33 (hace falta para compilar la llamada de A) | **[Hecho]** (T-011-02): `flutter.compileSdkVersion` = 36; la llamada va protegida por `Build.VERSION.SDK_INT` |
 
 ## 2. Cambios por capa
 
@@ -41,7 +45,7 @@ Detalle, capturas y cifras en `dispositivo.md` §2.
 | Datos | — | Ninguno (sin esquema, sin archivos, sin ajustes) |
 | Estado | — | Ninguno |
 | Presentación | — | Ninguna: la interfaz no cambia |
-| Nativo | `android/app/src/main/kotlin/invalid/pending/app/RecentsPrivacy.kt` (nuevo) y `MainActivity.kt` | `RecentsPrivacy(activity)`: `onCreate()` aplica A si `SDK_INT >= 33`; `onPause()` pone B si `SDK_INT < 33` (o en todas, si se decide en T-011-01); `onResume()` la quita. `MainActivity` la llama junto a `rotation?.pause()` y `rotation?.resume()`, que ya están. Sin registrar canales |
+| Nativo | `android/app/src/main/kotlin/invalid/pending/app/RecentsPrivacy.kt` (nuevo) y `MainActivity.kt` | `RecentsPrivacy(activity)`: `onCreate()` aplica A si `SDK_INT >= 33`; `onPause()` pone B si `SDK_INT < 33` (decisión definitiva, §1); `onResume()` la quita. `MainActivity` la llama junto a `rotation?.pause()` y `rotation?.resume()`, que ya están. Sin registrar canales |
 | Manifiesto | — | Ninguno: sin permisos nuevos |
 | l10n | — | Ninguna (spec §7) |
 | Herramientas | `tools/check-recents.sh` (nuevo) | Verificación con `adb`: captura de "Recientes" con dos tareas distintas (A y B) y comparación; presencia o ausencia de `SECURE` en `dumpsys window` con la app delante y detrás; bucle de 10 vueltas (CA-011-08); `screenrecord` para el parpadeo |

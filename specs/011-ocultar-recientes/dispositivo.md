@@ -18,9 +18,9 @@ tools/check-recents.sh $S record 10 /tmp/x        # parpadeo (CA-011-03), con ti
 ```
 
 - Necesita `adb` (variable `ADB`, `PATH` o el SDK en `~/Library/Android/sdk`) y `python3` con Pillow y numpy (solo herramienta local; no es una dependencia del proyecto).
-- **Dos rutas para abrir "Recientes"** (hallazgo de T-011-01, §2): por defecto el script pasa antes por el escritorio (`KEYCODE_HOME` y luego `KEYCODE_APP_SWITCH`); con `VIA=direct` lo abre desde la propia app.
+- **Dos rutas para abrir "Recientes"** (hallazgo de T-011-01, §2): por defecto el script pasa antes por el escritorio (`KEYCODE_HOME` y luego `KEYCODE_APP_SWITCH`), que es la ruta de CA-011-01; con `VIA=direct` lo abre desde la propia app y **solo informa** (CL-011-14: fuera del criterio).
 - "Parecido" es la correlación entre la pantalla y la tarjeta de "Recientes" (0,96 con el contenido visible; ≈ 0 sin él). Umbral: 0,5. Las tarjetas de A y B se comparan píxel a píxel dentro de la tarjeta (tolerancia 0,1 % de píxeles).
-- Limitación conocida del script: `record` usa `screenrecord --output-format=raw-frames`, que no da tiempos y solo emite fotogramas cuando la pantalla cambia; detecta que hay un fotograma liso blanco o negro, pero no cuánto dura. Los tiempos de §3 salen de un `screenrecord` a mp4 leído con `AVAssetReader` (script de un solo uso, no incluido).
+- Limitación conocida del script: `record` usa `screenrecord --output-format=raw-frames`, que no da tiempos y solo emite fotogramas cuando la pantalla cambia; detecta que hay un fotograma liso, pero no cuánto dura. El liso **blanco** es la excepción aceptada de CA-011-03 (sale como `blancos_aceptados` y no falla); cualquier otro liso (negro…) o que la app desaparezca tras verse es fallo. Los tiempos de §3 salen de un `screenrecord` a mp4 leído con `AVAssetReader` (script de un solo uso, no incluido).
 
 ## 1. Estado de partida (T-011-01 a)
 
@@ -59,19 +59,27 @@ Lecturas:
 3. **Al volver desde "Recientes" se ve un fotograma blanco a pantalla completa** con la instantánea vacía, antes de que la app se dibuje (`A-vuelta-tira.png`, `B-vuelta-tira.png`: el fotograma liso, entre "Recientes" y la app). Con la app sin ocultar no ocurre. Con mp4 el fotograma blanco dura ≈ 1,0–1,1 s en las dos vueltas en que se ve (13,504 → 14,610 s y 30,191 → 31,181 s en A); **[Suposición]** el valor está inflado por la carga de la grabación en el emulador. El blanco coincide con el `windowBackground` del `LaunchTheme` (`launch_background.xml`: blanco): **[Suposición]** es lo que el sistema pinta cuando no hay instantánea.
 4. Con B, `dumpsys window` marca `SECURE` solo con la app detrás (por el escritorio) y nunca delante.
 
-### Decisión (regla de desempate de la spec) — **PARO, se pregunta al propietario**
+### Decisión (propietario, 2026-09-30) [Hecho]
 
-- **Los dos mecanismos incumplen CA-011-03** en Android 16 (fotograma blanco al volver desde "Recientes"), y la spec dice: *"Si el sistema enseña un instante su propio fondo o la pantalla de arranque en Android 13+, se para y se pregunta."* No se ha cambiado la spec ni se ha "arreglado" el parpadeo.
-- Entre los dos, **A y B se comportan igual** en lo medido (ocultan por el escritorio, no ocultan en directo, dejan un fotograma blanco). **Recomendación técnica si el propietario acepta el blanco:** **A en Android 13+ y B en 8–12** (como dice el plan §1): A no toca la ventana, así que no puede interferir con capturas, con la lupa ni con la vista web (R-4), y no hay que sincronizarla con `onPause`/`onResume`.
-- Opciones que se pueden explorar (necesitan decisión del propietario o de diseño; no se han hecho): (a) **fondo del `LaunchTheme` en un color neutro del diseño** en lugar de blanco (el fondo de cada tarea varía: amarillo, rosa, verde…, así que seguiría habiendo un cambio de color, pero menos brusco); (b) aceptar el fotograma con una nota de la beta; (c) mecanismo distinto (no probado).
-- **Pregunta abierta sobre el CA-011-01:** la spec dice *"la app en segundo plano y abre 'Recientes'"*. Con la ruta directa (desde la app) el CA no se puede cumplir con ninguno de los dos mecanismos (punto 2). **Recomendación:** que el CA se verifique por el escritorio (o desde otra app), que es cuando existe la instantánea, y que se anote el resto como comportamiento del sistema.
+- **Mecanismo definitivo:** A en Android 13+ y B en Android 8-12 (plan §1), implementado en T-011-02.
+- **Se acepta el fotograma blanco** al volver desde "Recientes" (CA-011-03 enmendado); no se cambia el `LaunchTheme`.
+- **La ruta directa** (`VIA=direct`) queda fuera de CA-011-01 (CL-011-14): solo informativa.
 
 ## 3. Matriz, vueltas y casos límite (T-011-03) — pendiente
 
 Se hace tras T-011-02 con el mecanismo que decida el propietario.
 
+## 3b. Comprobación de T-011-02 (versión definitiva, API 37)
+
+Compilación *release* con el `RecentsPrivacy.kt` definitivo (A en `SDK_INT >= 33`), emulador `emulator-5554`. La verificación completa es T-011-03.
+
+- [x] `capture uno`, `capture dos`, `compare uno dos` (por el escritorio): PASA (parecido -0,002 y -0,005; tarjetas idénticas).
+- [x] `secure`: sin `FLAG_SECURE` con la app delante; la captura sale con contenido.
+- [x] `loop 3`: PASA. `record 4`: PASA (blanco aceptado en 2 de 4 vueltas; ningún negro ni pérdida).
+- [x] `VIA=direct loop 1`: parecido 0,966, informativo (CL-011-14), sin fallo.
+
 ## 4. Estado en que queda el árbol
 
-- `app/android/app/src/main/kotlin/invalid/pending/app/RecentsPrivacy.kt` es **PROVISIONAL** (constante `MODE`, dejada en `"A"`). T-011-02 **debe sustituirlo** por la versión final, sin `MODE`, con el mecanismo decidido y B para `SDK_INT < 33`.
-- `MainActivity.kt` ya llama a `RecentsPrivacy` en `onCreate`, `onPause` y `onResume`; esa parte es la definitiva.
-- El emulador se ha dejado con la compilación *release* de A instalada y las tareas de prueba borradas o completadas (datos de desarrollo).
+- `app/android/app/src/main/kotlin/invalid/pending/app/RecentsPrivacy.kt` es **definitivo** (T-011-02): A si `SDK_INT >= 33`, B si `< 33`; sin `MODE`.
+- `MainActivity.kt` llama a `RecentsPrivacy` en `onCreate`, `onPause` y `onResume`.
+- El emulador queda con la compilación *release* instalada y la tarea de prueba "dos" (datos de desarrollo).

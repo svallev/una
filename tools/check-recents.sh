@@ -21,9 +21,13 @@
 #   loop N:  N veces, segundo plano -> "Recientes" -> volver -> captura. Falla si
 #            alguna tarjeta enseña contenido o alguna captura sale sin él (CA-011-08).
 #   record N: N vueltas grabadas con screenrecord (fotogramas en bruto); falla si
-#            hay un fotograma liso negro o blanco o si, una vez visible la pantalla
-#            de la app, vuelve a desaparecer (parpadeo, CA-011-03).
-#   VIA=direct abre "Recientes" desde la propia app (por defecto pasa por el escritorio).
+#            hay un fotograma liso que no sea blanco (p. ej. negro) o si, una vez
+#            visible la pantalla de la app, vuelve a desaparecer (parpadeo,
+#            CA-011-03). El fotograma liso BLANCO al volver desde "Recientes" es
+#            la excepción aceptada (CA-011-03 enmendado): se cuenta, no falla.
+#   VIA=direct abre "Recientes" desde la propia app (por defecto pasa por el
+#            escritorio). Esa ruta queda FUERA de CA-011-01 (CL-011-14): el
+#            lanzador enseña la ventana en vivo; el script solo informa.
 #   secure:  falla si la ventana de la app lleva FLAG_SECURE ahora (CA-011-04).
 #
 # Requisitos: adb (variable ADB, PATH o el SDK de Android en ~/Library/Android),
@@ -35,7 +39,7 @@
 # Códigos de salida: 0 todo bien; 1 un criterio falla; 2 uso incorrecto.
 set -euo pipefail
 
-usage() { sed -n "2,34p" "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n "2,38p" "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 SERIAL="${1:-}"
 [ -n "$SERIAL" ] || { echo "Falta el serial de adb (primer argumento). Sin serial no se ejecuta nada." >&2; usage; }
@@ -81,6 +85,9 @@ open_recents() {
   if [ "${VIA:-home}" = "home" ]; then adb shell input keyevent KEYCODE_HOME; sleep 2; fi
   adb shell input keyevent KEYCODE_APP_SWITCH; sleep 2.5
 }
+
+# Con VIA=direct la tarjeta con contenido es lo esperado (CL-011-14): solo informa.
+direct_route() { [ "${VIA:-home}" = "direct" ]; }
 
 # Análisis de imágenes (Pillow + numpy). Subcomandos: nonblank, ncc, same, frames.
 img() {
@@ -156,13 +163,17 @@ elif cmd == "frames":  # frames <raw> <front.png> <ancho> <alto>: parpadeo
     # La grabación empieza con "Recientes" en pantalla: solo cuentan los
     # fotogramas desde que algo cambia (la vuelta a la app).
     start = next((i for i in range(1, n) if np.abs(frames[i][body] - frames[0][body]).mean() > 1.0), n)
-    blank = [i for i in range(start, n) if frames[i][body].std() < 3 and (frames[i][body].mean() < 20 or frames[i][body].mean() > 235)]
+    smooth = [i for i in range(start, n) if frames[i][body].std() < 3]
+    # Excepción aceptada (CA-011-03): fotograma liso BLANCO al volver desde
+    # "Recientes". Cualquier otro liso (negro u otro color) es fallo.
+    white = [i for i in smooth if frames[i][body].mean() > 235]
+    blank = [i for i in smooth if i not in white]
     # Fotogramas con la pantalla de la app (mismo dibujo que la referencia).
     shown = [i for i in range(start, n) if sims[i] > 0.9]
     lost = [i for i in range(shown[0], n) if sims[i] <= 0.9] if shown else []
     if len(sys.argv) > 6:  # tira de fotogramas para revisarlos a ojo
         Image.fromarray(np.concatenate([f.astype(np.uint8) for f in data[: n * size].reshape(n, h, w, 3)], axis=1)).save(sys.argv[6])
-    print(f"fotogramas={n} desde={start} con_la_app={len(shown)} lisos={blank} perdidos={lost}")
+    print(f"fotogramas={n} desde={start} con_la_app={len(shown)} blancos_aceptados={white} lisos_fallo={blank} perdidos={lost}")
     sys.exit(0 if (shown and not blank and not lost) else 1)
 PY
 }
@@ -200,12 +211,16 @@ case "$CMD" in
       v="$(img ncc "$OUT/$L-front.png" "$OUT/$L-recents.png")"
       if python3 -c "import sys; sys.exit(0 if float('$v') < 0.5 else 1)"; then
         echo "[$L] la tarjeta no se parece a la pantalla (parecido $v): bien"
+      elif direct_route; then
+        echo "[$L] INFORMATIVO (VIA=direct, CL-011-14): la tarjeta enseña la ventana en vivo (parecido $v)"
       else
         echo "FALLO CA-011-01: la tarjeta de '$L' enseña el contenido (parecido $v con la pantalla)" >&2; fail=1
       fi
     done
     if diff="$(img same "$OUT/$A-recents.png" "$OUT/$B-recents.png")"; then
       echo "las tarjetas de $A y $B son idénticas (píxeles distintos: $diff): bien"
+    elif direct_route; then
+      echo "INFORMATIVO (VIA=direct, CL-011-14): las tarjetas de $A y $B difieren (píxeles distintos: $diff)"
     else
       echo "FALLO CA-011-01: las tarjetas de $A y $B difieren (píxeles distintos: $diff)" >&2; fail=1
     fi
@@ -225,7 +240,10 @@ case "$CMD" in
       shot "$OUT/loop-$i-front.png"
       st="$(secure_state)"
       msg="vuelta $i: parecido tarjeta=$v; FLAG_SECURE delante=$st"
-      python3 -c "import sys; sys.exit(0 if float('$v') < 0.5 else 1)" || { msg="$msg  <- FALLO: la tarjeta enseña el contenido"; fail=1; }
+      if ! python3 -c "import sys; sys.exit(0 if float('$v') < 0.5 else 1)"; then
+        if direct_route; then msg="$msg  <- informativo (VIA=direct, CL-011-14)"
+        else msg="$msg  <- FALLO: la tarjeta enseña el contenido"; fail=1; fi
+      fi
       [ "$st" = "not-secure" ] || { msg="$msg  <- FALLO: FLAG_SECURE con la app delante"; fail=1; }
       img nonblank "$OUT/loop-$i-front.png" >/dev/null || { msg="$msg  <- FALLO: la captura sale sin contenido"; fail=1; }
       echo "$msg"
