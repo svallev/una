@@ -2,15 +2,21 @@
 # Verificación de la spec 011 (ocultar el contenido en "Recientes") con adb.
 #
 #   tools/check-recents.sh <serial-adb> capture <etiqueta> [directorio]
-#   tools/check-recents.sh <serial-adb> compare <etiquetaA> <etiquetaB> [directorio]
+#   tools/check-recents.sh <serial-adb> compare <etiquetaA> <etiquetaB> <directorio>
 #   tools/check-recents.sh <serial-adb> secure
 #   tools/check-recents.sh <serial-adb> loop <vueltas> [directorio]
 #   tools/check-recents.sh <serial-adb> record <vueltas> [directorio]
 #
 # El serial es OBLIGATORIO (no hay valor por defecto: con dos dispositivos
-# conectados adb falla y nunca se debe tocar el móvil del propietario). Para un
-# dispositivo físico (serial que no empieza por "emulator-") hace falta además
-# ALLOW_PHYSICAL=1, que solo se pone con permiso explícito del propietario.
+# conectados adb falla y nunca se debe tocar el móvil del propietario).
+# Dispositivo físico (serial que no empieza por "emulator-"), solo con permiso
+# explícito del propietario:
+#   - secure (solo lee dumpsys, no captura nada): ALLOW_PHYSICAL=1.
+#   - capture, compare, loop y record: ALLOW_PHYSICAL=1 Y ALLOW_PHYSICAL_SCREENSHOTS=1.
+#     Capturan "Recientes" ENTERA, con las tarjetas de las demás apps del propietario
+#     a la vista (mensajería, banco...), y le roban el foco.
+# Directorio de salida: si no se pasa, se crea uno con mktemp -d (permisos 700) y se
+# imprime al terminar; compare lo necesita explícito (el que imprimió capture).
 #
 # Flujo (CA-011-01, 04 y 08). Con la app en primer plano en la pantalla a probar:
 #   1. capture uno      con la tarea A ("uno"): guarda <etiqueta>-front.png y
@@ -28,7 +34,12 @@
 #   VIA=direct abre "Recientes" desde la propia app (por defecto pasa por el
 #            escritorio). Esa ruta queda FUERA de CA-011-01 (CL-011-14): el
 #            lanzador enseña la ventana en vivo; el script solo informa.
-#   secure:  falla si la ventana de la app lleva FLAG_SECURE ahora (CA-011-04).
+#   secure:  falla si la ventana de la app lleva FLAG_SECURE ahora (CA-011-04) y también
+#            si no encuentra la ventana de la app en dumpsys (imprime "unknown").
+#   Tarjeta de "Recientes": capture, compare, loop y record comprueban que se ve (clara)
+#            y que su interior es LISO (desviación típica <= FLAT_MAX_STD, 2 por defecto,
+#            sin la franja de arriba ni los bordes): cualquier contenido residual falla
+#            aunque sea igual con la tarea A y con la B.
 #   RECENTS_WAIT=<segundos>  espera tras abrir "Recientes" (por defecto 2,5). Con una
 #            imagen o un PDF el lanzador tarda más en pintar la tarjeta: si la captura sale
 #            sin tarjeta (solo el fondo), sube la espera (4 s bastan en el emulador).
@@ -42,20 +53,28 @@
 # Códigos de salida: 0 todo bien; 1 un criterio falla; 2 uso incorrecto.
 set -euo pipefail
 
-usage() { sed -n "2,41p" "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n "2,53p" "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 SERIAL="${1:-}"
 [ -n "$SERIAL" ] || { echo "Falta el serial de adb (primer argumento). Sin serial no se ejecuta nada." >&2; usage; }
-case "$SERIAL" in
-  emulator-*) ;;
-  *) [ "${ALLOW_PHYSICAL:-}" = "1" ] || {
-       echo "'$SERIAL' no es un emulador. Un dispositivo físico solo se usa con permiso explícito del propietario (ALLOW_PHYSICAL=1)." >&2
-       exit 2
-     } ;;
-esac
 CMD="${2:-}"
 [ -n "$CMD" ] || usage
 shift 2
+case "$SERIAL" in
+  emulator-*) ;;
+  *)
+    [ "${ALLOW_PHYSICAL:-}" = "1" ] || {
+      echo "'$SERIAL' no es un emulador. Un dispositivo físico solo se usa con permiso explícito del propietario (ALLOW_PHYSICAL=1)." >&2
+      exit 2
+    }
+    if [ "$CMD" != "secure" ]; then
+      [ "${ALLOW_PHYSICAL_SCREENSHOTS:-}" = "1" ] || {
+        echo "'$SERIAL' es un dispositivo físico: '$CMD' captura \"Recientes\" ENTERA, con las tarjetas de las demás apps del propietario a la vista, y le roba el foco." >&2
+        echo "Solo 'secure' se permite con ALLOW_PHYSICAL=1. Para '$CMD' hace falta además ALLOW_PHYSICAL_SCREENSHOTS=1, y solo con permiso explícito del propietario y sin guardar lo capturado (dispositivo.md §5.1)." >&2
+        exit 2
+      }
+    fi ;;
+esac
 
 PKG="${PKG:-invalid.pending.app}"
 ACTIVITY="$PKG/invalid.pending.app.MainActivity"
@@ -69,13 +88,23 @@ if [ "$CMD" != "compare" ]; then
   [ "$(adb get-state 2>/dev/null || true)" = "device" ] || { echo "El dispositivo $SERIAL no está disponible" >&2; exit 2; }
 fi
 
-# ¿Lleva la ventana de la app FLAG_SECURE? Imprime "secure" o "not-secure".
+# ¿Lleva la ventana de la app FLAG_SECURE? Imprime "secure", "not-secure" o "unknown"
+# (no se encontró la ventana de la app en dumpsys: no se puede afirmar nada).
 secure_state() {
   adb shell dumpsys window windows | awk -v w="Window{.* $PKG/" '
-    $0 ~ "Window #" && $0 ~ w { inwin = 1; next }
+    $0 ~ "Window #" && $0 ~ w { inwin = 1; seen = 1; next }
     inwin && $0 ~ "Window #" { inwin = 0 }
     inwin && $1 ~ /^fl=/ { if ($0 ~ /(^|[ =])SECURE( |$)/) found = 1 }
-    END { print found ? "secure" : "not-secure" }'
+    END { print !seen ? "unknown" : found ? "secure" : "not-secure" }'
+}
+
+# Directorio de salida: el pedido o, por defecto, uno temporal privado (mktemp -d).
+# Se imprime al terminar para poder localizar las capturas (y borrarlas).
+OUT=""
+setup_out() {
+  if [ -n "${1:-}" ]; then OUT="$1"; mkdir -p "$OUT"
+  else local base="${TMPDIR:-/tmp}"; OUT="$(mktemp -d "${base%/}/check-recents.XXXXXX")"; fi
+  trap 'echo "Capturas en: $OUT"' EXIT
 }
 
 shot() { adb exec-out screencap -p > "$1"; }
@@ -91,6 +120,20 @@ open_recents() {
 
 # Con VIA=direct la tarjeta con contenido es lo esperado (CL-011-14): solo informa.
 direct_route() { [ "${VIA:-home}" = "direct" ]; }
+
+# check_card <etiqueta> <captura-de-recientes>: la tarjeta se ve (cardlight) y su
+# interior es liso (flat). Devuelve 1 si falla, salvo con VIA=direct (CL-011-14, solo informa).
+check_card() {
+  local l="$1" f="$2" r
+  if ! r="$(img cardlight "$f")"; then
+    echo "[$l] FALLO: no se ve la tarjeta de la app en 'Recientes' ($r); repite con RECENTS_WAIT=4" >&2; return 1
+  fi
+  if ! r="$(img flat "$f")"; then
+    if direct_route; then echo "[$l] INFORMATIVO (VIA=direct, CL-011-14): el interior de la tarjeta no es liso ($r)"; return 0; fi
+    echo "[$l] FALLO CA-011-01: el interior de la tarjeta no es liso, hay contenido residual ($r)" >&2; return 1
+  fi
+  echo "[$l] tarjeta visible y lisa: $r"
+}
 
 # Análisis de imágenes (Pillow + numpy). Subcomandos: nonblank, ncc, same, frames.
 img() {
@@ -153,6 +196,18 @@ elif cmd == "cardlight":  # cardlight <recents>: ¿hay una tarjeta clara en su s
     c = inner(card_of(gray(sys.argv[2])))
     print(f"media={c.mean():.0f} desv={c.std():.1f}")
     sys.exit(0 if c.mean() > 200 else 1)
+elif cmd == "flat":  # flat <recents>: ¿el interior de la tarjeta es liso?
+    # La tarjeta esperada es un fondo liso (blanco). El interior que se mira excluye la
+    # franja de arriba (12 % de la tarjeta: en API 37 es la barra negra con la hora y los
+    # iconos del sistema, escalada) y un 6 % abajo y a los lados (esquinas y borde).
+    # Calibrado (1080x2400): tarjeta vacía std 0,00; línea base (con contenido) 32-33;
+    # ruta directa 32; selector de fotos 76; cámara 91. Umbral por defecto 2.
+    c = card_of(gray(sys.argv[2]))
+    h, w = c.shape
+    x = c[int(0.12 * h):int(0.94 * h), int(0.06 * w):int(0.94 * w)]
+    limit = float(os.environ.get("FLAT_MAX_STD", "2"))
+    print(f"desv={x.std():.2f} (max {limit:g})")
+    sys.exit(0 if x.std() <= limit else 1)
 elif cmd == "same":  # same <recentsA> <recentsB>: ¿tarjetas idénticas?
     a, b = inner(card_of(gray(sys.argv[2]))), inner(card_of(gray(sys.argv[3])))
     frac = float((np.abs(a - b) > 8).mean())
@@ -167,7 +222,10 @@ elif cmd == "frames":  # frames <raw> <front.png> <ancho> <alto>: parpadeo
         print("sin fotogramas"); sys.exit(1)
     frames = data[: n * size].reshape(n, h, w, 3).astype(np.float32).mean(axis=3)
     ref = np.asarray(Image.open(front_png).convert("L").resize((w, h), Image.BILINEAR), dtype=np.float32)
-    body = slice(int(0.1 * h), h)  # sin la barra de estado (reloj)
+    # Zona central (15-85 %): sin la barra de estado ni la píldora de gestos y sin los
+    # bordes, que en la animación de vuelta enseñan el fondo del lanzador (con la zona
+    # completa un fotograma blanco no salía "liso" y no se contaba).
+    body = (slice(int(0.15 * h), int(0.85 * h)), slice(int(0.15 * w), int(0.85 * w)))
     sims = [ncc(f[body], ref[body]) for f in frames]
     # La grabación empieza con "Recientes" en pantalla: solo cuentan los
     # fotogramas desde que algo cambia (la vuelta a la app).
@@ -191,12 +249,13 @@ case "$CMD" in
   secure)
     st="$(secure_state)"
     echo "FLAG_SECURE en la ventana de la app: $st"
+    [ "$st" != "unknown" ] || { echo "FALLO: no encuentro la ventana de $PKG en dumpsys (¿la app está abierta y delante?); no se puede afirmar que no lleve FLAG_SECURE" >&2; exit 1; }
     [ "$st" = "not-secure" ] || { echo "FALLO CA-011-04: con la app delante no debe haber FLAG_SECURE" >&2; exit 1; }
     ;;
 
   capture)
     LABEL="${1:?Falta la etiqueta}"
-    OUT="${2:-.}"; mkdir -p "$OUT"
+    setup_out "${2:-}"
     fail=0
     # Con la app delante (CA-011-04): sin FLAG_SECURE y captura con contenido.
     st="$(secure_state)"
@@ -208,17 +267,18 @@ case "$CMD" in
     open_recents
     shot "$OUT/$LABEL-recents.png"
     echo "[$LABEL] recientes: FLAG_SECURE=$(secure_state); parecido tarjeta/pantalla=$(img ncc "$OUT/$LABEL-front.png" "$OUT/$LABEL-recents.png")"
+    check_card "$LABEL" "$OUT/$LABEL-recents.png" || fail=1
     back_to_app
     exit "$fail"
     ;;
 
   compare)
     A="${1:?Falta la etiqueta A}"; B="${2:?Falta la etiqueta B}"
-    OUT="${3:-.}"
+    [ -n "${3:-}" ] || { echo "Falta el directorio de las capturas (el que imprimió 'capture')" >&2; exit 2; }
+    OUT="$3"
     fail=0
     for L in "$A" "$B"; do
-      img cardlight "$OUT/$L-recents.png" >/dev/null || {
-        echo "FALLO: en la captura de '$L' no se ve la tarjeta de la app en 'Recientes' ($(img cardlight "$OUT/$L-recents.png" || true)); repite con RECENTS_WAIT=4" >&2; fail=1; }
+      check_card "$L" "$OUT/$L-recents.png" || fail=1
       v="$(img ncc "$OUT/$L-front.png" "$OUT/$L-recents.png")"
       if python3 -c "import sys; sys.exit(0 if float('$v') < 0.5 else 1)"; then
         echo "[$L] la tarjeta no se parece a la pantalla (parecido $v): bien"
@@ -239,7 +299,7 @@ case "$CMD" in
     ;;
 
   loop)
-    N="${1:?Faltan las vueltas}"; OUT="${2:-.}"; mkdir -p "$OUT"
+    N="${1:?Faltan las vueltas}"; setup_out "${2:-}"
     fail=0
     shot "$OUT/loop-ref.png"
     img nonblank "$OUT/loop-ref.png" >/dev/null || { echo "La pantalla de referencia está en negro" >&2; exit 1; }
@@ -247,6 +307,7 @@ case "$CMD" in
       open_recents
       shot "$OUT/loop-$i-recents.png"
       v="$(img ncc "$OUT/loop-ref.png" "$OUT/loop-$i-recents.png")"
+      cardmsg="$(check_card "vuelta $i" "$OUT/loop-$i-recents.png" 2>&1)" || fail=1
       back_to_app
       shot "$OUT/loop-$i-front.png"
       st="$(secure_state)"
@@ -255,20 +316,23 @@ case "$CMD" in
         if direct_route; then msg="$msg  <- informativo (VIA=direct, CL-011-14)"
         else msg="$msg  <- FALLO: la tarjeta enseña el contenido"; fail=1; fi
       fi
-      [ "$st" = "not-secure" ] || { msg="$msg  <- FALLO: FLAG_SECURE con la app delante"; fail=1; }
+      [ "$st" = "not-secure" ] || { msg="$msg  <- FALLO: FLAG_SECURE (o ventana no encontrada) con la app delante"; fail=1; }
       img nonblank "$OUT/loop-$i-front.png" >/dev/null || { msg="$msg  <- FALLO: la captura sale sin contenido"; fail=1; }
       echo "$msg"
+      echo "$cardmsg"
     done
     exit "$fail"
     ;;
 
   record)
-    N="${1:?Faltan las vueltas}"; OUT="${2:-.}"; mkdir -p "$OUT"
+    N="${1:?Faltan las vueltas}"; setup_out "${2:-}"
     W=270; H=600
     fail=0
     shot "$OUT/record-ref.png"
     for ((i = 1; i <= N; i++)); do
       open_recents
+      shot "$OUT/record-$i-recents.png"
+      check_card "vuelta $i" "$OUT/record-$i-recents.png" || fail=1
       # Se graba solo la vuelta a la app. screenrecord no termina solo con un
       # cliente adb: se limita por tiempo y se corta desde aquí.
       adb exec-out screenrecord --output-format=raw-frames --time-limit 4 --size ${W}x${H} - > "$OUT/record-$i.raw" &

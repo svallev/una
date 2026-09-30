@@ -43,15 +43,19 @@ Lo que dibuja el sistema fuera de la app (la tarjeta de "Recientes") no se ve de
 
 ```bash
 S=emulator-5554   # el serial es OBLIGATORIO; sin él el script no hace nada
-tools/check-recents.sh $S capture uno /tmp/x      # con la tarea A ("uno") delante
-tools/check-recents.sh $S capture dos /tmp/x      # con la tarea B ("dos")
-tools/check-recents.sh $S compare uno dos /tmp/x  # CA-011-01: sin contenido y A = B
+D=$(mktemp -d)                                    # o dejar que el script cree uno y lo imprima
+tools/check-recents.sh $S capture uno $D          # con la tarea A ("uno") delante
+tools/check-recents.sh $S capture dos $D          # con la tarea B ("dos")
+tools/check-recents.sh $S compare uno dos $D      # CA-011-01: sin contenido y A = B (el directorio es obligatorio)
 tools/check-recents.sh $S secure                  # CA-011-04: sin FLAG_SECURE con la app delante
-tools/check-recents.sh $S loop 10 /tmp/x          # CA-011-08: 10 vueltas
-tools/check-recents.sh $S record 10 /tmp/x        # CA-011-03: parpadeo
+tools/check-recents.sh $S loop 10                 # CA-011-08: 10 vueltas
+tools/check-recents.sh $S record 10               # CA-011-03: parpadeo
 ```
 
-- **Serial obligatorio y sin dispositivos físicos por defecto:** con dos dispositivos conectados `adb` falla y nunca se debe tocar el móvil del propietario. Un serial que no empieza por `emulator-` exige `ALLOW_PHYSICAL=1`, que **solo se pone con permiso explícito del propietario** (y las capturas de un móvil real son privadas). `PKG` cambia el paquete (por defecto `invalid.pending.app`; la compilación debug es `invalid.pending.app.debug`).
+- **Serial obligatorio y sin dispositivos físicos por defecto:** con dos dispositivos conectados `adb` falla y nunca se debe tocar el móvil del propietario. Un serial que no empieza por `emulator-` es un dispositivo físico y solo se usa **con permiso explícito del propietario**: `secure` (que solo lee `dumpsys` y no captura nada) exige `ALLOW_PHYSICAL=1`; `capture`, `compare`, `loop` y `record` exigen **además** `ALLOW_PHYSICAL_SCREENSHOTS=1`, porque capturan "Recientes" **entera**, con las tarjetas de las demás apps del propietario a la vista (mensajería, banco...), y le roban el foco. Sin las variables, el script sale con 2 y un mensaje que lo explica. `PKG` cambia el paquete (por defecto `invalid.pending.app`; la compilación debug es `invalid.pending.app.debug`).
+- **Directorio de salida:** si no se pasa, el script crea uno con `mktemp -d` (permisos 700, fuera del repo) y lo imprime al terminar (`Capturas en: ...`); si se pasa, usa ese. `compare` necesita el directorio explícito (el de `capture`). Las capturas sueltas (`*-front.png`, `*-recents.png`, `*-tira.png`) están en el `.gitignore`; las revisadas de la spec, en `specs/011-ocultar-recientes/capturas/`, sí se versionan. Bórrese el directorio al terminar.
+- **La tarjeta se comprueba en cada comando de captura** (`capture`, `compare`, `loop`, `record`): que se vea (clara) y que su **interior sea liso** (desviación típica <= `FLAT_MAX_STD`, 2 por defecto, sin la franja de arriba, que en API 37 es la barra negra del sistema escalada, ni los bordes). Así, cualquier contenido residual falla aunque sea idéntico con A y con B. Calibrado con capturas de 1080x2400: tarjeta vacía 0,00; línea base 32-33; ruta directa 32; selector de fotos 76; cámara 91. La posición de la tarjeta (`CARD`) es la del Pixel 6a / emulador; en otra pantalla puede haber que ajustarla.
+- **`secure` falla si no encuentra la ventana de la app** en `dumpsys` (imprime `unknown` y sale con 1): no afirma nada que no haya visto.
 - **`RECENTS_WAIT=<segundos>`** (por defecto 2,5): espera tras abrir "Recientes". Con una imagen o un PDF el lanzador tarda más en pintar la tarjeta y la captura puede salir sin ella; el script lo detecta y falla en vez de dar un falso "pasa". En el emulador bastan 4 s.
 - **Ruta por defecto:** el script pasa antes por el escritorio (`KEYCODE_HOME` y luego `KEYCODE_APP_SWITCH`), que es la ruta de CA-011-01. **`VIA=direct`** abre "Recientes" desde la propia app: esa ruta queda fuera del criterio (CL-011-14, la tarjeta enseña la ventana en vivo), así que el script **solo informa** y no falla.
 - **Blanco al volver:** `record` cuenta el fotograma liso **blanco** al volver como excepción aceptada (`blancos_aceptados`, CA-011-03); cualquier otro fotograma liso (negro…) o que la app desaparezca tras verse es fallo. No mide duraciones (`screenrecord` en bruto no da tiempos): las de `dispositivo.md` §3 salen de un mp4.

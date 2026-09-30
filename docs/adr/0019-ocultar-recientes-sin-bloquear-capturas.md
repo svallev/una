@@ -1,6 +1,6 @@
 # ADR-0019: Ocultar "Recientes" sin bloquear las capturas
 
-- **Estado:** Aceptado (propietario, 2026-09-30). **Provisional** en la parte de Android 8–12 (mecanismo B) hasta PD-10
+- **Estado:** Aceptado (propietario, 2026-09-30). **[Hecho en API 37; [Suposición] en 33–36 y en HyperOS]**; **Provisional** en la parte de Android 8–12 (mecanismo B) hasta PD-10
 - **Fecha:** 2026-09-30
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** spec 011 (CA-011-01, 03, 04, 08; CL-011-3, 6, 13, 14, 15; plan §1, §7 y §8), CL-007-11, CL-008-13 y CL-009-10 (que cierra), modelo de amenazas T-2, P2, P4 y P5, PD-10 y riesgos R-1 a R-6 del plan de la 011
@@ -27,7 +27,7 @@
 **Opción 1** (propietario, 2026-09-30), toda en código nativo (`RecentsPrivacy.kt`, llamado desde `MainActivity` en `onCreate`, `onPause` y `onResume`), sin Dart, canal, ajuste, esquema, permisos ni dependencias:
 
 - **Android 13+ (`SDK_INT >= 33`), mecanismo A:** `setRecentsScreenshotEnabled(false)` una sola vez, al crear la actividad. No toca la ventana.
-- **Android 8–12 (`SDK_INT < 33`), mecanismo B:** `FLAG_SECURE` puesto en `onPause` y quitado en `onResume`. **[Suposición]** sin verificar hasta PD-10; si no oculta la miniatura, se aplica la regla de desempate (miniatura visible en 8–12 durante la beta) y este ADR se revisa.
+- **Android 8–12 (`SDK_INT < 33`), mecanismo B:** `FLAG_SECURE` puesto en `onPause` y quitado en `onResume`. **[Suposición]** sin verificar hasta PD-10; si no oculta la miniatura, se aplica la regla de desempate (miniatura visible en 8–12 durante la beta) y este ADR se revisa. **Si PD-10 muestra que B no oculta la miniatura, se RETIRA B** (no se deja código muerto con efectos secundarios: sin ocultar nada, solo taparía capturas en pausa, ver abajo) y en 8–12 queda el comportamiento de antes de la 011.
 - **Nunca `FLAG_SECURE` fija**: con la app delante la ventana no lleva la marca y las capturas y grabaciones salen con contenido.
 - **Verificación con `adb` (`tools/check-recents.sh`) y no con CI** (plan §8, decisión del propietario): el efecto es lo que dibuja el sistema fuera de la app, que no se ve desde `flutter test`, y probar Kotlin exigiría JUnit y Robolectric (dependencias de prueba, P11) que solo comprobarían las llamadas. Se compensa con la comprobación obligatoria antes de cada versión entregada a testers (CL-011-13, R-3).
 
@@ -49,7 +49,8 @@
   - **Hoja parcial del selector de fotos** (CL-011-15): corre en la misma tarea y no oculta su instantánea; la tarjeta enseña lo que queda a la vista de la app junto a la hoja. **[Hecho, API 37]** idéntico a antes de la 011, no peor. Fuera de CA-011-01 en ese caso.
   - Los tres límites se anotan en las notas de la beta y se pueden revisar antes de la v1.0.
 - **Negativas y riesgos:**
-  - **R-1 / PD-10:** en Android 8–12 (mecanismo B) puede no ocultar la miniatura o parpadear; hasta PD-10 no se da por verificado y la spec no pasa a "Implementada" del todo. Mitigación: regla de desempate (miniatura visible en 8–12 en la beta).
+  - **R-1 / PD-10:** en Android 8–12 (mecanismo B) puede no ocultar la miniatura o parpadear; hasta PD-10 no se da por verificado y la spec no pasa a "Implementada" del todo. Mitigación: regla de desempate (miniatura visible en 8–12 en la beta) y, si B no oculta, se retira B.
+  - **Capturas en negro con B (8–12):** en Android 8–12, con la app en pausa pero visible (pantalla dividida o ventana flotante en 8–9, CL-011-5, o algo del sistema encima), `FLAG_SECURE` está puesto y las capturas pueden salir en negro. Es el precio de B; solo aplica mientras dura la pausa, nunca con la app en primer plano.
   - **R-3:** sin test de CI, una actualización de Flutter o de Android podría quitar el efecto sin que salte nada. Mitigación: `tools/check-recents.sh` antes de cada entrega a testers (`docs/security/checklist.md`, `docs/testing.md`).
   - **R-5:** HyperOS puede ignorar ambos mecanismos (CL-011-9). Se comprueba en el Xiaomi solo con permiso del propietario; si falla, se para y se pregunta.
   - Otras superficies que leen la pantalla (asistente, "buscar lo que hay en pantalla", casting, terceros) quedan fuera de alcance (CL-011-8).

@@ -5,16 +5,19 @@ Guía y resultados de la verificación con `adb` (plan §5). Todo en el **emulad
 ## 0. Cómo se usa el script
 
 ```bash
-# El serial es obligatorio. Un serial que no sea "emulator-*" exige ALLOW_PHYSICAL=1
-# (solo con permiso explícito del propietario).
+# El serial es obligatorio. Un serial que no sea "emulator-*" es un dispositivo físico:
+# solo con permiso explícito del propietario. `secure` exige ALLOW_PHYSICAL=1; capture,
+# compare, loop y record exigen además ALLOW_PHYSICAL_SCREENSHOTS=1 (capturan "Recientes"
+# entera, con las demás apps del propietario a la vista).
 S=emulator-5554
-tools/check-recents.sh $S capture uno /tmp/x      # con la tarea A ("uno") en pantalla
+D=$(mktemp -d)                                    # opcional: sin directorio el script crea uno y lo imprime
+tools/check-recents.sh $S capture uno $D          # con la tarea A ("uno") en pantalla
 # (cambiar a la tarea B, "dos", y repetir)
-tools/check-recents.sh $S capture dos /tmp/x
-tools/check-recents.sh $S compare uno dos /tmp/x  # CA-011-01: falla si enseña contenido o A y B difieren
-tools/check-recents.sh $S secure                  # CA-011-04: sin FLAG_SECURE con la app delante
-tools/check-recents.sh $S loop 10 /tmp/x          # CA-011-08 (sin cámara ni selector)
-tools/check-recents.sh $S record 10 /tmp/x        # parpadeo (CA-011-03), con tiras de fotogramas
+tools/check-recents.sh $S capture dos $D
+tools/check-recents.sh $S compare uno dos $D      # CA-011-01: falla si enseña contenido, no es lisa o A y B difieren
+tools/check-recents.sh $S secure                  # CA-011-04: sin FLAG_SECURE con la app delante ("unknown" también falla)
+tools/check-recents.sh $S loop 10                 # CA-011-08 (sin cámara ni selector)
+tools/check-recents.sh $S record 10               # parpadeo (CA-011-03), con tiras de fotogramas
 ```
 
 - Necesita `adb` (variable `ADB`, `PATH` o el SDK en `~/Library/Android/sdk`) y `python3` con Pillow y numpy (solo herramienta local; no es una dependencia del proyecto).
@@ -213,7 +216,7 @@ Compilación *release* con el `RecentsPrivacy.kt` definitivo (A en `SDK_INT >= 3
 - **"Recientes" enseña las tarjetas de sus otras apps** (WhatsApp, banco...). Por eso:
   - **No se captura "Recientes" con el lanzador mostrando otras apps sin avisar.** Antes de mirar, el propietario deja en "Recientes" **solo la tarjeta de esta app** (cierra las demás él mismo, con el botón de cerrar todo o deslizándolas) o, si no quiere cerrarlas, la captura se **recorta a la tarjeta de la app**.
   - La captura de "Recientes" solo se toma con la tarjeta de la app **como única visible** o **recortada a ella**. **No se guarda en el repo** ni se copia al ordenador si se ve algo más; basta con **describir** lo que se ve (§5.8).
-  - Con `adb`: nada de `screencap` sin comprobar antes `adb shell dumpsys window | grep mCurrentFocus` y sin el "sí" del propietario; el archivo se borra al terminar. `tools/check-recents.sh` **no** se usa en el Xiaomi para `capture` ni `loop` (capturan "Recientes" entera y roban el foco); solo `secure` (lee `dumpsys`, no captura nada) y solo con `ALLOW_PHYSICAL=1`.
+  - Con `adb`: nada de `screencap` sin comprobar antes `adb shell dumpsys window | grep mCurrentFocus` y sin el "sí" del propietario; el archivo se borra al terminar. `tools/check-recents.sh` **no** se usa en el Xiaomi para `capture`, `compare`, `loop` ni `record` (capturan "Recientes" entera y roban el foco; el script los rechaza sin `ALLOW_PHYSICAL_SCREENSHOTS=1`, que no se pone aquí); solo `secure` (lee `dumpsys`, no captura nada) y solo con `ALLOW_PHYSICAL=1`.
 - Las capturas de la app con datos de prueba ("uno", "dos") no son privadas, pero **tampoco van al repo**: los resultados se anotan como texto en esta sección.
 
 ### 5.2 Instalar (sin `flutter drive`)
@@ -224,7 +227,7 @@ Opción recomendada, **sin tocar la app real**: la compilación *profile*, que e
 
 ```bash
 cd app && flutter build apk --profile --target-platform android-arm64
-S=6DRO9TE6WG59CM8T                      # solo con permiso del propietario
+S=<serial-xiaomi>                       # solo con permiso del propietario (adb devices)
 adb -s $S install -r build/app/outputs/flutter-apk/app-profile.apk
 ```
 
@@ -323,3 +326,36 @@ Lo demás (CL-011-14, hoja parcial del selector, blanco corto al volver) son lí
 - [ ] `adb -s $S uninstall invalid.pending.app.profile` (**solo** `.profile`; si se instaló la *release* sobre la real, borrar a mano las tareas "uno" y "dos").
 - [ ] Borrar de la galería y de `/sdcard` las capturas y grabaciones de prueba, y de `/tmp` o del directorio de la sesión cualquier archivo que se haya copiado.
 - [ ] Anotar el resultado en la fila T-011-07 de `tasks.md` y cerrar CL-011-9 (respeta / no muestra miniaturas / falla y se paró).
+
+## 6. T-011-08 previa: modo oscuro (2026-09-30)
+
+**Por qué.** El `a11y-reviewer` señaló que el fondo de arranque usa `?android:colorBackground` (`res/drawable-v21/launch_background.xml`) y que `values-night/styles.xml` usa `Theme.Black`: con el sistema en modo oscuro el fotograma sin instantánea al volver podría ser **negro** (CA-011-03 manda parar y preguntar si lo es). Se mide antes de T-011-08.
+
+**Entorno.** `emulator-5554` (API 37, arm64), compilación *release* de `4e30a1b` (la instalada tras T-011-04; `git diff main...HEAD -- app/android` solo toca `MainActivity.kt` y `RecentsPrivacy.kt`: **ningún recurso de arranque cambia**), tarea de texto delante ("SECRETO-UNO", datos de prueba). Estado original: `cmd uimode night` = `no` (`settings get secure ui_night_mode` = 1). Se cambió con `cmd uimode night yes` (`am get-config` con `night`) y **se restauró a `no` al terminar** (comprobado). El Xiaomi no estaba conectado ni se tocó.
+
+**Método.** Distinto del de §3.3 en dos detalles (script de un solo uso, no incluido): `screenrecord` a mp4 (540 × 1200) leído con `AVAssetReader`, y "fotograma liso" = desviación < 3 en la **zona central** (15-85 % de alto y ancho) en vez de todo el cuerpo: con la zona completa un fotograma blanco no salía liso, porque la animación de vuelta enseña la barra negra de arriba, la píldora de gestos y bordes del lanzador (`tools/check-recents.sh record` tenía el mismo defecto y se corrigió, §6.2). Color = media RGB del fotograma liso; **duración = del primer fotograma liso al siguiente fotograma distinto** (el mp4 solo tiene fotogramas cuando la pantalla cambia). 5 vueltas por ruta y modo; cada vuelta parte del escritorio o de "Recientes".
+
+### 6.1 Resultado
+
+| Ruta de vuelta (proceso vivo, sin instantánea) | Modo claro: color y duración | Modo oscuro: color y duración |
+|---|---|---|
+| "Recientes" → `am start` | blanco liso **(255,255,255)**, 0,03-0,08 s (2-5 fotogramas) | blanco **(255,255,255)**, 0,03-0,10 s; 1 vuelta de 5 sin liso |
+| Escritorio → `am start` | blanco **(255,255,255)**, 0,02-0,07 s (1-4) | blanco **(255,255,255)**, 0,01-0,08 s (1-5) |
+| Escritorio → icono (`monkey`) | blanco **(255,255,255)**, 0,02-0,03 s (1-2) | blanco **(255,255,255)**, 0,03-0,10 s (2-6; uno de ellos (252,252,236)) |
+| "Recientes" → tocar la tarjeta | blanco **(255,255,255)**, 0,10-0,12 s (6-7) | blanco **(255,255,255)**, 0,10-0,12 s (6-8) |
+| `tools/check-recents.sh record 3` (ya corregido) | `blancos_aceptados` en las 3 vueltas, 0 lisos que fallen, 0 perdidos | no se repitió en oscuro |
+
+- **Negro: 0 fotogramas. Otro color: 0** (en las 40 vueltas). **El fotograma liso al volver es BLANCO también en modo oscuro**, con el mismo color y duraciones parecidas: **no sale de `launch_background`** (con `Theme.Black` sería negro), sino de lo que el sistema pinta cuando no hay instantánea (la de "Recientes" desactivada por el mecanismo A). Esto **contradice la [Suposición]** de §2.3, del ADR-0019 y de la spec ("coincide con el `windowBackground` del `LaunchTheme`"); no se han cambiado la spec ni el ADR, queda para el propietario.
+- **Duración:** 0,01-0,12 s, **muy por debajo** de los 0,4-1,25 s de §3.3. **[Suposición]** los de §3.3 estaban inflados por la carga del emulador en ese momento (se medía con compilaciones y grabaciones en marcha); ahora el emulador estaba en reposo. No se ha podido separar de un cambio de método (§ Método), aunque la zona central detecta al menos lo que detectaba el cuerpo entero.
+- **Cuadro (no es la vuelta de la 011): arranque en frío (proceso muerto, `force-stop`), 3 veces por modo.** El sistema pinta su *splash* con el fondo de `launch_background.xml` y el icono de la app: en **modo claro, blanco** (≈ 0,3-0,4 s hasta el primer fotograma de Flutter); en **modo oscuro, NEGRO** (media ≈ 20 con el icono, 6 en el punto más oscuro; ≈ 0,5 s). Es **el mismo comportamiento que antes de la 011** (los recursos de arranque no se han tocado en la rama) y afecta a "volver a la app" solo cuando el sistema ha matado antes el proceso (CL-011-2). **[Pendiente, decisión del propietario]** si un arranque en frío en negro con el sistema en modo oscuro cuenta para el "negro" de CA-011-03 (no es lo que introduce la 011) o queda para F5 junto a `paper` en `launch_background` (`docs/architecture.md` §2).
+- **Veredicto de la medición previa:** en las rutas que introduce la 011 (proceso vivo, sin instantánea) el fotograma es **blanco en claro y en oscuro**; no hay que parar por eso. La salvedad es el arranque en frío en oscuro, anterior a la 011.
+
+### 6.2 Endurecimiento de `tools/check-recents.sh` (mismo día)
+
+Hallazgos bajos del `security-reviewer` sobre el script (T-011-08 sigue pendiente; ni la app ni la spec cambian):
+
+- `capture`, `compare`, `loop` y `record` comprueban con `cardlight` que la tarjeta se ve y fallan si no; además, con `flat`, que su **interior es liso** (desviación típica <= 2 en la tarjeta sin el 12 % de arriba ni el 6 % de abajo y de los lados). Calibrado con las capturas guardadas en `capturas/` y las de la sesión (1080 × 2400): tarjeta vacía **0,00**; línea base (con contenido) 32-33; ruta directa 32; selector de fotos 76; cámara 91; giro 14. Con el 12 % de arriba incluido salía 5,2 en la tarjeta vacía (la barra negra del sistema); con el 6 % de márgenes anterior, también. Comprobado: A-escritorio y B-escritorio (guardadas) pasan; la línea base y la tarjeta directa fallan **aunque A y B sean idénticas** (antes salían "idénticas: bien"); en el emulador con la implementación actual pasan `capture`, `compare`, `loop 2` y `record 3`; con `CARD` mal puesto `loop` falla ("no se ve la tarjeta"). El umbral se cambia con `FLAT_MAX_STD`. Con `VIA=direct` solo informa (CL-011-14).
+- `secure` imprime `unknown` y **falla** si no encuentra la ventana de la app en `dumpsys` (probado con `force-stop`); `capture` y `loop` también fallan si la ventana no aparece.
+- Dispositivo físico: `secure` con `ALLOW_PHYSICAL=1`; el resto exige además `ALLOW_PHYSICAL_SCREENSHOTS=1` (mensaje sobre que capturan "Recientes" entera). Probado solo el rechazo con un serial ficticio (`FAKE123`); no se conectó nada al Xiaomi.
+- Salida por defecto en un directorio de `mktemp -d`, impreso al terminar (`Capturas en: ...`); `compare` exige el directorio. Patrones de capturas sueltas en `.gitignore` sin excluir `capturas/` (`git check-ignore`: ninguna de las 21 versionadas queda ignorada).
+- **Corrección de `record`:** el cálculo de fotogramas lisos usaba todo el cuerpo (10-100 %) y no contaba como liso un fotograma blanco con la píldora de gestos; ahora usa la zona central (15-85 %). Antes `record` daba a veces `blancos_aceptados=[]` con blancos visibles en la tira; ahora los cuenta (`[8]` en las 3 vueltas).
