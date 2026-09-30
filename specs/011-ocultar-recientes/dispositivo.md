@@ -71,6 +71,8 @@ Lecturas:
 
 **Incidente del entorno:** `adb shell input keyevent --longpress KEYCODE_POWER` **apagó el emulador** (no sacó el menú de apagado); se relanzó con arranque en frío y los datos de la app siguieron. No se repite: la prueba del menú de apagado queda sin hacer (CL-011-4).
 
+**Resolución de los hallazgos (2026-09-30) [Hecho].** El propietario aceptó H-1, H-2 y H-3 el 2026-09-30 y la spec se enmendó en `594f5d1` (CL-011-15 nuevo, CL-011-6 corregido, excepción del blanco ampliada y CA-011-08): los "FALLA" y "falla" de esta sección describen lo medido, no un estado abierto. H-4 (pantalla en negro tras un WebView, §3.7) quedó como TD-2 en `docs/PLAN.md`.
+
 ### 3.1 Resultado por criterio y caso
 
 | Criterio / caso | Resultado | Notas |
