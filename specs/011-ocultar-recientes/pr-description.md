@@ -1,8 +1,6 @@
 # PR: spec 011, ocultar el contenido en "Recientes"
 
-> Borrador de la descripción. **La PR no está abierta** (sin `git push`); se abre cuando el propietario lo confirme.
-
-**Título propuesto:** `feat(011): hide app content in Recents without blocking screenshots`
+**Título:** `feat(011): hide app content in Recents without blocking screenshots`
 
 ## Resumen
 
@@ -21,7 +19,7 @@ La lista de aplicaciones recientes del sistema ("Recientes") enseñaba la últim
 - **Herramientas:** `tools/check-recents.sh` (verificación con `adb` en el emulador: `capture`, `compare`, `secure`, `loop`, `record`); patrones de capturas sueltas en `.gitignore`.
 - **Test:** `test/app/home_router_test.dart`, `'CA-011-03: …'` (reloj inyectado a 9:59 y 10:00).
 - **Documentación:** ADR-0019, `threat-model.md` T-2, `security/checklist.md` (sección "Recientes"), `architecture.md`, `testing.md`, `perf/baseline.md`, `PLAN.md`, `CLAUDE.md`, la skill `/release-checklist`, CL de las specs 007, 008 y 009 y §8 de la 010.
-- **Nota para quien revise:** la rama contiene también el commit `9e215b3` (spec 012 y borrador de la política de privacidad, solo documentación), que no es de la 011.
+- **Nota para quien revise:** la rama contiene también el commit `9e215b3` (spec 012 y borrador de la política de privacidad, solo documentación), que no es de la 011; el propietario decidió (2026-09-30) que va dentro de esta PR.
 
 ## Verificación
 
