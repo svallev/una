@@ -54,6 +54,9 @@ Task _webTask({String url = _address}) {
 
 class _Opener implements LinkOpener {
   @override
+  Future<bool> canOpen(LinkTarget target) async => true;
+
+  @override
   Future<bool> open(LinkTarget target) async => true;
 }
 

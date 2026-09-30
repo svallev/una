@@ -10,7 +10,13 @@ class NativeLinkOpener implements LinkOpener {
   static const _channel = MethodChannel('una/links');
 
   @override
-  Future<bool> open(LinkTarget target) async {
+  Future<bool> open(LinkTarget target) => _invoke('open', target);
+
+  @override
+  Future<bool> canOpen(LinkTarget target) => _invoke('canOpen', target);
+
+  /// Cualquier fallo del canal (sin lado nativo, error de plataforma) es "no".
+  Future<bool> _invoke(String method, LinkTarget target) async {
     final (kind, uri) = switch (target) {
       WebLink(:final uri) => ('web', uri),
       MailLink(:final uri) => ('mail', uri),
@@ -19,7 +25,7 @@ class NativeLinkOpener implements LinkOpener {
     };
     if (uri == null) return false;
     try {
-      return await _channel.invokeMethod<bool>('open', {
+      return await _channel.invokeMethod<bool>(method, {
             'kind': kind,
             'uri': uri.toString(),
           }) ??

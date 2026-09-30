@@ -255,6 +255,9 @@ Task _webTask() {
 /// Abre enlaces sin salir de la prueba.
 class _Opener implements LinkOpener {
   @override
+  Future<bool> canOpen(LinkTarget target) async => true;
+
+  @override
   Future<bool> open(LinkTarget target) async => true;
 }
 

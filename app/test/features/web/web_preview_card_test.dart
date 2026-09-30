@@ -37,6 +37,9 @@ Task _webTask() {
 }
 
 class _Opener implements LinkOpener {
+  @override
+  Future<bool> canOpen(LinkTarget target) async => true;
+
   final opened = <LinkTarget>[];
   @override
   Future<bool> open(LinkTarget target) async {

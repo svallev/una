@@ -105,6 +105,9 @@ final _drivers = <_LocalPageDriver>[];
 
 /// Recuerda lo que la app quiso abrir fuera de ella (sin abrir nada).
 class _RecordingOpener implements LinkOpener {
+  @override
+  Future<bool> canOpen(LinkTarget target) async => true;
+
   final opened = <LinkTarget>[];
 
   @override
