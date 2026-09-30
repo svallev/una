@@ -176,6 +176,24 @@ Compilación *release* con el `RecentsPrivacy.kt` definitivo (A en `SDK_INT >= 3
 - [x] `loop 3`: PASA. `record 4`: PASA (blanco aceptado en 2 de 4 vueltas; ningún negro ni pérdida).
 - [x] `VIA=direct loop 1`: parecido 0,966, informativo (CL-011-14), sin fallo.
 
+## 3c. T-011-05: sin datos, permisos ni dependencias; otras plataformas (2026-09-30)
+
+**Entorno.** `HEAD` = `d57c10a` (rama `feat/011-ocultar-recientes`, árbol limpio); línea base = `main` (`725e97c`), sacada con `git archive` a un directorio temporal (el árbol no se toca). `fvm` no está instalado: se usa el `flutter` del sistema, que **coincide** con `.fvmrc`: `flutter --version` = 3.47.5 (stable, Dart 3.13.4) y `git -C ~/development/flutter rev-parse HEAD` = `6a19cca56475dbfba1478ee68d7bd0c2ef891da1`, igual que la línea de 3.47.5 en `tools/flutter-sdk.lock`. Emulador `emulator-5554` (API 37); el Xiaomi no estaba conectado ni se tocó.
+
+### CA-011-06: permisos, red, esquema, dependencias, archivos
+
+- [x] **Permisos.** `flutter build apk --release --target-platform android-arm64` y `tools/check-android-permissions.sh release` (desde `app/`): `Permisos de release correctos (2 revisados ...)`, salida 0. `aapt2 dump permissions` de la *release* de HEAD y de la de `main`: **idéntico** (`INTERNET`, y el permiso interno `invalid.pending.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` de androidx). Sin red nueva: el diff no toca manifiesto ni Dart de `lib/`.
+- [x] **Diff.** `git diff --name-only main...HEAD | grep -E 'pubspec|drift_schemas|schemaVersion'` no da nada (`pubspec.yaml`, `pubspec.lock` y `drift_schemas/` sin cambios). `git diff main HEAD --name-only -- app/` solo lista `MainActivity.kt`, `RecentsPrivacy.kt` y `test/app/home_router_test.dart` (test de CA-011-03); `AppDatabase.schemaVersion` sigue en 2. Tras `flutter test` y `flutter build web`, `git status` sigue limpio (`pubspec.lock` no se toca).
+- [x] **Sin archivos nuevos (`run-as`).** La *release* no es depurable, así que se usa la compilación **debug** (`invalid.pending.app.debug`, el mismo Kotlin), de HEAD y de `main`, instalada desde cero (`uninstall` + `install -r`) en el emulador: se lista el almacenamiento de la app (`run-as ... find .`) **antes** del primer arranque y **después** de arrancar, ir al escritorio (`KEYCODE_HOME`: pasa por `onPause` con el mecanismo A) y esperar 2 s. Antes: `.`, `cache`, `code_cache` (idéntico en las dos). Después, **17 entradas en las dos compilaciones y listas idénticas** (`diff` sin diferencias, salvo el sufijo de fecha de `res_timestamp-*`): `app_flutter/{flutter_assets/{isolate_snapshot_data,kernel_blob.bin,vm_snapshot_data},res_timestamp-*,una.sqlite}`, `code_cache/flutter_engine/.../skia/.../sksl`, `files/profileInstalled`. `files/` contiene solo `profileInstalled` (24 bytes, lo crea androidx, también en la línea base). Es decir, la 011 **no crea ningún archivo** respecto de la línea base. Después se desinstaló el paquete `.debug`.
+- **Alcance de la comparación.** `run-as` solo ve el almacenamiento interno; no se comparó el almacenamiento externo (la app no lo usa) ni el contenido de `una.sqlite` (sin cambios de esquema; `schemaVersion` = 2). **[Suposición]** suficiente para "ningún archivo nuevo en el almacenamiento".
+
+### CA-011-07: otras plataformas
+
+- [x] `dart format lib test integration_test`: 277 archivos, 0 cambios. `flutter analyze --fatal-infos`: `No issues found!`.
+- [x] `flutter test` (completo): `+1207 ~49: All tests passed!` (49 omitidos, los de siempre).
+- [x] `flutter build web`: `Built build/web`, sin errores. Solo el aviso ya conocido de la herramienta sobre las fuentes de iconos (`Expected to find fonts for (MaterialIcons, packages/cupertino_icons/CupertinoIcons)...`), que no viene de esta rama (no hay cambios en `lib/` ni en `pubspec.yaml`).
+- **Nada de Dart de la app cambia** en la rama (solo un test), y el código nativo Kotlin no se compila en la web ni en iOS. **[Suposición]** iOS no se compila (D17: sin Xcode); no aplica en la beta.
+
 ## 4. Estado en que queda el árbol
 
 - `app/android/app/src/main/kotlin/invalid/pending/app/RecentsPrivacy.kt` es **definitivo** (T-011-02): A si `SDK_INT >= 33`, B si `< 33`; sin `MODE`.
