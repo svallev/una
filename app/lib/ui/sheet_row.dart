@@ -85,9 +85,12 @@ class _CloseButtonState extends State<_CloseButton> {
   }
 }
 
-/// Fila de las hojas (menú, "Mover"; `.mrow` del prototipo): 58 px, icono de 22, texto de 19 en negrita.
-/// Con [subtitle], dos líneas y 64 px como mínimo ("Añadir a la tarea", spec 007).
-class SheetRow extends StatelessWidget {
+/// Fila de las hojas (menú, "Mover"; `.mrow` del prototipo): 58 px como mínimo,
+/// icono de 22, texto de 19 en negrita. Con [subtitle], dos líneas y 64 px como
+/// mínimo ("Añadir a la tarea", spec 007). Con texto grande crece en lugar de
+/// cortar el texto (CA-012-13) y, con el foco del teclado o de un interruptor,
+/// muestra el anillo de foco (WCAG 2.4.7).
+class SheetRow extends StatefulWidget {
   const SheetRow({
     super.key,
     required this.icon,
@@ -98,8 +101,11 @@ class SheetRow extends StatelessWidget {
     this.divider = false,
     this.enabled = true,
     this.disabledHint,
+    this.hint,
     this.trailing,
     this.trailingSemantics,
+    this.focusNode,
+    this.semanticsKey,
   });
 
   /// Texto pequeño alineado a la derecha (el total de tareas, CA-005-12).
@@ -121,17 +127,42 @@ class SheetRow extends StatelessWidget {
   final bool enabled;
   final String? disabledHint;
 
+  /// Pista del lector con la fila activada ("Abre una página web en el
+  /// navegador", CA-012-11). Desactivada, manda [disabledHint].
+  final String? hint;
+
+  /// Foco de teclado de la fila, para dárselo desde fuera (al volver de una
+  /// pantalla, CA-012-02).
+  final FocusNode? focusNode;
+
+  /// Clave del nodo accesible de la fila, para enviar desde él el aviso de
+  /// foco del lector.
+  final GlobalKey? semanticsKey;
+
   /// Prototipo: `.mrow:disabled { opacity: .35 }`.
   static const _disabledOpacity = 0.35;
 
+  @override
+  State<SheetRow> createState() => _SheetRowState();
+}
+
+class _SheetRowState extends State<SheetRow> {
+  bool _focused = false;
+
   String get _semanticLabel {
-    final sub = subtitle;
-    final main = sub == null ? label : '$label. ${sub.replaceAll(' · ', ', ')}';
-    return trailingSemantics == null ? main : '$main, $trailingSemantics';
+    final sub = widget.subtitle;
+    final main = sub == null
+        ? widget.label
+        : '${widget.label}. ${sub.replaceAll(' · ', ', ')}';
+    return widget.trailingSemantics == null
+        ? main
+        : '$main, ${widget.trailingSemantics}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final color = widget.color;
+    final subtitle = widget.subtitle;
     final labelStyle = TextStyle(
       fontFamily: UnaFonts.display,
       fontSize: UnaFontSizes.bodyL,
@@ -139,80 +170,87 @@ class SheetRow extends StatelessWidget {
       color: color,
     );
     return Semantics(
+      key: widget.semanticsKey,
       button: true,
-      enabled: enabled,
+      enabled: widget.enabled,
       label: _semanticLabel,
-      hint: enabled ? null : disabledHint,
+      hint: widget.enabled ? widget.hint : widget.disabledHint,
       excludeSemantics: true,
-      onTap: enabled ? onTap : null,
+      onTap: widget.enabled ? widget.onTap : null,
       child: Opacity(
-        opacity: enabled ? 1 : _disabledOpacity,
+        opacity: widget.enabled ? 1 : SheetRow._disabledOpacity,
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            onTap: enabled ? onTap : null,
+            onTap: widget.enabled ? widget.onTap : null,
+            focusNode: widget.focusNode,
+            onFocusChange: (v) => setState(() => _focused = v),
             highlightColor: UnaColors.pressed,
             splashFactory: NoSplash.splashFactory,
-            child: Container(
-              height: subtitle == null ? UnaSizes.menuRow : null,
-              // Con texto grande, la fila de dos líneas crece.
-              constraints: subtitle == null
-                  ? null
-                  : const BoxConstraints(minHeight: UnaSizes.sheetRowTall),
-              // A la derecha, sin margen: el total queda alineado con el borde
-              // del botón "Nueva tarea".
-              padding: const EdgeInsets.only(left: UnaSpace.xs),
-              decoration: divider
-                  ? const BoxDecoration(
-                      border: Border(
-                        top: BorderSide(
-                          color: UnaColors.disabled,
-                          width: UnaBorders.hairlineWidth,
-                        ),
-                      ),
-                    )
-                  : null,
-              child: Row(
-                children: [
-                  UnaIcon(icon, color: color),
-                  const SizedBox(width: UnaSpace.m),
-                  Expanded(
-                    child: subtitle == null
-                        ? Text(label, style: labelStyle)
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: UnaSpace.s,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(label, style: labelStyle),
-                                const SizedBox(height: UnaSpace.xxs),
-                                Text(
-                                  subtitle!,
-                                  style: TextStyle(
-                                    fontFamily: UnaFonts.mono,
-                                    fontSize: UnaFontSizes.micro,
-                                    fontWeight: UnaFontWeights.regular,
-                                    color: color,
-                                  ),
-                                ),
-                              ],
-                            ),
+            child: FocusRing(
+              visible: _focused && showsFocusHighlight,
+              child: Container(
+                // Con texto grande, la fila crece (una o dos líneas).
+                constraints: BoxConstraints(
+                  minHeight: subtitle == null
+                      ? UnaSizes.menuRow
+                      : UnaSizes.sheetRowTall,
+                ),
+                // A la derecha, sin margen: el total queda alineado con el
+                // borde del botón "Nueva tarea".
+                padding: const EdgeInsets.only(left: UnaSpace.xs),
+                decoration: widget.divider
+                    ? const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: UnaColors.disabled,
+                            width: UnaBorders.hairlineWidth,
                           ),
-                  ),
-                  if (trailing != null)
-                    Text(
-                      trailing!,
-                      style: TextStyle(
-                        fontFamily: UnaFonts.mono,
-                        fontSize: UnaFontSizes.link,
-                        fontWeight: UnaFontWeights.bold,
-                        color: color,
+                        ),
+                      )
+                    : null,
+                child: Row(
+                  children: [
+                    UnaIcon(widget.icon, color: color),
+                    const SizedBox(width: UnaSpace.m),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: UnaSpace.s,
+                        ),
+                        child: subtitle == null
+                            ? Text(widget.label, style: labelStyle)
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(widget.label, style: labelStyle),
+                                  const SizedBox(height: UnaSpace.xxs),
+                                  Text(
+                                    subtitle,
+                                    style: TextStyle(
+                                      fontFamily: UnaFonts.mono,
+                                      fontSize: UnaFontSizes.micro,
+                                      fontWeight: UnaFontWeights.regular,
+                                      color: color,
+                                    ),
+                                  ),
+                                ],
+                              ),
                       ),
                     ),
-                ],
+                    if (widget.trailing != null)
+                      Text(
+                        widget.trailing!,
+                        style: TextStyle(
+                          fontFamily: UnaFonts.mono,
+                          fontSize: UnaFontSizes.link,
+                          fontWeight: UnaFontWeights.bold,
+                          color: color,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

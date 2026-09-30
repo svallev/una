@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
+import '../../ui/request_focus.dart';
 import '../../ui/sheet_row.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
+import '../settings/settings_route.dart';
+import '../settings/settings_screen.dart';
 
 /// Lo que se eligió en el menú (las demás opciones no cierran nada o solo
 /// cierran el menú).
@@ -130,7 +133,7 @@ class MenuSheet extends StatelessWidget {
                   onPressed: onNewTask,
                 ),
                 const SizedBox(height: UnaSpace.sm + 2),
-                Center(child: _SettingsText(label: l10n.menuSettings)),
+                Center(child: _SettingsButton(label: l10n.menuSettings)),
               ],
             ),
           ),
@@ -140,38 +143,49 @@ class MenuSheet extends StatelessWidget {
   }
 }
 
-/// "Configuración y perfil": solo texto, sin interacción ni rol de botón
-/// (propietario, 2026-09-29). Se ve como el enlace del prototipo hasta que
-/// exista la spec futura de Configuración y perfil.
-class _SettingsText extends StatelessWidget {
-  const _SettingsText({required this.label});
+/// "Configuración y perfil": abre el nivel 1 de la Configuración (spec 012,
+/// CA-012-01; enmienda de CA-005-09 y CL-010-7). Un solo toque abre una sola
+/// pantalla (CL-012-2) y, al volver, el foco es de este botón (CA-012-02).
+class _SettingsButton extends StatefulWidget {
+  const _SettingsButton({required this.label});
 
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        minHeight: UnaSizes.linkButton,
-        minWidth: UnaSizes.minTouchTarget,
-      ),
-      child: Center(
-        widthFactor: 1,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: UnaSpace.s),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontFamily: UnaFonts.mono,
-              fontSize: UnaFontSizes.link,
-              fontWeight: UnaFontWeights.bold,
-              color: UnaColors.ink,
-              decoration: TextDecoration.underline,
-              decorationThickness: 2,
-            ),
-          ),
-        ),
-      ),
-    );
+  State<_SettingsButton> createState() => _SettingsButtonState();
+}
+
+class _SettingsButtonState extends State<_SettingsButton> {
+  final _focus = FocusNode(debugLabel: 'menu settings');
+  final _key = GlobalKey();
+  bool _opening = false;
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
   }
+
+  Future<void> _open() async {
+    if (_opening) return;
+    _opening = true;
+    final back = settingsTransition(context);
+    await openSettings(context);
+    if (!mounted) return;
+    requestFocusAfter(
+      after: back,
+      isMounted: () => mounted,
+      node: _focus,
+      semantics: _key,
+    );
+    _opening = false;
+  }
+
+  @override
+  Widget build(BuildContext context) => UnaLinkButton(
+    label: widget.label,
+    focusNode: _focus,
+    semanticsKey: _key,
+    onPressed: _open,
+  );
 }

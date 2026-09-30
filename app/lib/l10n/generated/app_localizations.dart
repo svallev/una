@@ -374,7 +374,7 @@ abstract class AppLocalizations {
   /// **'Nueva tarea'**
   String get menuNewTask;
 
-  /// Texto del menú, sin interacción hasta la spec de Configuración y perfil. CA-005-09, CL-010-7
+  /// Botón del menú que abre la pantalla de Configuración y perfil (nivel 1, spec 012) y título de esa pantalla. Antes solo texto (CA-005-09, CL-010-7). CA-012-01
   ///
   /// In es, this message translates to:
   /// **'Configuración y perfil'**
@@ -860,7 +860,7 @@ abstract class AppLocalizations {
   /// **'No hemos podido leer este PDF.'**
   String get errPdfUnreadable;
 
-  /// Enlace del PDF sin navegador ni app que lo abra. CA-008-12
+  /// Enlace sin navegador ni app que lo abra: en un PDF (CA-008-12) y en la Política de privacidad de la Configuración (CA-012-04)
   ///
   /// In es, this message translates to:
   /// **'No hay ninguna app para abrir este enlace.'**

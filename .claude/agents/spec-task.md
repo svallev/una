@@ -38,6 +38,7 @@ Si descubres otra que servirá a tareas futuras (de una librería, del emulador,
 - **Gradle sin JDK en el PATH:** `./gradlew` falla con "Unable to locate a Java Runtime"; usa `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` y `--offline`. Las licencias de PDFium (`licenses/freetype.txt`) vienen en Latin-1: conviértelas a UTF-8 al copiarlas. `sed -i` de macOS exige `-i ''`: mejor Edit.
 - **`dart pub deps --no-dev --style=list`** incluye los paquetes del SDK de Flutter (`sky_engine`, `flutter_localizations`, `flutter_test`…) que no salen en `NOTICES` con su nombre: `tools/check-licenses.sh` los excluye por `source: sdk` en `pubspec.lock`. `./gradlew :app:dependencies` marca con `(c)` las restricciones que no entran en el classpath.
 - **Riverpod 3 reintenta solo** los `FutureProvider` que fallan (con espera creciente): el estado de error no llega a verse. Para "error + Reintentar" del usuario, `retry: (_, _) => null` en el proveedor (`licensesProvider`).
+- **Orden de lectura con `sortKey`:** un contenido que desplaza (`SingleChildScrollView`) sin `sortKey` se lee **antes** que un botón con clave; envuélvelo en `Semantics(sortKey: …)` (`SettingsPage`). Una palabra larga al 200 % a 360 dp se parte en mitad ("Configuración" a 26): `_FitTitle` la reduce lo justo, y se comprueba con `getMinIntrinsicWidth ≤ ancho`.
 
 ## Lo que devuelves
 
