@@ -200,3 +200,126 @@ Compilación *release* con el `RecentsPrivacy.kt` definitivo (A en `SDK_INT >= 3
 - `MainActivity.kt` llama a `RecentsPrivacy` en `onCreate`, `onPause` y `onResume`.
 - T-011-03 no toca el código de la app: solo `tools/check-recents.sh` (§3.8), un test en `app/test/app/home_router_test.dart` (§3.3) y este archivo con sus capturas.
 - El emulador queda con la compilación *release* de `4e30a1b` instalada (arm64) y tareas de prueba (datos de desarrollo); el paquete `.debug` se desinstaló y TalkBack y la lupa, desactivados.
+
+## 5. T-011-07: Xiaomi / HyperOS (CL-011-9, R-5)
+
+**Estado: sin hacer. Falta el permiso del propietario para usar el Xiaomi.** Estos son los pasos escritos, para que los haga el propietario a mano o el coordinador **con su permiso explícito** (un subagente `spec-task` no lo hace con un permiso de segunda mano). Ningún resultado de esta sección está verificado todavía.
+
+**Qué se comprueba.** Que el lanzador de HyperOS respeta la señal que le da la app y no enseña el contenido en "Recientes" (CA-011-01, CL-011-9), que las capturas con la app delante siguen saliendo con contenido (CA-011-04) y que la vuelta no es peor que la medida en el emulador (CA-011-03). El Xiaomi 15T Pro lleva Android 16 (API 36): usa el **mecanismo A** (`setRecentsScreenshotEnabled`); el B (Android 8-12) no se puede probar aquí (PD-10). **[Suposición]** HyperOS puede tratar la señal a su manera; si la ignora, ver "Criterio de parada".
+
+### 5.1 Reglas antes de empezar (privacidad)
+
+- **Solo con el permiso explícito del propietario y con el móvil libre** (él no lo está usando). Avisar antes de cada instalación y de cada bucle de arranques: le sacan de lo que esté haciendo.
+- **"Recientes" enseña las tarjetas de sus otras apps** (WhatsApp, banco...). Por eso:
+  - **No se captura "Recientes" con el lanzador mostrando otras apps sin avisar.** Antes de mirar, el propietario deja en "Recientes" **solo la tarjeta de esta app** (cierra las demás él mismo, con el botón de cerrar todo o deslizándolas) o, si no quiere cerrarlas, la captura se **recorta a la tarjeta de la app**.
+  - La captura de "Recientes" solo se toma con la tarjeta de la app **como única visible** o **recortada a ella**. **No se guarda en el repo** ni se copia al ordenador si se ve algo más; basta con **describir** lo que se ve (§5.8).
+  - Con `adb`: nada de `screencap` sin comprobar antes `adb shell dumpsys window | grep mCurrentFocus` y sin el "sí" del propietario; el archivo se borra al terminar. `tools/check-recents.sh` **no** se usa en el Xiaomi para `capture` ni `loop` (capturan "Recientes" entera y roban el foco); solo `secure` (lee `dumpsys`, no captura nada) y solo con `ALLOW_PHYSICAL=1`.
+- Las capturas de la app con datos de prueba ("uno", "dos") no son privadas, pero **tampoco van al repo**: los resultados se anotan como texto en esta sección.
+
+### 5.2 Instalar (sin `flutter drive`)
+
+`flutter drive` **desinstala el paquete base** (`invalid.pending.app`, la app real del propietario) al terminar y le borraría sus tareas: **no se usa**. Se instala un APK ya compilado con `adb install`.
+
+Opción recomendada, **sin tocar la app real**: la compilación *profile*, que es otro paquete (`invalid.pending.app.profile`, datos aparte) y lleva el mismo Kotlin de `RecentsPrivacy`:
+
+```bash
+cd app && flutter build apk --profile --target-platform android-arm64
+S=6DRO9TE6WG59CM8T                      # solo con permiso del propietario
+adb -s $S install -r build/app/outputs/flutter-apk/app-profile.apk
+```
+
+- Si `.profile` ya estaba instalada como APK partido por ABI (`versionCode` 2001), el `install -r` falla con `INSTALL_FAILED_VERSION_DOWNGRADE`: `adb -s $S uninstall invalid.pending.app.profile` (**solo ese paquete**) y repetir.
+- HyperOS: hace falta "Instalar vía USB" activado y **aceptar el aviso en el móvil**; si no, `INSTALL_FAILED_USER_RESTRICTED`. Si el USB se corta, reconectar y reintentar.
+- Alternativa (la *release* que pide la spec): `flutter build apk --release --target-platform android-arm64` e `install -r` del APK, que **actualiza la app real** (mismo paquete, sus datos se conservan). Solo si el propietario lo pide; las tareas "uno" y "dos" quedan entonces en su lista y hay que borrarlas al terminar. **Nunca `adb uninstall invalid.pending.app`.**
+
+- [ ] Instalada (paquete: `______`), abre y muestra la tarea actual o la bienvenida.
+
+### 5.3 Preparar las tareas A y B
+
+- [ ] Crear la tarea **A** con el texto `uno` y la tarea **B** con el texto `dos`. Se alterna entre ellas con "Todas mis tareas" o completando la actual, dejando delante la que toque.
+- Opcional (mismo procedimiento, solo si hay tiempo; la vista web se dibuja por separado): A y B **con imagen** y **con web** (`https://www.wikipedia.org` y `https://www.google.com`), como en §3.2.
+
+### 5.4 CA-011-01 y CL-011-9: la tarjeta de "Recientes"
+
+Ruta de la spec: **ir antes al escritorio y luego abrir "Recientes"** (botón/gesto de inicio y luego el gesto o botón de "Recientes" del propietario). Abrir "Recientes" directamente desde la app queda fuera del criterio (§5.6).
+
+1. Con la tarea **A ("uno")** delante: inicio (escritorio), esperar 2 s, abrir "Recientes". Mirar **solo la tarjeta de la app** (§5.1).
+2. Volver a la app con el icono, poner delante la tarea **B ("dos")** y repetir.
+
+| Comprobación | A ("uno") | B ("dos") |
+|---|---|---|
+| La tarjeta **no enseña nada del contenido** (ni texto, ni logotipo, ni botones) | [ ] sí [ ] no | [ ] sí [ ] no |
+| Qué se ve en su lugar (fondo liso, icono, en blanco, la tarea...) | | |
+| Se ve el icono y el nombre de la app (CA-010-05) | [ ] sí [ ] no | [ ] sí [ ] no |
+| La tarjeta de A es **igual** a la de B | [ ] sí [ ] no (una sola casilla) | |
+
+- [ ] **CL-011-9:** el lanzador de HyperOS **respeta la señal** (tarjeta sin contenido). Si el lanzador **no muestra miniaturas por sí mismo** (solo icono y nombre), también vale: "si no hay miniatura, no hay nada que ocultar" (anotarlo).
+- Si el lanzador enseña "uno" o "dos", o A y B difieren: **criterio de parada** (§5.9).
+
+### 5.5 CA-011-04, CA-011-03 y CA-011-08: capturas, vuelta y ciclo (10 vueltas)
+
+Repetir **10 veces**, con una tarea de texto delante (la spec pide 10; si el propietario prefiere menos, se anota cuántas):
+
+1. Inicio (escritorio) → abrir "Recientes" (§5.4) → **tocar la tarjeta** de la app para volver.
+2. Fijarse en la vuelta (**CA-011-03**): ¿se ve un instante en **blanco liso** antes de la app? ¿Es **negro** o de otro color en algún momento? Calcular a ojo cuánto dura (referencia medida en el emulador, inflada: 0,4-1,25 s con el icono o `am start`; casi nada al tocar la tarjeta).
+3. Con la app ya delante, hacer una **captura de pantalla del sistema** (la del propio Xiaomi, p. ej. volumen abajo + encendido) y comprobar en la galería que **sale con "uno" o "dos" visible**, no en negro y sin aviso de que la app lo impide (**CA-011-04**). Repetir además una vez con la **grabación de pantalla del sistema** (unos segundos, moviendo el menú): sale con contenido.
+
+| Comprobación | Resultado |
+|---|---|
+| Vueltas hechas (de 10) | ___ |
+| Tarjeta sin contenido en las 10 (CA-011-08) | [ ] sí [ ] no (cuántas fallan: ___) |
+| Captura con contenido en las 10 (CA-011-04) | [ ] sí [ ] no (cuántas salen en negro: ___) |
+| Grabación con contenido (CA-011-04) | [ ] sí [ ] no |
+| Fotograma **negro** o de otro color al volver (CA-011-03) | [ ] ninguno [ ] sí: ______ |
+| Blanco liso al volver tocando la tarjeta | [ ] no [ ] a veces [ ] siempre; duración a ojo: ___ s |
+| Blanco liso al volver con el **icono** de la app (5 veces) | [ ] no [ ] a veces [ ] siempre; duración a ojo: ___ s |
+| Se conserva la pantalla si pasaron < 10 min (CA-001-12) | [ ] sí [ ] no |
+
+- CA-011-04 también **en el primer arranque en frío** (cerrar la app del todo desde "Recientes" y abrirla): captura con contenido. [ ] sí [ ] no
+
+### 5.6 CL-011-14: "Recientes" abierto desde la propia app (solo informativo)
+
+- [ ] Con la app delante, abrir "Recientes" **sin pasar por el escritorio**: anotar si la tarjeta enseña la app en vivo (como en el emulador, aceptado) o no. **No es criterio**; solo se anota: ______
+
+### 5.7 CL-011-3: cámara y selector
+
+Con el editor de una tarea abierto y "uno" escrito:
+
+1. (+) → **"Hacer foto"** (cámara del Xiaomi): con la cámara abierta, ir al escritorio y abrir "Recientes" (§5.1). Anotar qué enseña la tarjeta (**esperado:** la escena de la cámara, nada de la app). Volver por la tarjeta, hacer la foto o cancelar: el editor sigue igual y una captura con la app delante sale con contenido (CA-011-04).
+2. (+) → **"Subir imagen"** (selector de fotos): con el selector abierto, ir al escritorio y abrir "Recientes". Anotar qué enseña la tarjeta. **Si es una hoja parcial sobre la app, puede verse lo que queda de la app a la vista (CL-011-15, aceptado, igual que antes de la 011)**; si el selector es a pantalla completa, no debería verse nada de la app. Volver y comprobar la captura con la app delante.
+
+| Comprobación | Cámara | Selector |
+|---|---|---|
+| La tarjeta enseña | | |
+| Contenido de la app visible en la tarjeta | [ ] no [ ] sí: ______ | [ ] no [ ] sí: ______ |
+| Tras volver, el editor sigue igual y la captura sale con contenido | [ ] sí [ ] no | [ ] sí [ ] no |
+| Ciclos hechos (la spec pide 10 por cada uno) | ___ | ___ |
+
+**[Suposición]** el selector de fotos de HyperOS puede ser el de Google o el de la galería de Xiaomi; anotar cuál es. Si enseña más de lo que enseña hoy la app sin la 011, no se puede saber sin la línea base en el Xiaomi: anotarlo y **preguntar** en vez de dar por bueno.
+
+### 5.8 Qué anotar y qué NO guardar
+
+**Anotar** (texto, en esta sección o en la fila de `tasks.md`): fecha, paquete instalado (`.profile` o base), versión de HyperOS (`adb shell getprop ro.mi.os.version.name` o Ajustes), cómo se abre "Recientes" (botones o gestos), qué muestra el lanzador en lugar del contenido, las casillas de arriba, y cualquier fallo.
+
+**NO guardar** (ni en el repo ni en `capturas/`):
+- Capturas o grabaciones de "Recientes" con otras apps visibles, ni recortes en los que asome algo que no sea la tarjeta de esta app.
+- Capturas de la galería, del selector de fotos o del selector de archivos (pueden traer fotos y nombres de archivo del propietario).
+- Cualquier `adb pull` de `Pictures/Screenshots`, `DCIM` o `Movies` del móvil. Si hace falta enseñar algo, el propietario lo **recorta a la tarjeta** y decide él si lo comparte; por defecto se **describe con palabras**.
+- Si se hizo una captura por `adb` sin querer y sale algo privado: se **borra al momento** y se le avisa.
+
+### 5.9 Criterio de parada
+
+**Parar y preguntar al propietario** (no reinterpretar la spec ni seguir con el resto) si:
+
+- El lanzador **ignora la señal**: la tarjeta de "Recientes" enseña "uno" o "dos", cualquier parte del contenido, o A y B se ven distintas (CA-011-01 falla en Android 13+; regla de desempate de la spec). Recomendación a proponer: probar el mecanismo B (`FLAG_SECURE` en `onPause`) también en 13+ (alternativa preparada, riesgo R-2/R-5) antes de decidir; requiere una tarea nueva y otra pasada por el Xiaomi.
+- La captura o la grabación con la app delante salen **en negro** o con un aviso de que la app lo impide (CA-011-04).
+- El fotograma al volver es **negro**, de otro color o dura **claramente más** de lo medido (más de ~1,5 s a ojo) (CA-011-03).
+- La tarjeta se queda con la app "congelada" o aparece el contenido tras volver a "Recientes" varias veces (CL-011-13).
+
+Lo demás (CL-011-14, hoja parcial del selector, blanco corto al volver) son límites ya aceptados por el propietario (2026-09-30): se anotan y no paran.
+
+### 5.10 Al terminar
+
+- [ ] `adb -s $S uninstall invalid.pending.app.profile` (**solo** `.profile`; si se instaló la *release* sobre la real, borrar a mano las tareas "uno" y "dos").
+- [ ] Borrar de la galería y de `/sdcard` las capturas y grabaciones de prueba, y de `/tmp` o del directorio de la sesión cualquier archivo que se haya copiado.
+- [ ] Anotar el resultado en la fila T-011-07 de `tasks.md` y cerrar CL-011-9 (respeta / no muestra miniaturas / falla y se paró).
