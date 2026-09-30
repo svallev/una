@@ -100,11 +100,13 @@ class _Status extends StatelessWidget {
   }
 }
 
-const _statusPadding = EdgeInsets.fromLTRB(
+/// Margen de los estados de carga y error; abajo suma el borde del sistema
+/// (la página no lo reserva).
+EdgeInsets _statusPadding(BuildContext context) => EdgeInsets.fromLTRB(
   UnaSpace.l,
   UnaSpace.m,
   UnaSpace.l,
-  UnaSpace.l,
+  UnaSpace.l + MediaQuery.paddingOf(context).bottom,
 );
 
 /// "Cargando licencias…", que se anuncia solo si la carga dura más que el
@@ -146,7 +148,7 @@ class _LoadingState extends State<_Loading> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: _statusPadding,
+      padding: _statusPadding(context),
       child: Align(
         alignment: AlignmentDirectional.topStart,
         child: _Status(AppLocalizations.of(context).licensesLoading),
@@ -186,7 +188,7 @@ class _LoadErrorState extends State<_LoadError> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
-      padding: _statusPadding,
+      padding: _statusPadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

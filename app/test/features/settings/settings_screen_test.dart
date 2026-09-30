@@ -93,6 +93,7 @@ Future<_Opener> _openSettings(
   bool reduced = false,
   double textScale = 1.0,
   Size size = const Size(390, 844),
+  double bottomInset = 0,
   _Opener? opener,
 }) async {
   final o = opener ?? _Opener();
@@ -105,6 +106,7 @@ Future<_Opener> _openSettings(
     reduced: reduced,
     textScale: textScale,
     size: size,
+    bottomInset: bottomInset,
     overrides: [linkOpenerProvider.overrideWithValue(o)],
   );
   await tester.tap(
@@ -462,6 +464,41 @@ void main() {
       },
     );
 
+    testWidgets(
+      'CA-012-04: el aviso se oculta en cuanto hay app otra vez (canOpen true), aunque después se cancele',
+      (tester) async {
+        final opener = _Opener()..available = false;
+        await _openSettings(tester, opener: opener);
+        await tester.tap(_inSettings(find.text('Política de privacidad')));
+        await _settle(tester);
+        expect(find.text(_noApp), findsOneWidget);
+        opener.available = true;
+        await tester.tap(_inSettings(find.text('Política de privacidad')));
+        await _settle(tester);
+        await tester.tap(find.text('Cancelar'));
+        await _settle(tester);
+        expect(opener.opened, isEmpty);
+        expect(find.text(_noApp), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'CA-012-04: el aviso no sobrevive a una visita al nivel 2 (se oculta al salir del nivel 1)',
+      (tester) async {
+        final opener = _Opener()..available = false;
+        await _openSettings(tester, opener: opener);
+        await tester.tap(_inSettings(find.text('Política de privacidad')));
+        await _settle(tester);
+        expect(find.text(_noApp), findsOneWidget);
+        await tester.tap(_inSettings(find.text('Licencias de código abierto')));
+        await _settle(tester);
+        await tester.tap(find.bySemanticsLabel('Volver'));
+        await _settle(tester);
+        expect(find.byType(SettingsScreen), findsOneWidget);
+        expect(find.text(_noApp), findsNothing);
+      },
+    );
+
     for (final url in [
       'http://example.com/privacy',
       'ftp://example.com/privacy',
@@ -715,6 +752,44 @@ void main() {
           }
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
           handle.dispose();
+        },
+      );
+    }
+
+    // 640 es el caso normal (cabe todo); 480, una pantalla corta en la que el
+    // contenido se desplaza y el final debe librar la barra.
+    for (final height in [640.0, 480.0]) {
+      testWidgets(
+        'CA-012-13: con la barra del sistema (48 dp abajo) al 200 % a 360x${height.toInt()}, el aviso del final queda por encima de ella',
+        (tester) async {
+          const inset = 48.0;
+          final opener = _Opener()..available = false;
+          await _openSettings(
+            tester,
+            textScale: 2,
+            size: const Size(360, 640),
+            bottomInset: inset,
+            opener: opener,
+          );
+          // Se abre en 640 (el menú debe caber) y luego la pantalla se acorta.
+          tester.view.physicalSize = Size(360, height);
+          await tester.pumpAndSettle();
+          await tester.tap(_inSettings(find.text('Política de privacidad')));
+          await _settle(tester);
+          // Hasta el final del desplazamiento, por si no cabe todo.
+          await tester.drag(
+            find.descendant(
+              of: find.byType(SettingsScreen),
+              matching: find.byType(SingleChildScrollView),
+            ),
+            const Offset(0, -2000),
+          );
+          await _settle(tester);
+          expect(
+            tester.getRect(_inSettings(find.text(_noApp))).bottom,
+            lessThanOrEqualTo(height - inset),
+            reason: 'el último elemento queda por encima de la barra',
+          );
         },
       );
     }

@@ -14,7 +14,8 @@ import 'pump_app.dart';
 
 /// Monta la app completa (UnaApp) con un repositorio en memoria y las tareas
 /// indicadas (la primera, la actual). El sistema está en [locale] (español
-/// por defecto); con [firstRunDone] a false, arranca en la bienvenida.
+/// por defecto); con [firstRunDone] a false, arranca en la bienvenida. Con
+/// [bottomInset] > 0, el sistema reserva ese margen abajo (barra de navegación).
 Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   WidgetTester tester, {
   required T repo,
@@ -25,6 +26,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   bool reduced = false,
   double textScale = 1.0,
   Size size = const Size(390, 844),
+  double bottomInset = 0,
   Clock? clock,
   List<Override> overrides = const [],
 }) async {
@@ -37,6 +39,12 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   tester.view
     ..physicalSize = size
     ..devicePixelRatio = 1.0;
+  if (bottomInset > 0) {
+    // Barra de navegación del sistema: margen inferior (dpr 1: dp = px).
+    tester.view
+      ..padding = FakeViewPadding(bottom: bottomInset)
+      ..viewPadding = FakeViewPadding(bottom: bottomInset);
+  }
   addTearDown(tester.view.reset);
   if (screenReader || reduced) {
     tester.platformDispatcher.accessibilityFeaturesTestValue =

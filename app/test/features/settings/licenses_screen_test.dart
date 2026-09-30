@@ -147,6 +147,7 @@ Future<void> _openLicenses(
   bool reduced = false,
   double textScale = 1.0,
   Size size = const Size(390, 844),
+  double bottomInset = 0,
   bool settle = true,
 }) async {
   await pumpUnaApp(
@@ -158,6 +159,7 @@ Future<void> _openLicenses(
     reduced: reduced,
     textScale: textScale,
     size: size,
+    bottomInset: bottomInset,
     overrides: [
       linkOpenerProvider.overrideWithValue(_Opener()),
       licenseSourceProvider.overrideWithValue(source),
@@ -1064,6 +1066,42 @@ void main() {
           handle.dispose();
         },
       );
+
+      for (final height in [640.0, 400.0]) {
+        // 400: pantalla corta, en la que el error se desplaza y el final debe
+        // librar la barra.
+        testWidgets(
+          'CA-012-13 ($code): con la barra del sistema (48 dp abajo) al 200 % a 360x${height.toInt()}, "Reintentar" queda por encima de ella',
+          (tester) async {
+            const inset = 48.0;
+            await _openLicenses(
+              tester,
+              _Source(null)..error = StateError('boom'),
+              locale: Locale(code),
+              textScale: 2,
+              size: const Size(360, 640),
+              bottomInset: inset,
+            );
+            // Se abre en 640 (el menú debe caber) y luego la pantalla se acorta.
+            tester.view.physicalSize = Size(360, height);
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            await tester.drag(
+              find.descendant(
+                of: find.byType(LicensesScreen),
+                matching: find.byType(SingleChildScrollView),
+              ),
+              const Offset(0, -2000),
+            );
+            await tester.pumpAndSettle();
+            expect(
+              tester.getRect(find.byType(BrutalButton)).bottom,
+              lessThanOrEqualTo(height - inset),
+              reason: 'el último elemento queda por encima de la barra',
+            );
+          },
+        );
+      }
 
       testWidgets(
         'CA-012-13 ($code): el error de las licencias al 200 % a 360 dp cabe y el botón mide ≥ 44',

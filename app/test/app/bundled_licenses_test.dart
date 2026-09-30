@@ -89,6 +89,29 @@ void main() {
     },
   );
 
+  test('CA-012-03: la lista de artefactos de Android sale en párrafos propios '
+      '(una línea por artefacto no se une en un solo párrafo)', () async {
+    registerBundledLicenses();
+    final artifact = RegExp(r'^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$');
+    final raw = await rootBundle.loadString('assets/licenses/android.txt');
+    final artifacts = raw.split('\n').where(artifact.hasMatch).toList();
+    expect(artifacts.length, greaterThan(40));
+
+    LicenseEntry? entry;
+    await for (final e in LicenseRegistry.licenses) {
+      if (e.packages.contains(androidLibrariesLicenseName) &&
+          e.paragraphs.any((p) => p.text.contains(artifacts.first))) {
+        entry = e;
+        break;
+      }
+    }
+    expect(entry, isNotNull);
+    final paragraphs = entry!.paragraphs.map((p) => p.text).toList();
+    for (final a in artifacts) {
+      expect(paragraphs, contains(a), reason: '$a debe ser un párrafo propio');
+    }
+  });
+
   test('CA-012-16: no se lee ningún archivo hasta pedir las licencias '
       '(P2: nada antes del primer fotograma)', () async {
     final bundle = _CountingBundle();

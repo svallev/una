@@ -64,6 +64,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _openLicenses() async {
     if (_busy) return;
     _busy = true;
+    // Al salir del nivel 1 el aviso ya no vale (plan §8, M5).
+    if (_noApp) setState(() => _noApp = false);
     final back = settingsTransition(context);
     await Navigator.of(context)
         .push(settingsRoute<void>(context, (_) => const LicensesScreen()));
@@ -89,6 +91,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // Se pregunta en cada toque, sin guardar la respuesta.
       if (link == null || !await opener.canOpen(link)) return _showNoApp();
       if (!mounted) return;
+      // Hay app: el aviso de un intento anterior ya no vale, aunque después
+      // se cancele (plan §8, M5).
+      if (_noApp) setState(() => _noApp = false);
       // La tarea de debajo no debe girar mientras se pregunta.
       final open = await showLinkConfirmSheet(
         context,
@@ -134,11 +139,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       title: l10n.menuSettings,
       root: true,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
+        // `SettingsPage` no reserva el borde inferior: lo suma el contenido
+        // (como las listas de los niveles 2 y 3).
+        padding: EdgeInsets.fromLTRB(
           UnaSpace.l,
           UnaSpace.m,
           UnaSpace.l,
-          UnaSpace.l,
+          UnaSpace.l + MediaQuery.paddingOf(context).bottom,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
