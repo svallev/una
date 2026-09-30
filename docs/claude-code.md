@@ -8,7 +8,7 @@ Objetivo: que el desarrollo con Claude Code sea **consistente** (SDD, convencion
 |---|---|---|
 | `CLAUDE.md` | raíz | ✅ Instalado |
 | Skills del proyecto (8 + `find-skills` adaptada) | `.claude/skills/` | ✅ Instaladas |
-| Subagentes (4) | `.claude/agents/` | ✅ Instalados |
+| Subagentes (5) | `.claude/agents/` | ✅ Instalados |
 | Permisos y hooks | `.claude/settings.json` + `.claude/hooks/*.sh` | ⏳ **Pendiente de que los instales tú** (ver §4). El modo automático de Claude Code, con buen criterio, no permite que Claude escriba su propia configuración de permisos y hooks. `.claude/hooks/block-sensitive-files.sh` ya existe, pero no hace nada hasta que `settings.json` lo referencie |
 | MCP | — | Ninguno nuevo (ver §5) |
 
@@ -17,7 +17,7 @@ Objetivo: que el desarrollo con Claude Code sea **consistente** (SDD, convencion
 | Skill | Para qué | Cuándo |
 |---|---|---|
 | `/spec-new` | Crear `specs/NNN-*/spec.md` desde la plantilla y pasarla por `spec-reviewer` | Funcionalidad nueva |
-| `/spec-implement NNN` | Plan → tareas → tests → código → verificación de los CA → DoD | Implementar una spec aprobada |
+| `/spec-implement NNN` | Plan → tareas → tests → código → verificación de los CA → DoD, en sesiones cortas con un `spec-task` por tarea (§2.1) | Implementar una spec aprobada |
 | `/adr-new` | Nuevo ADR con matriz y consecuencias; actualiza el índice | Decisiones técnicas |
 | `/security-check` | Checklist de seguridad sobre el diff + política de skills y MCP | Antes de cada PR |
 | `/i18n-check` | Textos incrustados, claves ES/EN, plurales, glosario | Tras tocar UI |
@@ -34,6 +34,13 @@ Objetivo: que el desarrollo con Claude Code sea **consistente** (SDD, convencion
 | `security-reviewer` | Solo lectura | Amenazas T-x / MASVS sobre diffs, specs o planes |
 | `a11y-reviewer` | Solo lectura | Gestos → acciones semánticas, foco, anuncios, contraste, texto grande |
 | `test-writer` | Lectura, escritura, Bash | Tests desde los CA (unitarios, widgets, goldens, integración, migraciones) |
+| `spec-task` | Lectura, escritura, Bash | Una tarea T-NNN-XX de principio a fin con el contexto limpio (tests, código, verificación, fila de Estado, commit) |
+
+### 2.1 Sesiones cortas
+
+Para gastar menos contexto, cada spec se hace en varias sesiones que empiezan solo con archivos: **1. Spec** (revisión y aprobación) → **2. Plan** (`plan.md` + `tasks.md`) → **3…n. Implementación** (un coordinador que lee solo `tasks.md` y lanza un `spec-task` nuevo por tarea; se corta antes de usar el móvil o cada ~6 tareas, dejando la línea **Siguiente** de `tasks.md` al día) → **Cierre** (revisiones, DoD, PR). Las filas de Estado miden ≤ 3 líneas y cada `spec-task` lee solo las de sus dependencias; lo que sirve para otras tareas va a las **Trampas** de `spec-task.md`.
+
+Las tareas van **de una en una, en orden**. Se valoró hacer dos a la vez en *worktrees* y se descartó (propietario, 2026-09-28): gasta más tokens y disco (~10 GB por copia), hay fallos que solo se ven al juntarlas y en la 008 apenas había tareas independientes. Detalle en `.claude/skills/spec-implement/SKILL.md`.
 
 ## 3. Skills, plugins y MCP de terceros: evaluación
 
