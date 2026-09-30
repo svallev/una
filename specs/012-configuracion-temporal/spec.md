@@ -47,7 +47,8 @@ Que la app tenga, mientras no exista la Configuración completa, **un sitio dond
     - cada **fuente empaquetada**;
     - y cada **biblioteca nativa de terceros** que va en el paquete de la app (`.so` de cada arquitectura, p. ej. PDFium y SQLite)
     tiene su licencia en la lista. Un test enumera cada una de esas tres clases y falla si alguna no aparece.
-  - **[Pendiente, plan]** El motor de Flutter y las bibliotecas de Android (AndroidX, Kotlin): el plan comprueba si la lista de Flutter ya las recoge. Si no, **se pregunta** al propietario si entran o si basta con las tres clases de arriba.
+  - **El motor de Flutter y las bibliotecas de Android** *(propietario, 2026-09-30, P-012-3)*: el motor ya viene en la lista de Flutter; las bibliotecas de Android (AndroidX, Kotlin) no, y **entran** como una entrada propia, "Bibliotecas de Android (AndroidX, Kotlin)", con su licencia y la lista de bibliotecas. El test también la comprueba.
+  - **Paquetes de desarrollo** *(propietario, 2026-09-30)*: la lista de Flutter trae también algunos que no van en la app; **se muestran tal cual** (sobra algo, no falta nada). El test solo exige los de *release*.
   - Los textos de las licencias son **contenido de terceros, en inglés** (como el texto del usuario y las páginas web en CA-010-07: fuera de P7); el resto de la pantalla, en el idioma de la app.
   - **Los textos de licencia no llevan enlaces activos**: las direcciones que contienen son texto plano (P4, ADR-0018).
 - **CA-012-04 Política de privacidad**
@@ -107,7 +108,7 @@ Que la app tenga, mientras no exista la Configuración completa, **un sitio dond
 - **CA-012-14 La tarea de debajo no cambia (CA-009-07, CA-009-13)**
   - **Dado** una tarea con web, con PDF o con imagen, con el menú abierto
   - **Cuando** se abre esta pantalla y se vuelve (o se abre la política en el navegador y se vuelve en menos de 10 minutos)
-  - **Entonces** la página web **no se recarga** y no se borra su sesión, y el PDF conserva su página y su zoom. **[Suposición]** Como esta pantalla es una ruta completa y no una hoja, el plan comprueba que no cuenta como "salir de la página" (CA-009-13); si cuenta, se **para y se pregunta**.
+  - **Entonces** el PDF conserva su página y su zoom, y la imagen no cambia. La página web **se vuelve a cargar al volver**, como tras el editor o el listado (CA-009-07, CA-009-13): esta pantalla tapa la tarea y eso cuenta como salir de la página. *(Enmienda del propietario, 2026-09-30: el plan comprobó que la ruta a pantalla completa cuenta como "salir de la página"; se acepta la recarga en lugar de mantener la vista web viva debajo.)*
 - **CA-012-15 Estados de carga y error de las licencias**
   - **Dado** el nivel 1
   - **Cuando** se abre el nivel 2
@@ -180,14 +181,14 @@ Claves nuevas (camelCase; se añaden con `/strings-add`). Se reutilizan `menuSet
 
 - **P-012-1 [Resuelta, propietario, 2026-09-30]:** al cerrar se vuelve al menú tal como estaba (CA-012-02).
 - **P-012-2 [Resuelta, propietario, 2026-09-30]:** una sola dirección para los dos idiomas (por ahora, el marcador).
-- **P-012-3 [Pendiente, plan; puede llegar a ser del propietario]:** el motor de Flutter y las bibliotecas de Android (CA-012-03).
+- **P-012-3 [Resuelta, propietario, 2026-09-30]:** el motor ya está en la lista de Flutter; las bibliotecas de Android entran como una entrada propia (CA-012-03).
 - **P-012-4 [Pendiente, propietario, más adelante]:** los huecos del borrador de la política (responsable, contacto y fecha, y dónde se aloja la web), que dependen de PD-2 y PD-3.
 
 ## Anexo: notas para `plan.md` (no normativas)
 
 - El menú es la hoja de la spec 005; "Configuración y perfil" es hoy un texto sin acción (`menuSettings`, CA-005-09, CL-010-7): pasa a botón y abre una ruta a pantalla completa, no una hoja.
 - La lista de licencias puede apoyarse en el registro de licencias de Flutter (`LicenseRegistry`): `bundled_licenses.dart` ya añade las OFL de Archivo y Space Mono. La pantalla de Flutter (`LicensePage`) es de Material y no usa los tokens; se hace propia (P12). PDFium (`libpdfium.so`, en tres arquitecturas, `tools/pdfium.lock`; BSD-3 más los avisos de sus terceros) y SQLite (binario que descarga el paquete `sqlite3`) **no** pasan por `LicenseRegistry`: hay que añadirlos como las fuentes. `pubspec.lock` mezcla dependencias de desarrollo; el test las filtra. Los `.so` se enumeran del APK *release*.
-- La confirmación y la apertura del navegador ya existen (spec 008: canal `una/links`, `NativeLinkOpener`, hoja de confirmación): se reutilizan, sin canal nuevo. La comprobación de "hay app que lo abra" ya está en ese canal (`resolveActivity`).
+- La confirmación y la apertura del navegador ya existen (spec 008: canal `una/links`, `NativeLinkOpener`, hoja de confirmación): se reutilizan, sin canal nuevo. La comprobación de "hay app que lo abra" está en ese canal (`resolveActivity`), pero solo dentro de `open`: el plan añade al mismo canal un método para comprobarlo antes de la confirmación.
 - La dirección de la política debería ir junto a la identidad (`app/identity.yaml` → `AppIdentity`, P7) o en un archivo de configuración propio. La puerta de CA-012-05 es un script tipo `tools/check-android-permissions.sh` (p. ej. `tools/check-release-config.sh`), que también busca los huecos en el texto de la política.
 - **Puerta de publicación y compilaciones locales:** el script **no** se ejecuta en las compilaciones *release* locales (medir el arranque, probar en el Xiaomi); solo en la lista de publicación y en el trabajo de CI que genere el artefacto de publicación.
 - Documentos a actualizar al implementar: `docs/design/prototype-deviations.md` (DEV-18 y DEV-49), `screen-map.md`, `architecture.md`, `security/checklist.md`, `glossary.md`, specs 005, 010 y 011, `.claude/skills/release-checklist/SKILL.md` (punto de la puerta), CLAUDE.md y la memoria "beta congelada".
