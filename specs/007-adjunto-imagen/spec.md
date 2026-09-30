@@ -229,7 +229,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 | CL-007-8 | Doble toque rápido en "Continuar" con imagen | Se crea una sola tarea |
 | CL-007-9 | Listado con 500 tareas, todas con imagen | Se cumple CA-006-20 |
 | CL-007-10 | Registros (logs) en *release* | No se registra ninguna dirección, nombre, ruta ni metadato de una imagen |
-| CL-007-11 | La miniatura de la app en "Recientes" | Muestra la imagen. **[Pendiente, F5]** Ocultarla mientras se ve un adjunto *(antes spec 010; enmienda 2026-09-29)* |
+| CL-007-11 | La miniatura de la app en "Recientes" | Muestra la imagen. **[Resuelto por la spec 011, ADR-0019]** La miniatura no muestra contenido: se oculta siempre, no solo con adjunto (propietario, 2026-09-30). **Límites aceptados (propietario, 2026-09-30):** "Recientes" abierto desde la propia app, el gesto de cambio entre apps y la hoja parcial del selector de fotos enseñan lo que hay a la vista (CL-011-14, CL-011-6, CL-011-15); fotograma blanco al volver (CA-011-03); en Android 8–12, **[Suposición]** sin verificar hasta PD-10. Ver `specs/011-ocultar-recientes/spec.md` y `docs/adr/0019-ocultar-recientes-sin-bloquear-capturas.md` *(antes: Se oculta siempre, no solo con adjunto (propietario, 2026-09-30) *(antes spec 010; enmiendas 2026-09-29 y 2026-09-30)*)* |
 | CL-007-12 | Web de pruebas (ADR-0010) | "Hacer foto" y "Subir imagen" usan el selector del navegador; las imágenes se guardan solo en memoria, como las tareas |
 
 ## 5. Estados vacíos y de error

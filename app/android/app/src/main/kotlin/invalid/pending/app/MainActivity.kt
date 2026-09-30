@@ -9,6 +9,12 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var images: ImageImport? = null
     private var rotation: AttachmentRotation? = null
+    private val recents = RecentsPrivacy(this)
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        recents.onCreate()
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -44,12 +50,14 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onPause() {
+        recents.onPause()
         rotation?.pause()
         super.onPause()
     }
 
     override fun onResume() {
         super.onResume()
+        recents.onResume()
         rotation?.resume()
     }
 

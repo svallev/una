@@ -93,3 +93,11 @@ Thumbs.db
 !.vscode/extensions.json
 !.vscode/settings.json
 /tools/fixtures/out/
+
+# ─── Capturas sueltas de tools/check-recents.sh (spec 011) ───────────
+# Capturan "Recientes" entera (pueden salir otras apps): nunca al repo.
+# Las capturas reducidas y revisadas de la spec sí se versionan.
+*-front.png
+*-recents.png
+*-tira.png
+!specs/011-ocultar-recientes/capturas/*.png

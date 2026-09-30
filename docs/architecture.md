@@ -35,6 +35,7 @@ flowchart TB
     WV[WebView en vivo: webview_flutter endurecida + canal una/webview, WebViewHardening.kt · WebDataJanitor]
     PDF[pdfrx/PDFium: PdfEngine · NativePdfImporter · visor TaskPdfView]
     LNK[Canal nativo una/links: LinkOpener.kt, ACTION_VIEW/SENDTO/DIAL]
+    RC[Nativo sin canal: RecentsPrivacy.kt — oculta la tarjeta de Recientes]
     NV[Canal nativo: QuickLook · FileProvider/ACTION_VIEW — no en la v1, ADR-0014]
   end
   UI --> STATE --> UC
@@ -71,7 +72,7 @@ lib/
 sequenceDiagram
   autonumber
   participant OS as Sistema
-  participant N as Splash nativo (color paper + logo)
+  participant N as Splash nativo (fondo liso del sistema, sin logo propio)
   participant M as main()
   participant DB as SQLite
   participant UI as CurrentTaskScreen
@@ -84,6 +85,7 @@ sequenceDiagram
   Note over UI: después del primer fotograma: imagen/PDF a resolución completa,<br/>migraciones pesadas diferidas, barrido de archivos huérfanos de tareas eliminadas, recuento de la cola
 ```
 
+- **Splash nativo [Hecho, medido en el emulador de API 37]:** lo que ve el usuario mientras arranca el proceso es el *splash* que pinta el sistema (Android 12+) con el fondo de `launch_background.xml` (`?android:colorBackground`) y el icono de la app: **fondo liso, sin logo propio y sin el color `paper`**; en modo claro sale blanco y en modo oscuro **negro** (`values-night` usa `Theme.Black`), unos 0,5 s antes del primer fotograma de Flutter. **[Pendiente, F5]** mitigación posible, fuera de la spec 011: usar `paper` en `launch_background` (y su versión para modo oscuro) para que el arranque en frío no sea blanco o negro. No cambiaría el fotograma blanco al volver a la app sin instantánea (spec 011, CA-011-03): se midió blanco también en modo oscuro, así que no sale de `launch_background` (`specs/011-ocultar-recientes/dispositivo.md`, "T-011-08 previa").
 - Fuentes empaquetadas (ya en el primer fotograma) y *shaders* precompilados.
 - Imagen: se muestra primero la **versión de pantalla** pregenerada al importar, **JPEG al ancho físico exacto de la pantalla** (I-2; ~20 % más rápido que PNG en S1); el original se carga al hacer zoom.
 - PDF (spec 008): antes de `runApp`, y solo si la tarea actual tiene PDF (tope de 1 s), se leen `position.json` y se decodifica `screen.jpg`, que es **lo que se ve desde la última posición**; el primer fotograma la pinta y pdfrx abre el documento debajo, sin quitarla hasta que ha dibujado las páginas visibles (detalle en §4, «PDF»).
@@ -221,6 +223,17 @@ Estado: **[Hecho]** en Android (rama `feat/009-adjunto-url`; emulador y Xiaomi, 
 - **Red y privacidad:** `INTERNET` es el único permiso de la app (`check-android-permissions.sh release`); `cleartextTrafficPermitted=false`; `WebView.MetricsOptOut`. Safe Browsing consulta a Google la reputación de las direcciones: **[Suposición, PD-9]** no cambia Data Safety; se revisa antes de publicar.
 - **Coste:** APK *release* arm64 28,7 MB (13,4 MB comprimido; +66 KB por el paquete); +65 MB de PSS con la página cargada (Xiaomi, `docs/perf/baseline.md`).
 
+### Recientes: `RecentsPrivacy` (spec 011, ADR-0019)
+
+Estado: **[Hecho]** en Android 13+ (verificado en el emulador de API 37 y, para la tarjeta de "Recientes", en el Xiaomi 15T Pro con HyperOS; `specs/011-ocultar-recientes/dispositivo.md`). **[Suposición, PD-10]** Android 8–12 sin verificar en dispositivo. iOS fuera de la beta (D17).
+
+- **Componente nativo, sin Dart:** `RecentsPrivacy.kt` (`android/app/src/main/kotlin/invalid/pending/app/`), una clase pequeña que `MainActivity` llama en `onCreate`, `onPause` y `onResume`, junto a la rotación. **Sin canal, sin ajuste, sin esquema, sin permisos, sin dependencias, sin textos y sin tocar `main()` ni el arranque** (P2). La interfaz de Flutter no interviene: lo que se oculta es la instantánea que el sistema guarda al pasar la app a segundo plano.
+- **Mecanismo A (`SDK_INT >= 33`):** `Activity.setRecentsScreenshotEnabled(false)` una sola vez, en `onCreate`. No toca la ventana. La llamada compila con el `compileSdk` de Flutter (36) y va protegida con `Build.VERSION.SDK_INT`.
+- **Mecanismo B (`SDK_INT < 33`):** `FLAG_SECURE` en `onPause` y `clearFlags` en `onResume`. Con la app delante no hay marca.
+- **Invariante:** nunca `FLAG_SECURE` con la app en primer plano, para no bloquear las capturas ni las grabaciones (CA-011-04). Las capturas mandan sobre el ocultado.
+- **Límites aceptados** (spec 011; el detalle, en el ADR-0019): fotograma blanco al volver a la app (lo pinta el sistema al no haber instantánea; igual en modo claro y oscuro, no sale del `LaunchTheme`); "Recientes" abierto desde la propia app y gesto de cambio entre apps (ventana en vivo, CL-011-14 y CL-011-6); hoja parcial del selector de fotos (CL-011-15).
+- **Verificación:** sin test de CI (P9, plan §8): `tools/check-recents.sh` con `adb` sobre el emulador (`docs/testing.md`), obligatorio antes de cada entrega a testers (`docs/security/checklist.md`).
+
 ### Decisiones de implementación de los spikes (F1)
 
 | ID | Decisión | Evidencia |
@@ -243,6 +256,7 @@ Estado: **[Hecho]** en Android (rama `feat/009-adjunto-url`; emulador y Xiaomi, 
 | Pantalla encendida | `isIdleTimerDisabled` mientras hay un adjunto visible | `FLAG_KEEP_SCREEN_ON` |
 | Red (solo la tarea web, spec 009) | ATS por defecto (sin excepciones) | `INTERNET` (único permiso), `network_security_config`: `cleartextTrafficPermitted=false`; WebView endurecida por el canal `una/webview` (§4) |
 | Backup | Application Support incluido, Caches excluido | `dataExtractionRules` / `fullBackupContent` (ADR-0004); nada de la WebView (CA-009-13) |
+| Contenido en "Recientes" (spec 011, ADR-0019) | No aplica en la beta (D17) | `RecentsPrivacy.kt`: `setRecentsScreenshotEnabled(false)` en Android 13+; `FLAG_SECURE` solo en pausa en 8–12 |
 | Widgets (futuro) | WidgetKit (SwiftUI) + App Group | Glance/AppWidget + datos compartidos; puente `home_widget` |
 
 ## 6. Feature flags

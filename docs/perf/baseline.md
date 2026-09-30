@@ -177,6 +177,25 @@ adb -s $S install -r /tmp/app-profile.apk
 - **[Pendiente]** No se midió el tiempo hasta ver la página (depende de la red) ni la memoria de los procesos de la WebView; no se capturó pantalla del móvil (el propietario lo usaba).
 - **[Hecho]** El APK sigue por debajo de 25 MB por ABI (comprimido).
 
+## Arranque en frío con la 011 (Recientes ocultos, T-011-04)
+
+- **Fecha:** 2026-09-30 · **Rama:** `feat/011-ocultar-recientes` (HEAD `594f5d1`) · **Línea base:** `main` (`725e97c`, sin `RecentsPrivacy`), sacada con `git archive` a un directorio temporal (el árbol de trabajo no se toca).
+- **Dispositivo:** emulador `Pixel_6a` (API 37, arm64, sin GPU), `emulator-5554`. **El emulador solo compara** las dos compilaciones entre sí; **no es la medida real de P2** (esa es la del móvil, con permiso del propietario). Tiempos de otro orden que los del Xiaomi (p50 ~200-480 ms allí).
+- **Compilación:** `flutter build apk --release --split-per-abi --target-platform android-arm64` (28,7 MB las dos; la nueva lleva `setRecentsScreenshotEnabled` en el `classes.dex`, la base no). Misma tarea (texto, "SECRETO-UNO"), mismos datos.
+- **Método:** cuatro pasadas **alternadas** (base, nueva, base, nueva) con `tools/measure-cold-start.sh emulator-5554 20`; antes de cada una, `adb install -r` y un arranque de calentamiento (no cuenta) más 5 s de espera, para no medir la optimización posterior a la instalación.
+
+| Pasada | Compilación | mín | **p50** | p90 | p95 | máx |
+|---|---|---|---|---|---|---|
+| 1 | base (sin 011) | 362 | **384** | 418 | 437 | 530 |
+| 2 | nueva (011) | 374 | **387** | 453 | 517 | 571 |
+| 3 | base (sin 011) | 364 | **385** | 397 | 425 | 693 |
+| 4 | nueva (011) | 365 | **385** | 425 | 436 | 474 |
+
+- Todo en ms, n = 20 por pasada. Las dos de la base juntas (n = 40): p50 **385**; las dos de la nueva: p50 **386**.
+- **[Hecho]** p50 < 1 s: 384-387 ms (39 % del presupuesto, en el emulador).
+- **[Hecho]** Aumento del p50: **+1 ms** con las pasadas juntas (386 frente a 385); por parejas, +3 ms (1.ª) y 0 ms (2.ª). La diferencia entre las dos pasadas de la base es de **1 ms** (384 y 385), así que el aumento cabe en ella, pero **el margen es de la resolución de la medida**: el ruido entre pasadas (hasta 3 ms) es mayor que el efecto que se busca. Las p90 y p95 varían más entre pasadas iguales (397-418 y 425-437 en la base) que entre base y nueva.
+- **[Hecho]** Lectura: `RecentsPrivacy` (una llamada a `setRecentsScreenshotEnabled` en `onCreate`, `onPause` y `onResume`) no añade un coste medible al arranque en frío; el criterio de T-011-04 se cumple. **[Pendiente]** El Xiaomi no se midió (no se toca sin permiso); si el propietario quiere la cifra real de P2, `tools/measure-cold-start.sh` con la release de la rama.
+
 ## Cómo repetir la medición
 
 ```bash
@@ -186,4 +205,4 @@ adb -s <serial> install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.a
 cd .. && tools/measure-cold-start.sh <serial> 20
 ```
 
-Se repite al cerrar cada spec que toque el arranque (003, 007–009) y antes de cada release.
+Se repite al cerrar cada spec que toque el arranque (003, 007–009, 011) y antes de cada release.

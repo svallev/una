@@ -89,7 +89,7 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
 | CL-010-4 | Sistema en un idioma de derecha a izquierda (árabe, hebreo) | App en inglés, de izquierda a derecha; al cambiarlo con la app abierta, se comporta como en CA-010-06 |
 | CL-010-5 | El sistema cierra la app mientras el usuario está en Ajustes | Arranque normal, ya en el idioma nuevo |
 | CL-010-6 | Ajustes › Idiomas de la app (Android 13+) | La app no aparece en esa lista: el idioma solo lo decide el sistema (§8) |
-| CL-010-7 | Pulsar "Configuración y perfil" en el menú | No pasa nada: es solo texto (subrayado, como el enlace del prototipo), sin acción y sin rol de botón. No cierra el menú (propietario, 2026-09-29; enmienda de CL-010-7). Lo sustituye la spec futura de Configuración y perfil |
+| CL-010-7 | Pulsar "Configuración y perfil" en el menú | No pasa nada: es solo texto (subrayado, como el enlace del prototipo), sin acción y sin rol de botón. No cierra el menú (propietario, 2026-09-29; enmienda de CL-010-7). Lo sustituye la spec futura de Configuración y perfil. **[Pendiente, spec 012 (Aprobada, 2026-09-30)]** antes, una pantalla temporal con licencias y política de privacidad |
 
 ## 5. Estados vacíos y de error
 
@@ -117,7 +117,7 @@ Ninguno nuevo. Se reutilizan los que ya existen, incluido "Configuración y perf
   - los textos de Privacidad y de Copias de seguridad;
   - las licencias de código abierto y la versión.
   Los borradores de esos textos están en el historial de git de este archivo.
-- **Ocultar el contenido en la miniatura de "Recientes"**: pasa a F5 (antes "[Pendiente, spec 010]" en CL-007-11, CL-008-13 y CL-009-10).
+- **Ocultar el contenido en la miniatura de "Recientes"**: pasa a F5 (antes "[Pendiente, spec 010]" en CL-007-11, CL-008-13 y CL-009-10). **[Actualizado 2026-09-30]** Lo resuelve la spec 011 (`specs/011-ocultar-recientes/`, ADR-0019), **Implementada parcialmente** (falta PD-10 / T-011-09). No añade textos ni ajustes, así que esta spec no cambia.
 - Anuncios con la marca de idioma de la app (CA-010-10, excepción): se revisan en F5.
 - Idioma por app de Android 13+.
 - iOS (D17, fase F-iOS).

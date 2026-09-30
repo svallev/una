@@ -19,7 +19,8 @@ Todos los artboards son `Main.dc.html` arrancado en un estado (`start=…`). For
 | 11 | Tarea web · `Web.dc.html` | `web` | Tarea con URL: candado + dominio + "WEB"; página dentro de la tarea | 009 | R5 |
 | — | Estados vacíos (dentro de `Main`) | — | "Todo hecho." + "Crear una tarea" (el "Nada pendiente." del prototipo no se usa, DEV-24) | 003, 004 | R12 |
 | — | Hoja "Cargar URL" (dentro de `Main`) | — | Campo `https://`, errores, "Se abre como tarea, arriba del todo." | 009 | R5 |
-| — | Configuración | — | **No existe en el prototipo** → la diseñará el propietario (fuera de la beta, 2026-09-29) | spec futura de Configuración y perfil | R15 |
+| — | Configuración y perfil (temporal) | — | **No existe en el prototipo.** Pantalla completa con título, icono de cerrar y dos opciones: licencias de código abierto y política de privacidad (enlace a una web) | 012 (temporal, propietario 2026-09-30) | — |
+| — | Configuración completa | — | **No existe en el prototipo** → la diseñará el propietario, en una fase posterior | spec futura de Configuración y perfil | R15 |
 
 ## Elementos sin pantalla en el prototipo (pendientes de diseño)
 

@@ -137,6 +137,45 @@ void main() {
   );
 
   testWidgets(
+    'CA-011-03: con el reloj inyectado a 9:59 se ve la misma pantalla y a 10:00, la tarea actual (o el editor)',
+    (tester) async {
+      // La frontera exacta de CA-001-12 que pide la spec 011: el test anterior
+      // prueba 9:00 y 10:00; aquí, 9:59 (se conserva) y 10:00 (se descarta).
+      final clock = _FakeClock();
+      await _pumpApp(tester, firstRunDone: true, clock: clock);
+      await tester.enterText(find.byType(TextField), 'Borrador');
+      await tester.pump();
+
+      void background(Duration d) {
+        for (final s in [
+          AppLifecycleState.inactive,
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(s);
+        }
+        clock.value = clock.value.add(d);
+        for (final s in [
+          AppLifecycleState.hidden,
+          AppLifecycleState.inactive,
+          AppLifecycleState.resumed,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(s);
+        }
+      }
+
+      background(const Duration(minutes: 9, seconds: 59));
+      await tester.pumpAndSettle();
+      expect(find.text('Borrador'), findsOneWidget);
+
+      background(const Duration(minutes: 10));
+      await tester.pumpAndSettle();
+      expect(find.text('Borrador'), findsNothing);
+      expect(find.byType(TaskEditorScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'CL-001-4: el primer uso queda guardado en cuanto se muestra la bienvenida',
     (tester) async {
       final repo = await _pumpApp(tester);
