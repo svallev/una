@@ -50,6 +50,14 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 
 Necesita `python3`, `unzip`, `dart` y un JDK para Gradle (`JAVA_HOME`; en local, el JBR de Android Studio: `/Applications/Android Studio.app/Contents/jbr/Contents/Home`). No instala nada. Se probó que **falla** quitando una línea de `android.txt`, con un `.so` inventado y con otra versión en la línea de origen de `pdfium.txt` (salidas en `specs/012-configuracion-temporal/tasks.md`).
 
+## Puerta de publicación (spec 012, CA-012-05)
+
+`tools/check-release-config.sh` (llama a `app/tool/check_release_config.dart`; necesita solo `dart`) **falla** (salida 1, mensajes `::error::` en español) si `privacyPolicyUrl` de `app/identity.yaml` no es `https`, lleva usuario o puerto, es una IP o `localhost`, o su dominio es uno reservado (`example.com|net|org` y sus subdominios, `*.example`, `*.test`, `*.invalid`, `*.localhost`; se normaliza a minúsculas y sin punto final), o si `docs/legal/privacy-policy.md` sigue con `[NOMBRE DE LA APP]`, `[FECHA]`, `[RESPONSABLE]`, `[CONTACTO]` o sus versiones EN (solo cuentan las partes "(ES)" y "(EN)"; la cabecera y las notas de revisión no). Con `--url <dirección>` y `--policy <archivo>` se prueba con valores de un directorio temporal (así lo hace `app/test/tool/check_release_config_test.dart`).
+
+- **Hoy falla a propósito** (marcador y huecos): el marcador es normal en desarrollo. **No se ejecuta en las compilaciones locales ni en `ci.yml`** (aún no hay trabajo de publicación, F6); está en `/release-checklist` y en la fila F6 de `docs/PLAN.md`. Cuando exista el trabajo de CI que genere el AAB de publicación, hay que añadirlo ahí.
+- La regla `https` + sin usuario es la de `privacyLink`, pero la herramienta no la importa (arrastra `package:flutter`, y `dart run` no tiene `dart:ui`): un test comprueba que la herramienta nunca es más permisiva.
+- No detecta las frases **[Suposición]** de la política: se revisan a mano.
+
 ## Verificación con `adb`: "Recientes" (spec 011, ADR-0019)
 
 Lo que dibuja el sistema fuera de la app (la tarjeta de "Recientes") no se ve desde `flutter test` y probar el Kotlin exigiría dependencias de prueba (P11), así que la spec 011 se verifica con `tools/check-recents.sh` sobre un emulador. **Se ejecuta a mano antes de cada versión entregada a testers** (CL-011-13; `docs/security/checklist.md`). Guía, resultados y capturas: `specs/011-ocultar-recientes/dispositivo.md`.

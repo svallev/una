@@ -31,6 +31,7 @@ Recorre cada punto y presenta el estado (✅ / ❌ / N/A con evidencia). **No su
 - [ ] `PrivacyInfo.xcprivacy` sin datos recogidos y con las *required reason APIs*; App Store: "Data Not Collected".
 - [ ] Play Data Safety: "No data collected / shared"; el manifiesto combinado solo con los permisos permitidos (`tools/check-android-permissions.sh`). Revisar PD-9 (Safe Browsing de la WebView, spec 009) con la guía de Play vigente.
 - [ ] Política de privacidad publicada y enlazada (Bloque 5; necesaria para publicar).
+- [ ] **Puerta de publicación** (spec 012, CA-012-05): `tools/check-release-config.sh` en verde sobre el commit que se entrega (`privacyPolicyUrl` de `app/identity.yaml` es `https` de un dominio propio, no el marcador `example.com` ni otro reservado; `docs/legal/privacy-policy.md` sin huecos ES/EN). Revisar a mano las frases **[Suposición]**/**[Assumption]** de la política (el script no las detecta). **Esa dirección coincide con la de la ficha de la tienda** (Play Console) y la web responde.
 - [ ] Fichas en ES y EN, capturas (con datos ficticios), icono, clasificación de contenido.
 - [ ] Play: la prueba cerrada con ≥ 12 testers durante 14 días está cumplida (cuenta personal nueva).
 
