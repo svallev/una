@@ -81,7 +81,7 @@ Lecturas:
 | Criterio / caso | Resultado | Notas |
 |---|---|---|
 | CA-011-01 (sin contenido en "Recientes", por el escritorio) | **Pasa** | Las 14 filas (§3.2): la tarjeta es blanca con la franja negra de arriba, sin ningún rastro del contenido (§3.2) |
-| CA-011-02 (matriz) | **Pasa** en las 14 filas aplicables | "Configuración y perfil", licencias y confirmación de enlace de la spec 012: **no aplica todavía, spec 012 sin implementar** |
+| CA-011-02 (matriz) | **Pasa** en las 14 filas aplicables | Las 4 filas de la spec 012 (nivel 1, nivel 2, nivel 3 y confirmación de enlace): **pasan** (2026-09-30, `specs/012-configuracion-temporal/dispositivo.md` §2) |
 | CA-011-03 (vuelta sin parpadeo) | **Pasa con una precisión** (§3.3) | 0 fotogramas negros y ninguno de otro color; el blanco dura 0,4-1,25 s (en el emulador, inflado) al volver **con `am start` o con el icono**; al volver **tocando la tarjeta** casi no hay fotograma liso. Reloj 9:59 y 10:00: test añadido |
 | CA-011-04 (capturas y grabaciones) | **Pasa** | §3.4 |
 | CA-011-08 (ciclo completo) | **Pasa** el ciclo básico (10) y el de la **cámara** (10); **falla** el del **selector de fotos** en "la tarjeta no muestra contenido" (10 de 10; la captura sí sale con contenido). Ver H-1 |
@@ -118,7 +118,10 @@ Cada fila, con A ("uno" o su variante) y B ("dos"), captura de "Recientes" por e
 | Eliminar (hoja de confirmación) | 0,023 / 0,025 | idénticas (0 %) |
 | "Todo hecho." | -0,009 / -0,009 | idénticas (0 %) |
 | Error de almacenamiento | -0,008 / -0,008 | idénticas (0 %) |
-| "Configuración y perfil", licencias, texto de una licencia, confirmación de enlace (spec 012) | no aplica todavía, spec 012 sin implementar | |
+| "Configuración y perfil" (spec 012, nivel 1) | 0,003 / 0,003 | idénticas (0 %) |
+| Lista de licencias (spec 012, nivel 2) | -0,003 / -0,003 | idénticas (0 %) |
+| Texto de una licencia (spec 012, nivel 3) | -0,010 / -0,010 | idénticas (0 %) |
+| Confirmación de enlace de la política (spec 012) | 0,024 / 0,024 | idénticas (0 %) |
 
 Cómo se provocó lo difícil, sin tocar el código de la app: el **error de almacenamiento** con la compilación *debug* (`invalid.pending.app.debug`, el mismo Kotlin) escribiendo basura en `app_flutter/una.sqlite` con `run-as` (sale "We couldn't open your tasks"; después se desinstaló el paquete de depuración); la **web** con las páginas públicas `https://www.google.com` y `https://www.wikipedia.org` (el emulador tiene salida a internet; `example.com` fallaba); "Todo hecho." completando todas las tareas (dos veces). La "hoja de colocación" ("¿Dónde va?") no está en la matriz de la spec y no se midió.
 
@@ -426,7 +429,7 @@ Entornos: **Emu** = emulador `Pixel_6a`, Android 16 (API 37), `emulator-5554`; *
 | CA | Qué se verificó | Dónde / cómo | Sin verificar |
 |---|---|---|---|
 | **CA-011-01** sin contenido en "Recientes" | Tarjeta en blanco e idéntica con A y con B, sin rastro del contenido | **Emu, adb:** `capture` + `compare` en las 14 filas (§3.2), 0 % de píxeles distintos, parecido < 0,1. **Xiaomi:** el lanzador respeta la señal (CL-011-9): tarjeta blanca con la franja negra, igual que el emulador; 10 de 10 medidas con "dos" (zona interior 100 % blanca), "uno" a ojo (§5.11) | API 26-32 (B); Android 13-35; ruta directa (CL-011-14, fuera del criterio) |
-| **CA-011-02** matriz | 14 filas de la spec, cada una con A y B | **Emu, adb** (§3.2); web con páginas reales; error de almacenamiento con BD corrupta (`run-as`) | Fila de la spec 012 ("Configuración y perfil", licencias, texto de una licencia, confirmación de enlace): **no aplica todavía, la 012 no está implementada** |
+| **CA-011-02** matriz | 14 filas de la spec, cada una con A y B | **Emu, adb** (§3.2); web con páginas reales; error de almacenamiento con BD corrupta (`run-as`) | Las 4 filas de la spec 012 (nivel 1, nivel 2, nivel 3, confirmación de enlace): **pasan** en el emulador (2026-09-30, `specs/012-configuracion-temporal/dispositivo.md` §2) |
 | **CA-011-03** vuelta sin parpadeo | 0 fotogramas negros y 0 de otro color; blanco liso al volver con `am start` o icono (0,4-1,25 s con el emulador cargado, §3.3; 0,01-0,12 s en reposo y en modo oscuro, §6), casi nada al tocar la tarjeta | **Emu, adb:** mp4 con `AVAssetReader` (10 vueltas por tarjeta, 10 `am start`, 5 icono) y `record 10`; **test:** `home_router_test.dart` `'CA-011-03: …'` con el reloj en 9:59 y 10:00 | **Xiaomi:** duración del blanco sin medir (el USB se corta al grabar; ningún negro visto en las capturas). Arranque en frío en modo oscuro (negro ≈ 0,5 s): anterior a la 011, fuera de este criterio, **aplazado a F5** (decisión del propietario) |
 | **CA-011-04** capturas y grabaciones | Con la app delante sale con contenido, sin `SECURE`: arranque en frío, tras "Recientes", tras el icono, tras la cámara y tras el selector | **Emu, adb:** `screencap`, `screenrecord`, `dumpsys window`; captura del sistema (encendido + volumen, `capturas/captura-sistema.png`) (§3.4). **Xiaomi:** `screencap` de `adb` con contenido, también tras arranque en frío (§5.11) | **Xiaomi:** captura y grabación del propio sistema; API 26-32 |
 | **CA-011-05** arranque | p50 < 1 s y aumento dentro de la diferencia entre líneas base: base 384/385 ms, nueva 387/385 ms (p50; alternadas, n = 20) | **Emu, `measure-cold-start.sh`** (T-011-04, `docs/perf/baseline.md`); el margen es la resolución de la medida (±3 ms) | **Xiaomi:** cifra real de P2 (con permiso del propietario) |

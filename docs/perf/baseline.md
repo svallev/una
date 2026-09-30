@@ -196,6 +196,28 @@ adb -s $S install -r /tmp/app-profile.apk
 - **[Hecho]** Aumento del p50: **+1 ms** con las pasadas juntas (386 frente a 385); por parejas, +3 ms (1.ª) y 0 ms (2.ª). La diferencia entre las dos pasadas de la base es de **1 ms** (384 y 385), así que el aumento cabe en ella, pero **el margen es de la resolución de la medida**: el ruido entre pasadas (hasta 3 ms) es mayor que el efecto que se busca. Las p90 y p95 varían más entre pasadas iguales (397-418 y 425-437 en la base) que entre base y nueva.
 - **[Hecho]** Lectura: `RecentsPrivacy` (una llamada a `setRecentsScreenshotEnabled` en `onCreate`, `onPause` y `onResume`) no añade un coste medible al arranque en frío; el criterio de T-011-04 se cumple. **[Pendiente]** El Xiaomi no se midió (no se toca sin permiso); si el propietario quiere la cifra real de P2, `tools/measure-cold-start.sh` con la release de la rama.
 
+## Licencias de la Configuración (spec 012, T-012-09)
+
+- **Fecha:** 2026-09-30 · **Rama:** `feat/012-configuracion-temporal` (HEAD `2913c01`) · **Línea base:** `main` (`c576d3f`), sacada con `git archive` a un directorio temporal.
+- **Dispositivo:** emulador `Pixel_6a` (API 37, arm64, sin GPU), `emulator-5554`. **El emulador solo compara**; no es la medida real de P2 ni de los fotogramas (esa es la del móvil, con permiso del propietario). El Xiaomi no se tocó.
+- **Arranque en frío (CA-012-16).** *Release* arm64 (28,7 MB la base, 28,8 MB la nueva), ocho pasadas alternadas de 20 arranques con `tools/measure-cold-start.sh`, tarea actual con imagen; antes de cada pasada, `adb install -r` y un arranque de calentamiento.
+
+| Pasada | 1 base | 2 nueva | 3 base | 4 nueva | 6 nueva | 5 base | 8 nueva | 7 base |
+|---|---|---|---|---|---|---|---|---|
+| p50 (ms) | 437 | 451 | 438 | 476 | 478 | 477 | 476 | 462 |
+| p90 (ms) | 465 | 506 | 477 | 629 | 569 | 530 | 538 | 535 |
+
+- **[Hecho]** p50 < 500 ms. Media de la base 453,5 ms, de la nueva 470,3 ms: **+17 ms (+3,7 %)**; por parejas +14, +38, +1, +14. **[Suposición]** ruido del emulador (la misma compilación varía 40 ms entre pasadas y hay deriva); la nueva no mejoró en ninguna pareja. El mecanismo (no se lee ninguna licencia antes del primer fotograma) lo prueba `startup_licenses_test.dart`. **[Pendiente]** repetirlo en el Xiaomi con permiso del propietario.
+- **Desplazar la lista de licencias y el texto de `angle` (CA-012-15).** `integration_test/licenses_perf_test.dart`, *profile*, 196 elementos reales (el test registra `NOTICES.Z` como el motor, porque el binding de pruebas no lo carga); control: el listado de 500 tareas de la 006 en el mismo emulador.
+
+| Medida | Lista de licencias | Texto de `angle` (57 licencias) | Listado 006 (control) |
+|---|---|---|---|
+| Abrir el nivel 2 hasta ver la lista | **48 ms** | — | 59 ms |
+| Construcción p50 / p90 | 0,6 / 1,5 ms | 0,5 / 1,2 ms | 0,5 / 1,5 ms |
+| Rasterizado p50 / p90 / p99 | 15,2 / 17,1 / 20,9 ms | 16,3 / 17,5 / 18,9 ms | 16,2 / 17,7 / 18,8 ms |
+
+- **[Hecho]** nivel 2 en 48 ms (< 300 ms); construcción muy por debajo de 16,7 ms. **[Suposición]** el rasterizado de ~16-17 ms es del emulador (sin GPU, 60 Hz): el control da lo mismo y el listado ya está aprobado en el Xiaomi. **[Pendiente]** p90 real en el Xiaomi.
+
 ## Cómo repetir la medición
 
 ```bash
@@ -205,4 +227,4 @@ adb -s <serial> install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.a
 cd .. && tools/measure-cold-start.sh <serial> 20
 ```
 
-Se repite al cerrar cada spec que toque el arranque (003, 007–009, 011) y antes de cada release.
+Se repite al cerrar cada spec que toque el arranque (003, 007–009, 011, 012) y antes de cada release.
