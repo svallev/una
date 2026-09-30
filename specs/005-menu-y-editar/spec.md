@@ -52,7 +52,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 - **CA-005-09 Nueva tarea y Configuración**
   - **Dado** el menú
   - **Cuando** elige "Nueva tarea" (o toca el texto "Configuración y perfil")
-  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" es solo texto, sin interacción ni rol de botón (enmienda 2026-09-29, propietario; antes cerraba el menú), hasta que exista la spec futura de Configuración y perfil (enmienda 2026-09-29: ya no es la 010).
+  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" es solo texto, sin interacción ni rol de botón (enmienda 2026-09-29, propietario; antes cerraba el menú), hasta que exista la spec futura de Configuración y perfil (enmienda 2026-09-29: ya no es la 010). **[Pendiente, spec 012 (Borrador, 2026-09-30)]** pasa a ser un botón que abre una pantalla temporal con licencias y política de privacidad.
 - **CA-005-12 Total de tareas (añadido por el propietario, DEV-22)**
   - **Dado** el menú con más de una tarea pendiente
   - **Cuando** se muestra
