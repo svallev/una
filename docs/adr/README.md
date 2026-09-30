@@ -22,3 +22,4 @@ Formato MADR simplificado ([plantilla](0000-template.md)). Nuevos ADR con la ski
 | [0016](0016-web-sin-copia-local.md) | Tarea web sin copia local: se guarda solo la dirección y la página se carga en vivo cada vez | Aceptado (excepción a P3); enmienda el ADR-0007 y sustituye a D9 |
 | [0017](0017-webview-fallo-del-proceso.md) | El fallo del proceso de la página se gestiona envolviendo el `WebViewClient` de `webview_flutter` | Aceptado (T-009-01); completa el ADR-0007 |
 | [0018](0018-web-sin-navegacion.md) | Tarea web sin navegación: solo se ve la página de la dirección guardada | Aceptado (2026-09-29); enmienda el ADR-0007 y el ADR-0016 |
+| [0019](0019-ocultar-recientes-sin-bloquear-capturas.md) | Ocultar "Recientes" sin bloquear las capturas: A (`setRecentsScreenshotEnabled`) en Android 13+ y B (`FLAG_SECURE` en `onPause`) en 8–12 | Aceptado (2026-09-30); provisional en Android 8–12 hasta PD-10 |

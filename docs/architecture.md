@@ -35,6 +35,7 @@ flowchart TB
     WV[WebView en vivo: webview_flutter endurecida + canal una/webview, WebViewHardening.kt · WebDataJanitor]
     PDF[pdfrx/PDFium: PdfEngine · NativePdfImporter · visor TaskPdfView]
     LNK[Canal nativo una/links: LinkOpener.kt, ACTION_VIEW/SENDTO/DIAL]
+    RC[Nativo sin canal: RecentsPrivacy.kt — oculta la tarjeta de Recientes]
     NV[Canal nativo: QuickLook · FileProvider/ACTION_VIEW — no en la v1, ADR-0014]
   end
   UI --> STATE --> UC
@@ -221,6 +222,17 @@ Estado: **[Hecho]** en Android (rama `feat/009-adjunto-url`; emulador y Xiaomi, 
 - **Red y privacidad:** `INTERNET` es el único permiso de la app (`check-android-permissions.sh release`); `cleartextTrafficPermitted=false`; `WebView.MetricsOptOut`. Safe Browsing consulta a Google la reputación de las direcciones: **[Suposición, PD-9]** no cambia Data Safety; se revisa antes de publicar.
 - **Coste:** APK *release* arm64 28,7 MB (13,4 MB comprimido; +66 KB por el paquete); +65 MB de PSS con la página cargada (Xiaomi, `docs/perf/baseline.md`).
 
+### Recientes: `RecentsPrivacy` (spec 011, ADR-0019)
+
+Estado: **[Hecho]** en Android 13+ (verificado en el emulador de API 37; `specs/011-ocultar-recientes/dispositivo.md`). **[Suposición, PD-10]** Android 8–12 sin verificar en dispositivo. iOS fuera de la beta (D17).
+
+- **Componente nativo, sin Dart:** `RecentsPrivacy.kt` (`android/app/src/main/kotlin/invalid/pending/app/`), una clase pequeña que `MainActivity` llama en `onCreate`, `onPause` y `onResume`, junto a la rotación. **Sin canal, sin ajuste, sin esquema, sin permisos, sin dependencias, sin textos y sin tocar `main()` ni el arranque** (P2). La interfaz de Flutter no interviene: lo que se oculta es la instantánea que el sistema guarda al pasar la app a segundo plano.
+- **Mecanismo A (`SDK_INT >= 33`):** `Activity.setRecentsScreenshotEnabled(false)` una sola vez, en `onCreate`. No toca la ventana. La llamada compila con el `compileSdk` de Flutter (36) y va protegida con `Build.VERSION.SDK_INT`.
+- **Mecanismo B (`SDK_INT < 33`):** `FLAG_SECURE` en `onPause` y `clearFlags` en `onResume`. Con la app delante no hay marca.
+- **Invariante:** nunca `FLAG_SECURE` con la app en primer plano, para no bloquear las capturas ni las grabaciones (CA-011-04). Las capturas mandan sobre el ocultado.
+- **Límites aceptados** (spec 011; el detalle, en el ADR-0019): fotograma blanco al volver a la app (`windowBackground` del `LaunchTheme`, sin instantánea); "Recientes" abierto desde la propia app y gesto de cambio entre apps (ventana en vivo, CL-011-14 y CL-011-6); hoja parcial del selector de fotos (CL-011-15).
+- **Verificación:** sin test de CI (P9, plan §8): `tools/check-recents.sh` con `adb` sobre el emulador (`docs/testing.md`), obligatorio antes de cada entrega a testers (`docs/security/checklist.md`).
+
 ### Decisiones de implementación de los spikes (F1)
 
 | ID | Decisión | Evidencia |
@@ -243,6 +255,7 @@ Estado: **[Hecho]** en Android (rama `feat/009-adjunto-url`; emulador y Xiaomi, 
 | Pantalla encendida | `isIdleTimerDisabled` mientras hay un adjunto visible | `FLAG_KEEP_SCREEN_ON` |
 | Red (solo la tarea web, spec 009) | ATS por defecto (sin excepciones) | `INTERNET` (único permiso), `network_security_config`: `cleartextTrafficPermitted=false`; WebView endurecida por el canal `una/webview` (§4) |
 | Backup | Application Support incluido, Caches excluido | `dataExtractionRules` / `fullBackupContent` (ADR-0004); nada de la WebView (CA-009-13) |
+| Contenido en "Recientes" (spec 011, ADR-0019) | No aplica en la beta (D17) | `RecentsPrivacy.kt`: `setRecentsScreenshotEnabled(false)` en Android 13+; `FLAG_SECURE` solo en pausa en 8–12 |
 | Widgets (futuro) | WidgetKit (SwiftUI) + App Group | Glance/AppWidget + datos compartidos; puente `home_widget` |
 
 ## 6. Feature flags

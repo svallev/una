@@ -45,6 +45,15 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 - [ ] Ningún componente exportado nuevo; FileProvider con permisos puntuales y solo de lectura (única excepción: la salida de la cámara, escritura sobre un solo archivo de `cache/import/` y revocada al volver, spec 007).
 - [ ] Sin esquemas de URL ni *deep links* nuevos sin su ADR.
 
+## "Recientes": lo que el sistema enseña de la app (T-2, spec 011, ADR-0019)
+
+Aplica si la PR toca `MainActivity.kt`, `RecentsPrivacy.kt`, el tema de arranque (`LaunchTheme`, `launch_background.xml`), la ventana o `FLAG_SECURE`, o si actualiza Flutter o el SDK de Android.
+
+- [ ] La tarjeta de "Recientes" no enseña contenido de la app (A en Android 13+, B en 8–12): sin `FLAG_SECURE` fija ni bloqueo de las capturas con la app delante (CA-011-04). Cualquier pantalla nueva entra en la matriz de CA-011-02 (sin pantallas "seguras" y "no seguras").
+- [ ] **Antes de cada versión entregada a testers** (CL-011-13, R-3; la 011 no tiene test de CI): ejecutar `tools/check-recents.sh` en el emulador y anotar el resultado en la entrega (**[Pendiente]** añadirlo a la skill `/release-checklist`, que hoy no lo recoge): `capture` y `compare` con dos tareas (A y B), `secure`, `loop 10` y `record 10`. Con `PKG` y `serial` del emulador; un dispositivo físico solo con permiso del propietario (`ALLOW_PHYSICAL=1`). Guía y límites conocidos en `docs/testing.md` y `specs/011-ocultar-recientes/dispositivo.md`.
+- [ ] **[Pendiente, PD-10]** Antes de dar la beta a testers, repetirlo en emuladores de Android 8 (API 26) y 12L (API 32): el mecanismo B no está verificado. Si no oculta la miniatura, se aplica la regla de desempate (la miniatura visible en 8–12 en la beta) y se anota en las notas de la beta.
+- [ ] Los límites aceptados siguen anotados en las notas de la beta: "Recientes" abierto desde la propia app y gesto de cambio entre apps (ventana en vivo), hoja parcial del selector de fotos y fotograma blanco al volver (CL-011-14, CL-011-6, CL-011-15, CA-011-03).
+
 ## Si toca CI, workflows o la web (T-9, T-11)
 
 - [ ] `permissions:` mínimos; acciones fijadas por SHA; sin `pull_request_target` con código de la PR.

@@ -16,6 +16,7 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 | **Integración/E2E** | Flujos: primer uso; crear y colocar; completar; eliminar; reordenar; importar imagen, PDF y URL; persistencia; **sin red** | `integration_test` | Simulador/emulador en CI (macOS y Android) y en local |
 | **Rendimiento** | Arranque en frío → tarea visible; fps de las animaciones | `integration_test` + `FrameTiming`/timeline, en modo *profile* | Dispositivo real (manual en cada release; automatizable con un laboratorio de dispositivos más adelante) |
 | **Seguridad** | *Fixtures* maliciosas (EXIF con GPS, PDF con JS, `.pdf` que es HTML, SVG, *zip bomb*, URL `javascript:`/IDN) | Unitarios + integración | CI |
+| **Sistema fuera de la app ("Recientes")** | Que la tarjeta de "Recientes" no enseñe contenido y que las capturas con la app delante salgan con él (spec 011). No se ve desde `flutter test` | `tools/check-recents.sh` con `adb` (ver más abajo) | Emulador, en local, antes de cada entrega a testers; **no está en CI** (plan de la 011 §8) |
 | **Manual de accesibilidad** | VoiceOver, TalkBack, Switch Control/Access, teclado, texto al 200 %, reducir movimiento | Checklist en la PR | Antes de cerrar cada spec y en F5 |
 
 ## Reglas
@@ -35,6 +36,28 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 ## En CI (ver `.github/workflows/ci.yml`)
 
 `format` → `analyze` → `unit+widget+golden` → `migrations` → `l10n/tokens` → `build web` / `build apk (debug)` / `build ios (no-codesign)` → `integration (android emulator)` (en `main` y de forma nocturna para no alargar las PR).
+
+## Verificación con `adb`: "Recientes" (spec 011, ADR-0019)
+
+Lo que dibuja el sistema fuera de la app (la tarjeta de "Recientes") no se ve desde `flutter test` y probar el Kotlin exigiría dependencias de prueba (P11), así que la spec 011 se verifica con `tools/check-recents.sh` sobre un emulador. **Se ejecuta a mano antes de cada versión entregada a testers** (CL-011-13; `docs/security/checklist.md`). Guía, resultados y capturas: `specs/011-ocultar-recientes/dispositivo.md`.
+
+```bash
+S=emulator-5554   # el serial es OBLIGATORIO; sin él el script no hace nada
+tools/check-recents.sh $S capture uno /tmp/x      # con la tarea A ("uno") delante
+tools/check-recents.sh $S capture dos /tmp/x      # con la tarea B ("dos")
+tools/check-recents.sh $S compare uno dos /tmp/x  # CA-011-01: sin contenido y A = B
+tools/check-recents.sh $S secure                  # CA-011-04: sin FLAG_SECURE con la app delante
+tools/check-recents.sh $S loop 10 /tmp/x          # CA-011-08: 10 vueltas
+tools/check-recents.sh $S record 10 /tmp/x        # CA-011-03: parpadeo
+```
+
+- **Serial obligatorio y sin dispositivos físicos por defecto:** con dos dispositivos conectados `adb` falla y nunca se debe tocar el móvil del propietario. Un serial que no empieza por `emulator-` exige `ALLOW_PHYSICAL=1`, que **solo se pone con permiso explícito del propietario** (y las capturas de un móvil real son privadas). `PKG` cambia el paquete (por defecto `invalid.pending.app`; la compilación debug es `invalid.pending.app.debug`).
+- **`RECENTS_WAIT=<segundos>`** (por defecto 2,5): espera tras abrir "Recientes". Con una imagen o un PDF el lanzador tarda más en pintar la tarjeta y la captura puede salir sin ella; el script lo detecta y falla en vez de dar un falso "pasa". En el emulador bastan 4 s.
+- **Ruta por defecto:** el script pasa antes por el escritorio (`KEYCODE_HOME` y luego `KEYCODE_APP_SWITCH`), que es la ruta de CA-011-01. **`VIA=direct`** abre "Recientes" desde la propia app: esa ruta queda fuera del criterio (CL-011-14, la tarjeta enseña la ventana en vivo), así que el script **solo informa** y no falla.
+- **Blanco al volver:** `record` cuenta el fotograma liso **blanco** al volver como excepción aceptada (`blancos_aceptados`, CA-011-03); cualquier otro fotograma liso (negro…) o que la app desaparezca tras verse es fallo. No mide duraciones (`screenrecord` en bruto no da tiempos): las de `dispositivo.md` §3 salen de un mp4.
+- **Salida:** 0 todo bien; 1 un criterio falla; 2 uso incorrecto. Requiere `adb` (variable `ADB`, `PATH` o el SDK en `~/Library/Android/sdk`) y `python3` con Pillow y numpy (solo herramienta local, no una dependencia del proyecto).
+- **Emuladores:** ahora solo hay Android 16 (API 37). Android 8 (API 26) y 12L (API 32) están aplazados a PD-10 (antes de dar la beta a testers): hasta entonces, lo que dependa del mecanismo B (Android 8–12) **no está verificado**. El ciclo de vida de `RecentsPrivacy` no tiene test de Dart (no hay Dart).
+- Las capturas son de la app con datos de prueba ("uno" y "dos"): no se guardan con datos reales ni en el repositorio.
 
 ## Pruebas en el móvil del propietario (lecciones aprendidas)
 
