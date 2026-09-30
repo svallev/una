@@ -20,7 +20,7 @@ Detalle, capturas y cifras en `dispositivo.md` §2.
 
 - **[Hecho]** `setRecentsScreenshotEnabled` existe y compila. **A y B ocultan la instantánea** cuando se llega a "Recientes" por el escritorio (tarjeta en blanco, idéntica con "uno" y con "dos"); ninguno pone `FLAG_SECURE` con la app delante ni estropea las capturas (CA-011-04).
 - **[Hecho] Ninguno oculta la tarjeta si "Recientes" se abre desde la propia app:** el lanzador enseña la ventana en vivo y la actividad no se pausa. Queda fuera de CA-011-01 (CL-011-14).
-- **[Hecho] Ninguno evita un fotograma blanco al volver desde "Recientes"** (el `windowBackground` blanco del `LaunchTheme`); sin mecanismo no ocurre.
+- **[Hecho] Ninguno evita un fotograma blanco al volver desde "Recientes"** (lo que el sistema pinta cuando no hay instantánea; **corregido 2026-09-30**: no es el `windowBackground` del `LaunchTheme`, el blanco es igual en modo oscuro, `dispositivo.md` §6); sin mecanismo no ocurre.
 - **Decisión del propietario (2026-09-30):**
   1. **Mecanismo definitivo: A en Android 13+ (`SDK_INT >= 33`) y B en Android 8-12 (`SDK_INT < 33`).** Sin constante `MODE`, sin variantes de prueba, sin canal y sin ajuste. Implementado en T-011-02 (`RecentsPrivacy.kt`).
   2. **Se acepta el fotograma blanco** al volver desde "Recientes" (CA-011-03 enmendado). No se cambian `LaunchTheme` ni `launch_background.xml`.

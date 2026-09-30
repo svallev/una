@@ -225,13 +225,13 @@ Estado: **[Hecho]** en Android (rama `feat/009-adjunto-url`; emulador y Xiaomi, 
 
 ### Recientes: `RecentsPrivacy` (spec 011, ADR-0019)
 
-Estado: **[Hecho]** en Android 13+ (verificado en el emulador de API 37; `specs/011-ocultar-recientes/dispositivo.md`). **[Suposición, PD-10]** Android 8–12 sin verificar en dispositivo. iOS fuera de la beta (D17).
+Estado: **[Hecho]** en Android 13+ (verificado en el emulador de API 37 y, para la tarjeta de "Recientes", en el Xiaomi 15T Pro con HyperOS; `specs/011-ocultar-recientes/dispositivo.md`). **[Suposición, PD-10]** Android 8–12 sin verificar en dispositivo. iOS fuera de la beta (D17).
 
 - **Componente nativo, sin Dart:** `RecentsPrivacy.kt` (`android/app/src/main/kotlin/invalid/pending/app/`), una clase pequeña que `MainActivity` llama en `onCreate`, `onPause` y `onResume`, junto a la rotación. **Sin canal, sin ajuste, sin esquema, sin permisos, sin dependencias, sin textos y sin tocar `main()` ni el arranque** (P2). La interfaz de Flutter no interviene: lo que se oculta es la instantánea que el sistema guarda al pasar la app a segundo plano.
 - **Mecanismo A (`SDK_INT >= 33`):** `Activity.setRecentsScreenshotEnabled(false)` una sola vez, en `onCreate`. No toca la ventana. La llamada compila con el `compileSdk` de Flutter (36) y va protegida con `Build.VERSION.SDK_INT`.
 - **Mecanismo B (`SDK_INT < 33`):** `FLAG_SECURE` en `onPause` y `clearFlags` en `onResume`. Con la app delante no hay marca.
 - **Invariante:** nunca `FLAG_SECURE` con la app en primer plano, para no bloquear las capturas ni las grabaciones (CA-011-04). Las capturas mandan sobre el ocultado.
-- **Límites aceptados** (spec 011; el detalle, en el ADR-0019): fotograma blanco al volver a la app (`windowBackground` del `LaunchTheme`, sin instantánea); "Recientes" abierto desde la propia app y gesto de cambio entre apps (ventana en vivo, CL-011-14 y CL-011-6); hoja parcial del selector de fotos (CL-011-15).
+- **Límites aceptados** (spec 011; el detalle, en el ADR-0019): fotograma blanco al volver a la app (lo pinta el sistema al no haber instantánea; igual en modo claro y oscuro, no sale del `LaunchTheme`); "Recientes" abierto desde la propia app y gesto de cambio entre apps (ventana en vivo, CL-011-14 y CL-011-6); hoja parcial del selector de fotos (CL-011-15).
 - **Verificación:** sin test de CI (P9, plan §8): `tools/check-recents.sh` con `adb` sobre el emulador (`docs/testing.md`), obligatorio antes de cada entrega a testers (`docs/security/checklist.md`).
 
 ### Decisiones de implementación de los spikes (F1)

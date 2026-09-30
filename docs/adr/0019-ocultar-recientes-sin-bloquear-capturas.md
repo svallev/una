@@ -1,6 +1,6 @@
 # ADR-0019: Ocultar "Recientes" sin bloquear las capturas
 
-- **Estado:** Aceptado (propietario, 2026-09-30). **[Hecho en API 37; [Suposición] en 33–36 y en HyperOS]**; **Provisional** en la parte de Android 8–12 (mecanismo B) hasta PD-10
+- **Estado:** Aceptado (propietario, 2026-09-30). **[Hecho en API 37 y, para la tarjeta, en HyperOS (Xiaomi, Android 16); [Suposición] en 33–35]**; **Provisional** en la parte de Android 8–12 (mecanismo B) hasta PD-10
 - **Fecha:** 2026-09-30
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** spec 011 (CA-011-01, 03, 04, 08; CL-011-3, 6, 13, 14, 15; plan §1, §7 y §8), CL-007-11, CL-008-13 y CL-009-10 (que cierra), modelo de amenazas T-2, P2, P4 y P5, PD-10 y riesgos R-1 a R-6 del plan de la 011
@@ -12,7 +12,7 @@
 - **[Hecho]** `FLAG_SECURE` en la ventana oculta el contenido en "Recientes" pero también hace que las capturas y grabaciones salgan en negro (documentación de Android, "Set FLAG_SECURE Window Flag"). Por eso no vale puesto siempre.
 - **[Hecho, API 37]** Medido en T-011-01 y T-011-03 (`specs/011-ocultar-recientes/dispositivo.md` §2 y §3): `Activity.setRecentsScreenshotEnabled(false)` (Android 13+) y `FLAG_SECURE` puesto en `onPause` ocultan la instantánea cuando la app se va de verdad a segundo plano; ninguno de los dos deja `FLAG_SECURE` con la app delante ni estropea las capturas.
 - **[Suposición]** En Android 8–12 (API 26–32) la instantánea de "Recientes" se toma **después** de `onPause`, por lo que `FLAG_SECURE` puesto ahí llega a tiempo. Es lo que usan varios plugins, pero depende de la versión y del fabricante. **No se ha verificado** (no hay emulador de esas versiones hasta PD-10).
-- **[Pendiente]** HyperOS (Xiaomi) usa su propio lanzador y puede tratar la señal a su manera (CL-011-9, T-011-07; solo con permiso del propietario).
+- **[Hecho, parcial]** HyperOS (Xiaomi 15T Pro, Android 16) usa su propio lanzador y **respeta la señal** (CL-011-9, CA-011-01; T-011-07, 2026-09-30, con permiso del propietario): tarjeta en blanco, igual que en el emulador, y ciclo de 10 vueltas con la tarjeta en blanco y la app de vuelta (CA-011-08). **[Pendiente / [Suposición]]** no se midió la duración del blanco al volver, ni la captura o grabación del propio sistema del Xiaomi, ni la cámara y el selector (CL-011-3, CL-011-15), ni CL-011-14 (`dispositivo.md` §5.11).
 
 ## Opciones consideradas
 
@@ -44,7 +44,7 @@
 
 - **Positivas:** T-2 se cierra en Android 13+ (verificado en API 37): la tarjeta es blanca, idéntica con dos tareas distintas, y la lee TalkBack solo con el nombre de la app. Sin permisos, red, datos, archivos ni dependencias nuevos (CA-011-06).
 - **Aceptadas por el propietario (2026-09-30), con la spec enmendada:**
-  - **Fotograma blanco al volver a la app** tras haberse ido de verdad, por cualquier vía (tarjeta de "Recientes", icono u otra app), porque no hay instantánea y el sistema pinta el `windowBackground` del `LaunchTheme` (CA-011-03). **[Hecho, API 37]** 0,4–1,25 s en el emulador (inflado por la grabación), 0 fotogramas negros o de otro color. No se cambia el fondo de arranque. Si fuera negro, de otro color o durara claramente más, se para y se pregunta; se revisa antes de la v1.0.
+  - **Fotograma blanco al volver a la app** tras haberse ido de verdad, por cualquier vía (tarjeta de "Recientes", icono u otra app), porque no hay instantánea y el sistema pinta un fotograma liso blanco (CA-011-03). *(Corregido el 2026-09-30, propietario: antes decía que era el `windowBackground` del `LaunchTheme`; medido en 40 vueltas (`dispositivo.md` §6), el blanco es igual en modo claro y oscuro —con `Theme.Black` sería negro—, así que no sale de `launch_background`: es lo que pinta el sistema sin instantánea, mecanismo A.)* **[Hecho, API 37]** 0,4–1,25 s en el emulador (inflado por la grabación), 0 fotogramas negros o de otro color. No se cambia el fondo de arranque. Si fuera negro, de otro color o durara claramente más, se para y se pregunta; se revisa antes de la v1.0.
   - **Abrir "Recientes" directamente desde la app** (CL-011-14) y el **gesto de cambio rápido entre apps** (CL-011-6): el sistema enseña la ventana en vivo de la app y la actividad no llega a pausarse, así que ningún mecanismo puede actuar. Fuera de CA-011-01. **[Hecho, API 37]**; **[Suposición]** igual en Android 13–16.
   - **Hoja parcial del selector de fotos** (CL-011-15): corre en la misma tarea y no oculta su instantánea; la tarjeta enseña lo que queda a la vista de la app junto a la hoja. **[Hecho, API 37]** idéntico a antes de la 011, no peor. Fuera de CA-011-01 en ese caso.
   - Los tres límites se anotan en las notas de la beta y se pueden revisar antes de la v1.0.
@@ -52,7 +52,7 @@
   - **R-1 / PD-10:** en Android 8–12 (mecanismo B) puede no ocultar la miniatura o parpadear; hasta PD-10 no se da por verificado y la spec no pasa a "Implementada" del todo. Mitigación: regla de desempate (miniatura visible en 8–12 en la beta) y, si B no oculta, se retira B.
   - **Capturas en negro con B (8–12):** en Android 8–12, con la app en pausa pero visible (pantalla dividida o ventana flotante en 8–9, CL-011-5, o algo del sistema encima), `FLAG_SECURE` está puesto y las capturas pueden salir en negro. Es el precio de B; solo aplica mientras dura la pausa, nunca con la app en primer plano.
   - **R-3:** sin test de CI, una actualización de Flutter o de Android podría quitar el efecto sin que salte nada. Mitigación: `tools/check-recents.sh` antes de cada entrega a testers (`docs/security/checklist.md`, `docs/testing.md`).
-  - **R-5:** HyperOS puede ignorar ambos mecanismos (CL-011-9). Se comprueba en el Xiaomi solo con permiso del propietario; si falla, se para y se pregunta.
+  - **R-5:** HyperOS puede ignorar ambos mecanismos (CL-011-9). **[Hecho, 2026-09-30]** en el Xiaomi 15T Pro (HyperOS OS3.0, Android 16) el lanzador respeta la señal; si otra versión de HyperOS la ignorara, se para y se pregunta.
   - Otras superficies que leen la pantalla (asistente, "buscar lo que hay en pantalla", casting, terceros) quedan fuera de alcance (CL-011-8).
   - CL-011-1: tras actualizar desde una versión anterior, la miniatura antigua puede seguir hasta la próxima vez que la app pase a segundo plano. **[Hecho, API 37]** confirmado; se anota en las notas del primer envío.
 - **Qué dispararía revisar este ADR:** que B falle en API 26–32 (PD-10); que un cambio de Android o de Flutter quite el efecto de A; que HyperOS lo ignore; una futura pantalla de Configuración con un interruptor de ocultado (fuera de alcance hoy); iOS (D17), que necesitaría otro mecanismo.
