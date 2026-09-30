@@ -89,7 +89,7 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
 | CL-010-4 | Sistema en un idioma de derecha a izquierda (árabe, hebreo) | App en inglés, de izquierda a derecha; al cambiarlo con la app abierta, se comporta como en CA-010-06 |
 | CL-010-5 | El sistema cierra la app mientras el usuario está en Ajustes | Arranque normal, ya en el idioma nuevo |
 | CL-010-6 | Ajustes › Idiomas de la app (Android 13+) | La app no aparece en esa lista: el idioma solo lo decide el sistema (§8) |
-| CL-010-7 | Pulsar "Configuración y perfil" en el menú | No pasa nada: es solo texto (subrayado, como el enlace del prototipo), sin acción y sin rol de botón. No cierra el menú (propietario, 2026-09-29; enmienda de CL-010-7). Lo sustituye la spec futura de Configuración y perfil. **[Pendiente, spec 012 (Borrador, 2026-09-30)]** antes, una pantalla temporal con licencias y política de privacidad |
+| CL-010-7 | Pulsar "Configuración y perfil" en el menú | No pasa nada: es solo texto (subrayado, como el enlace del prototipo), sin acción y sin rol de botón. No cierra el menú (propietario, 2026-09-29; enmienda de CL-010-7). Lo sustituye la spec futura de Configuración y perfil. **[Pendiente, spec 012 (Aprobada, 2026-09-30)]** antes, una pantalla temporal con licencias y política de privacidad |
 
 ## 5. Estados vacíos y de error
 
