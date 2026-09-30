@@ -17,6 +17,7 @@ spec (**Aprobada**) → plan → tareas → implementación con tests → verifi
 Skills: `/spec-new`, `/spec-implement NNN`, `/adr-new`, `/security-check`, `/i18n-check`, `/strings-add`, `/tokens-validate`, `/release-checklist`.
 Subagentes: `spec-reviewer`, `security-reviewer`, `a11y-reviewer`, `test-writer` y `spec-task` (ejecuta una tarea T-NNN-XX de principio a fin; la sesión coordinadora lanza uno por tarea).
 Si el código y la spec discrepan, **se para y se pregunta**; no se "arregla" la spec en silencio.
+**Sesiones cortas:** una sesión para la spec, otra para el plan, las de implementación (coordinador + un `spec-task` por tarea, de una en una) y la de cierre. Cada una empieza desde los archivos; `tasks.md` (línea **Siguiente** y tabla **Estado**) es el traspaso. Ver `docs/claude-code.md §2.1`.
 
 ## Stack y comandos (a partir de F2; provisional según ADR-0001)
 
