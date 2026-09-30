@@ -37,18 +37,18 @@ Detalle y cifras: `specs/012-configuracion-temporal/dispositivo.md`.
 | CA-012-09 | `check-recents.sh`: las 4 filas nuevas (3 niveles y la confirmación) pasan | Emulador API 37 |
 | CA-012-01, 02, 04, 06, 12, 13 y CL-012-3, 11 | Niveles, Escape, Tab/Intro/AvPág, confirmación con Chrome y aviso sin Chrome, 200 % ES/EN a 360 dp, fundido ≈ 160 ms y 0, giro, `am kill` | Emulador API 37 |
 | CA-012-07 (voz) | El texto de las licencias con voz inglesa y el resto con la española | **Propietario, a oído, Xiaomi** (TalkBack, APK *release*) |
-| CA-012-15 | Nivel 2 en 48 ms; construcción p90 1,5 ms; rasterizado p90 17,1 ms (igual que el listado de la 006 en el mismo emulador) | Emulador API 37, *profile* (`integration_test/licenses_perf_test.dart`) |
-| CA-012-16 | p50 de arranque +14 ms de mediana (+3,7 % de media), dentro del ruido del emulador; ninguna licencia se lee antes del primer fotograma (test) | Emulador API 37, 8 pasadas alternadas |
+| CA-012-15 | Nivel 2 en 48 ms; construcción p90 1,5 ms; rasterizado p90 17,1 ms (igual que el listado de la 006 en el mismo emulador) | Emulador API 37, *profile* (`integration_test/licenses_perf_test.dart`); **Xiaomi, *profile*: rasterizado p90 2,2 ms (lista) y 2,5 ms (texto), 0 fotogramas fuera de presupuesto, nivel 2 en 56 ms** |
+| CA-012-16 | p50 de arranque +14 ms de mediana (+3,7 % de media), dentro del ruido del emulador; ninguna licencia se lee antes del primer fotograma (test) | Emulador API 37, 8 pasadas alternadas; **Xiaomi, *release*, 8 pasadas alternadas: p50 216 ms (`main`) frente a 215 ms (rama)** |
 
 ## Definition of Done (`specs/constitution.md`)
 
 - [ ] Criterios de aceptación cumplidos y con tests en verde: **en parte** (todos con test o casilla; faltan las casillas de dispositivo, ver Pendiente)
-- [ ] CI en verde (format, analyze, test, migraciones, l10n, tokens, builds): **sin ejecutar**; en local, sí. El job de tests fallará al principio por los 3 *goldens* sin subir
+- [ ] CI en verde (format, analyze, test, migraciones, l10n, tokens, builds): en local, sí; los 3 *goldens* ya están subidos (`f805c31`), generados con `actualizar-goldens`
 - [x] Textos nuevos en ES y EN; ninguno incrustado en el código
 - [x] Sin valores visuales sueltos (todo sale de los tokens; salvedad: 4 `height: 1.5` a mano, suman a TD-1)
 - [x] Accesibilidad: semántica, alternativas a gestos, contraste, texto grande, reducir movimiento (con hallazgos sin corregir registrados y casillas de dispositivo pendientes)
 - [x] Documentación actualizada (spec, glosario, arquitectura, `PLAN.md`)
-- [ ] Rendimiento del arranque sin degradar: medido en el emulador (dentro del ruido); la cifra del Xiaomi, pendiente
+- [x] Rendimiento del arranque sin degradar: en el Xiaomi, p50 de 216 ms (`main`) frente a 215 ms (rama); en el emulador, dentro del ruido
 
 ## Seguridad ([checklist](../../docs/security/checklist.md))
 
@@ -64,17 +64,17 @@ Ninguna. `pubspec.yaml` solo añade los assets `assets/licenses/{pdfium,sqlite,a
 - **La política de privacidad enlaza a un marcador** y `docs/legal/privacy-policy.md` tiene huecos y ~12 marcas `[Suposición]`. No se puede publicar así (F6, PD-2); la puerta existe, pero **no detecta esas marcas** (012-S4) ni la deriva de `app_identity.g.dart` (012-S2).
 - **Nombre "Bibliotecas de Android (AndroidX, Kotlin)" fijo en español** con la app en inglés y sin marca de idioma (WCAG 3.1.2, P7): lo pide la spec tal cual; registrado como 012-A-M3.
 - **`LinkOpener.kt` no repite la garantía "https sin usuario"** (solo está en Dart; hoy no explotable, 012-S1).
-- **Rasterizado de ~17 ms al desplazar** en el emulador (sin GPU): igual que el listado de la 006, que en el Xiaomi tiene 0 fotogramas fuera de presupuesto. **[Suposición]** lo mismo aquí; sin cifra del Xiaomi.
+- **Rasterizado de ~17 ms al desplazar** en el emulador (sin GPU): igual que el listado de la 006, que en el Xiaomi tiene 0 fotogramas fuera de presupuesto. **[Hecho]** en el Xiaomi, el rasterizado p90 es de 2,2-2,5 ms.
 - **Al volver de la política** la web de una tarea se recarga (CA-012-14 enmendado por el propietario): esta pantalla tapa la tarea y eso cuenta como salir de la página.
 
 ## Pendiente
 
 - **[Pendiente] Casillas de dispositivo** (`dispositivo.md` §8 y "Casillas del cierre"): foco real de TalkBack al volver (tres saltos, Cancelar y navegador), anuncio de "Cargando licencias…" y foco en "Reintentar", nivel 3 de "Bibliotecas de Android", sistema en inglés y `ca`/`gl`/`eu`, 200 % con navegación de 3 botones, anillo con teclado real, Switch Access real, reducir movimiento y el flujo del aviso obsoleto (M2) con Chrome desactivado.
-- **[Pendiente] Xiaomi** (con permiso del propietario): p90 de rasterizado al desplazar (`flutter drive --profile … licenses_perf_test.dart`) y arranque en frío (`tools/measure-cold-start.sh` con la *release* de la rama frente a `main`).
-- **[Pendiente] Goldens:** los 3 *goldens* de `test/goldens/settings_golden_test.dart` están revisados a ojo en el Mac pero **sin subir**. Poner la etiqueta `actualizar-goldens` en la PR, descargar el artefacto, revisarlo y subirlo en un commit normal. **Hasta entonces el job de tests de CI fallará** por falta de imágenes.
+- **[Hecho] Xiaomi (2026-09-30):** rasterizado p90 de 2,2 ms (lista) y 2,5 ms (texto) y 0 fotogramas fuera de presupuesto; nivel 2 en 56 ms; arranque en frío sin diferencia con `main` (p50 215 frente a 216 ms).
+- **[Hecho] Goldens:** los 3 *goldens* de `test/goldens/settings_golden_test.dart` se generaron en Linux con la etiqueta `actualizar-goldens`, se revisaron a ojo y se subieron (`f805c31`); las otras 49 imágenes salieron idénticas.
 - **[Pendiente] CL-012-7** (sin conexión al abrir la política): sin test ni casilla, porque la app no interviene (la abre el navegador); se da por cubierto por diseño, a confirmar por el propietario.
 - **[Pendiente, F6]** Añadir `tools/check-release-config.sh` a `ci.yml` con el trabajo del AAB de publicación; dirección y texto definitivos de la política (PD-2, P-012-4).
-- La spec pasa a **Implementada** cuando se cierren las casillas y los *goldens*.
+- La spec pasa a **Implementada** cuando se cierren las casillas manuales.
 
 ## Deuda registrada (`docs/PLAN.md`, "Hallazgos de la 012 para la auditoría de F5")
 

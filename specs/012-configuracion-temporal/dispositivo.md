@@ -78,7 +78,7 @@ Con `adb shell input keyevent` (la app recibe Escape, Tab, Intro, AvPág, flecha
 | Rasterizado p50 / p90 / p99 | 15,2 / 17,1 / 20,9 ms | 16,3 / 17,5 / 18,9 ms | 16,2 / 17,7 / 18,8 ms |
 
 - **[Hecho]** La construcción (hilo de la interfaz) está muy por debajo de 16,7 ms.
-- **[Suposición]** El rasterizado de ~16-17 ms es del emulador (sin GPU, ritmo de 60 Hz): el listado de la 006, ya aprobado con 0 fotogramas fuera de presupuesto **en el Xiaomi**, da lo mismo aquí (17,7 ms). **[Pendiente]** la cifra real (Xiaomi, con permiso del propietario): `flutter drive --profile … --target=integration_test/licenses_perf_test.dart`.
+- **[Suposición]** El rasterizado de ~16-17 ms es del emulador (sin GPU, ritmo de 60 Hz): el listado de la 006, ya aprobado con 0 fotogramas fuera de presupuesto **en el Xiaomi**, da lo mismo aquí (17,7 ms). **[Hecho, Xiaomi, 2026-09-30, con permiso del propietario]** `flutter drive --profile --no-dds --keep-app-running --use-application-binary` de `licenses_perf_test.dart` (HEAD `7448f4e`; app `.profile` desinstalada después, la base intacta): lista de licencias (2037 fotogramas) construcción p90 1,6 ms y rasterizado p90 **2,2 ms** (p99 2,7); texto de `angle` (2168 fotogramas) construcción p90 1,0 ms y rasterizado p90 **2,5 ms** (p99 3,5); **0 fotogramas por encima de 16,7 ms** en los dos; abrir el nivel 2: **56 ms**. Los ~17 ms del emulador eran, como se suponía, el emulador.
 
 ## 7. Arranque en frío alternado (CA-012-16)
 
@@ -97,7 +97,7 @@ Base = `main` (`c576d3f`), sacada con `git archive` a un directorio temporal; nu
 
 - Por parejas (base → nueva): +14, +38, +1, +14 ms de p50; media de la base 453,5 ms frente a 470,3 ms de la nueva (**+17 ms, +3,7 %**). Hay deriva entre pasadas (la base sube de 437 a 477 en el tiempo), así que las parejas están ordenadas alternando.
 - **[Hecho]** p50 < 500 ms (P2: < 1 s). **[Hecho]** el mecanismo: ninguna licencia se lee antes del primer fotograma (`startup_licenses_test.dart`, CA-012-16).
-- **[Suposición]** la diferencia es ruido del emulador (el mismo binario varía 40 ms entre pasadas), pero la nueva no fue mejor en ninguna pareja. **[Pendiente]** la cifra real en el Xiaomi (con permiso): `tools/measure-cold-start.sh` con la release de la rama frente a la de `main`.
+- **[Suposición]** la diferencia es ruido del emulador (el mismo binario varía 40 ms entre pasadas), pero la nueva no fue mejor en ninguna pareja. **[Hecho, Xiaomi, 2026-09-30, con permiso del propietario]** mismas *release* arm64 (`main` `c576d3f` frente a la rama `7448f4e`), 8 pasadas alternadas de 20 arranques con `tools/measure-cold-start.sh` sobre la app real (`adb install -r`, con su tarea actual): p50 de la base 219, 215, 216, 214 (media 216 ms) y de la rama 209, 210, 221, 221 (media 215 ms); p90 227-246 ms en las dos. **Sin diferencia** (el ruido entre pasadas es de ±6 ms); P2 (< 1 s) con mucho margen. La rama quedó instalada al terminar.
 
 ## 8. Pendiente (a mano o con permiso)
 
@@ -105,9 +105,9 @@ Base = `main` (`c576d3f`), sacada con `git archive` a un directorio temporal; nu
 - [ ] TalkBack: anuncio de "Cargando licencias…" y foco en "Reintentar" (error) y su pista; recuento leído en voz (se comprobó en el árbol, no a oído).
 - [ ] Anillo de foco visible con un teclado real (Xiaomi con teclado, o emulador con el teclado del ordenador).
 - [ ] Switch Access: recorrer, activar y desplazar (el servicio se activó y se asignaron teclas, pero no apareció resaltado).
-- [ ] p90 de fotogramas (rasterizado) y arranque en frío en el Xiaomi (permiso del propietario).
+- [x] p90 de fotogramas (rasterizado) y arranque en frío en el Xiaomi (2026-09-30, §6 y §7).
 - [ ] CA-012-06 a los 10 minutos con el reloj real (lo cubre `home_router_test.dart`, 9:59 y 10:00).
-- [ ] Los 3 *goldens* de T-012-06 por generar en CI (`actualizar-goldens`).
+- [x] Los 3 *goldens* de T-012-06, generados en Linux CI con `actualizar-goldens` y subidos (2026-09-30, `f805c31`; las otras 49 imágenes salieron idénticas).
 
 ### Casillas del cierre (T-012-11): qué probar a mano según `a11y-reviewer`
 

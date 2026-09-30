@@ -1,6 +1,6 @@
 # Tareas — Spec 012: Pantalla temporal de "Configuración y perfil"
 
-**Siguiente:** ninguna tarea: la spec está **Implementada parcialmente** y la PR (`pr-description.md`) sigue sin abrir, pendiente de que el propietario confirme `git push` y la PR. Después, las casillas [Pendiente] de `dispositivo.md` §8 (con permiso para el Xiaomi) y los *goldens* (CI, `actualizar-goldens`) cierran la spec como **Implementada**.
+**Siguiente:** ninguna tarea: la spec está **Implementada parcialmente**; PR [svallev/una#22](https://github.com/svallev/una/pull/22) abierta (2026-09-30) y *goldens* subidos. Solo quedan las casillas manuales de `dispositivo.md` §8 (TalkBack con foco real, anillo con teclado real, Switch Access y las de la revisión de accesibilidad); con ellas cerradas, la spec pasa a **Implementada**.
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden** (nada en paralelo). Rama `feat/012-configuracion-temporal` desde `main`. Cada tarea termina con `fvm dart format .`, `fvm flutter analyze --fatal-infos` y `fvm flutter test` en verde y un commit `feat(012): …` (o `test`/`docs`/`chore`). Emulador de API 37; nunca el Xiaomi sin permiso del propietario.
 
@@ -23,10 +23,10 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 ## Cierre
 
 - [x] Cada CA de la spec tiene su test o su casilla de dispositivo: tabla CA → prueba en `spec.md` §10 (13 de 16 con test automático; 08, 09 y parte del 10 por script o por diferencia, y la voz de CA-012-07, del propietario). Sin CA sin cubrir; **CL-012-7** no tiene test ni casilla (por diseño, ver §10).
-- [ ] Todos los CA **verificados por completo**: faltan las casillas de `dispositivo.md` §8 y los 3 *goldens* (CA-012-01 y 03).
+- [ ] Todos los CA **verificados por completo**: faltan las casillas manuales de `dispositivo.md` §8 (los *goldens* de CA-012-01 y 03 ya están subidos, `f805c31`).
 - [ ] Definition of Done (`specs/constitution.md`), punto por punto (2026-09-30):
   - [~] **CA con su ID:** cumplidos y con su ID en los tests; lo que falta está en `dispositivo.md` §8 (TalkBack con foco real, anillo con teclado real, Switch Access, Xiaomi).
-  - [~] **Tests en CI:** `flutter test` +1423 en verde en local; CI **sin ejecutar** hasta abrir la PR. Los 3 *goldens* no están subidos, así que el job de tests de la PR fallará por falta de imágenes hasta aplicar `actualizar-goldens` **[Pendiente]**.
+  - [~] **Tests en CI:** `flutter test` +1423 en verde en local; PR svallev/una#22 abierta; los 3 *goldens* generados en CI con `actualizar-goldens` y subidos (`f805c31`); **[Pendiente]** ver el CI en verde tras ese commit.
   - [~] **format, analyze y CI:** `dart format` y `flutter analyze --fatal-infos` limpios en local; jobs de CI **[Pendiente]** con la PR.
   - [x] **Checklist de seguridad:** sección "enlaces externos y licencias" de `docs/security/checklist.md` (la marcan los puntos aplicables en la PR); `/security-check` limpio y `security-reviewer` con 0 altos, 0 medios y 5 bajos (registrados en `PLAN.md`).
   - [x] **Accesibilidad:** `a11y-reviewer` con 0 críticos y 0 altos; M1, M2 y B1 corregidos (`7448f4e`); M3 y B2–B6 sin corregir por decisión del propietario, registrados en `PLAN.md` con sus casillas en `dispositivo.md`. Lo no verificable con `adb` sigue **[Pendiente]** (§8).
@@ -35,7 +35,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
   - [x] **Documentación:** spec (§10 y estado), `plan.md`, DEV-18 y DEV-49, `screen-map`, `architecture`, `checklist`, `glossary`, enmiendas de 005 y 010, `testing.md`, `PLAN.md` (D13, línea de la hoja de ruta, fila 012, F5 y hallazgos), `CLAUDE.md`, `dispositivo.md` y `pr-description.md` al día.
   - [~] **Rendimiento:** arranque medido en el emulador (p50 +14 ms de mediana, +3,7 % de media, dentro del ruido; sin licencias antes del primer fotograma por test); la cifra real (y el p90 de raster) en el Xiaomi es **[Pendiente]**, con permiso del propietario.
   - [ ] **PR con título Conventional Commits:** propuesto en `pr-description.md`; la PR no está abierta.
-- [ ] Spec marcada como **Implementada** (tras las casillas de §8 y los *goldens*). Ahora: **Implementada parcialmente**.
+- [ ] Spec marcada como **Implementada** (tras las casillas manuales de §8). Ahora: **Implementada parcialmente**.
 
 ## Estado
 
