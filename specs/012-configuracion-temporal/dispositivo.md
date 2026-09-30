@@ -108,3 +108,17 @@ Base = `main` (`c576d3f`), sacada con `git archive` a un directorio temporal; nu
 - [ ] p90 de fotogramas (rasterizado) y arranque en frío en el Xiaomi (permiso del propietario).
 - [ ] CA-012-06 a los 10 minutos con el reloj real (lo cubre `home_router_test.dart`, 9:59 y 10:00).
 - [ ] Los 3 *goldens* de T-012-06 por generar en CI (`actualizar-goldens`).
+
+### Casillas del cierre (T-012-11): qué probar a mano según `a11y-reviewer`
+
+Salen de la revisión de accesibilidad del cierre (2026-09-30). Todas **[Pendiente]**; las que piden el Xiaomi necesitan el permiso del propietario. Los hallazgos que las motivan están en `docs/PLAN.md` ("Hallazgos de la 012 para la auditoría de F5").
+
+- [ ] **TalkBack con el foco real al volver:** mover el foco de TalkBack a la fila (con el dedo, no con `adb`) y activarla; al volver (3 → 2 → 1 → menú, tras Cancelar y tras el navegador) el foco debe ir a la fila de la tabla de niveles. Con él, comprobar también el orden de lectura de "Volver" (012-A-B3, el `Focus` sin etiqueta de `license_detail_screen.dart`).
+- [ ] **Nivel 3 de "Bibliotecas de Android":** con TalkBack, cómo se lee el nombre (fijo en español, 012-A-M3) y el texto (inglés) con la app en español y en inglés.
+- [ ] **Sistema en inglés:** el recorrido completo de los tres niveles y del aviso con TalkBack y la app en inglés.
+- [ ] **Idiomas `ca`, `gl` y `eu`:** qué voz dice los anuncios (carga, aviso "No hay ninguna app…") y la pantalla (012-A-B2). `ca` abre en español y `gl`/`eu` en inglés (spec 010).
+- [ ] **200 % con navegación de 3 botones:** los tres niveles y el aviso a 360 dp, sin que la barra del sistema tape nada (corregido el margen inferior en `7448f4e`; solo se vio con gestos).
+- [ ] **Teclado físico con anillo de foco visible** (Tab, Intro, Escape) en los tres niveles y en la confirmación.
+- [ ] **Switch Access real:** recorrer, activar y desplazar el nivel 3 (ya anotado arriba; aquí con el orden "Volver al final").
+- [ ] **Reducir movimiento:** fundido de 0 ms y, aparte, la animación de pulsación de los botones (012-A-B4, previa a la 012).
+- [ ] **Aviso obsoleto (M2, corregido en `7448f4e`):** con Chrome desactivado, ver el aviso, reactivarlo, volver al nivel 1 y pulsar "Política de privacidad": el aviso debe haber desaparecido y salir la confirmación.
