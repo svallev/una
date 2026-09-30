@@ -17,6 +17,7 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 | **Rendimiento** | Arranque en frío → tarea visible; fps de las animaciones | `integration_test` + `FrameTiming`/timeline, en modo *profile* | Dispositivo real (manual en cada release; automatizable con un laboratorio de dispositivos más adelante) |
 | **Seguridad** | *Fixtures* maliciosas (EXIF con GPS, PDF con JS, `.pdf` que es HTML, SVG, *zip bomb*, URL `javascript:`/IDN) | Unitarios + integración | CI |
 | **Sistema fuera de la app ("Recientes")** | Que la tarjeta de "Recientes" no enseñe contenido y que las capturas con la app delante salgan con él (spec 011). No se ve desde `flutter test` | `tools/check-recents.sh` con `adb` (ver más abajo) | Emulador, en local, antes de cada entrega a testers; **no está en CI** (plan de la 011 §8) |
+| **Licencias empaquetadas** | Que todo lo que va dentro del APK de release (paquetes de Dart, bibliotecas nativas, AndroidX/Kotlin, fuentes) tiene su licencia en la pantalla de licencias (spec 012, CA-012-03) | `tools/check-licenses.sh` sobre los APK (ver más abajo) | CI (job Android, tras `check-pdfium.sh`) y en local |
 | **Manual de accesibilidad** | VoiceOver, TalkBack, Switch Control/Access, teclado, texto al 200 %, reducir movimiento | Checklist en la PR | Antes de cerrar cada spec y en F5 |
 
 ## Reglas
@@ -36,6 +37,18 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 ## En CI (ver `.github/workflows/ci.yml`)
 
 `format` → `analyze` → `unit+widget+golden` → `migrations` → `l10n/tokens` → `build web` / `build apk (debug)` / `build ios (no-codesign)` → `integration (android emulator)` (en `main` y de forma nocturna para no alargar las PR).
+
+## Licencias empaquetadas (spec 012, CA-012-03)
+
+`tools/check-licenses.sh [apk]` se ejecuta **desde `app/`, tras `flutter build apk --release --split-per-abi`**; sin argumento revisa el APK de cada ABI de `tools/pdfium.lock`. Falla (salida 1) si:
+
+- un paquete de Dart de release (`dart pub deps --no-dev`; los del SDK de Flutter cuentan con la entrada `flutter`) no está en `NOTICES` de Flutter (se descomprime `NOTICES.Z` con `python3`);
+- una biblioteca `lib/<abi>/*.so` no tiene entrada conocida (`libapp.so` se excluye): un `.so` nuevo obliga a añadir su caso a `so_entry` del script **y** su licencia a la pantalla;
+- un artefacto de `releaseRuntimeClasspath` (Gradle, `--offline`; sin `io.flutter:*`, cuyo aviso ya va en `NOTICES`) no está, como `grupo:artefacto`, en `app/assets/licenses/android.txt`. **Al añadir uno, se comprueba la licencia de su POM contra `threat-model.md §5` y se anota en la PR** (si no es de la lista permitida, se para);
+- unas fuentes empaquetadas no llevan su `OFL.txt`, o falta dentro del APK alguno de `assets/licenses/{pdfium,sqlite,android}.txt`;
+- la primera línea de `pdfium.txt` no dice la release ni los sha256 de los `.tgz` de `tools/pdfium.lock` (al actualizar PDFium hay que regenerar `pdfium.txt`).
+
+Necesita `python3`, `unzip`, `dart` y un JDK para Gradle (`JAVA_HOME`; en local, el JBR de Android Studio: `/Applications/Android Studio.app/Contents/jbr/Contents/Home`). No instala nada. Se probó que **falla** quitando una línea de `android.txt`, con un `.so` inventado y con otra versión en la línea de origen de `pdfium.txt` (salidas en `specs/012-configuracion-temporal/tasks.md`).
 
 ## Verificación con `adb`: "Recientes" (spec 011, ADR-0019)
 
