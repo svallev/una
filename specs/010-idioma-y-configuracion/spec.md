@@ -117,7 +117,7 @@ Ninguno nuevo. Se reutilizan los que ya existen, incluido "Configuración y perf
   - los textos de Privacidad y de Copias de seguridad;
   - las licencias de código abierto y la versión.
   Los borradores de esos textos están en el historial de git de este archivo.
-- **Ocultar el contenido en la miniatura de "Recientes"**: pasa a F5 (antes "[Pendiente, spec 010]" en CL-007-11, CL-008-13 y CL-009-10).
+- **Ocultar el contenido en la miniatura de "Recientes"**: pasa a F5 (antes "[Pendiente, spec 010]" en CL-007-11, CL-008-13 y CL-009-10). **[Actualizado 2026-09-30]** Lo resuelve la spec 011 (`specs/011-ocultar-recientes/`, ADR-0019), **Implementada parcialmente** (falta PD-10 / T-011-09). No añade textos ni ajustes, así que esta spec no cambia.
 - Anuncios con la marca de idioma de la app (CA-010-10, excepción): se revisan en F5.
 - Idioma por app de Android 13+.
 - iOS (D17, fase F-iOS).

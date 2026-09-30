@@ -1,6 +1,6 @@
 # Plan técnico — Spec 011: Ocultar el contenido en "Recientes"
 
-- **Spec:** `specs/011-ocultar-recientes/spec.md` (estado: **Aprobada**, 2026-09-30)
+- **Spec:** `specs/011-ocultar-recientes/spec.md` (estado: **Implementada parcialmente**, 2026-09-30; aprobada el mismo día)
 - **ADR aplicables:** ninguno vigente. Se propone **ADR-0019** (tarea T-011-06): "Ocultar "Recientes" sin bloquear las capturas" (decisión con impacto de seguridad y con un comportamiento distinto por versión de Android)
 - **Estado del plan:** **Aprobado** (propietario, 2026-09-30), con las dos decisiones de §8 aceptadas: sin test automático de CI (verificación con `adb`) y ADR-0019
 - **Etiquetas:** [Hecho], [Suposición] y [Pendiente]

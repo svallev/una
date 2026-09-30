@@ -15,6 +15,7 @@ Recorre cada punto y presenta el estado (✅ / ❌ / N/A con evidencia). **No su
 - [ ] Tests de integración pasados en simulador y emulador (iOS 16 y el último; Android API 26 y la última).
 - [ ] Rendimiento: arranque en frío medido en dispositivo real (p50 < 1 s en el Android de referencia); tamaño dentro del presupuesto (`--analyze-size`).
 - [ ] Accesibilidad a mano: VoiceOver, TalkBack, Switch, texto al 200 %, reducir movimiento.
+- [ ] "Recientes" (spec 011, ADR-0019; no tiene test de CI, CL-011-13): `tools/check-recents.sh <serial>` en el **emulador** (un dispositivo físico solo con permiso del propietario y sus variables `ALLOW_PHYSICAL*`) sobre la compilación *release* que se entrega: `capture` y `compare` con dos tareas distintas (A y B), `secure`, `loop 10` y `record 10`; todos en verde y el resultado anotado en la entrega. Antes de la beta a testers, repetirlo también en Android 8 (API 26) y 12L (API 32) (PD-10 / T-011-09). Las notas de la beta recogen los límites aceptados (fotograma blanco al volver, "Recientes" abierto desde la propia app, hoja parcial del selector de fotos). Guía en `docs/testing.md` y `docs/security/checklist.md` (sección "Recientes").
 - [ ] Migraciones: la actualización desde la versión anterior publicada conserva los datos (test con una BD real anonimizada).
 
 ## Versión y changelog

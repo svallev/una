@@ -1,6 +1,6 @@
 # Spec 011: Ocultar el contenido en "Recientes"
 
-- **Estado:** **Aprobada** (propietario, 2026-09-30). Revisada por `spec-reviewer` el 2026-09-30 con los cambios aplicados; P-011-1 resuelta y P-011-2 aplazada (PD-10)
+- **Estado:** **Implementada parcialmente** (2026-09-30: falta PD-10 / T-011-09, la verificación en Android 8 y 12L; ver `tasks.md`). Aprobada por el propietario el 2026-09-30. Revisada por `spec-reviewer` el 2026-09-30 con los cambios aplicados; P-011-1 resuelta y P-011-2 aplazada (PD-10)
 - **Reglas de producto:** R8 (abrir → tarea actual rápido; CA-011-03 y CA-011-05). Desarrolla P4 (privacidad por defecto) y P5 (seguridad desde el diseño) y cierra la amenaza T-2 de `docs/security/threat-model.md` ("instantánea del selector de apps")
 - **Pantallas del prototipo:** ninguna. No hay interfaz nueva; lo que cambia es lo que el sistema enseña de la app cuando está en segundo plano
 - **Decisiones y ADR relacionados:** D17 (solo Android en la beta); P2 (arranque). Decisión del propietario, 2026-09-30: **ocultar siempre**, no solo con adjunto. El plan valorará un ADR corto para esta decisión (impacto de seguridad)
