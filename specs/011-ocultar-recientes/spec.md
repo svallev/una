@@ -31,7 +31,7 @@ Formato: ID · Dado / Cuando / Entonces. **Estado de partida [Hecho]:** hoy "Rec
 
 - **CA-011-01 Sin contenido en "Recientes"**
   - **Dado** la app en primer plano en cada pantalla de la matriz (más abajo) y, en dos pasadas distintas, con la tarea A ("uno") y con la tarea B ("dos", con otra imagen si procede)
-  - **Cuando** el usuario deja la app en segundo plano y abre "Recientes", y se captura esa pantalla
+  - **Cuando** el usuario deja la app en segundo plano **de verdad** (con el botón de inicio, con el cambio a otra app o con el gesto de vuelta) y abre "Recientes", y se captura esa pantalla. *(Reformulado 2026-09-30, propietario, tras T-011-01: abrir "Recientes" **directamente desde la app**, sin pasar antes por el escritorio ni por otra app, queda fuera del criterio; ver CL-011-14.)*
   - **Entonces** la tarjeta de la app **no contiene ninguna región de lo que había en pantalla**: ni texto, ni imagen, ni PDF, ni página web, ni el logotipo, ni los botones. **Prueba:** las capturas de la tarjeta con A y con B son idénticas entre sí y no contienen ningún píxel reconocible del contenido (comparación con la captura de la pantalla en primer plano). En los lanzadores que muestran el nombre, la tarjeta sigue con su icono y su nombre (CA-010-05). Qué se ve en su lugar (fondo liso, icono…) **[Suposición]** lo decide el sistema y siempre es algo aceptable.
 - **CA-011-02 Matriz de pantallas (sin excepciones)**
   - **Dado** la lista siguiente, **cada fila** se prueba en **cada** entorno de verificación
@@ -41,7 +41,8 @@ Formato: ID · Dado / Cuando / Entonces. **Estado de partida [Hecho]:** hoy "Rec
   - **Dado** la app en segundo plano
   - **Cuando** el usuario vuelve (desde "Recientes", desde el icono, desde otra app o tras desbloquear la pantalla)
   - **Entonces** se aplica CA-001-12 sin cambios: **si pasaron menos de 10 minutos se ve la misma pantalla; si pasaron 10 minutos o más, la tarea actual (o el editor si no hay ninguna)**. Se prueba con el reloj inyectado en 9:59 y en 10:00.
-  - Además **no hay parpadeo**. **Prueba:** grabación con `screenrecord`, 10 vueltas por entorno. Ningún fotograma posterior a la vuelta tiene el área de contenido uniformemente negra o blanca, ni con un fondo distinto del contenido esperado. **[Suposición]** Si el sistema enseña un instante su propio fondo o la pantalla de arranque en Android 13+, se para y se pregunta (regla de desempate).
+  - Además **la vuelta no enseña nada distinto de la app**, salvo lo que se acepta a continuación. **Prueba:** grabación con `screenrecord`, 10 vueltas por entorno; ningún fotograma con el área de contenido negra, ni con un fondo distinto del contenido esperado, **excepto el fotograma en blanco de "volver desde Recientes"**.
+  - **Excepción aceptada [propietario, 2026-09-30, tras T-011-01 en API 37]:** al volver **desde "Recientes"** puede verse un instante un fotograma **liso en blanco** (el fondo de arranque del sistema, porque no hay instantánea) antes de que se dibuje la app. **[Hecho]** en API 37 con los dos mecanismos; **[Suposición]** la duración medida (≈ 1 s en `screenrecord` a mp4) está inflada por la carga de la grabación en el emulador. No se cambia el fondo de arranque en esta spec. Si a partir de esta excepción el blanco fuera **negro**, otro color o durara claramente más de lo medido, **se para y se pregunta**. Se revisa antes de la v1.0.
 - **CA-011-04 Capturas y grabaciones con la app en primer plano** *(propietario, 2026-09-30, P-011-1)*
   - **Dado** la app en primer plano en cualquier pantalla de la matriz, **incluso después de volver de segundo plano, de la cámara o del selector** (CL-011-3), y en el primer arranque en frío
   - **Cuando** el usuario hace una captura de pantalla o graba la pantalla con las herramientas del sistema
@@ -80,6 +81,7 @@ Formato: ID · Dado / Cuando / Entonces. **Estado de partida [Hecho]:** hoy "Rec
 | CL-011-11 | Teclado abierto con texto escrito en el editor al pasar a segundo plano | La tarjeta no muestra ni el texto ni el teclado (CA-011-02) y al volver el texto y el foco siguen (CA-001-12) |
 | CL-011-12 | Se gira el móvil con la app en segundo plano y una imagen o un PDF en la tarea | Al volver se aplica CA-011-03 y la tarjeta sigue sin contenido |
 | CL-011-13 | El ocultado falla sin que nadie lo note | No hay aviso en la app (§5), pero los criterios lo detectan: CA-011-01 y CA-011-08 se comprueban en los entornos de verificación **antes de cada versión** que se entregue a testers |
+| CL-011-14 | "Recientes" se abre **directamente desde la app** (deslizar hacia arriba con la app delante), sin pasar antes por el escritorio | **[Hecho, API 37]** La tarjeta enseña la ventana **en vivo** de la app, con contenido, y la actividad no llega a pausarse: ni `setRecentsScreenshotEnabled` ni `FLAG_SECURE` al pausar pueden actuar. Es el comportamiento de "Recientes" con cualquier app; la instantánea queda oculta en cuanto se cambia de app. **Límite conocido, aceptado (propietario, 2026-09-30):** queda fuera de CA-011-01. Se anota en las notas de la beta y se puede revisar antes de la v1.0. **[Suposición]** en Android 13–16 se comporta igual; en 8–12 se mira en PD-10 |
 
 ## 5. Estados vacíos y de error
 
