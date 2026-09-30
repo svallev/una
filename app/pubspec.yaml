@@ -41,6 +41,10 @@ flutter:
   assets:
     - assets/fonts/archivo/OFL.txt
     - assets/fonts/space_mono/OFL.txt
+    # Licencias de lo que va empaquetado sin ser un paquete de pub (spec 012, CA-012-03).
+    - assets/licenses/pdfium.txt
+    - assets/licenses/sqlite.txt
+    - assets/licenses/android.txt
   fonts:
     - family: Archivo
       fonts:

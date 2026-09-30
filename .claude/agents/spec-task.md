@@ -35,6 +35,7 @@ Si descubres otra que servirá a tareas futuras (de una librería, del emulador,
 - `dart format` reformatea líneas: tras formatear, una sustitución de texto exacta puede no encontrar lo que buscaba. Comprueba siempre que se aplicó (asserts) o usa Edit.
 - **pdfrx:** no leas `controller.value` (ni uses `ValueListenableBuilder` sobre el controlador) antes de que el visor esté listo: deja la pantalla en blanco sin error visible (usa `ListenableBuilder`). En `flutter test` funciona con el PDFium real: `setUpAll(initPdfrxForTests)` (`test/support/pdfrx.dart`), carga con `tester.runAsync` en bucle y al final desmonta y deja pasar 2 s (quedan temporizadores). Su semántica propia está excluida (dice "Page N" en inglés).
 - Los tests que miden texto empiezan con `setUpAll(loadAppFonts)`.
+- **Gradle sin JDK en el PATH:** `./gradlew` falla con "Unable to locate a Java Runtime"; usa `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` y `--offline`. Las licencias de PDFium (`licenses/freetype.txt`) vienen en Latin-1: conviértelas a UTF-8 al copiarlas. `sed -i` de macOS exige `-i ''`: mejor Edit.
 
 ## Lo que devuelves
 
