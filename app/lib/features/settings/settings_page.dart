@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -172,7 +174,7 @@ class _SettingsPageState extends State<SettingsPage> {
 /// El título: 26 con la escala de texto del sistema, pero si la palabra más
 /// larga no cabe en el ancho (al 200 %, "Configuración" a 360 dp) se reduce lo
 /// justo para que no se parta ninguna palabra, como el texto de la tarea
-/// (CA-001-07, CA-012-13).
+/// (CA-001-07, CA-012-13), y nunca por debajo de 26.
 class _FitTitle extends StatelessWidget {
   const _FitTitle(this.text);
 
@@ -205,8 +207,14 @@ class _FitTitle extends StatelessWidget {
           if (painter.width > longest) longest = painter.width;
           painter.dispose();
         }
+        // Sin encoger por debajo del tamaño sin escalar: un nombre largo sin
+        // espacios (`flutter_local_notifications_platform_interface`) se parte
+        // por caracteres en lugar de quedar diminuto.
+        final floor = scaled > UnaFontSizes.title
+            ? UnaFontSizes.title / scaled
+            : 1.0;
         final fit = longest > constraints.maxWidth
-            ? constraints.maxWidth / longest
+            ? math.max(constraints.maxWidth / longest, floor)
             : 1.0;
         return Text(
           text,

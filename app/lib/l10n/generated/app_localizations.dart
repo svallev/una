@@ -1063,6 +1063,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudieron cargar las licencias.'**
   String get licensesError;
+
+  /// Encabezado de cada texto de licencia en el nivel 3 cuando un elemento tiene varias (el título del nivel es el nombre del elemento). CA-012-03/11
+  ///
+  /// In es, this message translates to:
+  /// **'Licencia {n} de {total}'**
+  String licensesTextOf(int n, int total);
 }
 
 class _AppLocalizationsDelegate

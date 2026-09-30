@@ -28,6 +28,10 @@ const _spec012 = <String, (String, String)>{
   ),
 };
 
+/// `licensesTextOf` (enmienda de la spec §7, propietario, 2026-09-30): lleva
+/// placeholders, así que se comprueba aparte con su plantilla.
+const _licensesTextOf = ('Licencia {n} de {total}', 'License {n} of {total}');
+
 void main() {
   final es = _arb('es'), en = _arb('en');
 
@@ -45,7 +49,7 @@ void main() {
   );
 
   test('CA-012-11: cada clave nueva tiene descripción que cita su CA', () {
-    for (final k in [..._spec012.keys, 'licensesCount']) {
+    for (final k in [..._spec012.keys, 'licensesCount', 'licensesTextOf']) {
       final meta = es['@$k'] as Map<String, dynamic>?;
       expect(meta, isNotNull, reason: '@$k');
       expect(
@@ -69,6 +73,15 @@ void main() {
       expect(enL.licensesCount(31), '31 licenses');
     },
   );
+
+  test('CA-012-03: licensesTextOf ("Licencia {n} de {total}") está en las ARB y se rellena', () {
+    expect(es['licensesTextOf'], _licensesTextOf.$1);
+    expect(en['licensesTextOf'], _licensesTextOf.$2);
+    final meta = es['@licensesTextOf'] as Map<String, dynamic>;
+    expect(meta['placeholders'], allOf(contains('n'), contains('total')));
+    expect(AppLocalizationsEs().licensesTextOf(2, 3), 'Licencia 2 de 3');
+    expect(AppLocalizationsEn().licensesTextOf(2, 3), 'License 2 of 3');
+  });
 
   test('CA-012-01: menuSettings sigue siendo el texto del menú', () {
     expect(es['menuSettings'], 'Configuración y perfil');

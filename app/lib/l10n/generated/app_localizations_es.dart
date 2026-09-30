@@ -600,4 +600,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get licensesError => 'No se pudieron cargar las licencias.';
+
+  @override
+  String licensesTextOf(int n, int total) {
+    return 'Licencia $n de $total';
+  }
 }

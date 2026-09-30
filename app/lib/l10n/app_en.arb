@@ -169,5 +169,7 @@
   "licensesBack": "Back",
   "@licensesBack": {"description": "Botón de volver de los niveles 2 y 3. CA-012-02/11"},
   "licensesError": "Couldn't load the licenses.",
-  "@licensesError": {"description": "Error de lectura de las licencias, con Reintentar. CA-012-15"}
+  "@licensesError": {"description": "Error de lectura de las licencias, con Reintentar. CA-012-15"},
+  "licensesTextOf": "License {n} of {total}",
+  "@licensesTextOf": {"description": "Encabezado de cada texto de licencia en el nivel 3 cuando un elemento tiene varias (el título del nivel es el nombre del elemento). CA-012-03/11", "placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}}
 }

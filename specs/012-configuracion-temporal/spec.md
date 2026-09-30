@@ -167,6 +167,7 @@ Claves nuevas (camelCase; se añaden con `/strings-add`). Se reutilizan `menuSet
 | `licensesCount` | {count, plural, one{1 licencia} other{{count} licencias}} | {count, plural, one{1 license} other{{count} licenses}} | Bajo el nombre del elemento (CA-010-04) |
 | `licensesBack` | Volver | Back | Niveles 2 y 3 |
 | `licensesError` | No se pudieron cargar las licencias. | Couldn't load the licenses. | CA-012-15 |
+| `licensesTextOf` | Licencia {n} de {total} | License {n} of {total} | Encabezado de cada texto en el nivel 3 **solo si el elemento tiene varias licencias** *(propietario, 2026-09-30)*. El título del nivel 3 (encabezado y foco al llegar) es el **nombre del elemento**; con una sola licencia no hay más encabezado |
 
 ## 8. Fuera de alcance
 
