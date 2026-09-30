@@ -20,7 +20,8 @@ Todo se hace en el **emulador de Android 16 (API 37)**; nunca en el Xiaomi sin p
 
 | Tarea | Estado | Notas |
 |---|---|---|
-| T-011-01 a 09 | [Pendiente] | Plan aprobado el 2026-09-30. Se ejecutan en sesiones nuevas, una tarea cada vez (`spec-task`), por orden. T-011-09 queda diferida (PD-10) |
+| T-011-01 | **Hecha, con decisión pendiente** (2026-09-30) | (a) Partida verificada en API 37: "Recientes" enseña el contenido. (b) `tools/check-recents.sh` (serial obligatorio; físico solo con `ALLOW_PHYSICAL=1`): `capture`, `compare`, `secure`, `loop`, `record`; **falla en el estado de partida** (salida 1) y se probó `loop 3` con A. (c) `RecentsPrivacy.kt` **provisional** (constante `MODE`, dejada en `"A"`; T-011-02 lo sustituye) y `MainActivity` cableada. Resultados y capturas: `dispositivo.md` §2, `capturas/`. **Hallazgos, todos en API 37:** A y B ocultan la instantánea cuando se llega por el escritorio; **ninguno oculta la tarjeta abriendo "Recientes" desde la propia app** (ventana en vivo, la actividad no se pausa); **ambos dejan un fotograma blanco a pantalla completa al volver desde "Recientes"** (`windowBackground` del `LaunchTheme`), y sin mecanismo no. Es la condición de parada de la spec (CA-011-03): **no se ha elegido mecanismo; se pregunta al propietario** (plan §1 y `dispositivo.md`). **[Suposición]** duración ≈ 1 s medida con mp4 en el emulador cargado; el `record` del script no mide tiempos. Sin tocar el Xiaomi |
+| T-011-02 a 09 | [Pendiente] | Plan aprobado el 2026-09-30. Se ejecutan en sesiones nuevas, una tarea cada vez (`spec-task`), por orden. **T-011-02 espera la decisión del propietario sobre el fotograma blanco y sobre la ruta de CA-011-01.** T-011-09 queda diferida (PD-10) |
 
 ## Cierre
 

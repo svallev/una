@@ -14,12 +14,21 @@
 - **[Suposición] a validar primero (T-011-01, emulador API 37):** que A oculta la miniatura sin parpadeo al volver. Si no, se usa **B en todas las versiones** (un solo camino, más fácil de verificar ahora que Android 8–12 está aplazado, PD-10).
 - **Cómo se verifica:** no hay tests unitarios de Kotlin en el proyecto ni se añade JUnit (P11: dependencia nueva). La verificación es un script con `adb` (`tools/check-recents.sh`) y una guía manual (`specs/011-ocultar-recientes/dispositivo.md`), como en la 007. Ver §5 y el riesgo R-3.
 
+### Resultado de T-011-01 (2026-09-30, emulador API 37) — **decisión pendiente del propietario**
+
+Detalle, capturas y cifras en `dispositivo.md` §2.
+
+- **[Hecho]** `setRecentsScreenshotEnabled` existe y compila (`compileSdk` de Flutter 3.47.5 ≥ 33). **A y B ocultan la instantánea** cuando se llega a "Recientes" por el escritorio (tarjeta en blanco, idéntica con "uno" y con "dos"); ninguno pone `FLAG_SECURE` con la app delante ni estropea las capturas (CA-011-04).
+- **[Hecho] Ninguno oculta la tarjeta si "Recientes" se abre desde la propia app:** el lanzador enseña la ventana en vivo y la actividad no se pausa. Afecta por igual a A y a B y a la redacción de CA-011-01.
+- **[Hecho] Ninguno evita un fotograma blanco a pantalla completa al volver desde "Recientes"** (el sistema pinta el `windowBackground` blanco del `LaunchTheme`); sin mecanismo no ocurre. Es la condición de parada de CA-011-03 y de la regla de desempate: **no se elige mecanismo por ahora**; se pregunta al propietario (opciones en `dispositivo.md` §2).
+- **Recomendación si se acepta el blanco:** A en Android 13+ y B en 8–12 (lo previsto en este plan), por no tocar la ventana con la app viva.
+
 ### Lo que se sabe y lo que no
 
 | Punto | Estado |
 |---|---|
 | `FLAG_SECURE` hace que las capturas de esa ventana salgan en blanco (documentación de Android, "Set FLAG_SECURE Window Flag") | **[Hecho]** |
-| `setRecentsScreenshotEnabled` existe desde Android 13 y evita la miniatura de "Recientes" | **[Suposición]** No la he encontrado en la documentación consultada; se comprueba en el emulador en T-011-01 |
+| `setRecentsScreenshotEnabled` existe desde Android 13 y evita la miniatura de "Recientes" | **[Hecho en API 37]** (T-011-01): compila y oculta la instantánea; ver el resultado de arriba |
 | En Android 8–12, poner `FLAG_SECURE` en `onPause` llega antes de que el sistema haga la miniatura | **[Suposición]** Es lo que usan varios plugins, pero depende de la versión y del fabricante. **No se puede verificar ahora** (PD-10): por eso la regla de desempate de la spec acepta la miniatura visible en Android 8–12 en la beta |
 | Quitar o poner `FLAG_SECURE` con la app viva no reconstruye la superficie de Flutter ni parpadea | **[Suposición]** Se mide en T-011-03 (CA-011-03) |
 | `compileSdk` de Flutter 3.47.5 es ≥ 33 (hace falta para compilar la llamada de A) | **[Suposición]** Se ve al compilar en T-011-02; la llamada va protegida por `Build.VERSION.SDK_INT` |
