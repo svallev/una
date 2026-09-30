@@ -29,6 +29,9 @@
 #            escritorio). Esa ruta queda FUERA de CA-011-01 (CL-011-14): el
 #            lanzador enseña la ventana en vivo; el script solo informa.
 #   secure:  falla si la ventana de la app lleva FLAG_SECURE ahora (CA-011-04).
+#   RECENTS_WAIT=<segundos>  espera tras abrir "Recientes" (por defecto 2,5). Con una
+#            imagen o un PDF el lanzador tarda más en pintar la tarjeta: si la captura sale
+#            sin tarjeta (solo el fondo), sube la espera (4 s bastan en el emulador).
 #
 # Requisitos: adb (variable ADB, PATH o el SDK de Android en ~/Library/Android),
 # python3 con Pillow y numpy. El paquete se cambia con PKG (por defecto
@@ -39,7 +42,7 @@
 # Códigos de salida: 0 todo bien; 1 un criterio falla; 2 uso incorrecto.
 set -euo pipefail
 
-usage() { sed -n "2,38p" "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n "2,41p" "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 SERIAL="${1:-}"
 [ -n "$SERIAL" ] || { echo "Falta el serial de adb (primer argumento). Sin serial no se ejecuta nada." >&2; usage; }
@@ -83,7 +86,7 @@ back_to_app() { adb shell am start -n "$ACTIVITY" >/dev/null 2>&1; sleep 2; }
 # ahí la ventana en vivo de la app en lugar de la instantánea.
 open_recents() {
   if [ "${VIA:-home}" = "home" ]; then adb shell input keyevent KEYCODE_HOME; sleep 2; fi
-  adb shell input keyevent KEYCODE_APP_SWITCH; sleep 2.5
+  adb shell input keyevent KEYCODE_APP_SWITCH; sleep "${RECENTS_WAIT:-2.5}"
 }
 
 # Con VIA=direct la tarjeta con contenido es lo esperado (CL-011-14): solo informa.
@@ -144,6 +147,12 @@ elif cmd == "ncc":  # ncc <front> <recents>: parecido entre la tarjeta y la pant
     f, c = front_as_card(front, rec)
     v = ncc(inner(f), inner(c))
     print(f"{v:.3f}")
+elif cmd == "cardlight":  # cardlight <recents>: ¿hay una tarjeta clara en su sitio?
+    # Evita el falso "idénticas" de dos capturas sin tarjeta (el lanzador tarda en
+    # pintarla): el fondo del lanzador es oscuro; la tarjeta vacía es clara y lisa.
+    c = inner(card_of(gray(sys.argv[2])))
+    print(f"media={c.mean():.0f} desv={c.std():.1f}")
+    sys.exit(0 if c.mean() > 200 else 1)
 elif cmd == "same":  # same <recentsA> <recentsB>: ¿tarjetas idénticas?
     a, b = inner(card_of(gray(sys.argv[2]))), inner(card_of(gray(sys.argv[3])))
     frac = float((np.abs(a - b) > 8).mean())
@@ -208,6 +217,8 @@ case "$CMD" in
     OUT="${3:-.}"
     fail=0
     for L in "$A" "$B"; do
+      img cardlight "$OUT/$L-recents.png" >/dev/null || {
+        echo "FALLO: en la captura de '$L' no se ve la tarjeta de la app en 'Recientes' ($(img cardlight "$OUT/$L-recents.png" || true)); repite con RECENTS_WAIT=4" >&2; fail=1; }
       v="$(img ncc "$OUT/$L-front.png" "$OUT/$L-recents.png")"
       if python3 -c "import sys; sys.exit(0 if float('$v') < 0.5 else 1)"; then
         echo "[$L] la tarjeta no se parece a la pantalla (parecido $v): bien"
