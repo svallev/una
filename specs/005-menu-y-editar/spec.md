@@ -1,6 +1,6 @@
 # Spec 005: Menú de la tarea y editar
 
-- **Estado:** Implementada (2026-09-25; aprobada por el propietario tras probarla en el móvil). Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009, eliminar 004, configuración: spec futura de Configuración y perfil, enmienda 2026-09-29)
+- **Estado:** Implementada (2026-09-25; aprobada por el propietario tras probarla en el móvil). Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009, eliminar 004, configuración completa: spec futura de Configuración y perfil, enmienda 2026-09-29; pantalla temporal: spec 012, enmienda 2026-09-30)
 - **Reglas de producto:** R7 (primer paso), R11
 - **Pantallas del prototipo:** 2 "Menú", 3 "Nueva tarea" (modo editar)
 - **Decisiones y ADR:** D13, DEV-05 (revocada), DEV-11, DEV-17, DEV-18, DEV-21
@@ -52,7 +52,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 - **CA-005-09 Nueva tarea y Configuración**
   - **Dado** el menú
   - **Cuando** elige "Nueva tarea" (o toca el texto "Configuración y perfil")
-  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" es solo texto, sin interacción ni rol de botón (enmienda 2026-09-29, propietario; antes cerraba el menú), hasta que exista la spec futura de Configuración y perfil (enmienda 2026-09-29: ya no es la 010). **[Pendiente, spec 012 (Aprobada, 2026-09-30)]** pasa a ser un botón que abre una pantalla temporal con licencias y política de privacidad.
+  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" **es un botón** (rol de botón para el lector, objetivo táctil ≥ 44 pt, con anillo de foco) que abre, sin cerrar el menú, la pantalla temporal de la spec 012 (licencias de código abierto y política de privacidad; DEV-49); al salir de ella el menú sigue tal como estaba (CA-012-02). **Enmienda 2026-09-30 (spec 012, propietario):** ~~era solo texto, sin interacción ni rol de botón (enmienda 2026-09-29; antes cerraba el menú)~~. La Configuración completa sigue siendo una spec futura (enmienda 2026-09-29: ya no es la 010) y sustituirá a la temporal. Un doble toque rápido la abre una sola vez (CL-012-2).
 - **CA-005-12 Total de tareas (añadido por el propietario, DEV-22)**
   - **Dado** el menú con más de una tarea pendiente
   - **Cuando** se muestra

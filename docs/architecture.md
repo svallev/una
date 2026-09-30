@@ -10,7 +10,7 @@ flowchart TB
     S1[CurrentTaskScreen]:::ui
     S2[TaskEditorScreen]:::ui
     S3[TaskListScreen]:::ui
-    S4["SettingsScreen (futura)"]:::ui
+    S4["SettingsScreen temporal (spec 012): Configuración y perfil · Licencias · Texto de una licencia"]:::ui
     SH[Sheets: Menú · ¿Dónde? · Añadir · Cargar URL · Eliminar]:::ui
     V[Adjunto en la tarea: imagen · PDF · TaskWeb con WebBar]:::ui
     FX[Animaciones: HoldToComplete · Tear · Crumple · Intro]:::ui
@@ -26,7 +26,7 @@ flowchart TB
     E[Entidades: Task · Attachment · Rank · QueuePosition · Settings]
     RP[[TaskRepository]]
     AS[[AttachmentStore]]
-    PF[[Platform ports: ImageImporter · PdfImporter · LinkOpener · Clock · IdGenerator]]
+    PF[[Platform ports: ImageImporter · PdfImporter · LinkOpener · LicenseSource · Clock · IdGenerator]]
   end
   subgraph DATA["Datos e infraestructura"]
     DR[DriftTaskRepository → SQLite]
@@ -34,7 +34,8 @@ flowchart TB
     IMP[ImportPipeline: bytes mágicos · límites · ImageSanitizer nativo sin EXIF · miniaturas]
     WV[WebView en vivo: webview_flutter endurecida + canal una/webview, WebViewHardening.kt · WebDataJanitor]
     PDF[pdfrx/PDFium: PdfEngine · NativePdfImporter · visor TaskPdfView]
-    LNK[Canal nativo una/links: LinkOpener.kt, ACTION_VIEW/SENDTO/DIAL]
+    LNK[Canal nativo una/links: LinkOpener.kt, ACTION_VIEW/SENDTO/DIAL, canOpen]
+    LIC[FlutterLicenseSource: LicenseRegistry + licencias propias de assets/licenses]
     RC[Nativo sin canal: RecentsPrivacy.kt — oculta la tarjeta de Recientes]
     NV[Canal nativo: QuickLook · FileProvider/ACTION_VIEW — no en la v1, ADR-0014]
   end
@@ -43,7 +44,7 @@ flowchart TB
   UC --> RP & AS & PF
   RP -.implementa.- DR
   AS -.implementa.- FS
-  PF -.implementa.- IMP & NV & PDF & LNK
+  PF -.implementa.- IMP & NV & PDF & LNK & LIC
   P4 --> WV
   V --> PDF
   classDef ui fill:#FFE55C,stroke:#111,color:#111
@@ -223,6 +224,17 @@ Estado: **[Hecho]** en Android (rama `feat/009-adjunto-url`; emulador y Xiaomi, 
 - **Red y privacidad:** `INTERNET` es el único permiso de la app (`check-android-permissions.sh release`); `cleartextTrafficPermitted=false`; `WebView.MetricsOptOut`. Safe Browsing consulta a Google la reputación de las direcciones: **[Suposición, PD-9]** no cambia Data Safety; se revisa antes de publicar.
 - **Coste:** APK *release* arm64 28,7 MB (13,4 MB comprimido; +66 KB por el paquete); +65 MB de PSS con la página cargada (Xiaomi, `docs/perf/baseline.md`).
 
+### Configuración y perfil, temporal (spec 012, DEV-49)
+
+Estado: **[Hecho]** en Android (rama `feat/012-configuracion-temporal`; emulador de API 37, `specs/012-configuracion-temporal/dispositivo.md`). **[Pendiente]** lo de `dispositivo.md` §8: foco de TalkBack al volver, anuncio de carga y "Reintentar", anillo de foco con teclado real, Switch Access, p90 de raster y arranque en el Xiaomi, y los *goldens* en CI (`actualizar-goldens`). Sustituida más adelante por la Configuración completa (spec futura, diseño del propietario).
+
+- **Tres rutas opacas a pantalla completa** (`features/settings/`: `SettingsScreen`, `LicensesScreen`, `LicenseDetailScreen`, `settings_route.dart`), sin `LicensePage` de Material (P12). Se empujan desde el contexto de la hoja del menú, que **no se cierra**: al salir del nivel 1 el menú sigue como estaba. Fundido de `UnaMotion.sheetOut` (160 ms; cero con "reducir movimiento"); siempre en vertical. Escape, atrás y el icono suben un nivel; el foco llega al título y vuelve a la fila de origen.
+- **Sin estado persistente:** no hay ajuste, esquema ni archivo nuevos; tras `am kill` no se restaura (CL-012-11) y `UnaApp` la cierra con `popUntil(isFirst)` tras ≥ 10 min en segundo plano (CA-001-12). La tarea de debajo no cambia salvo la web, que se recarga (CA-012-14 enmendado).
+- **Licencias (CA-012-03, CA-012-16):** puerto `LicenseSource` (dominio) → `FlutterLicenseSource` (datos) → `licensesProvider` (`FutureProvider.autoDispose`, sin reintento automático; lista vacía = error). Lee `LicenseRegistry` **solo al abrir el nivel 2** (nada antes del primer fotograma) y agrupa por paquete. `registerBundledLicenses()` añade, perezosas, las OFL de las fuentes y `assets/licenses/{pdfium,sqlite,android}.txt` (PDFium con su línea de origen, que `tools/check-licenses.sh` compara con `tools/pdfium.lock`; "Bibliotecas de Android (AndroidX, Kotlin)" con la lista de artefactos de `releaseRuntimeClasspath`). `LicenseDetailScreen` pinta cada licencia como texto plano (sin enlaces), en párrafos navegables marcados `en` para el lector. Se muestran también los paquetes de desarrollo que trae `NOTICES` (decisión del propietario).
+- **Completitud:** `tools/check-licenses.sh [apk]` (paquetes Dart de *release* ⊆ `NOTICES`, cada `.so` de cada ABI con su entrada, artefactos de Android ⊆ `android.txt`, OFL de las fuentes), en `ci.yml` tras `check-pdfium.sh`.
+- **Política de privacidad (CA-012-04/05):** `AppIdentity.privacyPolicyUrl` (de `identity.yaml`; hoy el marcador `https://example.com/privacy`) → `privacyLink()` (dominio; solo `https`, sin `usuario@`) → `LinkOpener.canOpen` (método nuevo del canal `una/links`: solo `resolveActivity`, sin `startActivity` ni registrar la dirección) → confirmación de la spec 008 → `open`. Sin app: aviso en línea anunciado en cada intento. La app no se conecta: lo hace el navegador. **Puerta de publicación:** `tools/check-release-config.sh` (`app/tool/check_release_config.dart`) falla con el marcador, dominios reservados, `http`, IP, `localhost`, `usuario@` o huecos en `docs/legal/privacy-policy.md`; se pasa a mano en `/release-checklist` (no en CI hasta F6) y **no** en las compilaciones locales. Repite la regla de `privacyLink` porque `dart run` no tiene `dart:ui`; un test comprueba que no es más permisiva.
+- **Capas:** el dominio (`LicensePackage`, `LicenseSource`, `privacyLink`) es Dart puro; nada del paquete de licencias de Flutter sale de `data/`.
+
 ### Recientes: `RecentsPrivacy` (spec 011, ADR-0019)
 
 Estado: **[Hecho]** en Android 13+ (verificado en el emulador de API 37 y, para la tarjeta de "Recientes", en el Xiaomi 15T Pro con HyperOS; `specs/011-ocultar-recientes/dispositivo.md`). **[Suposición, PD-10]** Android 8–12 sin verificar en dispositivo. iOS fuera de la beta (D17).
@@ -279,6 +291,6 @@ Regla: nada detrás de un flag llega a producción sin su spec aprobada.
 ## 8. Internacionalización
 
 - `flutter gen-l10n` con ARB (`app_es.arb` como plantilla, `app_en.arb`); ICU para plurales y selectores; fechas con `intl` en el idioma activo.
-- Resolución: el primer idioma de la lista del dispositivo que la app admite: cualquier `es-*` → `es`, `en-*` → `en`; si ninguno, `en` (R15, spec 010). *(Enmienda 2026-09-29: sin ajuste manual en la beta; volverá con la spec futura de Configuración y perfil.)*
+- Resolución: el primer idioma de la lista del dispositivo que la app admite: cualquier `es-*` → `es`, `en-*` → `en`; si ninguno, `en` (R15, spec 010). *(Enmienda 2026-09-29: sin ajuste manual en la beta; volverá con la spec futura de Configuración y perfil. La pantalla temporal de la spec 012 no lo añade.)*
 - El nombre de la app es la clave `appName` + `AppIdentity`. El nombre nativo va en InfoPlist.strings (es/en) y `strings.xml` (values, values-es), generados desde una única fuente (`app/identity.yaml`).
 - CI: test que compara las claves de ES y EN (sin huecos) y lint que prohíbe literales de texto en los widgets (`custom_lint` o un script).
