@@ -206,7 +206,7 @@ Compilación *release* con el `RecentsPrivacy.kt` definitivo (A en `SDK_INT >= 3
 
 ## 5. T-011-07: Xiaomi / HyperOS (CL-011-9, R-5)
 
-**Estado: sin hacer. Falta el permiso del propietario para usar el Xiaomi.** Estos son los pasos escritos, para que los haga el propietario a mano o el coordinador **con su permiso explícito** (un subagente `spec-task` no lo hace con un permiso de segunda mano). Ningún resultado de esta sección está verificado todavía.
+**Estado: hecha en parte (2026-09-30, con el permiso del propietario, desde la sesión coordinadora).** Resultados en §5.11. Los pasos de abajo se escribieron antes y se siguen con estas salvedades: no se hizo la parte de cámara y selector (CL-011-3, CL-011-15), no se midió la duración del blanco al volver ni se probó la captura del propio Xiaomi (volumen + encendido), y se sustituyó "a mano" por `adb` + medición numérica para no guardar capturas de "Recientes".
 
 **Qué se comprueba.** Que el lanzador de HyperOS respeta la señal que le da la app y no enseña el contenido en "Recientes" (CA-011-01, CL-011-9), que las capturas con la app delante siguen saliendo con contenido (CA-011-04) y que la vuelta no es peor que la medida en el emulador (CA-011-03). El Xiaomi 15T Pro lleva Android 16 (API 36): usa el **mecanismo A** (`setRecentsScreenshotEnabled`); el B (Android 8-12) no se puede probar aquí (PD-10). **[Suposición]** HyperOS puede tratar la señal a su manera; si la ignora, ver "Criterio de parada".
 
@@ -326,6 +326,21 @@ Lo demás (CL-011-14, hoja parcial del selector, blanco corto al volver) son lí
 - [ ] `adb -s $S uninstall invalid.pending.app.profile` (**solo** `.profile`; si se instaló la *release* sobre la real, borrar a mano las tareas "uno" y "dos").
 - [ ] Borrar de la galería y de `/sdcard` las capturas y grabaciones de prueba, y de `/tmp` o del directorio de la sesión cualquier archivo que se haya copiado.
 - [ ] Anotar el resultado en la fila T-011-07 de `tasks.md` y cerrar CL-011-9 (respeta / no muestra miniaturas / falla y se paró).
+
+### 5.11 Resultados en el Xiaomi (2026-09-30) [Hecho, salvo lo indicado]
+
+**Entorno.** Xiaomi 15T Pro (`2506BPN68G`), Android 16 (API 36), HyperOS `OS3.0`, navegación por gestos. Paquete `invalid.pending.app.profile` (compilación *profile* de `891825a`, arm64; datos aparte de la app real, que **no se tocó**); mecanismo **A**. El propietario dejó el móvil libre y sin más tarjetas en "Recientes". Se creó "uno" y "dos" (la de "dos" pasó a ser la actual). Al terminar: `adb uninstall invalid.pending.app.profile` (solo ese paquete), sin restos míos en `/sdcard`, sin capturas ni grabaciones en el repo.
+
+| Comprobación | Resultado |
+|---|---|
+| **CA-011-01, CL-011-9** (escritorio → "Recientes" con `KEYCODE_HOME` y `KEYCODE_APP_SWITCH`) | **El lanzador de HyperOS respeta la señal.** Tarjeta "Una." sin contenido: fondo **blanco** liso con la franja negra de arriba, **igual que en el emulador**. Con "uno" delante se miró a ojo; con "dos", las 10 veces, se midió (zona interior de la tarjeta 100 % blanca, 0 % amarillo u oscuro). |
+| **CA-011-08** (ciclo: escritorio → "Recientes" → tocar la tarjeta) | **10 de 10**: tarjeta en blanco y la app vuelve a delante con la tarea "dos" (comprobado por foco y por el árbol de accesibilidad). |
+| **CA-011-04** (captura con la app delante) | **Pasa** con `screencap` de `adb` (que respeta `FLAG_SECURE`): sale con el contenido ("uno", "dos", el menú y el editor) en el uso normal y tras un **arranque en frío**; `dumpsys window` sin ventana segura de la app. **No se probó** la captura ni la grabación del propio sistema del Xiaomi (botones). |
+| **CA-011-03** (vuelta sin parpadeo negro) | **Sin medir bien.** En los ciclos no se vio ningún fotograma negro en las capturas de la app; **la duración del blanco no se pudo medir**: el USB del Xiaomi se corta al grabar con `screenrecord` (la grabación de 2,8 s acabó antes de que apareciera la app). **[Suposición]** parecido al emulador. Queda a ojo del propietario. |
+| **CL-011-3, CL-011-15** (cámara y selector) | **No hecho** en el Xiaomi (no se abrió la galería ni la cámara del propietario). Se mantiene lo del emulador. |
+| **CL-011-14** (Recientes abierto desde la app) | No probado (informativo). |
+
+**Incidencias de la sesión (no son de la app).** (1) El USB se cayó una decena de veces (HyperOS): hubo que reconectar y reintentar. (2) Muchos toques de `adb input tap` no llegaron en el primer intento; se repitieron comprobando el árbol de accesibilidad (`uiautomator dump`). (3) Un `screencap` a medio dibujar mostró el escritorio del propietario (iconos de aplicaciones): se borró en el acto. (4) `tools/check-recents.sh` no se usó (rechaza el móvil sin `ALLOW_PHYSICAL_SCREENSHOTS`, que no se puso).
 
 ## 6. T-011-08 previa: modo oscuro (2026-09-30)
 
