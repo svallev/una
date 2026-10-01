@@ -309,11 +309,19 @@ class _LicenseListState extends State<_LicenseList> {
     void ensureVisible() {
       final context = _rows[name]?.context;
       if (context == null) return;
-      Scrollable.ensureVisible(
-        context,
-        duration: Duration.zero,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-      );
+      // Cada política solo desplaza en un sentido (hacia delante, la una; hacia
+      // atrás, la otra) y no hace nada si la fila ya se ve: juntas cubren una
+      // fila que baja (bajo la ventana) y una que sube (sobre ella, F-2).
+      for (final policy in [
+        ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+      ]) {
+        Scrollable.ensureVisible(
+          context,
+          duration: Duration.zero,
+          alignmentPolicy: policy,
+        );
+      }
     }
 
     if (_rows[name] != null) {

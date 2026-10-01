@@ -1239,6 +1239,67 @@ void main() {
         semantics.dispose();
       });
 
+      // F-2 (T-013-08c): la fila sube y queda justo por encima de la ventana,
+      // todavía construida (dentro del margen de construcción). Solo aplica a
+      // es → en: es la dirección en que la entrada sube (de última a primera).
+      if (from == 'es') {
+        testWidgets('la fila sube y queda justo sobre la ventana, aún '
+            'construida: se lleva a la vista', (tester) async {
+          final semantics = tester.ensureSemantics();
+          await openLicenses(tester, 11);
+          await tester.scrollUntilVisible(
+            find.text(androidName(before)),
+            300,
+            scrollable: listScrollable.first,
+          );
+          await tester.drag(list, const Offset(0, -2000));
+          await tester.pumpAndSettle();
+          Focus.of(tester.element(find.text(androidName(before))))
+              .requestFocus();
+          await tester.pump();
+          expect(_focusedRow(), androidName(before));
+          final position = tester
+              .state<ScrollableState>(listScrollable.first)
+              .position;
+          expect(
+            position.pixels,
+            greaterThan(0),
+            reason: 'la lista está desplazada',
+          );
+
+          await _switchTo(tester, [Locale(to)]);
+
+          expect(_focusedRow(), androidName(after));
+          expectInView(tester, androidName(after));
+          semantics.dispose();
+        });
+
+        testWidgets('al volver del nivel 3 la fila, que subió y quedó sobre '
+            'la ventana, se lleva a la vista', (tester) async {
+          final semantics = tester.ensureSemantics();
+          await openLicenses(tester, 11);
+          await tester.scrollUntilVisible(
+            find.text(androidName(before)),
+            300,
+            scrollable: listScrollable.first,
+          );
+          await tester.drag(list, const Offset(0, -2000));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(androidName(before)));
+          await tester.pumpAndSettle();
+          expect(find.byType(LicenseDetailScreen), findsOneWidget);
+
+          await _switchTo(tester, [Locale(to)]);
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
+
+          expect(find.byType(LicenseDetailScreen), findsNothing);
+          expect(_focusedRow(), androidName(after));
+          expectInView(tester, androidName(after));
+          semantics.dispose();
+        });
+      }
+
       testWidgets('un giro de pantalla no mueve el desplazamiento ni el '
           'foco', (tester) async {
         final semantics = tester.ensureSemantics();
