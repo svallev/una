@@ -39,9 +39,14 @@ class HoldToCompleteButton extends StatefulWidget {
 @visibleForTesting
 class HoldToCompleteButtonState extends State<HoldToCompleteButton>
     with SingleTickerProviderStateMixin {
+  // `preserve`: con "quitar animaciones" Flutter acortaría el relleno 20
+  // veces y la tarea se completaría casi al instante, sin la protección contra
+  // el toque accidental. El relleno indica progreso, no es decorativo
+  // (CA-013-03, CL-003-5); vale también para `animateBack`.
   late final AnimationController _fill = AnimationController(
     vsync: this,
     duration: UnaMotion.holdToComplete,
+    animationBehavior: AnimationBehavior.preserve,
   )..addStatusListener(_onFillStatus);
   late final AppLifecycleListener _lifecycle;
 

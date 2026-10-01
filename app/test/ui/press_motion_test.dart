@@ -517,6 +517,64 @@ void main() {
     );
 
     testWidgets(
+      'CA-013-03 / CL-003-5: con "quitar animaciones" del sistema el relleno sigue a 1,2 s y no completa antes',
+      (tester) async {
+        // `AnimationController` lee `SemanticsBinding.disableAnimations`
+        // (`platformDispatcher.accessibilityFeatures`), no `MediaQueryData`.
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        var completed = 0;
+        await pumpWithApp(
+          tester,
+          Scaffold(
+            body: Center(
+              child: HoldToCompleteButton(
+                label: 'Pulsa para completar',
+                a11yAction: 'Completar tarea',
+                a11yHint: 'Mantén pulsado',
+                onComplete: () async {
+                  completed++;
+                  return true;
+                },
+              ),
+            ),
+          ),
+          disableAnimations: true,
+        );
+        final state = tester.state<HoldToCompleteButtonState>(button);
+        final g = await tester.startGesture(tester.getCenter(button));
+        await tester.pump(); // Arranca la animación.
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(state.progress, closeTo(200 / 1200, 0.03));
+        expect(completed, 0);
+        await tester.pump(const Duration(milliseconds: 700));
+        expect(state.progress, closeTo(900 / 1200, 0.03));
+        expect(completed, 0);
+        // Al soltar, retrocede en `holdRelease` (no al instante).
+        await g.up();
+        await tester.pump(); // Arranca el retroceso.
+        await tester.pump(UnaMotion.holdRelease ~/ 2);
+        expect(state.progress, greaterThan(0));
+        expect(state.progress, lessThan(0.75));
+        await tester.pumpAndSettle();
+        expect(state.progress, 0);
+        expect(completed, 0);
+        // Y mantenido el tiempo entero, sí completa.
+        final g2 = await tester.startGesture(tester.getCenter(button));
+        await tester.pump();
+        await tester.pump(
+          UnaMotion.holdToComplete + const Duration(milliseconds: 50),
+        );
+        expect(completed, 1);
+        await g2.up();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
       'CL-003-5: con reducir movimiento el relleno sigue su ritmo (1,2 s), no salta',
       (tester) async {
         await pumpButton(tester, reduced: true);

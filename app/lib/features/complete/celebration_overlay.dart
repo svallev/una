@@ -71,6 +71,9 @@ class _CelebrationOverlayState extends State<CelebrationOverlay>
         AnimationController(
             vsync: this,
             duration: _hold + UnaMotion.successFade,
+            // La enhorabuena dura lo mismo con "reducir movimiento"
+            // (CL-003-5, CA-003-04); por defecto se acortaría 20 veces.
+            animationBehavior: AnimationBehavior.preserve,
           )
           ..addListener(_onTick)
           ..addStatusListener((s) {

@@ -305,15 +305,39 @@ void main() {
       await _hold(tester);
       await tester.pump(UnaMotion.holdDonePause);
       await tester.pump(UnaMotion.tear ~/ 2);
-      // Sin mitades rotas (ClipPath) ni confeti: solo el fundido.
+      // Sin mitades rotas (ClipPath con `_HalfClipper`) ni confeti: solo el
+      // fundido. La enhorabuena sigue ahí (el controlador no se acorta).
+      expect(find.byType(CelebrationOverlay), findsOneWidget);
       expect(
         find.descendant(
           of: find.byType(CelebrationOverlay),
-          matching: find.byType(ClipPath),
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is ClipPath && '${w.clipper.runtimeType}' == '_HalfClipper',
+          ),
         ),
         findsNothing,
       );
-      await _celebrate(tester, hold: Duration.zero);
+      await _celebrate(tester);
+      expect(find.byType(CelebrationOverlay), findsNothing);
+      expect(find.text('Segunda'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'CL-003-5: con "quitar animaciones" del sistema la enhorabuena dura lo mismo (2,1 s), no se acorta',
+    (tester) async {
+      await _app(tester, tasks: ['Primera', 'Segunda'], reduced: true);
+      await _hold(tester);
+      await tester.pump(UnaMotion.holdDonePause);
+      await tester.pump(_frame);
+      // Pasada la mitad de `successHold` sigue la enhorabuena, sin empezar a
+      // fundirse (un controlador sin `preserve` acaba en ~140 ms).
+      await tester.pump(UnaMotion.successHold ~/ 2);
+      expect(find.byType(CelebrationOverlay), findsOneWidget);
+      await tester.pump(UnaMotion.successHold ~/ 2 + UnaMotion.successFade);
+      await tester.pump(_frame);
+      await tester.pump(UnaMotion.introFade);
       expect(find.byType(CelebrationOverlay), findsNothing);
       expect(find.text('Segunda'), findsOneWidget);
     },
