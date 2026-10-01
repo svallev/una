@@ -146,8 +146,11 @@ class _LicenseDetailScreenState extends State<LicenseDetailScreen> {
     return SettingsPage(
       title: licenseDisplayName(l10n, widget.package),
       root: false,
+      // Sin nodo accesible propio: sería una parada enfocable sin nombre
+      // (CA-013-04). Con teclado sigue enfocándose, con su anillo y sus teclas.
       child: Focus(
         focusNode: _focus,
+        includeSemantics: false,
         onKeyEvent: _onKey,
         onFocusChange: (v) => setState(() => _focused = v),
         child: FocusRing(

@@ -210,7 +210,10 @@ class _BrutalButtonState extends State<BrutalButton> {
     final offset = pressed ? Offset(sink, sink) : Offset.zero;
     return Semantics(
       key: _semanticsKey,
-      container: true,
+      // Sin `container: true`: así este nodo se funde con el del
+      // `FocusableActionDetector` y el botón es un solo nodo con nombre, `tap` y
+      // `focus`, en lugar de dejar encima otro enfocable sin etiqueta
+      // (CA-013-04, plan 013 P-013-4).
       button: true,
       enabled: enabled,
       label: widget.label,
