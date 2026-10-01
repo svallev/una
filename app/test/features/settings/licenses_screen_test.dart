@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:app/app/locale_resolution.dart';
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/in_memory_task_repository.dart';
@@ -165,7 +166,8 @@ Future<void> _openLicenses(
       licenseSourceProvider.overrideWithValue(source),
     ],
   );
-  final en = locale.languageCode == 'en';
+  // Con `ca` la app está en español y con `gl` o `eu`, en inglés (CA-010-01).
+  final en = resolveAppLocale([locale]).languageCode == 'en';
   await tester.tap(
     find.bySemanticsLabel(en ? 'Task menu' : 'Menú de la tarea'),
   );
@@ -1000,6 +1002,179 @@ void main() {
     });
   });
 
+  group('Nombre traducido de las bibliotecas de Android (CA-013-01)', () {
+    const es = 'Bibliotecas de Android (AndroidX, Kotlin)';
+    const en = 'Android libraries (AndroidX, Kotlin)';
+    final packages = [
+      _pkg('drift'),
+      _pkg(androidLibrariesLicenseKey),
+      _pkg('Archivo'),
+      _pkg('Zeta'),
+    ];
+
+    /// Los nombres de las filas, de arriba abajo.
+    List<String> rowOrder(WidgetTester tester) {
+      final rows = [
+        for (final e in _inLicenses(find.byType(InkWell)).evaluate())
+          (
+            tester.getTopLeft(find.byElementPredicate((x) => x == e)).dy,
+            tester
+                .widget<Text>(
+                  find
+                      .descendant(
+                        of: find.byElementPredicate((x) => x == e),
+                        matching: find.byType(Text),
+                      )
+                      .first,
+                )
+                .data!,
+          ),
+      ]..sort((a, b) => a.$1.compareTo(b.$1));
+      return [for (final r in rows) r.$2];
+    }
+
+    testWidgets(
+      'CA-013-01, CL-013-1: en español la entrada va en la B ("Bibliotecas…"), entre Archivo y drift',
+      (tester) async {
+        await _openLicenses(tester, _Source(packages));
+        expect(rowOrder(tester), ['Archivo', es, 'drift', 'Zeta']);
+        expect(
+          _inLicenses(find.text(androidLibrariesLicenseKey)),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'CA-013-01, CL-013-1: en inglés la entrada va en la A ("Android libraries…"), antes de Archivo',
+      (tester) async {
+        await _openLicenses(
+          tester,
+          _Source(packages),
+          locale: const Locale('en'),
+        );
+        expect(rowOrder(tester), [en, 'Archivo', 'drift', 'Zeta']);
+        expect(
+          _inLicenses(find.text(androidLibrariesLicenseKey)),
+          findsNothing,
+        );
+      },
+    );
+
+    for (final (code, name, label) in [
+      ('es', es, '$es, 1 licencia'),
+      ('en', en, '$en, 1 license'),
+    ]) {
+      testWidgets(
+        'CA-013-01 ($code): la fila dice "nombre, N licencias", el nivel 3 lleva el nombre como título y el texto de la licencia no cambia',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await _openLicenses(
+            tester,
+            _Source(packages),
+            locale: Locale(code),
+            screenReader: true,
+          );
+          expect(find.bySemanticsLabel(label), findsOneWidget);
+          await _openDetail(tester, name);
+          expect(_inDetail(find.text(name)), findsOneWidget);
+          expect(
+            tester
+                .getSemantics(_inDetail(find.text(name)))
+                .flagsCollection
+                .isHeader,
+            isTrue,
+          );
+          expect(
+            _inDetail(find.text(androidLibrariesLicenseKey)),
+            findsNothing,
+          );
+          expect(
+            _inDetail(
+              find.text('MIT License. Text of $androidLibrariesLicenseKey.'),
+            ),
+            findsOneWidget,
+          );
+          handle.dispose();
+        },
+      );
+
+      testWidgets(
+        'CA-013-01 ($code): el nodo de la entrada (fila y título) lleva el idioma de la app, no la marca de inglés de los párrafos',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await _openLicenses(
+            tester,
+            _Source(packages),
+            locale: Locale(code),
+            screenReader: true,
+          );
+          Locale? localeOf(Finder f) =>
+              tester.getSemantics(f).getSemanticsData().locale;
+          expect(localeOf(find.bySemanticsLabel(label)), Locale(code));
+          await _openDetail(tester, name);
+          expect(localeOf(_inDetail(find.text(name))), Locale(code));
+          // Los párrafos de la licencia siguen con la marca de inglés.
+          expect(
+            localeOf(_inDetail(find.textContaining('MIT License. Text of'))),
+            const Locale('en'),
+          );
+          handle.dispose();
+        },
+      );
+    }
+
+    for (final (system, name) in [
+      (const Locale('ca'), es),
+      (const Locale('ca', 'ES'), es),
+      (const Locale('gl'), en),
+      (const Locale('eu'), en),
+      (const Locale('fr', 'FR'), en),
+    ]) {
+      testWidgets(
+        'CL-013-2: con el sistema en $system el nombre sale en el idioma de la app ($name)',
+        (tester) async {
+          await _openLicenses(tester, _Source(packages), locale: system);
+          expect(_inLicenses(find.text(name)), findsOneWidget);
+          await _openDetail(tester, name);
+          expect(_inDetail(find.text(name)), findsOneWidget);
+        },
+      );
+    }
+
+    for (final code in ['es', 'en']) {
+      testWidgets(
+        'CL-013-3 ($code): al 200 % a 360 dp el nombre cabe o pasa a otra línea, en la fila y en el título del nivel 3, sin desbordes',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await _openLicenses(
+            tester,
+            _Source(packages),
+            locale: Locale(code),
+            textScale: 2,
+            size: const Size(360, 640),
+          );
+          final name = code == 'es' ? es : en;
+          expect(tester.takeException(), isNull);
+          void inside(Finder screen, Finder text) {
+            final box = tester.getRect(screen);
+            final r = tester.getRect(text);
+            expect(r.left, greaterThanOrEqualTo(box.left));
+            expect(r.right, lessThanOrEqualTo(box.right));
+          }
+
+          inside(find.byType(LicensesScreen), _inLicenses(find.text(name)));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await _openDetail(tester, name);
+          expect(tester.takeException(), isNull);
+          inside(find.byType(LicenseDetailScreen), _inDetail(find.text(name)));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          handle.dispose();
+        },
+      );
+    }
+  });
+
   group('Texto grande y movimiento (CA-012-13)', () {
     final packages = [
       _pkg('pdfrx', [
@@ -1008,7 +1183,7 @@ void main() {
           'Copyright (c) https://github.com/very/long/address/that/does/not/break/at/all',
         ],
       ]),
-      _pkg('Bibliotecas de Android (AndroidX, Kotlin)'),
+      _pkg(androidLibrariesLicenseKey),
       _pkg('flutter_local_notifications_platform_interface'),
     ];
 
@@ -1047,7 +1222,13 @@ void main() {
           expect(title, isNotEmpty);
           expect(back, isNotEmpty);
           expect(close, isNotEmpty);
-          // Nivel 3, con dos licencias y una dirección larga.
+          // Nivel 3, con dos licencias y una dirección larga. La lista se
+          // ordena por el nombre que se ve: pdfrx queda al final, fuera de la vista.
+          await tester.scrollUntilVisible(
+            _inLicenses(find.text('pdfrx')),
+            200,
+            scrollable: _inLicenses(find.byType(Scrollable)).first,
+          );
           await _openDetail(tester, 'pdfrx');
           expect(tester.takeException(), isNull);
           final detail = tester.getRect(find.byType(LicenseDetailScreen));

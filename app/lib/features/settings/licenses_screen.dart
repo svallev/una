@@ -13,6 +13,7 @@ import '../../ui/brutal_button.dart';
 import '../../ui/focus_ring.dart';
 import '../../ui/request_focus.dart';
 import 'license_detail_screen.dart';
+import 'license_names.dart';
 import 'settings_page.dart';
 import 'settings_route.dart';
 
@@ -215,6 +216,8 @@ class _LicenseList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
+    // Se ordena con el nombre que se ve, que depende del idioma (CL-013-1).
+    final sorted = sortedForDisplay(AppLocalizations.of(context), packages);
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(
         UnaSpace.l,
@@ -222,9 +225,9 @@ class _LicenseList extends StatelessWidget {
         UnaSpace.l,
         UnaSpace.xl + bottom,
       ),
-      itemCount: packages.length,
+      itemCount: sorted.length,
       itemBuilder: (context, i) =>
-          _LicenseRow(packages[i], divider: i > 0, key: ValueKey(i)),
+          _LicenseRow(sorted[i], divider: i > 0, key: ValueKey(i)),
     );
   }
 }
@@ -279,7 +282,7 @@ class _LicenseRowState extends State<_LicenseRow> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final name = widget.package.name;
+    final name = licenseDisplayName(l10n, widget.package);
     // Sin texto legible sale igualmente "1 licencia" (CL-012-10).
     final count = l10n.licensesCount(
       widget.package.licenseCount < 1 ? 1 : widget.package.licenseCount,
