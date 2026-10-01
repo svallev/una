@@ -547,7 +547,7 @@ void main() {
 
   group('Lector de pantalla y teclado (CA-012-11, CA-012-12)', () {
     testWidgets(
-      'CA-012-11: título (encabezado) → opciones (botones) → Cerrar; la política añade su pista',
+      'CA-012-11 / CA-013-05: título (encabezado) → opciones (botones) → Cerrar; la política añade su pista',
       (tester) async {
         final handle = tester.ensureSemantics();
         await _openSettings(tester, screenReader: true);
@@ -579,7 +579,7 @@ void main() {
     );
 
     testWidgets(
-      'CA-012-11: con el aviso visible se lee tras el título y antes de las opciones',
+      'CA-013-05: con el aviso visible se lee tras el título y las opciones, y antes de Cerrar',
       (tester) async {
         final handle = tester.ensureSemantics();
         final opener = _Opener()..available = false;
@@ -589,9 +589,9 @@ void main() {
         final order = _readingOrder(tester);
         expect(order.sublist(order.length - 5), [
           _menuLabel,
-          _noApp,
           'Licencias de código abierto',
           'Política de privacidad',
+          _noApp,
           'Cerrar',
         ]);
         handle.dispose();
@@ -599,7 +599,66 @@ void main() {
     );
 
     testWidgets(
-      'CA-012-11: en inglés todo sale en inglés (título, opciones, pista)',
+      'CA-013-05: en inglés, con el aviso visible se lee tras el título y las opciones, y antes de Close',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final opener = _Opener()..available = false;
+        await _openSettings(
+          tester,
+          locale: const Locale('en'),
+          screenReader: true,
+          opener: opener,
+        );
+        await tester.tap(_inSettings(find.text('Privacy policy')));
+        await _settle(tester);
+        final order = _readingOrder(tester);
+        expect(order.sublist(order.length - 5), [
+          'Settings and profile',
+          'Open-source licenses',
+          'Privacy policy',
+          "There's no app to open this link.",
+          'Close',
+        ]);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CA-013-05 / CL-013-8: con el foco del lector en una opción, el aviso se anuncia una vez y el foco no se mueve; el orden no cambia el del teclado',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final opener = _Opener()..available = false;
+        await _openSettings(tester, screenReader: true, opener: opener);
+        tester.takeAnnouncements();
+        final focusBefore = FocusManager.instance.primaryFocus;
+        await tester.tap(_inSettings(find.text('Política de privacidad')));
+        await _settle(tester);
+        expect(tester.takeAnnouncements().map((a) => a.message), [_noApp]);
+        expect(FocusManager.instance.primaryFocus, same(focusBefore));
+        // El teclado sigue siendo Cerrar → título → opciones (CA-012-12).
+        final order = <String?>[];
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        order.add(_focusedLabel(tester));
+        for (var i = 0; i < 3; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+          order.add(_focusedLabel(tester));
+        }
+        expect(order, [
+          'Cerrar',
+          _menuLabel,
+          'Licencias de código abierto',
+          'Política de privacidad',
+        ]);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CA-012-11 / CA-013-05: en inglés todo sale en inglés (título, opciones, pista)',
       (tester) async {
         final handle = tester.ensureSemantics();
         await _openSettings(

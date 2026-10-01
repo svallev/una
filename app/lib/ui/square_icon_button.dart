@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme/tokens.g.dart';
 import 'focus_ring.dart';
+import 'press_motion.dart';
 import 'una_icons.dart';
 
 /// Botón cuadrado de barra del prototipo (`.sq`): 46 px, sombra de 3 px y
@@ -61,7 +62,7 @@ class _SquareIconButtonState extends State<SquareIconButton> {
               child: FocusRing(
                 visible: _focused,
                 child: AnimatedContainer(
-                  duration: UnaMotion.press,
+                  duration: pressDuration(context),
                   transform: _down
                       ? Matrix4.translationValues(
                           sink.offset.dx,

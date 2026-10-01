@@ -172,7 +172,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: _openPrivacy,
               ),
             ),
-            // Bajo las opciones, pero el lector lo lee antes (plan §8).
+            // Bajo las opciones y, para el lector, después de ellas (CA-013-05).
             if (_noApp)
               Semantics(
                 container: true,

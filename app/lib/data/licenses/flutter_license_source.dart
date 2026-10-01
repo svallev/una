@@ -31,11 +31,7 @@ class FlutterLicenseSource implements LicenseSource {
         if (!texts.contains(text)) texts.add(text);
       }
     }
-    final names = byName.keys.toList()
-      ..sort((a, b) {
-        final byCase = a.toLowerCase().compareTo(b.toLowerCase());
-        return byCase != 0 ? byCase : a.compareTo(b);
-      });
+    final names = byName.keys.toList()..sort(compareLicenseNames);
     return [for (final n in names) LicensePackage(name: n, texts: byName[n]!)];
   }
 }

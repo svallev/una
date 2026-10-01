@@ -8,6 +8,7 @@ import '../../app/theme/una_theme.dart';
 import '../../domain/entities/license_package.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/focus_ring.dart';
+import 'license_names.dart';
 import 'settings_page.dart';
 
 /// Un párrafo largo se trocea en partes de este tamaño como máximo (plan §6:
@@ -143,10 +144,13 @@ class _LicenseDetailScreenState extends State<LicenseDetailScreen> {
     final l10n = AppLocalizations.of(context);
     final bottom = MediaQuery.paddingOf(context).bottom;
     return SettingsPage(
-      title: widget.package.name,
+      title: licenseDisplayName(l10n, widget.package),
       root: false,
+      // Sin nodo accesible propio: sería una parada enfocable sin nombre
+      // (CA-013-04). Con teclado sigue enfocándose, con su anillo y sus teclas.
       child: Focus(
         focusNode: _focus,
+        includeSemantics: false,
         onKeyEvent: _onKey,
         onFocusChange: (v) => setState(() => _focused = v),
         child: FocusRing(

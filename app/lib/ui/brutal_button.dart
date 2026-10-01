@@ -3,6 +3,7 @@ import 'package:flutter/semantics.dart' show FocusSemanticEvent;
 
 import '../app/theme/tokens.g.dart';
 import 'focus_ring.dart';
+import 'press_motion.dart';
 import 'una_icons.dart';
 
 /// Botón "brutalista" del prototipo (`.bb`): borde de 3 px, sombra dura de 5 px
@@ -209,7 +210,10 @@ class _BrutalButtonState extends State<BrutalButton> {
     final offset = pressed ? Offset(sink, sink) : Offset.zero;
     return Semantics(
       key: _semanticsKey,
-      container: true,
+      // Sin `container: true`: así este nodo se funde con el del
+      // `FocusableActionDetector` y el botón es un solo nodo con nombre, `tap` y
+      // `focus`, en lugar de dejar encima otro enfocable sin etiqueta
+      // (CA-013-04, plan 013 P-013-4).
       button: true,
       enabled: enabled,
       label: widget.label,
@@ -225,7 +229,7 @@ class _BrutalButtonState extends State<BrutalButton> {
         child: Opacity(
           opacity: enabled ? 1 : 0.4,
           child: AnimatedContainer(
-            duration: UnaMotion.press,
+            duration: pressDuration(context),
             transform: Matrix4.translationValues(offset.dx, offset.dy, 0),
             width: widget.iconOnly ? widget.height : null,
             constraints: BoxConstraints(minHeight: widget.height),

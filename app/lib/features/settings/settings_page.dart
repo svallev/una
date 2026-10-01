@@ -10,13 +10,14 @@ import '../../ui/focus_ring.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/una_icons.dart';
 
-/// Orden de lectura de los niveles de la Configuración (spec 012, plan §8):
-/// título, aviso o estado, opciones o filas, y por último Cerrar o Volver.
-/// El orden del teclado es otro (CA-012-12): Cerrar/Volver, título, opciones.
+/// Orden de lectura de los niveles de la Configuración (CA-013-05, que cambia
+/// el de la 012): título, opciones o filas, aviso y, por último, Cerrar o
+/// Volver. El aviso se ve bajo las opciones y se lee después de ellas. El
+/// orden del teclado es otro (CA-012-12): Cerrar/Volver, título, opciones.
 abstract final class SettingsOrder {
   static const title = 0.0;
-  static const status = 1.0;
-  static const content = 2.0;
+  static const content = 1.0;
+  static const status = 2.0;
   static const leading = 3.0;
 }
 

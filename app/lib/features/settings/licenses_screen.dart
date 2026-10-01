@@ -13,6 +13,7 @@ import '../../ui/brutal_button.dart';
 import '../../ui/focus_ring.dart';
 import '../../ui/request_focus.dart';
 import 'license_detail_screen.dart';
+import 'license_names.dart';
 import 'settings_page.dart';
 import 'settings_route.dart';
 
@@ -207,94 +208,279 @@ class _LoadErrorState extends State<_LoadError> {
   }
 }
 
-class _LicenseList extends StatelessWidget {
+/// La lista de filas. Guarda **por nombre** el `FocusNode` de cada fila, no las
+/// filas: la lista es perezosa y, con el nivel 3 abierto, el nivel 2 no se
+/// dibuja, así que una fila que cambia de sitio con el idioma puede destruirse y
+/// reconstruirse lejos. Con el foco aquí, la fila nueva lo vuelve a adoptar y el
+/// foco (teclado y lector) sigue en la misma entrada (CA-013-02, plan P-013-3).
+///
+/// La `GlobalKey` del nodo accesible **no** se guarda aquí: reutilizar una clave
+/// global en una fila destruida y reconstruida hace saltar una aserción del
+/// árbol semántico de Flutter (visto con texto al 200 %). Cada fila crea la
+/// suya y se registra en [_rows] mientras existe.
+class _LicenseList extends StatefulWidget {
   const _LicenseList(this.packages);
 
   final List<LicensePackage> packages;
 
   @override
+  State<_LicenseList> createState() => _LicenseListState();
+}
+
+class _LicenseListState extends State<_LicenseList> {
+  final _scroll = ScrollController();
+  final _focusNodes = <String, FocusNode>{};
+  final _rows = <String, _LicenseRowState>{};
+
+  /// Orden y posición de cada nombre: se recalculan solo si cambian la lista o
+  /// el idioma.
+  List<LicensePackage> _sorted = const [];
+  Map<String, int> _indexOf = const {};
+  List<LicensePackage>? _sortedFrom;
+  Locale? _sortedLocale;
+
+  /// El idioma visto por última vez en `didChangeDependencies` (`didUpdateWidget`
+  /// llega antes y no debe ocultar el cambio).
+  Locale? _seenLocale;
+
+  /// La fila cuyo nivel 3 está abierto (un segundo toque no hace nada,
+  /// CL-012-2).
+  String? _openName;
+
+  FocusNode _focusOf(String name) =>
+      _focusNodes.putIfAbsent(name, () => FocusNode(debugLabel: 'license row'));
+
+  /// El nombre de la fila que tiene el foco de teclado, si alguna.
+  String? _focusedName() {
+    for (final MapEntry(:key, :value) in _focusNodes.entries) {
+      if (value.hasFocus) return key;
+    }
+    return null;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Solo cuenta un cambio de idioma: un giro de pantalla (otro `MediaQuery`)
+    // no debe mover el desplazamiento.
+    final locale = Localizations.localeOf(context);
+    final changed = _seenLocale != null && _seenLocale != locale;
+    _seenLocale = locale;
+    _resort(locale);
+    if (!changed || _openName != null) return;
+    // Con el nivel 3 abierto no se hace nada: `_open` coloca la fila al volver.
+    final name = _focusedName();
+    if (name != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reveal(name, then: () => _focusRow(name));
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(_LicenseList old) {
+    super.didUpdateWidget(old);
+    _resort(Localizations.localeOf(context));
+  }
+
+  void _resort(Locale locale) {
+    if (identical(_sortedFrom, widget.packages) && _sortedLocale == locale) {
+      return;
+    }
+    _sortedFrom = widget.packages;
+    _sortedLocale = locale;
+    _sorted = sortedForDisplay(AppLocalizations.of(context), widget.packages);
+    _indexOf = {for (final (i, p) in _sorted.indexed) p.name: i};
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  /// Lleva la fila de [name] a la vista (sin animación, como "reducir
+  /// movimiento") y llama a [then]. Si no está construida, salta a su posición
+  /// estimada y lo vuelve a intentar con ella ya construida.
+  void _reveal(String name, {required VoidCallback then}) {
+    void ensureVisible() {
+      final context = _rows[name]?.context;
+      if (context == null) return;
+      // Cada política solo desplaza en un sentido (hacia delante, la una; hacia
+      // atrás, la otra) y no hace nada si la fila ya se ve: juntas cubren una
+      // fila que baja (bajo la ventana) y una que sube (sobre ella, F-2).
+      for (final policy in [
+        ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+      ]) {
+        Scrollable.ensureVisible(
+          context,
+          duration: Duration.zero,
+          alignmentPolicy: policy,
+        );
+      }
+    }
+
+    if (_rows[name] != null) {
+      ensureVisible();
+      then();
+      return;
+    }
+    final index = _indexOf[name];
+    if (index == null || !_scroll.hasClients) return then();
+    final position = _scroll.position;
+    if (!position.hasContentDimensions) return then();
+    final extent =
+        (position.maxScrollExtent + position.viewportDimension) /
+        _sorted.length;
+    _scroll.jumpTo(
+      (index * extent - (position.viewportDimension - extent) / 2).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      ),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ensureVisible();
+      then();
+    });
+  }
+
+  /// El foco de teclado y el del lector, en la fila de [name].
+  void _focusRow(String name) {
+    _focusOf(name).requestFocus();
+    _rows[name]?.announceFocus();
+  }
+
+  Future<void> _open(LicensePackage package) async {
+    final name = package.name;
+    if (_openName != null) return;
+    _openName = name;
+    final back = settingsTransition(context);
+    await Navigator.of(context).push(
+      settingsRoute<void>(
+        context,
+        (_) => LicenseDetailScreen(package: package),
+      ),
+    );
+    if (!mounted) return;
+    // Al volver, la fila (que pudo moverse con el idioma) recupera el foco.
+    Timer(back, () {
+      if (!mounted) return;
+      _reveal(
+        name,
+        then: () => requestFocusAfter(
+          after: Duration.zero,
+          isMounted: () => mounted,
+          node: _focusOf(name),
+          semantics: _rows[name]?.semanticsKey,
+        ),
+      );
+    });
+    _openName = null;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
     return ListView.builder(
+      controller: _scroll,
       padding: EdgeInsets.fromLTRB(
         UnaSpace.l,
         UnaSpace.s,
         UnaSpace.l,
         UnaSpace.xl + bottom,
       ),
-      itemCount: packages.length,
-      itemBuilder: (context, i) =>
-          _LicenseRow(packages[i], divider: i > 0, key: ValueKey(i)),
+      itemCount: _sorted.length,
+      findChildIndexCallback: (key) =>
+          key is ValueKey<String> ? _indexOf[key.value] : null,
+      itemBuilder: (context, i) {
+        final package = _sorted[i];
+        return _LicenseRow(
+          package,
+          divider: i > 0,
+          key: ValueKey(package.name),
+          focusNode: _focusOf(package.name),
+          rows: _rows,
+          onOpen: () => _open(package),
+        );
+      },
     );
   }
 }
 
 /// Una fila de la lista: el nombre y, debajo, cuántas licencias tiene. Botón
-/// para el lector ("nombre, N licencias"); con el teclado, anillo de foco. Al
-/// volver del nivel 3, recupera el foco (tabla de niveles de la spec).
+/// para el lector ("nombre, N licencias"); con el teclado, anillo de foco. El
+/// foco y la apertura del nivel 3 son de la lista.
 class _LicenseRow extends StatefulWidget {
-  const _LicenseRow(this.package, {super.key, required this.divider});
+  const _LicenseRow(
+    this.package, {
+    super.key,
+    required this.divider,
+    required this.focusNode,
+    required this.rows,
+    required this.onOpen,
+  });
 
   final LicensePackage package;
   final bool divider;
+  final FocusNode focusNode;
+  final Map<String, _LicenseRowState> rows;
+  final VoidCallback onOpen;
 
   @override
   State<_LicenseRow> createState() => _LicenseRowState();
 }
 
 class _LicenseRowState extends State<_LicenseRow> {
-  final _focus = FocusNode(debugLabel: 'license row');
-  final _key = GlobalKey();
-  bool _focused = false;
+  late bool _focused = widget.focusNode.hasFocus;
 
-  /// Se está abriendo: un segundo toque no hace nada (CL-012-2).
-  bool _busy = false;
+  /// El nodo accesible de la fila (el del botón, no el de un antecesor).
+  final semanticsKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.rows[widget.package.name] = this;
+  }
 
   @override
   void dispose() {
-    _focus.dispose();
+    if (identical(widget.rows[widget.package.name], this)) {
+      widget.rows.remove(widget.package.name);
+    }
     super.dispose();
   }
 
-  Future<void> _open() async {
-    if (_busy) return;
-    _busy = true;
-    final back = settingsTransition(context);
-    await Navigator.of(context).push(
-      settingsRoute<void>(
-        context,
-        (_) => LicenseDetailScreen(package: widget.package),
-      ),
+  /// Avisa al lector de que el foco está en esta fila.
+  void announceFocus() {
+    semanticsKey.currentContext?.findRenderObject()?.sendSemanticsEvent(
+      const FocusSemanticEvent(),
     );
-    if (!mounted) return;
-    requestFocusAfter(
-      after: back,
-      isMounted: () => mounted,
-      node: _focus,
-      semantics: _key,
-    );
-    _busy = false;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final name = widget.package.name;
+    final name = licenseDisplayName(l10n, widget.package);
     // Sin texto legible sale igualmente "1 licencia" (CL-012-10).
     final count = l10n.licensesCount(
       widget.package.licenseCount < 1 ? 1 : widget.package.licenseCount,
     );
     return Semantics(
-      key: _key,
+      key: semanticsKey,
       button: true,
       label: '$name, $count',
       excludeSemantics: true,
-      onTap: _open,
+      onTap: widget.onOpen,
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
-          onTap: _open,
-          focusNode: _focus,
+          onTap: widget.onOpen,
+          focusNode: widget.focusNode,
           onFocusChange: (v) => setState(() => _focused = v),
           highlightColor: UnaColors.pressed,
           splashFactory: NoSplash.splashFactory,

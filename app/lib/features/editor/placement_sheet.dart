@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/queue_position.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../ui/press_motion.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
 
@@ -146,7 +147,7 @@ class _OptionState extends State<_Option> {
         onTapUp: (_) => setState(() => _down = false),
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: UnaMotion.press,
+          duration: pressDuration(context),
           transform: _down
               ? Matrix4.translationValues(4, 4, 0)
               : Matrix4.identity(),

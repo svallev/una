@@ -101,6 +101,8 @@ Base = `main` (`c576d3f`), sacada con `git archive` a un directorio temporal; nu
 
 ## 8. Pendiente (a mano o con permiso)
 
+> **Spec 013 (aprobada 2026-10-01):** estas casillas pasan a la auditoría en dispositivo (spec 016). Las de "TalkBack con el foco real al volver", "Nivel 3 de Bibliotecas de Android", "Switch Access real" y "Reducir movimiento" se hacen **con el comportamiento de la 013**: nombre traducido (CA-013-01), aviso leído después de las opciones y sin nodos sin nombre (CA-013-04/05) y hundido instantáneo (CA-013-03). La de los idiomas `ca`/`gl`/`eu` solo anota la voz: los anuncios con la voz del sistema están aceptados (ADR-0020). Las casillas nuevas de la 013 (F-1 y F-2 ya corregidos y vistos en el emulador; lo que queda a mano) están en `specs/013-deuda-accesibilidad/dispositivo.md` §6.
+
 - [ ] Foco de TalkBack al volver en los tres saltos, tras Cancelar y tras el navegador (hace falta mover el foco de TalkBack a la fila antes de activarla; `adb` no puede).
 - [ ] TalkBack: anuncio de "Cargando licencias…" y foco en "Reintentar" (error) y su pista; recuento leído en voz (se comprobó en el árbol, no a oído).
 - [ ] Anillo de foco visible con un teclado real (Xiaomi con teclado, o emulador con el teclado del ordenador).

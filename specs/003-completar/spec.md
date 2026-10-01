@@ -24,6 +24,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
   - **Dado** la tarea actual en la pantalla principal
   - **Cuando** el usuario mantiene pulsado el botón "Pulsa para completar"
   - **Entonces** el botón se desplaza 4 px y su sombra baja a 1 px, y un relleno `ink` avanza de izquierda a derecha durante `holdToComplete` (1,2 s); sobre el relleno, el mismo texto e icono se ven en blanco (como el prototipo: el texto **no** cambia).
+  - *(Enmienda 2026-10-01, spec 013, CA-013-03:)* con "reducir movimiento", el desplazamiento de 4 px y el cambio de sombra son instantáneos, sin transición; el relleno no cambia (CL-003-5).
 - **CA-003-02 Soltar antes de tiempo**
   - **Dado** que el relleno está avanzando
   - **Cuando** el usuario suelta, arrastra el dedo fuera del botón o la app pasa a segundo plano antes de 1,2 s
