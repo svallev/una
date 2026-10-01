@@ -1,6 +1,6 @@
 # Spec 013: Deuda de accesibilidad del código (hallazgos de la 012)
 
-- **Estado:** Borrador (2026-10-01). Revisada por `spec-reviewer` el 2026-10-01, con los hallazgos aplicados (§11)
+- **Estado:** **Aprobada** por el propietario el 2026-10-01 (con el ADR-0020 aceptado y las enmiendas de abajo ya aplicadas). Revisada por `spec-reviewer` el 2026-10-01, con los hallazgos aplicados (§11)
 - **Fase:** F5 (endurecimiento). Es la primera spec del troceado acordado con el propietario el 2026-10-01 (`docs/PLAN.md`, "Troceado de F5"):
   - 013 deuda de accesibilidad del código;
   - 014 seguridad y puerta de publicación;
@@ -15,13 +15,13 @@
   - con "reducir movimiento", el hundido instantáneo (CA-013-03, DEV-50).
 
   La pantalla temporal de la 012 sigue siendo DEV-49.
-- **Decisiones y ADR relacionados:** decisiones del propietario del 2026-10-01 (§9); **ADR-0020** (Propuesto: voz del sistema en anuncios, acciones y títulos de hojas, excepción a P6); CA-010-10; DEV-49 y DEV-50 (nueva).
+- **Decisiones y ADR relacionados:** decisiones del propietario del 2026-10-01 (§9); **ADR-0020** (Aceptado: voz del sistema en anuncios, acciones y títulos de hojas, excepción a P6); CA-010-10; DEV-49 y DEV-50 (nueva).
 - **Dependencias:**
   - 012 (Implementada parcialmente; esta spec corrige parte de sus hallazgos) y 010;
   - por los botones que se hunden (CA-013-03): 001, 002 (hoja "¿Dónde la pones?"), 003 (botón de completar) y 005;
   - 006 (orden del lector del listado).
 - **Origen:** hallazgos de `a11y-reviewer` en el cierre de la 012 (`docs/PLAN.md`, "Hallazgos de la 012 para la auditoría de F5"): 012-A-M3, B2, B3, B4, B5 y B6.
-- **Enmiendas a otras specs y documentos (se aplican al aprobar esta):**
+- **Enmiendas a otras specs y documentos (aplicadas al aprobarla, 2026-10-01):**
   - **012:**
     - CA-012-03: el nombre de "Bibliotecas de Android" ya no va "tal cual".
     - CA-012-11: el orden del lector queda explícito, con el aviso después de las opciones.
@@ -168,8 +168,7 @@ Clave nueva (camelCase; se añade con `/strings-add`):
 
 - **D-013-1 (012-A-B3, botón):** "Volver" y "Cerrar" se quedan **los últimos** para el lector, como en el listado (spec 006), por coherencia en toda la app; además, el atrás del sistema llega siempre. Solo se corrige la parada sin nombre (CA-013-04).
 - **D-013-2 (012-A-B2 y CA-010-10):** los anuncios, los nombres de las acciones del lector y los títulos de las hojas **se quedan con la voz del sistema** cuando el sistema está en un idioma que la app no tiene (`ca`, `gl`, `eu`, `fr`…).
-  - Es una excepción a P6 (WCAG 3.1.2). Se formaliza en el **ADR-0020** (Propuesto), con su mitigación y su criterio de revisión.
-  - Al aceptarlo, se añade su línea a las excepciones de P6.
+  - Es una excepción a P6 (WCAG 3.1.2). Se formaliza en el **ADR-0020** (Aceptado, 2026-10-01), con su mitigación y su criterio de revisión; su línea está en las excepciones de P6 (constitución 1.5).
   - Con el **primer** idioma del sistema en español o en inglés no hay diferencia: la voz del sistema es la de la app. Con una lista como `fr-FR, es-ES`, la app sale en español y la voz es la francesa (CA-010-02): también entra en la excepción.
 - **D-013-3 (012-A-B5 y B6):** el mínimo de P6 sigue siendo **44** (dp en Android, pt en iOS; WCAG 2.5.8 pide 24). Donde una spec pide 48, se mantiene: el listado, CL-006-10.
   - No se adopta la guía de 48 dp de Android en los tests. Los tests siguen comprobando ≥ 44, y el contraste lo sigue garantizando `validate-tokens`.

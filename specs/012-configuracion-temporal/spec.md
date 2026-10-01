@@ -47,7 +47,7 @@ Que la app tenga, mientras no exista la Configuración completa, **un sitio dond
     - cada **fuente empaquetada**;
     - y cada **biblioteca nativa de terceros** que va en el paquete de la app (`.so` de cada arquitectura, p. ej. PDFium y SQLite)
     tiene su licencia en la lista. Un test enumera cada una de esas tres clases y falla si alguna no aparece.
-  - **El motor de Flutter y las bibliotecas de Android** *(propietario, 2026-09-30, P-012-3)*: el motor ya viene en la lista de Flutter; las bibliotecas de Android (AndroidX, Kotlin) no, y **entran** como una entrada propia, "Bibliotecas de Android (AndroidX, Kotlin)", con su licencia y la lista de bibliotecas. El test también la comprueba.
+  - **El motor de Flutter y las bibliotecas de Android** *(propietario, 2026-09-30, P-012-3)*: el motor ya viene en la lista de Flutter; las bibliotecas de Android (AndroidX, Kotlin) no, y **entran** como una entrada propia, "Bibliotecas de Android (AndroidX, Kotlin)", con su licencia y la lista de bibliotecas. El test también la comprueba. *(Enmienda 2026-10-01, spec 013, CA-013-01: el nombre ya no va "tal cual": se traduce, "Android libraries (AndroidX, Kotlin)" en inglés, y es texto de la app.)*
   - **Paquetes de desarrollo** *(propietario, 2026-09-30)*: la lista de Flutter trae también algunos que no van en la app; **se muestran tal cual** (sobra algo, no falta nada). El test solo exige los de *release*.
   - Los textos de las licencias son **contenido de terceros, en inglés** (como el texto del usuario y las páginas web en CA-010-07: fuera de P7); el resto de la pantalla, en el idioma de la app.
   - **Los textos de licencia no llevan enlaces activos**: las direcciones que contienen son texto plano (P4, ADR-0018).
@@ -96,11 +96,13 @@ Que la app tenga, mientras no exista la Configuración completa, **un sitio dond
     - cada fila de la lista dice el nombre del elemento y cuántas licencias tiene (p. ej., "pdfrx, 1 licencia");
     - el texto de una licencia se divide en **párrafos** navegables, con el título de la licencia como encabezado;
     - el foco al volver es el de la tabla;
-    - el aviso de "No hay ninguna app…" se anuncia una vez.
+    - el aviso de "No hay ninguna app…" se anuncia una vez;
+    - *(enmienda 2026-10-01, spec 013, CA-013-05)* el orden del lector es título → opciones, filas o texto → aviso (si lo hay) → "Cerrar" o "Volver", lo último; ningún nodo enfocable queda sin nombre (CA-013-04).
 - **CA-012-12 Teclado y conmutadores**
   - **Dado** teclado físico o Switch Access
   - **Cuando** se recorre y se activa
   - **Entonces** el orden de foco es cerrar (o Volver) → título → opciones o filas; se ve el anillo de foco; Intro activa; Escape sube un nivel; todo se puede hacer sin arrastrar ni pellizcar.
+  - *(Enmienda 2026-10-01, spec 013, CA-013-05:)* ese orden es el del **teclado**. Switch Access sigue el orden del lector (CA-012-11), con "Cerrar" o "Volver" al final.
 - **CA-012-13 Texto grande y movimiento**
   - **Dado** el texto del sistema al 200 %, en móviles de 360 dp de ancho, **en español y en inglés** (CA-010-12), y "reducir movimiento" activo o no
   - **Cuando** se muestran los tres niveles y el aviso de error

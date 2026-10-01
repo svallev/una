@@ -69,7 +69,7 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
   - **Entonces** lo lee con la voz del idioma de la app: español si el sistema está en `es-*` y, si no, inglés.
   - **Cómo se cumple:** `appFrame` envuelve la app en `Semantics(localeForSubtree: idioma de la app)` (decisión del propietario, 2026-09-30), para que TalkBack use la voz del idioma de la app y no la del sistema (p. ej. sistema en catalán o francés).
   - **Verificación:** un test comprueba que los nodos de la tarea, el menú y el campo del editor llevan el idioma de la app y que ninguno lleva otro; la voz se comprueba a mano (§6).
-  - Excepción aceptada en la beta: los anuncios, los nombres de las acciones y los títulos de las hojas se oyen con la voz del sistema. Se revisa en la auditoría de accesibilidad de F5.
+  - ~~Excepción aceptada en la beta: los anuncios, los nombres de las acciones y los títulos de las hojas se oyen con la voz del sistema. Se revisa en la auditoría de accesibilidad de F5.~~ **Enmienda 2026-10-01 (spec 013, D-013-2):** excepción **aceptada** (ADR-0020, excepción a P6): los anuncios, los nombres de las acciones y los títulos de las hojas se oyen con la voz del sistema cuando su primer idioma no es español ni inglés. Se revisa con los criterios del ADR-0020.
 - **CA-010-11 Orden de las acciones tras el cambio**
   - **Dado** CA-010-06
   - **Cuando** se abren las acciones de TalkBack en la tarea actual (solo texto, con imagen, con PDF y con web) y en una fila del listado
@@ -84,7 +84,7 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
 | ID | Situación | Comportamiento esperado |
 |---|---|---|
 | CL-010-1 | Se cambia el idioma del sistema con la app abierta | Ver CA-010-06 |
-| CL-010-2 | Sistema en un idioma que la app no admite (p. ej. `fr` o `de`) y **sin español ni inglés en su lista** | App en inglés, también la voz de la interfaz y del contenido del usuario (CA-010-10). Los selectores del sistema (fotos, archivos) siguen en el idioma del sistema, y los anuncios se oyen con su voz: aceptado en la beta |
+| CL-010-2 | Sistema en un idioma que la app no admite (p. ej. `fr` o `de`) y **sin español ni inglés en su lista** | App en inglés, también la voz de la interfaz y del contenido del usuario (CA-010-10). Los selectores del sistema (fotos, archivos) siguen en el idioma del sistema, y los anuncios se oyen con su voz: aceptado (ADR-0020; enmienda 2026-10-01, spec 013) |
 | CL-010-3 | Variantes regionales (`es-MX`, `en-GB`) | Textos y formatos de español o inglés sin variante. TalkBack puede usar la voz por defecto del idioma (p. ej. la de España) en vez de la regional: aceptado en la beta. Se comprueba una vez en el emulador |
 | CL-010-4 | Sistema en un idioma de derecha a izquierda (árabe, hebreo) | App en inglés, de izquierda a derecha; al cambiarlo con la app abierta, se comporta como en CA-010-06 |
 | CL-010-5 | El sistema cierra la app mientras el usuario está en Ajustes | Arranque normal, ya en el idioma nuevo |
@@ -118,7 +118,7 @@ Ninguno nuevo. Se reutilizan los que ya existen, incluido "Configuración y perf
   - la versión (las licencias de código abierto y la política de privacidad ya están en la pantalla temporal de la spec 012).
   Los borradores de esos textos están en el historial de git de este archivo.
 - **Ocultar el contenido en la miniatura de "Recientes"**: pasa a F5 (antes "[Pendiente, spec 010]" en CL-007-11, CL-008-13 y CL-009-10). **[Actualizado 2026-09-30]** Lo resuelve la spec 011 (`specs/011-ocultar-recientes/`, ADR-0019), **Implementada parcialmente** (falta PD-10 / T-011-09). No añade textos ni ajustes, así que esta spec no cambia.
-- Anuncios con la marca de idioma de la app (CA-010-10, excepción): se revisan en F5.
+- Anuncios con la marca de idioma de la app (CA-010-10, excepción): ~~se revisan en F5~~ revisados en la spec 013: se quedan con la voz del sistema (ADR-0020, 2026-10-01).
 - Idioma por app de Android 13+.
 - iOS (D17, fase F-iOS).
 - Tema y paletas, notificaciones (Bloque 4); páginas legales y ayuda, exportar e importar (Bloque 5); biometría (D11).
@@ -130,7 +130,7 @@ Ninguna. Decisiones del propietario del 2026-09-29:
 - sin pantalla de Configuración **completa** en la beta (enmienda 2026-09-30: hay una temporal, spec 012, solo con licencias y política de privacidad);
 - solo español e inglés, elegidos por el sistema;
 - el texto del usuario se lee con la voz del idioma de la app (CA-010-10);
-- los anuncios con la voz del sistema se aceptan y se revisan en F5;
+- los anuncios con la voz del sistema se aceptan ~~y se revisan en F5~~ (revisado el 2026-10-01: ADR-0020, spec 013);
 - "Recientes" pasa a F5 y el ajuste de pantalla encendida, a la spec futura.
 
 ## Anexo: notas para `plan.md` (no normativas)
