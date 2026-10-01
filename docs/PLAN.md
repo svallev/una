@@ -89,6 +89,8 @@ Registrados en el cierre de la spec 012 (2026-09-30). Los corregidos (M1, M2 y B
 
 Las casillas de comprobación a mano de estos hallazgos y de T-012-09 están en `specs/012-configuracion-temporal/dispositivo.md` §8.
 
+**Troceado de F5 (propietario, 2026-10-01):** 013 deuda de accesibilidad del código → 014 seguridad y puerta de publicación → 015 modo oscuro y arranque → 016 auditoría en dispositivo (cierra la 011 y la 012, con PD-10) → 017 privacidad y ficha de tienda (PD-2, PD-3, PD-9). TD-1, PR `chore` aparte. **Spec 013 en Borrador** (`specs/013-deuda-accesibilidad/spec.md`): corrige 012-A-M3, B4 y la parte de código de B3; el propietario **acepta** B2 (voz del sistema en anuncios, acciones y títulos de hojas), B5 y B6 (objetivos de 44) y mantener "Volver" el último para el lector (2026-10-01; se aplica al aprobar la 013). B2 se formaliza en el **ADR-0020** (Propuesto; excepción a P6). Con "reducir movimiento", el hundido de los botones pasa a instantáneo (DEV-50) y el aviso de "No hay ninguna app…" se lee después de las opciones. **Para la 017:** **[Suposición]** el informe previo al lanzamiento de Google Play puede avisar de objetivos táctiles de menos de 48 dp (se aceptan 44, D-013-3); no bloquea.
+
 **Camino crítico:** F0 → F1 → F2 → F3 → F4 → F5 → F6 (→ F-iOS si PD-7). **Tareas con plazo propio que conviene adelantar:** la cuenta de Google Play y el reclutamiento de 12 testers (el reloj de 14 días) y la compra del dominio (bloquea la primera subida).
 
 ## 4. Orden de implementación dentro de F3/F4 y motivo
@@ -113,6 +115,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R-05 | ~~Captura de página completa poco fiable en Android~~ **Evitado (ADR-0016): sin captura** | — | — | — | Cerrado |
 | R-20 | Usuarios que esperan ver la tarea web sin conexión (ADR-0016) | Media | Baja | Aviso claro sin conexión; la imagen y el PDF como alternativa sin cobertura | Feedback de la beta (F6) |
 | R-21 | Una actualización de `webview_flutter_android` rompe el envoltorio de su `WebViewClient` (ADR-0017) y un fallo del proceso de la página vuelve a cerrar la app, o deja de llegar antes el aviso de redirección del servidor (`isRedirect`, T-009-12, 2026-09-29) y la carga inicial sigue navegaciones de la página | Baja | Alta | Versión fijada; se comprueba que el envoltorio está puesto cada vez que se aplica; se repite la prueba de `chrome://crash`, de los callbacks y de las redirecciones (integración web) | Cada actualización del paquete |
+| R-22 | Android retira los anuncios del lector (obsoletos desde la API 36; ADR-0020) y dejan de oírse los avisos que la app anuncia (p. ej. CA-003-07, CA-012-15) | Baja | Media | Versión de Flutter fijada; si se anuncia la retirada, sustituir los anuncios por regiones vivas | Cada actualización de Flutter |
 | R-06 | Migraciones de datos que rompen datos reales tras publicar | Baja | Alta | Tests de migración obligatorios desde la v1; *fixtures* de BD reales anonimizadas | Cada cambio de esquema |
 | R-07 | **Google Play: 12 testers durante 14 días** retrasa la v1.0 | Alta | Media | Crear la cuenta en F0–F2 y reclutar testers en paralelo | F2 |
 | R-08 | Bundle ID sin dominio definitivo | Media | Alta (permanente) | Comprar el dominio en F0; marcador solo en desarrollo; prohibido subir a una tienda con el marcador | F0 |
@@ -146,7 +149,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R12 estado vacío ("Todo hecho.") | 003, 004 | CA-003-05, CA-004-07/08 |
 | R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-04 a 16 |
 | R14 histórico | 003 | CA-003-06 — **retirada por el ADR-0012 (2026-09-26)** |
-| R15 idioma | 010 (y P7 en todas) | CA-010-01, 02, 04–07 y 10–12 |
+| R15 idioma | 010 (y P7 en todas); 013 | CA-010-01, 02, 04–07 y 10–12; CA-013-01 y 02 |
 
 ## 7. Decisiones pendientes
 

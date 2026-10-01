@@ -1,6 +1,6 @@
 # Spec 012: Pantalla temporal de "Configuración y perfil" (licencias y privacidad)
 
-- **Estado:** **Implementada parcialmente** (2026-09-30: faltan las casillas de dispositivo de `dispositivo.md` §8 y los 3 *goldens* por generar en CI; ver `tasks.md` y §10). Aprobada por el propietario el 2026-09-30. Revisada por `spec-reviewer` el 2026-09-30 con los hallazgos aplicados
+- **Estado:** **Implementada parcialmente** (2026-09-30: faltan las casillas de dispositivo de `dispositivo.md` §8, que pasan a la auditoría en dispositivo de F5, spec 016; los 3 *goldens* se generaron en CI y se subieron el 2026-09-30, `f805c31`; fusionada en `main` el 2026-09-30, PR svallev/una#22; ver `tasks.md` y §10). Aprobada por el propietario el 2026-09-30. Revisada por `spec-reviewer` el 2026-09-30 con los hallazgos aplicados
 - **Alcance (propietario, 2026-09-30):** pantalla **temporal**, "para que esté en algún sitio". Solo dos opciones: las licencias de código abierto y la política de privacidad. La Configuración completa llegará en una fase posterior, con diseño del propietario y alguna funcionalidad nueva. **Esto cambia el alcance de la beta** ("sin pantalla de Configuración", 2026-09-29): solo en lo que aquí se dice
 - **Reglas de producto:** R15 solo en CA-012-07 (idioma). Cubre parte de D13 (aplazada) y el requisito de publicación de las licencias (`docs/PLAN.md`, F5). Desarrolla P4 (privacidad), P6 y P7
 - **Pantallas del prototipo:** **ninguna: sin diseño** (`docs/design/screen-map.md`). Se hace con los tokens y componentes existentes y se registra como DEV-49 (temporal)
@@ -187,7 +187,7 @@ Claves nuevas (camelCase; se añaden con `/strings-add`). Se reutilizan `menuSet
 
 ## 10. Verificación: CA → prueba (cierre, T-012-11)
 
-Rutas relativas a `app/` salvo las de `tools/`. Entorno: `flutter test` en local (1423 verdes), salvo lo que dice otra cosa. **Dispositivo** = `specs/012-configuracion-temporal/dispositivo.md` (emulador de API 37; §8 son las casillas **[Pendiente]**). Los *goldens* (`test/goldens/settings_golden_test.dart`) están **sin subir**: se generan en CI con la etiqueta `actualizar-goldens` **[Pendiente]**.
+Rutas relativas a `app/` salvo las de `tools/`. Entorno: `flutter test` en local (1423 verdes), salvo lo que dice otra cosa. **Dispositivo** = `specs/012-configuracion-temporal/dispositivo.md` (emulador de API 37; §8 son las casillas **[Pendiente]**). Los *goldens* (`test/goldens/settings_golden_test.dart`) se generaron en CI con la etiqueta `actualizar-goldens` y se subieron el 2026-09-30 (`f805c31`) **[Hecho]**; las marcas "*golden* … **[Pendiente]**" de la tabla quedan superadas.
 
 | CA | Prueba automática | Dispositivo / otra | Estado |
 |---|---|---|---|
