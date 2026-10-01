@@ -336,24 +336,25 @@ void main() {
       },
     );
 
-    testWidgets('CA-012-11: el error se lee tras el título y antes de Volver', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      await _openLicenses(
-        tester,
-        _Source(null)..error = StateError('boom'),
-        screenReader: true,
-      );
-      final order = _readingOrder(tester);
-      expect(order.sublist(order.length - 4), [
-        _title,
-        _error,
-        'Reintentar',
-        'Volver',
-      ]);
-      handle.dispose();
-    });
+    testWidgets(
+      'CA-012-11 / CA-013-05: el error se lee tras el título y antes de Volver',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await _openLicenses(
+          tester,
+          _Source(null)..error = StateError('boom'),
+          screenReader: true,
+        );
+        final order = _readingOrder(tester);
+        expect(order.sublist(order.length - 4), [
+          _title,
+          _error,
+          'Reintentar',
+          'Volver',
+        ]);
+        handle.dispose();
+      },
+    );
 
     testWidgets(
       'CA-012-16: no se lee ninguna licencia hasta abrir el nivel 2',
@@ -391,7 +392,7 @@ void main() {
     ];
 
     testWidgets(
-      'CA-012-11: cada fila es un botón "nombre, N licencias" (singular y plural), tras el título y antes de Volver',
+      'CA-012-11 / CA-013-05: cada fila es un botón "nombre, N licencias" (singular y plural), tras el título y antes de Volver',
       (tester) async {
         final handle = tester.ensureSemantics();
         await _openLicenses(tester, _Source(packages), screenReader: true);
@@ -411,7 +412,9 @@ void main() {
       },
     );
 
-    testWidgets('CA-012-11: en inglés, todo en inglés', (tester) async {
+    testWidgets('CA-012-11 / CA-013-05: en inglés, todo en inglés', (
+      tester,
+    ) async {
       final handle = tester.ensureSemantics();
       await _openLicenses(
         tester,
@@ -588,7 +591,7 @@ void main() {
 
   group('Nivel 3: el texto de una licencia (CA-012-03, CA-012-11)', () {
     testWidgets(
-      'CA-012-02 / CA-012-11: el título es el nombre del elemento, encabezado y con el foco al llegar; con una sola licencia no hay más encabezado',
+      'CA-012-02 / CA-012-11 / CA-013-05: el título es el nombre del elemento, encabezado y con el foco al llegar; con una sola licencia no hay más encabezado',
       (tester) async {
         final handle = tester.ensureSemantics();
         await _openLicenses(
@@ -635,7 +638,7 @@ void main() {
     );
 
     testWidgets(
-      'CA-012-03 / CA-012-11: con varias licencias, un encabezado "Licencia n de total" por texto, todas seguidas',
+      'CA-012-03 / CA-012-11 / CA-013-05: con varias licencias, un encabezado "Licencia n de total" por texto, todas seguidas',
       (tester) async {
         final handle = tester.ensureSemantics();
         await _openLicenses(
