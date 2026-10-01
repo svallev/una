@@ -79,13 +79,20 @@ Registrados en el cierre de la spec 012 (2026-09-30). Los corregidos (M1, M2 y B
 
 **`a11y-reviewer` (0 críticos, 0 altos; medios y bajos sin corregir):**
 
-- **012-A-M3** (medio) "Bibliotecas de Android (AndroidX, Kotlin)" sale fijo en español y sin marca de idioma con la app en inglés (WCAG 3.1.2, P7). **[Pendiente]** clave ARB o `localeForSubtree` (la spec pide ese nombre tal cual). **→ spec 013 (CA-013-01), por implementar.**
+- **012-A-M3** (medio) "Bibliotecas de Android (AndroidX, Kotlin)" sale fijo en español y sin marca de idioma con la app en inglés (WCAG 3.1.2, P7). **[Pendiente]** clave ARB o `localeForSubtree` (la spec pide ese nombre tal cual). **Corregido** en la spec 013 (CA-013-01, 2026-10-01).
 - **012-A-B2** Los anuncios no llevan `locale`: con el sistema en `ca` los dice la voz catalana y con gl/eu la del sistema. **[Pendiente]** **Aceptado** (propietario, 2026-10-01; ADR-0020).
-- **012-A-B3** "Volver" es el último en el orden de lector y hay un `Focus` sin etiqueta en `license_detail_screen.dart:148-152`. **[Pendiente]** mirarlo con TalkBack. **→ spec 013:** el orden se mantiene (D-013-1) y se corrige el nodo sin nombre (CA-013-04), por implementar.
-- **012-A-B4** La animación de pulsación de `BrutalButton` y `SquareIconButton` ignora "reducir movimiento" (previa a la 012). **[Pendiente]** **→ spec 013 (CA-013-03, DEV-50), por implementar.**
+- **012-A-B3** "Volver" es el último en el orden de lector y hay un `Focus` sin etiqueta en `license_detail_screen.dart:148-152`. **[Pendiente]** mirarlo con TalkBack. **→ spec 013:** el orden se mantiene (D-013-1) y se corrige el nodo sin nombre (CA-013-04). **Corregido** en la spec 013 (2026-10-01); el aviso se lee ya después de las opciones (CA-013-05).
+- **012-A-B4** La animación de pulsación de `BrutalButton` y `SquareIconButton` ignora "reducir movimiento" (previa a la 012). **[Pendiente]** **Corregido** en la spec 013 (CA-013-03, DEV-50, 2026-10-01).
 - **012-A-B5** `UnaLinkButton` mide 44, Android pide 48 (WCAG 2.5.8 se cumple; guía de Material). **[Pendiente]** **Aceptado** (propietario, 2026-10-01; D-013-3: se queda en 44).
 - **012-A-B6** Los tests no usan las guías `androidTapTarget` ni `textContrast`; el contraste lo garantiza `validate-tokens`. **[Pendiente]** **Aceptado** (propietario, 2026-10-01; D-013-3).
 - **012-T-TD1** La 012 añade 4 `height: 1.5` escritos a mano (`licenses_screen.dart`, `license_detail_screen.dart`): suben a 23 los de TD-1.
+
+**Hallazgos de la 013 (cierre, 2026-10-01; `a11y-reviewer`: 0 altos; `security-reviewer`: sin hallazgos). F-1 y F-2 del emulador, ya corregidos.** Sin corregir, para la 016 o una spec aparte:
+
+- **013-A-M1** (medio, previo a la 013) Las dos opciones de "¿Dónde la pones?" (`placement_sheet.dart`, `_Option`) son un `GestureDetector` sin `Focus`: con teclado físico no se llega a ellas ni muestran anillo (WCAG 2.1.1 y 2.4.7). TalkBack y Switch Access sí funcionan. **[Pendiente]** envolverlas como `BrutalButton` (`FocusableActionDetector` + `FocusRing`), con un solo nodo semántico.
+- **013-A-B1** `_focusedName()` (`licenses_screen.dart`) solo ve el foco de **teclado**: si el foco de TalkBack está en una fila y cambia de sitio al cambiar el idioma, no se recoloca. **[Pendiente]** `onDidGainAccessibilityFocus` en la fila, o documentarlo en la 016.
+- **013-A-B2** (de la 012) Con error en el nivel 2 el lector dice el error y luego "Reintentar, <mismo error>" (el `hint` repite el texto). **[Pendiente]**
+- **013-A-B3** Nivel 3 con TalkBack y teclado físico: el área de texto no tiene nodo propio (`includeSemantics: false`, aceptado en el plan §7); anillo sin ver en el emulador. **[Pendiente]** comprobarlo en la 016.
 
 Las casillas de comprobación a mano de estos hallazgos y de T-012-09 están en `specs/012-configuracion-temporal/dispositivo.md` §8.
 

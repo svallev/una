@@ -1,6 +1,6 @@
 # Tareas — Spec 013: Deuda de accesibilidad del código
 
-**Siguiente:** **T-013-10** (cierre); T-013-01 a T-013-09 (con 08b, 08c y 08d) hechas. Decisión del propietario (2026-10-01): arreglar F-1 y intentar F-2. Plan **Aprobado** (2026-10-01). P-013-7 resuelta: **sí**.
+**Siguiente:** nada en esta spec: T-013-01 a T-013-10 hechas (spec **Implementada parcialmente**, casillas de dispositivo en la 016). Falta que el propietario confirme el push y la PR (`pr-description.md`). Decisión del propietario (2026-10-01): arreglar F-1 y intentar F-2. Plan **Aprobado** (2026-10-01). P-013-7 resuelta: **sí**.
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden** (nada en paralelo). Rama `feat/013-deuda-accesibilidad` (ya creada). Cada tarea termina con `dart format lib test`, `flutter analyze --fatal-infos` y `flutter test` en verde y un commit `feat(013): …` (o `test`/`docs`/`chore`). FVM no está instalado: `flutter` y `dart` del sistema. Emulador de API 37; nunca el Xiaomi sin permiso del propietario. Los tests que miden empiezan con `setUpAll(loadAppFonts)`.
 
@@ -23,9 +23,9 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde (los de dispositivo: casilla en la 016).
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada**.
+- [x] Todos los CA de la spec tienen test en verde (los de dispositivo: casilla en la 016).
+- [x] Definition of Done (`specs/constitution.md`) completa (CI y *goldens* en la PR).
+- [x] Spec marcada como **Implementada parcialmente** (faltan las casillas de dispositivo, spec 016).
 
 ## Estado
 
@@ -44,3 +44,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 | T-013-08c | Hecha: `_reveal` aplica `keepVisibleAtEnd` y luego `keepVisibleAtStart` (la primera solo desplaza hacia delante; por eso una fila que **sube** y queda sobre la ventana, aún construida, no se movía). 2 tests nuevos en `locale_change_test.dart` (es→en, fila sobre la ventana: en el cambio y al volver del nivel 3) fallaban antes (fila a 45 < 68); 1530 tests, format y analyze limpios. Emulador API 37 (release, 196 filas): ES→EN con el nivel 2 y con el 3 abierto + Volver: la fila queda a la vista y con el foco (Intro abre su nivel 3). `dispositivo.md` lo actualiza T-013-08d. | (este commit) |
 | T-013-08d | Hecha: APK *release* de `1c4d3ae` en el emulador API 37 (nunca el Xiaomi). F-1: con las tres escalas a 0, 0,4 s y 1 s no completan, 1,5 s sí y la enhorabuena se ve; F-2: ES→EN con el nivel 2 (fila ≈ 6 posiciones más arriba) y con el 3 + Volver: la fila queda a la vista y con el foco. Ajustes restaurados. `dispositivo.md` con el resultado final. | (este commit) |
 | T-013-09 | Hecha: `architecture.md` (clave interna, nombre y orden que se ven, foco por nombre y `_reveal`, `pressDuration`, `AnimationBehavior.preserve`, nodos sin nombre, `SettingsOrder`), `testing.md` (simular "quitar animaciones" con `accessibilityFeaturesTestValue`, `semantics_stops`, cambio de idioma), `CLAUDE.md`, `PLAN.md` (casillas de la 016) y aviso en `012/dispositivo.md` §8. Solo documentación (sin tests nuevos). Glosario sin cambios: la fila ya estaba al día; las enmiendas de la cabecera de la spec, comprobadas. | (este commit) |
+| T-013-10 | Hecha: tabla CA → prueba (spec §10), `a11y-reviewer` (0 altos; 1 medio previo y 3 bajos registrados en `PLAN.md`) y `security-reviewer` (sin hallazgos); `/i18n-check`, `/tokens-validate`, `/security-check` limpios; 1530 tests, format y analyze limpios; `PLAN.md` con M3, B3 y B4 corregidos. Spec **Implementada parcialmente**; `pr-description.md` listo, sin push ni PR. | (este commit) |

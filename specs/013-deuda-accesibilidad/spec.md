@@ -1,6 +1,6 @@
 # Spec 013: Deuda de accesibilidad del código (hallazgos de la 012)
 
-- **Estado:** **Aprobada** por el propietario el 2026-10-01 (con el ADR-0020 aceptado y las enmiendas de abajo ya aplicadas). Revisada por `spec-reviewer` el 2026-10-01, con los hallazgos aplicados (§11)
+- **Estado:** **Implementada parcialmente** (2026-10-01: T-013-01 a T-013-10 hechas, 1530 tests en verde y verificada en el emulador de API 37; faltan las casillas de dispositivo de `dispositivo.md` §6, que pasan a la auditoría de la spec 016; ver §10). Aprobada por el propietario el 2026-10-01 (con el ADR-0020 aceptado y las enmiendas de abajo ya aplicadas). Revisada por `spec-reviewer` el 2026-10-01, con los hallazgos aplicados (§11)
 - **Fase:** F5 (endurecimiento). Es la primera spec del troceado acordado con el propietario el 2026-10-01 (`docs/PLAN.md`, "Troceado de F5"):
   - 013 deuda de accesibilidad del código;
   - 014 seguridad y puerta de publicación;
@@ -180,7 +180,18 @@ Clave nueva (camelCase; se añade con `/strings-add`):
 
 ## 10. Verificación: CA → prueba
 
-Se rellena al cerrar la implementación, como en la 012 §10.
+Cierre de T-013-10 (2026-10-01). Rutas relativas a `app/` salvo las de `tools/`. Entorno: `flutter test` en local, **1530 en verde**, `dart format` y `flutter analyze --fatal-infos` limpios. **Dispositivo** = `specs/013-deuda-accesibilidad/dispositivo.md` (emulador `Pixel_6a`, API 37, APK *release* de `1c4d3ae`; nunca el Xiaomi). Lo que no se puede ver en el emulador pasa a la 016 (`docs/PLAN.md`, "Troceado de F5").
+
+| CA | Prueba automática | Dispositivo / otra | Estado |
+|---|---|---|---|
+| 01 Nombre traducido | `test/l10n/spec_013_strings_test.dart`; `test/domain/license_package_test.dart` (clave y comparador); `test/features/settings/license_names_test.dart`; `test/app/bundled_licenses_test.dart` (la entrada sigue registrada con sus dos textos); `test/data/flutter_license_source_test.dart`; `licenses_screen_test.dart` (fila, etiqueta "nombre, N licencias", título del nivel 3, orden alfabético, locale del nodo, `ca`→ES y `gl`/`eu`→EN, 200 % a 360 dp) | Dispositivo §3 (la entrada en su sitio alfabético en ES y EN); `tools/check-licenses.sh` sobre el APK *release* | Hecho |
+| 02 Cambio de idioma | `test/app/locale_change_test.dart` (lista de 60, ES↔EN: mismo `SemanticsNode.id`, foco de teclado, fila a la vista —incluida la que **sube** por encima de la ventana—, nivel 3 abierto con el desplazamiento conservado, foco al volver, giro de pantalla); `licenses_screen_test.dart` | Dispositivo §3 (lista real de 196: la fila baja y sube, en el nivel 2 y al volver del 3) | Hecho; foco real de TalkBack **[Pendiente]** 016 |
+| 03 Sin movimiento | `test/ui/press_motion_test.dart` (pulsar, soltar, cancelar, teclado, deshabilitado↔habilitado, cambio del ajuste en caliente, 80 ms normales, `BrutalButton.icon` y `ghost`, `_Option`, completar; relleno a 1,2 s con `accessibilityFeaturesTestValue`); `test/features/complete/completion_flow_test.dart` (enhorabuena a su duración) | Dispositivo §2 (fotograma a fotograma: 1 fotograma en los cuatro controles; relleno intacto con las tres escalas a 0) | Hecho; a ojo en el móvil **[Pendiente]** 016 |
+| 04 Sin paradas sin nombre | `test/features/settings/semantics_stops_test.dart` y `test/support/semantics_stops.dart` (niveles 1-3, con y sin aviso, cargando, error y lista; ES y EN; guía de objetivos; teclado); `test/ui/brutal_button_sites_test.dart` (un solo nodo en borrar, enlace, "+", "Nueva tarea", "Reintentar") | Dispositivo §4 y §5 (`uiautomator dump` sin nodos enfocables sin etiqueta; foco inicial en "Cancelar") | Hecho; "Reintentar" y el área de texto del nivel 3 con teclado físico **[Pendiente]** 016 |
+| 05 Orden | `settings_screen_test.dart` y `licenses_screen_test.dart` (título → contenido → aviso → Cerrar/Volver en ES y EN; aviso único y sin mover el foco; teclado igual, CA-012-12) | Dispositivo §5 (orden del árbol de los tres niveles) | Hecho; Switch Access y anuncio único a oído **[Pendiente]** 016 |
+| 06 Nada más cambia | `test/drift/app/migration_test.dart`; `test/app/startup_licenses_test.dart`; *goldens* (`test/goldens/settings_golden_test.dart`, solo CI) | Dispositivo §1: `tools/check-android-permissions.sh release` (solo `INTERNET`), `tools/check-licenses.sh`, `node tools/validate-tokens.mjs` (28 combinaciones AA), `git diff main...HEAD` sin `pubspec.*`, `drift_schemas/`, manifiestos ni `build.gradle` | Hecho; *goldens* en CI **[Pendiente]** |
+
+**Revisiones de cierre (2026-10-01):** `security-reviewer`: sin hallazgos. `a11y-reviewer`: ver §11. `/i18n-check`: las dos ARB con las mismas claves, `licensesAndroidLibraries` con descripción y sin literales nuevos en `lib/`. `/tokens-validate`: ✅ y ningún valor suelto en el diff (las duraciones literales de `celebration_overlay.dart` y `licenses_screen.dart` y la etiqueta de `placement_sheet.dart` ya existían antes de la 013).
 
 ## 11. Revisión
 
@@ -201,6 +212,9 @@ Se rellena al cerrar la implementación, como en la 012 §10.
 Segunda pasada (2026-10-01): **lista para aprobar**, sin altos ni medios. Los 8 bajos están aplicados:
 - en el ADR-0020: API obsoleta bien atribuida, número exacto de anuncios, "primer idioma del sistema", riesgo R-22 y la línea de P6 redactada;
 - en la spec: la sombra en la enmienda de la 003, la casilla de foco de `dispositivo.md` y cómo se verifican CA-013-02 y CA-013-04.
+
+
+Cierre (2026-10-01): `security-reviewer` sin hallazgos. `a11y-reviewer`: **0 altos**; el único alto de la rama, F-1 (el relleno de completar con "reducir movimiento"), ya estaba corregido (T-013-08b), igual que F-2 (T-013-08c). Quedan sin corregir, registrados en `docs/PLAN.md` ("Hallazgos de la 012 para la auditoría de F5", 013-A-M1, B1, B2 y B3): 1 medio previo a la 013 (las opciones de "¿Dónde la pones?" no se alcanzan con teclado físico) y 3 bajos (foco de TalkBack en la lista al cambiar el idioma, texto repetido en "Reintentar", área de texto del nivel 3 con TalkBack y teclado físico).
 
 ## Anexo: notas para `plan.md` (no normativas)
 
