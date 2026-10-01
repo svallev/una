@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../app/theme/tokens.g.dart';
 import '../../ui/focus_ring.dart';
+import '../../ui/press_motion.dart';
 import '../../ui/una_icons.dart';
 
 /// Botón "Pulsa para completar" (spec 003): hay que **mantenerlo** pulsado
@@ -178,7 +179,7 @@ class HoldToCompleteButtonState extends State<HoldToCompleteButton>
           child: FocusRing(
             visible: _focused,
             child: AnimatedContainer(
-              duration: UnaMotion.press,
+              duration: pressDuration(context),
               transform: pressed
                   ? Matrix4.translationValues(4, 4, 0)
                   : Matrix4.identity(),

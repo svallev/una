@@ -1,4 +1,6 @@
 import 'package:app/app/theme/tokens.g.dart';
+import 'package:app/features/complete/hold_to_complete_button.dart';
+import 'package:app/features/editor/placement_sheet.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/press_motion.dart';
 import 'package:app/ui/square_icon_button.dart';
@@ -85,11 +87,12 @@ class _Look {
   String toString() => '($dx, $dy) $shadow $duration';
 }
 
-_Look _look(WidgetTester tester, Finder control) {
-  final animated = find.descendant(
-    of: control,
-    matching: find.byType(AnimatedContainer),
-  );
+_Look _look(WidgetTester tester, Finder control) => _lookAt(
+  tester,
+  find.descendant(of: control, matching: find.byType(AnimatedContainer)),
+);
+
+_Look _lookAt(WidgetTester tester, Finder animated) {
   final duration = tester.widget<AnimatedContainer>(animated).duration;
   final transform = tester.widget<Transform>(
     find.descendant(of: animated, matching: find.byType(Transform)).first,
@@ -291,6 +294,281 @@ void main() {
       );
     });
   }
+
+  group('CA-013-03: opciones de "¿Dónde la pones?"', () {
+    // Dos opciones en la hoja: la primera ("Arriba del todo") y la segunda.
+    Finder option(int i) => find.byType(AnimatedContainer).at(i);
+
+    Future<void> pumpSheet(WidgetTester tester, {required bool reduced}) =>
+        pumpWithApp(
+          tester,
+          const Scaffold(
+            body: PlacementSheet(
+              text: 'Llamar a Marta',
+              color: UnaColors.surface,
+            ),
+          ),
+          disableAnimations: reduced,
+        );
+
+    for (final i in [0, 1]) {
+      testWidgets(
+        'con reducir movimiento la opción $i se hunde al instante, con la sombra, y vuelve al soltar',
+        (tester) async {
+          await pumpSheet(tester, reduced: true);
+          final rest = _lookAt(tester, option(i));
+          expect(rest.dx, 0);
+          expect(rest.shadow, const [UnaShadows.button]);
+
+          final g = await tester.startGesture(tester.getCenter(option(i)));
+          await tester.pump(kPressTimeout);
+          final sunk = _lookAt(tester, option(i));
+          expect(sunk.duration, Duration.zero);
+          expect((sunk.dx, sunk.dy), (4, 4), reason: '$sunk');
+          expect(sunk.shadow, const [UnaShadows.buttonPressed]);
+
+          await g.up();
+          await tester.pump();
+          final back = _lookAt(tester, option(i));
+          expect(back.duration, Duration.zero);
+          expect((back.dx, back.dy), (0, 0), reason: '$back');
+          expect(back.shadow, const [UnaShadows.button]);
+        },
+      );
+    }
+
+    testWidgets(
+      'CL-013-5: con reducir movimiento vuelve al instante al cancelar (el dedo sale)',
+      (tester) async {
+        await pumpSheet(tester, reduced: true);
+        final g = await tester.startGesture(tester.getCenter(option(0)));
+        await tester.pump(kPressTimeout);
+        expect(_lookAt(tester, option(0)).dx, 4);
+        await g.moveBy(const Offset(0, 400));
+        await g.cancel();
+        await tester.pump();
+        final look = _lookAt(tester, option(0));
+        expect(look.duration, Duration.zero);
+        expect(look.dx, 0, reason: '$look');
+        expect(look.shadow, const [UnaShadows.button]);
+      },
+    );
+
+    testWidgets(
+      'sin reducir movimiento sigue tardando 80 ms: en el origen tras el pump y a medio camino tras 40 ms',
+      (tester) async {
+        await pumpSheet(tester, reduced: false);
+        final g = await tester.startGesture(tester.getCenter(option(0)));
+        await tester.pump(kPressTimeout);
+        final first = _lookAt(tester, option(0));
+        expect(first.duration, UnaMotion.press);
+        expect(first.dx, 0, reason: '$first');
+        await tester.pump(const Duration(milliseconds: 40));
+        final mid = _lookAt(tester, option(0));
+        expect(mid.dx, greaterThan(0), reason: '$mid');
+        expect(mid.dx, lessThan(4), reason: '$mid');
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(_lookAt(tester, option(0)).dx, 4);
+        await g.cancel();
+      },
+    );
+
+    testWidgets(
+      'CL-013-4: cambiar el ajuste con la app abierta vale en la siguiente pulsación',
+      (tester) async {
+        final reduced = ValueNotifier(false);
+        addTearDown(reduced.dispose);
+        await pumpWithApp(
+          tester,
+          ValueListenableBuilder<bool>(
+            valueListenable: reduced,
+            builder: (context, value, _) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: value),
+              child: const Scaffold(
+                body: PlacementSheet(
+                  text: 'Llamar a Marta',
+                  color: UnaColors.surface,
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(_lookAt(tester, option(0)).duration, UnaMotion.press);
+        reduced.value = true;
+        await tester.pump();
+        final g = await tester.startGesture(tester.getCenter(option(0)));
+        await tester.pump(kPressTimeout);
+        final look = _lookAt(tester, option(0));
+        expect(look.duration, Duration.zero);
+        expect(look.dx, 4, reason: '$look');
+        await g.up();
+        await tester.pump();
+        expect(_lookAt(tester, option(0)).dx, 0);
+      },
+    );
+  });
+
+  group('CA-013-03: botón de completar (HoldToCompleteButton)', () {
+    final button = find.byType(HoldToCompleteButton);
+
+    Future<void> pumpButton(WidgetTester tester, {required bool reduced}) =>
+        pumpWithApp(
+          tester,
+          Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: HoldToCompleteButton(
+                  label: 'Pulsa para completar',
+                  a11yAction: 'Completar tarea',
+                  a11yHint: 'Mantén pulsado',
+                  onComplete: () async => true,
+                ),
+              ),
+            ),
+          ),
+          disableAnimations: reduced,
+        );
+
+    void expectRest(_Look l) {
+      expect((l.dx, l.dy), (0, 0), reason: '$l');
+      expect(l.shadow, const [UnaShadows.button]);
+    }
+
+    void expectSunk(_Look l) {
+      expect((l.dx, l.dy), (4, 4), reason: '$l');
+      expect(l.shadow, const [UnaShadows.buttonPressed]);
+    }
+
+    testWidgets(
+      'con reducir movimiento se hunde al instante, con la sombra, al pulsar, y vuelve al soltar',
+      (tester) async {
+        await pumpButton(tester, reduced: true);
+        expectRest(_look(tester, button));
+        final g = await tester.startGesture(tester.getCenter(button));
+        await tester.pump();
+        final sunk = _look(tester, button);
+        expect(sunk.duration, Duration.zero);
+        expectSunk(sunk);
+        await g.up();
+        await tester.pump();
+        final back = _look(tester, button);
+        expect(back.duration, Duration.zero);
+        expectRest(back);
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'CL-013-5: con reducir movimiento vuelve al instante al cancelar (el dedo sale)',
+      (tester) async {
+        await pumpButton(tester, reduced: true);
+        final g = await tester.startGesture(tester.getCenter(button));
+        await tester.pump();
+        expectSunk(_look(tester, button));
+        await g.moveBy(const Offset(0, 400));
+        await tester.pump();
+        final look = _look(tester, button);
+        expect(look.duration, Duration.zero);
+        expectRest(look);
+        await g.cancel();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'CL-013-7: con reducir movimiento, mantener una tecla lo hunde al instante y soltarla lo devuelve',
+      (tester) async {
+        await pumpButton(tester, reduced: true);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+        await tester.pump();
+        final sunk = _look(tester, button);
+        expect(sunk.duration, Duration.zero);
+        expectSunk(sunk);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+        await tester.pump();
+        final back = _look(tester, button);
+        expect(back.duration, Duration.zero);
+        expectRest(back);
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'sin reducir movimiento sigue tardando 80 ms: en el origen tras el pump y a medio camino tras 40 ms',
+      (tester) async {
+        await pumpButton(tester, reduced: false);
+        final g = await tester.startGesture(tester.getCenter(button));
+        await tester.pump();
+        final first = _look(tester, button);
+        expect(first.duration, UnaMotion.press);
+        expect(first.dx, 0, reason: '$first');
+        await tester.pump(const Duration(milliseconds: 40));
+        final mid = _look(tester, button);
+        expect(mid.dx, greaterThan(0), reason: '$mid');
+        expect(mid.dx, lessThan(4), reason: '$mid');
+        await tester.pump(const Duration(milliseconds: 60));
+        expectSunk(_look(tester, button));
+        await g.up();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'CL-003-5: con reducir movimiento el relleno sigue su ritmo (1,2 s), no salta',
+      (tester) async {
+        await pumpButton(tester, reduced: true);
+        final state = tester.state<HoldToCompleteButtonState>(button);
+        final g = await tester.startGesture(tester.getCenter(button));
+        await tester.pump(); // Arranca la animación.
+        expect(state.progress, 0);
+        await tester.pump(UnaMotion.holdToComplete ~/ 2);
+        expect(state.progress, closeTo(0.5, 0.05));
+        await g.up();
+        await tester.pumpAndSettle();
+        expect(state.progress, 0);
+      },
+    );
+
+    testWidgets(
+      'CL-013-4: cambiar el ajuste con la app abierta vale en la siguiente pulsación',
+      (tester) async {
+        final reduced = ValueNotifier(false);
+        addTearDown(reduced.dispose);
+        await pumpWithApp(
+          tester,
+          ValueListenableBuilder<bool>(
+            valueListenable: reduced,
+            builder: (context, value, _) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: value),
+              child: Scaffold(
+                body: Center(
+                  child: HoldToCompleteButton(
+                    label: 'Pulsa para completar',
+                    a11yAction: 'Completar tarea',
+                    a11yHint: 'Mantén pulsado',
+                    onComplete: () async => true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(_look(tester, button).duration, UnaMotion.press);
+        reduced.value = true;
+        await tester.pump();
+        final g = await tester.startGesture(tester.getCenter(button));
+        await tester.pump();
+        final look = _look(tester, button);
+        expect(look.duration, Duration.zero);
+        expectSunk(look);
+        await g.up();
+        await tester.pumpAndSettle();
+      },
+    );
+  });
 
   group('CL-013-6: BrutalButton pasa de deshabilitado a habilitado', () {
     for (final reduced in [true, false]) {
