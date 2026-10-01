@@ -86,9 +86,9 @@ El resto de lo que señaló la revisión de la 012 queda **aceptado** por decisi
 - **CA-013-04 Ninguna parada del lector sin nombre (012-A-B3, parte de código)**
   - **Dado** el árbol de accesibilidad de los tres niveles de la pantalla temporal de la 012
   - **Cuando** se inspecciona cada nivel (con y sin el aviso, y con la lista cargada, cargando y con error)
-  - **Entonces** ningún nodo enfocable o con acciones (tocar, desplazar…) se queda sin etiqueta ni valor. La única excepción es el contenedor de desplazamiento del texto del nivel 3:
-    - conserva sus acciones de desplazar, para TalkBack y Switch Access (CA-012-12);
-    - no lleva el indicador de enfocable, así que el lector no se para en él con un nombre vacío.
+  - **Entonces** ningún nodo enfocable o con acciones (tocar, desplazar…) se queda sin etiqueta ni valor. La única excepción son los contenedores de desplazamiento (el texto del nivel 3, la lista del nivel 2 y los desplazables de los niveles 1 y de "Reintentar"; ampliada por el propietario el 2026-10-01, P-013-7), es decir, los nodos cuyas **únicas** acciones son de desplazar (`scrollUp`, `scrollDown`, `scrollLeft`, `scrollRight`, `scrollToOffset`):
+    - conservan sus acciones de desplazar, para TalkBack y Switch Access (CA-012-12);
+    - no llevan el indicador de enfocable ni de botón, así que el lector no se para en ellos con un nombre vacío.
   - Con teclado, el área de texto del nivel 3 se sigue pudiendo enfocar, con su anillo y sus teclas de desplazamiento (CA-012-12).
 - **CA-013-05 Orden del lector y de Switch Access (012-A-B3, propietario, 2026-10-01)**
   - **Dado** TalkBack activo en cualquiera de los tres niveles
