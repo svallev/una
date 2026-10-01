@@ -38,3 +38,17 @@ final class LicensePackage {
   /// Cuántos textos de licencia distintos tiene (lo que dice la fila de la lista).
   int get licenseCount => texts.length;
 }
+
+/// Clave interna de la entrada de las bibliotecas de Android (AndroidX, Kotlin)
+/// en la lista de licencias (CA-013-01, P-013-1). Es el `name` de su
+/// [LicensePackage], pero **nunca se muestra tal cual**: la presentación lo
+/// sustituye por el texto traducido de la app. Lleva `:` para no chocar con el
+/// nombre de un paquete de pub, que no puede llevarlo.
+const androidLibrariesLicenseKey = 'una:android-libraries';
+
+/// Orden de la lista de licencias: alfabético sin distinguir mayúsculas y, si
+/// empatan, sensible a ellas (salida determinista; CA-012-03, P-013-2).
+int compareLicenseNames(String a, String b) {
+  final byCase = a.toLowerCase().compareTo(b.toLowerCase());
+  return byCase != 0 ? byCase : a.compareTo(b);
+}

@@ -1069,6 +1069,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Licencia {n} de {total}'**
   String licensesTextOf(int n, int total);
+
+  /// Nombre de la entrada propia de las bibliotecas de Android en la lista de licencias y título de su nivel 3; texto de la app, no de terceros. CA-013-01
+  ///
+  /// In es, this message translates to:
+  /// **'Bibliotecas de Android (AndroidX, Kotlin)'**
+  String get licensesAndroidLibraries;
 }
 
 class _AppLocalizationsDelegate

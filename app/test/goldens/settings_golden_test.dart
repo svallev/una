@@ -52,10 +52,7 @@ const _mit = [
 
 final _packages = [
   LicensePackage(name: 'Archivo', texts: [_text(_mit)]),
-  LicensePackage(
-    name: 'Bibliotecas de Android (AndroidX, Kotlin)',
-    texts: [_text(_mit)],
-  ),
+  LicensePackage(name: androidLibrariesLicenseKey, texts: [_text(_mit)]),
   LicensePackage(name: 'drift', texts: [_text(_mit)]),
   LicensePackage(
     name: 'PDFium',

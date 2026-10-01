@@ -62,6 +62,31 @@ void main() {
       expect(packages.map((p) => p.name), ['alpha', 'Archivo', 'Beta', 'zeta']);
     });
 
+    test(
+      'CA-013-01: la entrada con clave interna se ordena por su clave, con el '
+      'mismo comparador que la lista',
+      () async {
+        final packages = await _source([
+          _entry(['zeta'], 'z'),
+          _entry([androidLibrariesLicenseKey], 'k'),
+          _entry(['Una'], 'u'),
+          _entry(['alpha'], 'a'),
+        ]).load();
+        final names = packages.map((p) => p.name).toList();
+        expect(names, [...names]..sort(compareLicenseNames));
+        expect(names, ['alpha', 'Una', androidLibrariesLicenseKey, 'zeta']);
+      },
+    );
+
+    test('CA-013-01: los empates sin mayúsculas se resuelven como en '
+        'compareLicenseNames', () async {
+      final packages = await _source([
+        _entry(['a'], '1'),
+        _entry(['A'], '2'),
+      ]).load();
+      expect(packages.map((p) => p.name), ['A', 'a']);
+    });
+
     test('los nombres vacíos no crean una entrada', () async {
       final packages = await _source([
         _entry(['', '  ', 'real'], 'text'),

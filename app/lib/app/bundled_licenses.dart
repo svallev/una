@@ -1,10 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Nombre de la entrada de las bibliotecas de Android (AndroidX, Kotlin) en la
-/// lista de licencias (CA-012-03, P-012-3). Es un dato de la lista, como el
-/// nombre de un paquete; el texto de la licencia es contenido de terceros.
-const androidLibrariesLicenseName = 'Bibliotecas de Android (AndroidX, Kotlin)';
+import '../domain/entities/license_package.dart';
 
 /// Separa las licencias de un mismo archivo: una línea de 80 `=`.
 final _separator = RegExp(r'^={80}$', multiLine: true);
@@ -16,14 +13,16 @@ final _separator = RegExp(r'^={80}$', multiLine: true);
 /// - PDFium (`libpdfium.so`, `tools/pdfium.lock`): su licencia y los avisos de
 ///   sus terceros; la primera línea dice de qué versión y de qué `.tgz` sale.
 /// - SQLite (`libsqlite3.so`, que descarga el paquete `sqlite3`): dominio público.
-/// - Las bibliotecas de Android del `releaseRuntimeClasspath`: Apache-2.0 y la
+/// - Las bibliotecas de Android del `releaseRuntimeClasspath` (con la clave
+///   interna [androidLibrariesLicenseKey]; su nombre visible es un texto de la
+///   app, CA-013-01): Apache-2.0 y la
 ///   lista de artefactos (`tools/check-licenses.sh` comprueba que está completa).
 const _bundled = <(String, String)>[
   ('Archivo', 'assets/fonts/archivo/OFL.txt'),
   ('Space Mono', 'assets/fonts/space_mono/OFL.txt'),
   ('PDFium', 'assets/licenses/pdfium.txt'),
   ('SQLite', 'assets/licenses/sqlite.txt'),
-  (androidLibrariesLicenseName, 'assets/licenses/android.txt'),
+  (androidLibrariesLicenseKey, 'assets/licenses/android.txt'),
 ];
 
 /// Registra esas licencias para que aparezcan en la pantalla de licencias.

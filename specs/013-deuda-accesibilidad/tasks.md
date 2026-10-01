@@ -1,6 +1,6 @@
 # Tareas — Spec 013: Deuda de accesibilidad del código
 
-**Siguiente:** **T-013-01** en una sesión nueva con `/spec-implement 013`. Plan **Aprobado** (2026-10-01). P-013-7 resuelta: **sí** (propietario, 2026-10-01); no bloquea ninguna tarea.
+**Siguiente:** **T-013-02** (T-013-01 hecha) en una sesión nueva con `/spec-implement 013`. Plan **Aprobado** (2026-10-01). P-013-7 resuelta: **sí** (propietario, 2026-10-01); no bloquea ninguna tarea.
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden** (nada en paralelo). Rama `feat/013-deuda-accesibilidad` (ya creada). Cada tarea termina con `dart format lib test`, `flutter analyze --fatal-infos` y `flutter test` en verde y un commit `feat(013): …` (o `test`/`docs`/`chore`). FVM no está instalado: `flutter` y `dart` del sistema. Emulador de API 37; nunca el Xiaomi sin permiso del propietario. Los tests que miden empiezan con `setUpAll(loadAppFonts)`.
 
@@ -29,3 +29,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-013-01 | Hecha: clave ARB `licensesAndroidLibraries` (ES/EN), `androidLibrariesLicenseKey` y `compareLicenseNames` en el dominio, entrada registrada con la clave y `FlutterLicenseSource` con el comparador. `gen-l10n` sin avisos; analyze y `flutter test` en verde (1430 tests); `check-licenses.sh` solo mira `android.txt`. **[Suposición]** hasta T-013-02 la lista enseña la clave tal cual y el *golden* de Configuración (solo CI) saldrá distinto: no se regenera, T-013-02 lo devuelve a su texto. | (este commit) |

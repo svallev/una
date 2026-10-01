@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:app/app/bundled_licenses.dart';
+import 'package:app/domain/entities/license_package.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,7 +49,7 @@ void main() {
           'Space Mono',
           'PDFium',
           'SQLite',
-          androidLibrariesLicenseName,
+          androidLibrariesLicenseKey,
         ]),
       );
       expect(byPackage['Archivo']!.single, contains('SIL OPEN FONT LICENSE'));
@@ -68,7 +69,18 @@ void main() {
 
       expect(byPackage['SQLite']!.single, contains('May you do good'));
 
-      final android = byPackage[androidLibrariesLicenseName]!;
+      // CA-013-01: la entrada va con la clave interna; el nombre que se ve sale
+      // de los textos de la app, no del registro.
+      expect(
+        byPackage.keys,
+        isNot(contains('Bibliotecas de Android (AndroidX, Kotlin)')),
+      );
+      expect(
+        byPackage.keys,
+        isNot(contains('Android libraries (AndroidX, Kotlin)')),
+      );
+
+      final android = byPackage[androidLibrariesLicenseKey]!;
       expect(android.first, contains('androidx.core:core'));
       expect(android.first, contains('org.jetbrains.kotlin:kotlin-stdlib'));
       expect(android.last, contains('Apache License'));
@@ -99,7 +111,7 @@ void main() {
 
     LicenseEntry? entry;
     await for (final e in LicenseRegistry.licenses) {
-      if (e.packages.contains(androidLibrariesLicenseName) &&
+      if (e.packages.contains(androidLibrariesLicenseKey) &&
           e.paragraphs.any((p) => p.text.contains(artifacts.first))) {
         entry = e;
         break;

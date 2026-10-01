@@ -605,4 +605,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String licensesTextOf(int n, int total) {
     return 'Licencia $n de $total';
   }
+
+  @override
+  String get licensesAndroidLibraries =>
+      'Bibliotecas de Android (AndroidX, Kotlin)';
 }

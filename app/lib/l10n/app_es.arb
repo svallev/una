@@ -323,5 +323,7 @@
   "licensesError": "No se pudieron cargar las licencias.",
   "@licensesError": {"description": "Error de lectura de las licencias, con Reintentar. CA-012-15"},
   "licensesTextOf": "Licencia {n} de {total}",
-  "@licensesTextOf": {"description": "Encabezado de cada texto de licencia en el nivel 3 cuando un elemento tiene varias (el título del nivel es el nombre del elemento). CA-012-03/11", "placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}}
+  "@licensesTextOf": {"description": "Encabezado de cada texto de licencia en el nivel 3 cuando un elemento tiene varias (el título del nivel es el nombre del elemento). CA-012-03/11", "placeholders": {"n": {"type": "int"}, "total": {"type": "int"}}},
+  "licensesAndroidLibraries": "Bibliotecas de Android (AndroidX, Kotlin)",
+  "@licensesAndroidLibraries": {"description": "Nombre de la entrada propia de las bibliotecas de Android en la lista de licencias y título de su nivel 3; texto de la app, no de terceros. CA-013-01"}
 }
