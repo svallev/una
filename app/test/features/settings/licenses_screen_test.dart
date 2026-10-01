@@ -537,6 +537,31 @@ void main() {
     );
 
     testWidgets(
+      'CA-013-02: bajar y subir por una lista larga con el lector activo, a 200 %, no falla (las filas se destruyen y vuelven)',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final many = [
+          for (var i = 0; i < 100; i++)
+            _pkg('pkg${i.toString().padLeft(3, '0')}'),
+        ];
+        await _openLicenses(
+          tester,
+          _Source(many),
+          screenReader: true,
+          textScale: 2,
+          size: const Size(360, 640),
+        );
+        for (final dy in [-3000.0, 3000.0, -3000.0, 3000.0]) {
+          await tester.drag(find.byType(ListView), Offset(0, dy));
+          await tester.pumpAndSettle();
+        }
+        expect(tester.takeException(), isNull);
+        expect(_inLicenses(find.text('pkg000')), findsOneWidget);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
       'CA-012-02: al volver del nivel 3 la lista sigue donde estaba',
       (tester) async {
         final many = [
