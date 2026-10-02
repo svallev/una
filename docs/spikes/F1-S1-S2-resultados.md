@@ -1,7 +1,7 @@
 # F1 · Resultados de los spikes S1 (arranque) y S2 (animaciones), Android
 
 - **Fecha:** 2026-09-24 · **Estado:** ✅ **validado en dispositivo físico** (Xiaomi 15T Pro); pendiente solo un móvil de gama media (R-02)
-- **Código:** rama `spike/f1-android`, carpeta `spikes/una_spikes/` (desechable, no se fusiona)
+- **Código:** etiqueta `archive/spike-f1-android` (antes rama `spike/f1-android`, borrada el 2026-10-02), carpeta `spikes/una_spikes/` (desechable, no se fusiona)
 - **Entorno:** Flutter 3.47.5 (stable), Dart 3.13.4, *release* arm64, JDK 25 de Android Studio (Gradle sin problemas). Emulador `Pixel_6a` Android 17 (API 37), 4 núcleos, 3 GB, páginas de 16 KB, en un Mac Apple Silicon.
 - **Relacionado:** ADR-0001 (criterios S1/S2), D17, riesgos R-02, R-03, R-18
 
