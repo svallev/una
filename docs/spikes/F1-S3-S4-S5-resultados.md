@@ -1,7 +1,7 @@
 # F1 · Resultados de S3 (PDF y documentos), S4 (URL) y S5 (importación y backup), Android
 
 - **Fecha:** 2026-09-24 · **Estado:** completados en el emulador; queda repetir lo básico en un móvil físico
-- **Código:** rama `spike/f1-android`, `spikes/una_spikes/` (desechable). Muestras generadas en el Mac, incluidas maliciosas
+- **Código:** etiqueta `archive/spike-f1-android` (antes rama `spike/f1-android`, borrada el 2026-10-02), `spikes/una_spikes/` (desechable). Muestras generadas en el Mac, incluidas maliciosas
 - **Entorno:** Flutter 3.47.5, *release* arm64; emulador Pixel 6a, Android 17 (API 37), `-gpu host`
 - **Decisión aplicada durante el spike:** D18, **PDF de 10 MB como máximo** (del propietario)
 
