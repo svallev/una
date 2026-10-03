@@ -10,6 +10,14 @@
       "x": 4230,
       "y": 0
     },
+    "Ajustes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "16 · Ajustes (pantalla completa)",
+      "w": 390,
+      "x": 1880,
+      "y": 1333
+    },
     "Borrado.dc.html": {
       "h": 844,
       "is_interactive": true,
@@ -17,6 +25,22 @@
       "w": 390,
       "x": 3760,
       "y": 0
+    },
+    "Deshacer.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "12 · Eliminar con deshacer: la tarea (en bucle)",
+      "w": 390,
+      "x": 0,
+      "y": 1333
+    },
+    "DeshacerLista.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "13 · Eliminar con deshacer: desde la lista (en bucle)",
+      "w": 390,
+      "x": 470,
+      "y": 1333
     },
     "Documento.dc.html": {
       "h": 844,
@@ -29,10 +53,26 @@
     "Eliminar.dc.html": {
       "h": 844,
       "is_interactive": true,
-      "title": "6 · Eliminar",
+      "title": "6 · Eliminar: sin confirmación, con deshacer 3 s (en bucle)",
       "w": 390,
       "x": 2820,
       "y": 0
+    },
+    "Fotos.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "15 · Tarea con varias fotos: carrusel infinito (swipe)",
+      "w": 390,
+      "x": 1410,
+      "y": 1333
+    },
+    "FotosSel.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "14 · Varias imágenes: preselección (fotos superpuestas)",
+      "w": 390,
+      "x": 940,
+      "y": 1333
     },
     "Hecho.dc.html": {
       "h": 844,
@@ -41,6 +81,13 @@
       "w": 390,
       "x": 3290,
       "y": 0
+    },
+    "Icono.dc.html": {
+      "h": 844,
+      "title": "17 · Icono de la app (iOS, Android y stores)",
+      "w": 1300,
+      "x": 2350,
+      "y": 1333
     },
     "Lista.dc.html": {
       "h": 844,
@@ -108,6 +155,14 @@
     "view": "canvas"
   },
   "notes": {
+    "note-neq1ms": {
+      "kind": "title1",
+      "maxW": 5560,
+      "text": "Una — Nuevas funcionalidades",
+      "w": 240,
+      "x": 0,
+      "y": 1033
+    },
     "titulo": {
       "kind": "title1",
       "maxW": 5560,
@@ -129,7 +184,13 @@
     "Borrado.dc.html",
     "Adjuntar.dc.html",
     "Documento.dc.html",
-    "Web.dc.html"
+    "Web.dc.html",
+    "Deshacer.dc.html",
+    "DeshacerLista.dc.html",
+    "FotosSel.dc.html",
+    "Fotos.dc.html",
+    "Ajustes.dc.html",
+    "Icono.dc.html"
   ],
   "pages": [],
   "title": "Una — tareas de una en una"
