@@ -12,7 +12,8 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Posición (rango) | Rank | `rank` | Clave de orden fraccional (*fractional indexing*) en texto. Permite insertar entre dos tareas sin renumerar. |
 | Completar | Complete | `complete()` | Marcar la tarea actual como hecha manteniendo pulsado. La tarea y sus archivos se borran (sin histórico, ADR-0012). |
 | Mantener pulsado | Press and hold | `HoldToComplete` | Gesto de 1,2 s que completa la tarea. |
-| Eliminar | Delete | `delete()` | Quitar una tarea **sin** completarla. Es definitivo: no hay deshacer (ADR-0011). |
+| Eliminar | Delete | `delete()` | Quitar una tarea **sin** completarla. Hoy es definitivo y pide confirmación (ADR-0011/0012). **→ spec 014 (plan F4b, 2026-10-04):** sin confirmación y con **deshacer** durante 4 s; pasado ese tiempo, definitivo. |
+| Deshacer | Undo | `undo` *(spec 014)* | Recuperar una tarea recién **eliminada** desde la card "Tarea eliminada", durante 4 s (más si el sistema pide más tiempo de accesibilidad). Vuelve a su posición. Completar **no** tiene deshacer (P-4). |
 | Marca de borrado | Tombstone | `deletedAt` | Registro mínimo de que una tarea se eliminó. Sirve para una futura sincronización. |
 | Histórico | History | `history` | Tareas completadas con su fecha. En la v1 se guarda pero no se muestra. **Retirado por el ADR-0012 (2026-09-26): no se guarda lo hecho.** |
 | Adjunto | Attachment | `Attachment` | Archivo copiado dentro de la app y asociado a una tarea: imagen, PDF o documento. La tarea web es un adjunto **sin archivos**: solo guarda la dirección (ADR-0016). |
@@ -55,7 +56,8 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Hoja inferior | Bottom sheet | `*Sheet` | Panel que sube desde abajo. |
 | Primera vez / bienvenida | First run / welcome | `FirstRun`, `WelcomeIntro` | Animación inicial y creación obligatoria de la primera tarea. |
 | Estado vacío | Empty state | `EmptyState` | "Todo hecho.": no queda ninguna tarea pendiente (tras completar o eliminar la última). No existe "Nada pendiente." |
-| Configuración | Settings | `Settings` | Idioma, pantalla encendida, Acerca de. La completa no existe en la beta: spec futura de Configuración y perfil (2026-09-29); hasta entonces, la pantalla temporal de la spec 012 (licencias y política de privacidad). |
+| Configuración | Settings | `Settings` | Ver **Ajustes**. Hasta la spec 015, la pantalla temporal de la spec 012 (licencias y política de privacidad). |
+| Ajustes | Settings | `Settings`, `SettingsScreen` *(spec 015)* | Pantalla completa que se abre con el enlace "Ajustes" del menú (prototipo, tablero 16): Idioma, Notificaciones, Pantalla siempre activa, Bloquear zoom, Información (Política de privacidad, Licencias de terceros) y Ayuda. Sustituye a "Configuración y perfil (temporal)" (plan F4b, 2026-10-04). Todos los interruptores, apagados por defecto. |
 | Pantalla encendida | Keep screen on | `keepScreenOn` | Impide el bloqueo mientras se ve una tarea con adjunto. |
 | Indicador de función | Feature flag | `FeatureFlag` | Interruptor local para funcionalidades a medio hacer. |
 | Fecha límite *(futuro)* | Due date | `dueDate` | Bloque 1 de la hoja de ruta. |
