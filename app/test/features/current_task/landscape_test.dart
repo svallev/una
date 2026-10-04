@@ -12,7 +12,6 @@ import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/pdf_strip.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/web/web_bar.dart';
 import 'package:app/ui/brutal_button.dart';
@@ -367,7 +366,6 @@ void main() {
           .firstWhere((e) => e.key.label == 'Eliminar tarea')
           .value();
       await tester.pump(const Duration(milliseconds: 16));
-      expect(find.byType(DeleteConfirmSheet), findsNothing);
       await tester.pump(UnaMotion.crumple);
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('Sin adjunto'), findsOneWidget);
@@ -585,7 +583,6 @@ void main() {
       await turn(tester, landscape: true);
       performOnNode(tester, 'Eliminar tarea');
       await tester.pump(const Duration(milliseconds: 16));
-      expect(find.byType(DeleteConfirmSheet), findsNothing);
       await tester.pump(UnaMotion.crumple);
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('Sin adjunto'), findsOneWidget);

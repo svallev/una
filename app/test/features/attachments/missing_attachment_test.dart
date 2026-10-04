@@ -13,7 +13,6 @@ import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/pdf_strip.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:app/ui/una_icons.dart';
@@ -196,7 +195,6 @@ void main() {
       await tester.tap(find.text('Eliminar tarea'));
       await tester.pump(const Duration(milliseconds: 16));
       await tester.pump(const Duration(milliseconds: 16));
-      expect(find.byType(DeleteConfirmSheet), findsNothing);
       expect(await repo.currentTask(), isNull);
       await tester.pump(UnaMotion.crumple);
       await tester.pump(const Duration(milliseconds: 32));
@@ -331,7 +329,6 @@ void main() {
       await tester.tap(find.text('Eliminar tarea'));
       await tester.pump(const Duration(milliseconds: 16));
       await tester.pump(const Duration(milliseconds: 16));
-      expect(find.byType(DeleteConfirmSheet), findsNothing);
       expect(await repo.currentTask(), isNull);
       await tester.pump(UnaMotion.crumple);
       await tester.pump(const Duration(milliseconds: 32));

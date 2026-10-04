@@ -89,11 +89,11 @@ class BrutalButton extends StatefulWidget {
   final bool iconOnly;
 
   /// `.bb.ghost` del prototipo: sin relleno ni sombra; al pulsar baja 1 px
-  /// ("Cancelar" de la confirmación de eliminar, spec 004).
+  /// ("Cancelar" de las confirmaciones).
   final bool ghost;
 
   /// Recibe el foco del teclado y del lector de pantalla al aparecer (la
-  /// acción segura de una confirmación, CA-004-10).
+  /// acción segura de una confirmación).
   final bool autofocus;
 
   @override

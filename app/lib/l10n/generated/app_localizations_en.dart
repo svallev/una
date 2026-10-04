@@ -184,26 +184,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get deleteTitle => 'Delete this task?';
-
-  @override
-  String deleteBody(String label) {
-    return '“$label” will disappear without being marked as done.';
-  }
-
-  @override
-  String get deleteConfirm => 'Delete';
-
-  @override
   String get deleteA11yAction => 'Delete task';
-
-  @override
-  String a11yDeletedNext(String text) {
-    return 'Task deleted. Next: $text';
-  }
-
-  @override
-  String get a11yDeletedAllDone => 'Task deleted. All done.';
 
   @override
   String get deleteError => 'We couldn\'t delete the task';
@@ -284,17 +265,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String a11yAddedAt(int position, int total) {
     return 'Task added at position $position of $total';
-  }
-
-  @override
-  String a11yDeletedFromList(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Task deleted. $count left',
-      one: 'Task deleted. 1 left',
-    );
-    return '$_temp0';
   }
 
   @override

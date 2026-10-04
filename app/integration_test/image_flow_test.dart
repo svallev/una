@@ -29,6 +29,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'support/fixture_importer.dart';
+import 'support/undo.dart';
 
 late Directory _support;
 late Directory _cache;
@@ -173,16 +174,18 @@ void main() {
     expect(find.byType(MissingAttachmentCard), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    // Sin texto, su única acción es eliminar (con confirmación).
+    // Sin texto, su única acción es eliminar (sin confirmación, con
+    // deshacer). Los archivos se borran cuando la eliminación es definitiva
+    // (CA-014-15), no antes.
     final l10n = _l10n(tester);
     await tester.tap(find.text(l10n.deleteA11yAction));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.byWidgetPredicate(
-        (w) => w is BrutalButton && w.label == l10n.deleteConfirm,
-      ),
+    await pumpUntilCard(tester);
+    expect(find.byType(AllDoneScreen), findsOneWidget);
+    expect(
+      await _container(tester).read(taskRepositoryProvider).currentTask(),
+      isNull,
     );
-    await tester.pumpAndSettle();
+    await pumpUntilCardGone(tester);
     expect(find.byType(AllDoneScreen), findsOneWidget);
     await _shutdown(tester);
     semantics.dispose();

@@ -1,5 +1,5 @@
 // La tarea web fuera de la pantalla principal (spec 009, T-009-16): insignia
-// "WEB" y dominio como etiqueta en el listado, la confirmación de eliminar y
+// "WEB" y dominio como etiqueta en el listado, la card de deshacer y
 // los anuncios; en las caras de completar y eliminar, la barra y la zona de la
 // página en blanco, sin WebView (CA-009-17, CA-009-18, CL-009-11).
 import 'package:app/app/providers.dart';

@@ -392,41 +392,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 tarea} other{{count} tareas}}'**
   String menuAllTasksCount(int count);
 
-  /// Título de la confirmación de eliminar. CA-004-01
-  ///
-  /// In es, this message translates to:
-  /// **'¿Eliminar esta tarea?'**
-  String get deleteTitle;
-
-  /// Cuerpo de la confirmación de eliminar, con comillas tipográficas del prototipo. CA-004-01
-  ///
-  /// In es, this message translates to:
-  /// **'“{label}” desaparecerá sin marcarse como hecha.'**
-  String deleteBody(String label);
-
-  /// Botón rojo que elimina de forma definitiva. CA-004-01
-  ///
-  /// In es, this message translates to:
-  /// **'Eliminar'**
-  String get deleteConfirm;
-
   /// Acción del lector de pantalla (tarea actual y filas del listado) y botón de la tarjeta "Adjunto no disponible": elimina la tarea al momento, con la card de deshacer. CA-014-19, CA-006-16, CA-007-19
   ///
   /// In es, this message translates to:
   /// **'Eliminar tarea'**
   String get deleteA11yAction;
-
-  /// Anuncio único al eliminar. CA-004-11
-  ///
-  /// In es, this message translates to:
-  /// **'Tarea eliminada. Siguiente: {text}'**
-  String a11yDeletedNext(String text);
-
-  /// Anuncio al eliminar la última pendiente. CA-004-11
-  ///
-  /// In es, this message translates to:
-  /// **'Tarea eliminada. Todo hecho.'**
-  String get a11yDeletedAllDone;
 
   /// Aviso con Reintentar si falla la eliminación (menú, fila o acción del lector); no hay animación ni card. CA-004-13, CA-014-22
   ///
@@ -565,12 +535,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Tarea añadida en la posición {position} de {total}'**
   String a11yAddedAt(int position, int total);
-
-  /// Anuncio al eliminar desde el listado una tarea que no es la primera. CA-006-17
-  ///
-  /// In es, this message translates to:
-  /// **'{count, plural, =1{Tarea eliminada. Queda 1} other{Tarea eliminada. Quedan {count}}}'**
-  String a11yDeletedFromList(int count);
 
   /// Título y nombre de la hoja "Añadir". CA-007-01
   ///
