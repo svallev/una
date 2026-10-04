@@ -55,10 +55,13 @@ class AttachmentJanitor {
   void releaseHeld(String id) => _held.remove(id);
 
   /// La eliminación del adjunto retenido [id] es definitiva: deja de retenerlo
-  /// y borra sus archivos. No lanza (CA-014-15).
-  Future<void> discardHeld(String id) {
+  /// y borra sus archivos. No lanza (CA-014-15). Si la fila existe (una
+  /// recuperación que falló al confirmar pero sí llegó a escribirse), no borra.
+  Future<void> discardHeld(String id) async {
     _held.remove(id);
-    return discard(id);
+    // Protección primero y BD después, como el barrido.
+    if (await _inDatabase(id)) return;
+    await discard(id);
   }
 
   /// Borra los archivos del adjunto guardado [id], que ya no tiene tarea.

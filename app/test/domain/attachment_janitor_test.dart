@@ -180,6 +180,18 @@ void main() {
       expect(await store.storedIds(), isEmpty);
     });
 
+    test('CA-014-15: discardHeld no borra los archivos de un adjunto cuya fila '
+        'está en la BD (recuperación que falló al confirmar)', () async {
+      final a = await saved('vuelto');
+      await repo.insert(
+        sampleTask(id: 't').withContent(null, a, DateTime.utc(2026)),
+      );
+      janitor.hold('vuelto');
+      await janitor.discardHeld('vuelto');
+      expect(janitor.held, isEmpty);
+      expect(await store.storedIds(), {'vuelto'});
+    });
+
     test('hold devuelve si lo ha añadido: solo suelta quien protegió', () {
       expect(janitor.hold('a'), isTrue);
       expect(janitor.hold('a'), isFalse);
