@@ -301,7 +301,10 @@ class _UndoCardState extends State<UndoCard> with TickerProviderStateMixin {
         child: FadeTransition(
           opacity: _entered,
           alwaysIncludeSemantics: true,
-          child: ColoredBox(
+          // `Material` (no `ColoredBox`): la card se monta sin `Scaffold`
+          // encima y sin él el texto sale con el estilo de reserva
+          // (subrayado doble amarillo).
+          child: Material(
             color: UnaColors.ink,
             // Abajo, la barra queda encima del margen del sistema y el negro
             // llega al borde (P-014-2); a los lados, el contenido y la barra

@@ -163,7 +163,7 @@ void main() {
       final ink = find.descendant(
         of: _card,
         matching: find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == UnaColors.ink,
+          (w) => w is Material && w.color == UnaColors.ink,
         ),
       );
       expect(tester.getRect(ink.first), card);

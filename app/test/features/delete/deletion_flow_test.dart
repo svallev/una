@@ -1,7 +1,9 @@
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/task.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
+import 'package:app/features/complete/completion_controller.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
@@ -24,6 +26,26 @@ const _frame = Duration(milliseconds: 16);
 
 class _Repo extends InMemoryTaskRepository {
   bool failDelete = false;
+  bool failInsert = false;
+  String insertMessage = 'disk I/O error';
+  int inserts = 0;
+
+  /// Lo que tarda la BD en dar la tarea actual (la de verdad avisa un instante
+  /// después de escribir).
+  Duration currentDelay = Duration.zero;
+
+  @override
+  Future<Task?> currentTask() async {
+    if (currentDelay > Duration.zero) await Future<void>.delayed(currentDelay);
+    return super.currentTask();
+  }
+
+  @override
+  Future<void> insert(Task task) async {
+    inserts++;
+    if (failInsert) throw StateError('$insertMessage: ${task.text}');
+    return super.insert(task);
+  }
 
   @override
   Future<bool> remove(String id) async {
@@ -510,5 +532,302 @@ void main() {
     );
     expect(container.read(undoProvider).phase, UndoPhase.none);
     expect(await repo.findById('t0'), isNotNull);
+  });
+
+  group('Deshacer en la pantalla principal (CA-014-09, CA-014-10)', () {
+    final undoButton = find.descendant(
+      of: _card,
+      matching: find.byKey(UndoCard.buttonKey),
+    );
+
+    /// Elimina la primera, deja pasar la guarda de 350 ms y vuelve a mirar.
+    Future<void> deleteAndWait(WidgetTester tester) async {
+      await _delete(tester);
+      await _crumple(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_card, findsOneWidget);
+    }
+
+    testWidgets('CA-014-09, CA-014-10: vuelve en la posición 1 con su texto, '
+        'su color y sus fechas, como la actual, sin fundido, sin "¿Dónde la '
+        'pones?" ni "Tarea añadida" y con un solo anuncio', (tester) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      final announcements = _listenAnnouncements(tester);
+      final before = (await repo.findById('t0'))!;
+      await deleteAndWait(tester);
+      expect(await repo.findById('t0'), isNull);
+
+      await tester.tap(undoButton);
+      // Sin fundido: nunca se ven dos notas a la vez mientras vuelve.
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(_frame);
+        expect(find.byType(CurrentTaskScreen), findsOneWidget);
+      }
+      final after = (await repo.findById('t0'))!;
+      expect(after.id, before.id);
+      expect(after.rank, before.rank);
+      expect(after.text, before.text);
+      expect(after.colorKey, before.colorKey);
+      expect(after.createdAt, before.createdAt);
+      expect(after.updatedAt, before.updatedAt);
+      expect((await repo.currentTask())!.id, 't0');
+      expect((await repo.pendingTasks()).map((t) => t.id), ['t0', 't1']);
+
+      expect(_card, findsNothing);
+      expect(find.text('Primera'), findsOneWidget);
+      expect(find.text('Segunda'), findsNothing);
+      expect(find.byType(HoldToCompleteButton), findsOneWidget);
+      expect(find.text('¿Dónde la pones?'), findsNothing);
+      expect(find.textContaining('añadida'), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+
+      await tester.pump(UnaMotion.sheetOut);
+      await tester.pump(UnaMotion.undoWindow);
+      expect(announcements, ['Tarea recuperada']);
+      // Recuperada, la eliminación ya no es de nadie: nada que caducar.
+      expect(_container(tester).read(undoProvider).phase, UndoPhase.none);
+      expect(await repo.findById('t0'), isNotNull);
+    });
+
+    testWidgets('CA-014-10: si la BD tarda en dar la actual, no hay fundido: '
+        'se espera a que lo sea antes de mostrarla', (tester) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      await deleteAndWait(tester);
+      repo.currentDelay = const Duration(milliseconds: 200);
+
+      await tester.tap(undoButton);
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(_frame);
+        expect(find.byType(CurrentTaskScreen), findsOneWidget);
+      }
+      expect(find.text('Primera'), findsOneWidget);
+      expect(find.text('Segunda'), findsNothing);
+      await tester.pump(UnaMotion.sheetOut * 2);
+    });
+
+    testWidgets('CA-014-10: al eliminar la última, deshacer vuelve de "Todo '
+        'hecho." a la tarea', (tester) async {
+      final repo = await _pump(tester, tasks: ['Única']);
+      await deleteAndWait(tester);
+      expect(find.byType(AllDoneScreen), findsOneWidget);
+
+      await tester.tap(undoButton);
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(_frame);
+      }
+      expect(find.byType(AllDoneScreen), findsNothing);
+      expect(find.byType(CurrentTaskScreen), findsOneWidget);
+      expect(find.text('Única'), findsOneWidget);
+      expect((await repo.currentTask())!.id, 't0');
+      expect(_card, findsNothing);
+    });
+
+    testWidgets('CA-014-03: la card no usa el estilo de reserva (sin '
+        'Material, el texto saldría subrayado en amarillo)', (tester) async {
+      await _pump(tester, tasks: ['Primera', 'Segunda']);
+      await deleteAndWait(tester);
+      final title = find.descendant(
+        of: _card,
+        matching: find.text('Tarea eliminada'),
+      );
+      final style = DefaultTextStyle.of(tester.element(title)).style;
+      expect(style.decoration, isNot(TextDecoration.underline));
+      expect(style.fontFamily, isNot('monospace'));
+      await tester.pump(UnaMotion.undoWindow);
+    });
+
+    testWidgets('CL-014-3: una activación antes de 350 ms no hace nada; '
+        'después sí', (tester) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      await _delete(tester);
+      await _crumple(tester);
+      expect(_card, findsOneWidget);
+
+      await tester.tap(undoButton);
+      await tester.pump(_frame);
+      expect(_card, findsOneWidget);
+      expect(await repo.findById('t0'), isNull);
+
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(undoButton);
+      await tester.pump(_frame);
+      expect(_card, findsNothing);
+      expect(await repo.findById('t0'), isNotNull);
+      await tester.pump(UnaMotion.sheetOut * 2);
+    });
+
+    testWidgets('CL-014-3: dos pulsaciones seguidas recuperan una sola vez', (
+      tester,
+    ) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      final announcements = _listenAnnouncements(tester);
+      await deleteAndWait(tester);
+      final inserts = repo.inserts;
+
+      await tester.tap(undoButton);
+      await tester.tap(undoButton, warnIfMissed: false);
+      await tester.pump(_frame);
+      await tester.pump(UnaMotion.sheetOut);
+      await tester.pump(_frame);
+      expect(repo.inserts, inserts + 1);
+      expect(await repo.pendingTasks(), hasLength(2));
+      expect(announcements, ['Tarea recuperada']);
+    });
+
+    testWidgets('CL-014-3: Intro mantenido es una sola activación y no '
+        'completa nada de lo que hay detrás', (tester) async {
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      await deleteAndWait(tester);
+      final inserts = repo.inserts;
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+      await tester.pump(_frame);
+      for (var i = 0; i < 4; i++) {
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
+        await tester.pump(_frame);
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+      await tester.pump(UnaMotion.holdToComplete);
+
+      expect(repo.inserts, inserts + 1);
+      expect(_container(tester).read(completionProvider).busy, isFalse);
+      expect((await repo.pendingTasks()).map((t) => t.id), ['t0', 't1']);
+      expect(find.text('Primera'), findsOneWidget);
+    });
+
+    testWidgets('CL-014-4: justo antes de acabar el tiempo se recupera; '
+        'justo después ya no hay nada que pulsar', (tester) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      await deleteAndWait(tester);
+      // Del primer fotograma de la card (400 ms) a 100 ms del final.
+      await tester.pump(
+        UnaMotion.undoWindow - const Duration(milliseconds: 500),
+      );
+      expect(_card, findsOneWidget);
+      await tester.tap(undoButton);
+      await tester.pump(_frame);
+      expect(await repo.findById('t0'), isNotNull);
+
+      // Otra eliminación que caduca: un "Deshacer" tardío no hace nada.
+      await _delete(tester);
+      await _crumple(tester);
+      await tester.pump(UnaMotion.undoWindow + _frame);
+      await tester.pump();
+      expect(_card, findsNothing);
+      expect(
+        await _container(tester).read(undoProvider.notifier).undo(),
+        isNull,
+      );
+      expect((await repo.pendingTasks()).map((t) => t.id), ['t1']);
+    });
+
+    testWidgets('CA-014-23: si falla al recuperar, el aviso con "Reintentar" '
+        'no tapa el botón y "Reintentar" recupera la tarea', (tester) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      final announcements = _listenAnnouncements(tester);
+      await deleteAndWait(tester);
+      repo.failInsert = true;
+
+      await tester.tap(undoButton);
+      await tester.pump(_frame);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_card, findsNothing);
+      expect(find.text('No hemos podido recuperar la tarea'), findsOneWidget);
+      expect(find.text('Reintentar'), findsOneWidget);
+      expect(await repo.findById('t0'), isNull);
+      expect(_container(tester).read(undoProvider).phase, UndoPhase.failed);
+      // Los botones vuelven a verse y el aviso flota por encima de ellos.
+      final cta = find.byType(HoldToCompleteButton);
+      expect(cta, findsOneWidget);
+      expect(
+        tester.getRect(find.text('Reintentar')).bottom,
+        lessThanOrEqualTo(tester.getRect(cta).top),
+      );
+      // El texto del error no sale por ninguna parte.
+      expect(find.textContaining('disk I/O'), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      repo.failInsert = false;
+      await tester.tap(find.text('Reintentar'));
+      await tester.pump(_frame);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(SnackBar), findsNothing);
+      expect(await repo.findById('t0'), isNotNull);
+      expect(find.text('Primera'), findsOneWidget);
+      expect(announcements, ['Tarea recuperada']);
+    });
+
+    testWidgets('CA-014-23: un `commit` quita el aviso sin animación y '
+        '"Reintentar" ya no recupera nada', (tester) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      await deleteAndWait(tester);
+      repo.failInsert = true;
+      await tester.tap(undoButton);
+      await tester.pump(_frame);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Reintentar'), findsOneWidget);
+
+      final undo = _container(tester).read(undoProvider.notifier);
+      undo.commit();
+      await tester.pump();
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.text('Reintentar'), findsNothing);
+      repo.failInsert = false;
+      expect(await undo.undo(), isNull);
+      expect(await repo.findById('t0'), isNull);
+      expect(_container(tester).read(undoProvider).phase, UndoPhase.none);
+    });
+
+    testWidgets('CA-014-23: descartar el aviso la hace definitiva', (
+      tester,
+    ) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      await deleteAndWait(tester);
+      repo.failInsert = true;
+      await tester.tap(undoButton);
+      await tester.pump(_frame);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_container(tester).read(undoProvider).phase, UndoPhase.failed);
+
+      await tester.fling(
+        find.text('No hemos podido recuperar la tarea'),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+      expect(_container(tester).read(undoProvider).phase, UndoPhase.none);
+      repo.failInsert = false;
+      expect(
+        await _container(tester).read(undoProvider.notifier).undo(),
+        isNull,
+      );
+      expect(await repo.findById('t0'), isNull);
+    });
+
+    testWidgets('CA-014-23: sin espacio, el aviso lo dice', (tester) async {
+      final repo = await _pump(tester, tasks: ['Primera', 'Segunda']);
+      await deleteAndWait(tester);
+      repo
+        ..failInsert = true
+        ..insertMessage = 'No space left on device';
+      await tester.tap(undoButton);
+      await tester.pump(_frame);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('No hemos podido recuperar la tarea'), findsNothing);
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.textContaining('espacio'),
+        ),
+        findsOneWidget,
+      );
+      // Sin el aviso colgado.
+      _container(tester).read(undoProvider.notifier).commit();
+      await tester.pump();
+    });
   });
 }

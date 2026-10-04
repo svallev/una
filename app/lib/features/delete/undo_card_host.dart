@@ -5,6 +5,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/providers.dart';
+import 'delete_task_action.dart';
 import 'undo_card.dart';
 import 'undo_controller.dart';
 
@@ -33,7 +35,8 @@ class UndoCardHost extends ConsumerStatefulWidget {
   final UndoHost host;
   final Widget child;
 
-  /// "Deshacer". Por defecto, solo recupera la tarea (`UndoController.undo`).
+  /// "Deshacer". Por defecto, `undoDeletion`: recupera la tarea y lleva el foco
+  /// a ella.
   final VoidCallback? onUndo;
 
   @override
@@ -68,6 +71,18 @@ class _UndoCardHostState extends ConsumerState<UndoCardHost> {
         state.host == widget.host &&
         TickerMode.valuesOf(context).enabled;
     final undo = ref.read(undoProvider.notifier);
+    // La card desaparece sin deshacer con el foco del teclado en ella (tiempo,
+    // otra acción): el foco va a la tarea o al título (CA-014-20). Al deshacer
+    // no: allí el foco lo lleva `undoDeletion` a la tarea recuperada.
+    ref.listen(undoProvider, (previous, next) {
+      if (previous != null &&
+          previous.cardVisible &&
+          previous.host == widget.host &&
+          next.phase == UndoPhase.none &&
+          _focusNode.hasFocus) {
+        ref.read(screenFocusProvider.notifier).signal();
+      }
+    });
     return UndoCardScope(
       visible: shown,
       height: shown ? _height : 0,
@@ -91,7 +106,9 @@ class _UndoCardHostState extends ConsumerState<UndoCardHost> {
                   task: task,
                   serial: state.serial,
                   fraction: () => undo.fraction,
-                  onUndo: widget.onUndo ?? () => unawaited(undo.undo()),
+                  onUndo:
+                      widget.onUndo ??
+                      () => unawaited(undoDeletion(context, ref)),
                   onShown: undo.cardShown,
                   onFocusChanged: undo.focusChanged,
                   onScreenReaderChanged: undo.screenReaderChanged,

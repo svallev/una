@@ -5,6 +5,7 @@ import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/pdf_position.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/features/attachments/missing_attachment_card.dart';
@@ -361,5 +362,43 @@ void main() {
         },
       );
     }
+  });
+
+  testWidgets('CA-014-09: deshacer devuelve el PDF en su última posición y '
+      'sus archivos siguen', (tester) async {
+    await repo.insert(await pdfTask('t1', rank: 'A', name: 'Mapa.pdf'));
+    await repo.insert(await pdfTask('t2', rank: 'B'));
+    await store.writePosition('p-t1', const PdfPosition(page: 7, offset: 0.25));
+    await pumpUnaApp(tester, repo: repo, overrides: overrides());
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pump(_frame);
+    await tester.pump(UnaMotion.crumple);
+    await tester.pump(_frame);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await repo.findById('t1'), isNull);
+    taskPdfCalls.clear();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(UndoCard),
+        matching: find.byKey(UndoCard.buttonKey),
+      ),
+    );
+    await tester.pump(_frame);
+    await tester.pump(UnaMotion.sheetOut * 2);
+    await tester.pumpAndSettle();
+
+    expect((await repo.currentTask())!.id, 't1');
+    expect(find.byType(MissingAttachmentCard), findsNothing);
+    expect(
+      taskPdfCalls.last.initialPosition,
+      const PdfPosition(page: 7, offset: 0.25),
+    );
+    await tester.pump(UnaMotion.undoWindow * 2);
+    await tester.pumpAndSettle();
+    expect(await store.storedIds(), {'p-t1', 'p-t2'});
   });
 }

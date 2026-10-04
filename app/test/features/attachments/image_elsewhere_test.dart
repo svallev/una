@@ -335,4 +335,40 @@ void main() {
       expect(await store.storedIds(), {'a-t2'});
     });
   });
+
+  testWidgets('CA-014-09: deshacer devuelve la tarea con su imagen y sus '
+      'versiones; los archivos siguen pasado el tiempo', (tester) async {
+    await repo.insert(await imageTask('t1', text: 'Horario', rank: 'A'));
+    await repo.insert(await imageTask('t2', rank: 'B'));
+    await pumpUnaApp(tester, repo: repo, overrides: overrides());
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pump(_frame);
+    await tester.pump(UnaMotion.crumple);
+    await tester.pump(_frame);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await repo.findById('t1'), isNull);
+    expect(await store.storedIds(), {'a-t1', 'a-t2'});
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(UndoCard),
+        matching: find.byKey(UndoCard.buttonKey),
+      ),
+    );
+    await tester.pump(_frame);
+    await tester.pump(UnaMotion.sheetOut * 2);
+    await tester.pumpAndSettle();
+
+    expect((await repo.currentTask())!.id, 't1');
+    expect(find.byType(UndoCard), findsNothing);
+    expect(find.byType(TaskImage), findsWidgets);
+    expect(find.byType(MissingAttachmentCard), findsNothing);
+    // Pasado el tiempo que tenía la card, nada se borra.
+    await tester.pump(UnaMotion.undoWindow * 2);
+    await tester.pumpAndSettle();
+    expect(await store.storedIds(), {'a-t1', 'a-t2'});
+  });
 }

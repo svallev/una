@@ -505,4 +505,41 @@ void main() {
       }
     },
   );
+
+  testWidgets('CA-014-09, CL-014-9: deshacer devuelve la tarea web y la '
+      'página se vuelve a cargar desde su dirección', (tester) async {
+    await pumpWith(tester, [
+      _webTask('w', _address, rank: 'A'),
+      _webTask('v', _nextAddress, rank: 'B'),
+    ]);
+    web.last.started(_address);
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pump(frame);
+    await tester.pump(UnaMotion.crumple);
+    await tester.pump(frame);
+    await tester.pump(frame);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await repo.findById('w'), isNull);
+    final drivers = web.drivers.length;
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(UndoCard),
+        matching: find.byKey(UndoCard.buttonKey),
+      ),
+    );
+    await tester.pump(frame);
+    await tester.pump(UnaMotion.sheetOut * 2);
+    await tester.pump(frame);
+
+    expect((await repo.currentTask())!.id, 'w');
+    // Una WebView nueva que carga la dirección guardada.
+    expect(web.drivers.length, greaterThan(drivers));
+    expect(web.last.loads.map((u) => u.toString()), [_address]);
+    expect(find.text(_host), findsWidgets);
+    await tester.pumpAndSettle();
+  });
 }

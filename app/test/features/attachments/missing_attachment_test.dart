@@ -484,4 +484,33 @@ void main() {
       expect(await pumpViewer(tester, 'one_page.pdf'), 0);
     });
   });
+
+  testWidgets('CL-014-10: deshacer una tarea con "Adjunto no disponible" la '
+      'devuelve igual, con la misma tarjeta', (tester) async {
+    await repo.insert(await imageTask(text: null));
+    store.removeFile('a1', 'full-0-0.jpg');
+    await pump(tester);
+    expect(find.byType(MissingAttachmentCard), findsOneWidget);
+    await tester.tap(find.text('Eliminar tarea'));
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(UnaMotion.crumple);
+    await tester.pump(const Duration(milliseconds: 32));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await repo.currentTask(), isNull);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(UndoCard),
+        matching: find.byKey(UndoCard.buttonKey),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(UnaMotion.sheetOut * 2);
+    await tester.pumpAndSettle();
+
+    expect((await repo.currentTask())!.attachment!.id, 'a1');
+    expect(find.byType(MissingAttachmentCard), findsOneWidget);
+    expect(find.text('Eliminar tarea'), findsOneWidget);
+    expect(find.byType(UndoCard), findsNothing);
+  });
 }

@@ -145,6 +145,7 @@ class HomeRouter extends ConsumerWidget {
     final crumpling = deletion.phase == DeletionPhase.crumpling;
     final busy = completion.busy || deletion.busy;
     final focusSignal = ref.watch(screenFocusProvider);
+    final restorations = ref.watch(undoRestorationsProvider);
     final task = ref.watch(currentTaskProvider);
     final firstRunDone = ref.watch(firstRunDoneProvider);
     final hasEverHadTasks = ref.watch(hasEverHadTasksProvider);
@@ -209,8 +210,9 @@ class HomeRouter extends ConsumerWidget {
     final screens = AnimatedSwitcher(
       // Al eliminar, la de detrás sustituye a la eliminada sin fundido (se
       // vería detrás de la bola): se monta de nuevo solo en ese momento
-      // (CA-004-04).
-      key: ValueKey('screens-${deletion.generation}'),
+      // (CA-004-04). Lo mismo al deshacer: la recuperada se ve sin fundido
+      // (CA-014-10).
+      key: ValueKey('screens-${deletion.generation}-$restorations'),
       duration: reduced ? UnaMotion.reducedMotionFade : UnaMotion.introFade,
       // Cada pantalla es una "ruta" para el lector (se anuncia el cambio) y la
       // que sale no se lee durante el fundido; tampoco anima nada (así una

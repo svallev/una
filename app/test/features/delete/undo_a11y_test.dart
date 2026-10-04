@@ -7,6 +7,7 @@ import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/attachment_store.dart' show attachmentFrom;
 import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
+import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/delete/undo_controller.dart';
 import 'package:flutter/material.dart';
@@ -40,7 +41,7 @@ late FakeWebPages _web;
 ProviderContainer _container(WidgetTester tester) =>
     ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
 
-Future<InMemoryTaskRepository> _pump(
+Future<_FailingInsertRepo> _pump(
   WidgetTester tester, {
   List<String> tasks = const ['Primera', 'Segunda'],
   List<Task> extra = const [],
@@ -49,7 +50,7 @@ Future<InMemoryTaskRepository> _pump(
   Size size = const Size(390, 844),
   double bottomInset = 0,
 }) async {
-  final repo = InMemoryTaskRepository();
+  final repo = _FailingInsertRepo();
   for (final t in extra) {
     await repo.insert(t);
   }
@@ -99,13 +100,20 @@ List<String> _reading(WidgetTester tester) => tester.semantics
     .toList();
 
 /// Los avisos de foco del lector (el id del nodo al que va).
-List<int> _listenFocusEvents(WidgetTester tester) {
+List<int> _listenFocusEvents(
+  WidgetTester tester, {
+  List<String>? announcements,
+}) {
   final events = <int>[];
   tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
     SystemChannels.accessibility,
     (message) async {
       final map = message! as Map<Object?, Object?>;
       if (map['type'] == 'focus') events.add(map['nodeId']! as int);
+      if (map['type'] == 'announce' && announcements != null) {
+        final data = map['data']! as Map<Object?, Object?>;
+        announcements.add(data['message']! as String);
+      }
       return null;
     },
   );
@@ -117,6 +125,17 @@ List<int> _listenFocusEvents(WidgetTester tester) {
         ),
   );
   return events;
+}
+
+/// No puede volver a insertar (CA-014-23).
+class _FailingInsertRepo extends InMemoryTaskRepository {
+  bool failInsert = false;
+
+  @override
+  Future<void> insert(Task task) async {
+    if (failInsert) throw StateError('disk I/O error: ${task.text}');
+    return super.insert(task);
+  }
 }
 
 /// La acción personalizada [action] del nodo que se lee [label].
@@ -464,6 +483,161 @@ void main() {
         expect(body.bottom, lessThanOrEqualTo(cardTop));
       });
     }
+  });
+
+  group('Deshacer: foco y anuncio (CA-014-18, CA-014-20, CA-014-23)', () {
+    final undoButton = find.descendant(
+      of: _card,
+      matching: find.byKey(UndoCard.buttonKey),
+    );
+
+    bool onTask(WidgetTester tester) =>
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<CurrentTaskScreen>() !=
+        null;
+
+    testWidgets('CA-014-18: con lector, un solo aviso de foco a la tarea '
+        'recuperada, el foco de entrada en ella y un anuncio único', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final announcements = <String>[];
+      final events = _listenFocusEvents(tester, announcements: announcements);
+      await _pump(tester, screenReader: true);
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_focusLabel(), 'undo');
+      events.clear();
+
+      // Con el lector se activa el nodo de la card.
+      final card = tester.getSemantics(find.bySemanticsLabel(_cardLabel));
+      card.owner!.performAction(card.id, SemanticsAction.tap);
+      await tester.pump(_frame);
+      await tester.pump(_frame);
+      expect(_card, findsNothing);
+
+      final task = tester.getSemantics(
+        find.bySemanticsLabel('Tarea actual: Primera'),
+      );
+      expect(events, isNotEmpty);
+      expect(events.toSet(), {
+        task.id,
+      }, reason: 'un solo aviso de foco, al nodo de la tarea');
+      expect(onTask(tester), isTrue);
+      // El anuncio llega cuando la pantalla ya se ve, y es uno.
+      expect(announcements, isEmpty);
+      await tester.pump(UnaMotion.sheetOut + _frame);
+      expect(announcements, ['Tarea recuperada']);
+      handle.dispose();
+    });
+
+    testWidgets('CA-014-18, CA-014-20: con teclado, el foco queda en la tarea '
+        'recuperada y no en el botón', (tester) async {
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      await _pump(tester);
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_focusLabel(), 'undo');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump(_frame);
+      await tester.pump(_frame);
+      expect(_card, findsNothing);
+      expect(find.text('Primera'), findsOneWidget);
+      expect(onTask(tester), isTrue);
+      expect(
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<HoldToCompleteButton>(),
+        isNull,
+      );
+      await tester.pump(UnaMotion.sheetOut * 2);
+    });
+
+    testWidgets('CA-014-18: desde "Todo hecho." vuelve la tarea con el foco '
+        'en ella', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester, tasks: ['Primera'], screenReader: true);
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(AllDoneScreen), findsOneWidget);
+      final card = tester.getSemantics(find.bySemanticsLabel(_cardLabel));
+      card.owner!.performAction(card.id, SemanticsAction.tap);
+      await tester.pump(_frame);
+      await tester.pump(_frame);
+      expect(find.byType(AllDoneScreen), findsNothing);
+      expect(onTask(tester), isTrue);
+      await tester.pump(UnaMotion.sheetOut * 2);
+      handle.dispose();
+    });
+
+    testWidgets('CA-014-20: si la card desaparece sin deshacer con el foco '
+        'del teclado en ella, el foco va a la tarea', (tester) async {
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      await _pump(tester);
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_focusLabel(), 'undo');
+
+      _container(tester).read(undoProvider.notifier).commit();
+      await tester.pump();
+      await tester.pump(_frame);
+      expect(_card, findsNothing);
+      expect(onTask(tester), isTrue);
+    });
+
+    testWidgets('CA-014-20: lo mismo en "Todo hecho.": el foco va al título', (
+      tester,
+    ) async {
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      await _pump(tester, tasks: ['Primera']);
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_focusLabel(), 'undo');
+
+      _container(tester).read(undoProvider.notifier).commit();
+      await tester.pump();
+      await tester.pump(_frame);
+      expect(_card, findsNothing);
+      expect(
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<AllDoneScreen>(),
+        isNotNull,
+      );
+    });
+
+    testWidgets('CA-014-23: el aviso de error lleva el foco de teclado y el '
+        'aviso de foco del lector a "Reintentar"', (tester) async {
+      final handle = tester.ensureSemantics();
+      final events = _listenFocusEvents(tester);
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      final repo = await _pump(tester, screenReader: true);
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      repo.failInsert = true;
+      events.clear();
+
+      await tester.tap(undoButton);
+      await tester.pump(_frame);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Reintentar'), findsOneWidget);
+      final retry = tester.getSemantics(find.bySemanticsLabel('Reintentar'));
+      expect(events, isNotEmpty);
+      expect(events.last, retry.id);
+      final focus = FocusManager.instance.primaryFocus;
+      expect(focus, isNotNull);
+      expect(
+        focus!.context!.findAncestorWidgetOfExactType<TextButton>(),
+        isNotNull,
+        reason: 'el foco de entrada está en "Reintentar"',
+      );
+      _container(tester).read(undoProvider.notifier).commit();
+      await tester.pump();
+      handle.dispose();
+    });
   });
 
   group('Girar con la card (CL-014-8, CA-014-12)', () {

@@ -103,6 +103,20 @@ final undoProvider = NotifierProvider<UndoController, UndoState>(
   UndoController.new,
 );
 
+/// Cuántas tareas se han recuperado con "Deshacer" (CA-014-10): la pantalla
+/// principal lo añade a la clave de su `AnimatedSwitcher` para que la tarea
+/// recuperada aparezca **sin fundido**, como el arrugado con `generation`.
+final undoRestorationsProvider = NotifierProvider<UndoRestorations, int>(
+  UndoRestorations.new,
+);
+
+class UndoRestorations extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
 /// La fila de la tarea sale de la BD al guardar la eliminación y sus archivos
 /// esperan retenidos ([AttachmentJanitor.hold]); la eliminación es
 /// **definitiva** cuando la card desaparece por cualquier causa ([commit]):
