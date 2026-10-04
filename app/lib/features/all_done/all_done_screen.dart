@@ -6,6 +6,7 @@ import '../../ui/brutal_button.dart';
 import '../../ui/focus_on_signal.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
+import '../delete/undo_card_host.dart';
 
 /// "Todo hecho." (R12, spec 003, CA-003-05): no queda nada pendiente.
 /// Prototipo: estado `vacio` con `allDone` (fondo papel, texto de 56 px).
@@ -57,6 +58,15 @@ class _AllDoneScreenState extends State<AllDoneScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final reduced = MediaQuery.disableAnimationsOf(context);
+    // Con la card de deshacer a la vista, "Crear una tarea" no se ve y su sitio
+    // crece lo que haga falta para que nada quede tapado (CA-014-05).
+    final undoCard = UndoCardScope.of(context);
+    final cardSpace = undoCard.visible
+        ? (undoCard.height -
+                  MediaQuery.paddingOf(context).bottom -
+                  UnaSpace.xxl)
+              .clamp(0.0, double.infinity)
+        : 0.0;
     const titleStyle = TextStyle(
       fontFamily: UnaFonts.display,
       fontSize: UnaFontSizes.hero,
@@ -123,6 +133,7 @@ class _AllDoneScreenState extends State<AllDoneScreen>
                               // Se lee como un solo texto (CA-003-07).
                               FocusOnSignal(
                                 signal: widget.focusSignal,
+                                suspended: undoCard.visible,
                                 child: Semantics(
                                   header: true,
                                   label:
@@ -167,18 +178,24 @@ class _AllDoneScreenState extends State<AllDoneScreen>
                           ),
                         ),
                       ),
-                      Visibility(
-                        visible: widget.showActions,
-                        maintainSize: true,
-                        maintainAnimation: true,
-                        maintainState: true,
-                        child: BrutalButton(
-                          label: l10n.emptyCreate,
-                          icon: UnaIcons.plus,
-                          iconSize: UnaSizes.icon,
-                          iconStroke: UnaSizes.iconStroke,
-                          height: UnaSizes.emptyButton,
-                          onPressed: widget.onCreate,
+                      ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: cardSpace),
+                        child: Visibility(
+                          visible: widget.showActions && !undoCard.visible,
+                          maintainSize: true,
+                          maintainAnimation: true,
+                          maintainState: true,
+                          child: ExcludeFocus(
+                            excluding: undoCard.visible,
+                            child: BrutalButton(
+                              label: l10n.emptyCreate,
+                              icon: UnaIcons.plus,
+                              iconSize: UnaSizes.icon,
+                              iconStroke: UnaSizes.iconStroke,
+                              height: UnaSizes.emptyButton,
+                              onPressed: widget.onCreate,
+                            ),
+                          ),
                         ),
                       ),
                     ],

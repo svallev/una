@@ -17,7 +17,6 @@ import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/entities/web_load_failure.dart';
 import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/domain/ports/link_opener.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/features/web/task_web.dart';
 import 'package:app/features/web/url_sheet.dart';
@@ -204,9 +203,6 @@ final List<_Exit> _exits = [
     run: (tester) async {
       await _openMenu(tester);
       await tester.tap(find.text('Eliminar'));
-      await tester.pumpAndSettle();
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-      await tester.tap(find.text('Eliminar').last);
       await tester.pumpAndSettle();
       expect(find.text('Segunda'), findsOneWidget);
     },

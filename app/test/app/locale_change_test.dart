@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:app/app/providers.dart';
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
@@ -14,7 +15,7 @@ import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/menu/menu_sheet.dart';
 import 'package:app/features/settings/license_detail_screen.dart';
@@ -415,9 +416,8 @@ void main() {
         semantics.dispose();
       });
 
-      testWidgets('la hoja de eliminar abierta sigue abierta y no elimina', (
-        tester,
-      ) async {
+      testWidgets('CA-014-03: la card de deshacer visible cambia de idioma y '
+          'sigue la cuenta', (tester) async {
         final repo = InMemoryTaskRepository();
         await pumpUnaApp(
           tester,
@@ -428,19 +428,31 @@ void main() {
         await tester.tap(find.bySemanticsLabel(before.menuButton));
         await tester.pumpAndSettle();
         await tester.tap(find.text(before.menuDelete));
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.pump(UnaMotion.crumple);
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.byType(UndoCard), findsOneWidget);
+        expect(find.text(before.undoDeletedTitle), findsOneWidget);
+        expect(find.text(before.undoButton), findsOneWidget);
+
+        // Sin `pumpAndSettle`: con la card a la vista nunca se asienta y
+        // avanzaría el reloj hasta que caduque.
+        tester.platformDispatcher.localesTestValue = [Locale(to)];
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // La cuenta no se reinicia: sigue la misma card, ya en el idioma
+        // nuevo, y la tarea sigue eliminada.
+        expect(find.byType(UndoCard), findsOneWidget);
+        expect(find.text(after.undoDeletedTitle), findsOneWidget);
+        expect(find.text(after.undoButton), findsOneWidget);
+        expect(find.text(before.undoDeletedTitle), findsNothing);
+        expect((await repo.pendingTasks()).length, _tasks.length - 1);
+        await tester.pump(UnaMotion.undoWindow);
         await tester.pumpAndSettle();
-        expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-        expect(find.text(before.deleteTitle), findsOneWidget);
-
-        final stale = _modalBarrierTexts(tester);
-        await _switchTo(tester, [Locale(to)]);
-
-        expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-        expect(find.text(after.deleteTitle), findsOneWidget);
-        expect(find.text(before.deleteTitle), findsNothing);
-        expect(find.text(after.deleteBody(_tasks.first)), findsOneWidget);
-        expect((await repo.pendingTasks()).length, _tasks.length);
-        _expectNoLeaksAfterSwitch(tester, to, staleBarrier: stale);
+        expect(find.byType(UndoCard), findsNothing);
       });
 
       testWidgets('el listado abierto sigue abierto, con sus filas', (

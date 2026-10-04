@@ -11,9 +11,9 @@ import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
 import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
-import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -286,7 +286,8 @@ void main() {
     });
 
     testWidgets('el arrugado muestra la imagen (no "Adjunto no disponible"), '
-        'la confirmación dice "Foto" y el anuncio también', (tester) async {
+        'la card dice "Foto" y los archivos se borran al acabar el '
+        'tiempo', (tester) async {
       final announcements = listen(tester);
       await repo.insert(await imageTask('t1', rank: 'A'));
       await repo.insert(
@@ -298,19 +299,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Eliminar'));
-      await tester.pumpAndSettle();
-      expect(
-        find.descendant(
-          of: find.byType(DeleteConfirmSheet),
-          matching: find.textContaining('Foto'),
-        ),
-        findsOneWidget,
-      );
-      await tester.tap(
-        find.byWidgetPredicate(
-          (w) => w is BrutalButton && w.label == 'Eliminar',
-        ),
-      );
+      // Sin confirmación (CA-014-01).
       await tester.pump(_frame);
       await tester.pump(_frame);
       await tester.pump(UnaMotion.crumple * 0.5);
@@ -325,8 +314,23 @@ void main() {
       );
       expect(find.byType(MissingAttachmentCard), findsNothing);
       await tester.pump(UnaMotion.crumple);
+      await tester.pump(_frame);
+      await tester.pump(_frame);
+      // CA-007-20, CA-014-04: la etiqueta sin texto, en la card; sin anuncios
+      // (CA-014-16).
+      expect(
+        find.descendant(
+          of: find.byType(UndoCard),
+          matching: find.textContaining('Foto'),
+        ),
+        findsOneWidget,
+      );
+      expect(announcements, isEmpty);
+      // CA-014-15: los archivos siguen mientras se puede deshacer y se
+      // borran al acabar el tiempo.
+      expect(await store.storedIds(), {'a-t1', 'a-t2'});
+      await tester.pump(UnaMotion.undoWindow);
       await tester.pumpAndSettle();
-      expect(announcements, contains('Tarea eliminada. Siguiente: Imagen'));
       // CA-007-16: los archivos de la eliminada ya no están.
       expect(await store.storedIds(), {'a-t2'});
     });

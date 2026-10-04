@@ -97,6 +97,7 @@ class _UndoCardHostState extends ConsumerState<UndoCardHost> {
                   onScreenReaderChanged: undo.screenReaderChanged,
                   focusNode: _focusNode,
                   sortKey: const OrdinalSortKey(0),
+                  requestsFocus: true,
                 ),
               ),
             ),

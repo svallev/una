@@ -25,6 +25,7 @@ import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/placement_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
@@ -110,22 +111,24 @@ Future<void> _openMenu(WidgetTester tester, AppLocalizations l10n) async {
   expect(find.byType(MenuSheet), findsOneWidget);
 }
 
-/// Menú → Eliminar → Eliminar, hasta que termina el arrugado.
+/// Menú → Eliminar (sin confirmación, spec 014), hasta que termina el
+/// arrugado: queda la card de deshacer a la vista.
 Future<void> _delete(WidgetTester tester, AppLocalizations l10n) async {
   await _openMenu(tester, l10n);
   await tester.tap(find.text(l10n.menuDelete));
-  await tester.pumpAndSettle();
-  expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-  await tester.tap(
-    find.byWidgetPredicate(
-      (w) => w is BrutalButton && w.label == l10n.deleteConfirm,
-    ),
-  );
   await tester.pump(_frame);
   await tester.pump(_frame);
-  await tester.pump(UnaMotion.sheetOut);
   await tester.pump(UnaMotion.crumple);
+  await tester.pump(_frame);
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(find.byType(UndoCard), findsOneWidget);
+}
+
+/// Deja pasar el tiempo de la card de deshacer.
+Future<void> _expireUndo(WidgetTester tester) async {
+  await tester.pump(UnaMotion.undoWindow);
   await tester.pumpAndSettle();
+  expect(find.byType(UndoCard), findsNothing);
 }
 
 /// Mensajes de los anuncios capturados (para comprobar que sí se anunció).
@@ -315,11 +318,13 @@ void main() {
         expect(_messages(said), [l10n.a11yCompletedNext(_neutral[1])]);
         expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
 
-        // Eliminar con siguiente.
+        // Eliminar con siguiente: sin anuncios, la card se lee sola al recibir
+        // el foco (CA-014-16); el idioma de su texto, el de la app.
         await _delete(tester, l10n);
         said = tester.takeAnnouncements();
-        expect(_messages(said), [l10n.a11yDeletedNext(_neutral[2])]);
+        expect(said, isEmpty);
         expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
+        await _expireUndo(tester);
 
         // Completar la última: "Todo hecho.".
         await _hold(tester);
@@ -342,9 +347,11 @@ void main() {
         tester.takeAnnouncements();
         await _delete(tester, l10n);
         final said = tester.takeAnnouncements();
-        expect(_messages(said), [l10n.a11yDeletedAllDone]);
+        expect(said, isEmpty);
         expect(find.byType(AllDoneScreen), findsOneWidget);
         expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
+        await _expireUndo(tester);
+        expectNoL10nLeaks(tester, languageCode: lang);
       });
 
       for (final noSpace in [false, true]) {
@@ -733,37 +740,26 @@ void main() {
         expectNoL10nLeaks(tester, languageCode: lang);
       });
 
-      testWidgets('hoja de eliminar (tarea con texto y con PDF)', (
+      testWidgets('card de deshacer (tarea con texto y con PDF)', (
         tester,
       ) async {
         await pumpWith(tester, [
           sampleTask(id: 't0', text: _neutral.first, rank: 'MA'),
           await _pdfTask(store, 'p', rank: 'MB'),
         ]);
-        for (var i = 0; i < 2; i++) {
-          await _openMenu(tester, l10n);
-          await tester.tap(find.text(l10n.menuDelete));
-          await tester.pumpAndSettle();
-          expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-          expectNoL10nLeaks(tester, languageCode: lang);
-          if (i == 0) {
-            // Se elimina la de texto; la siguiente es la del PDF.
-            await tester.tap(
-              find.byWidgetPredicate(
-                (w) => w is BrutalButton && w.label == l10n.deleteConfirm,
-              ),
-            );
-            await tester.pump(_frame);
-            await tester.pump(_frame);
-            await tester.pump(UnaMotion.sheetOut);
-            await tester.pump(UnaMotion.crumple);
-            await tester.pumpAndSettle();
-            final said = tester.takeAnnouncements();
-            expect(said, hasLength(1));
-            expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
-            expect(find.byType(PdfStrip), findsOneWidget);
-          }
-        }
+        // Se elimina la de texto; la siguiente es la del PDF.
+        await _delete(tester, l10n);
+        var said = tester.takeAnnouncements();
+        expect(said, isEmpty);
+        expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
+        expect(find.byType(PdfStrip), findsOneWidget);
+        await _expireUndo(tester);
+        // Y la del PDF: la card dice el nombre del archivo.
+        await _delete(tester, l10n);
+        said = tester.takeAnnouncements();
+        expect(said, isEmpty);
+        expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
+        await _expireUndo(tester);
       });
 
       testWidgets('listado: filas de texto, PDF y web, hoja de mover, hoja de '

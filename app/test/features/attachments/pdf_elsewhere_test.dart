@@ -15,9 +15,9 @@ import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
 import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
-import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -310,8 +310,7 @@ void main() {
     for (final reduced in [false, true]) {
       testWidgets(
         'el arrugado${reduced ? ' (reducir movimiento: fundido)' : ''} '
-        'muestra lo que se veía, la confirmación dice el nombre y el '
-        'anuncio también',
+        'muestra lo que se veía, la card dice el nombre y no hay anuncio',
         (tester) async {
           final announcements = listenAnnouncements(tester);
           await repo.insert(await pdfTask('t1', rank: 'A', name: 'Mapa.pdf'));
@@ -326,19 +325,8 @@ void main() {
 
           await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
           await tester.pumpAndSettle();
+          // Sin confirmación (CA-014-01).
           await tester.tap(find.text('Eliminar'));
-          await tester.pumpAndSettle();
-          expect(
-            tester
-                .widget<DeleteConfirmSheet>(find.byType(DeleteConfirmSheet))
-                .label,
-            'Mapa.pdf',
-          );
-          await tester.tap(
-            find.byWidgetPredicate(
-              (w) => w is BrutalButton && w.label == 'Eliminar',
-            ),
-          );
           await tester.pump(_frame);
           await tester.pump(_frame);
           await tester.pump(
@@ -354,11 +342,21 @@ void main() {
           expect(await faceColor(tester, overlay), _visiblePage);
           expect(find.byType(MissingAttachmentCard), findsNothing);
           await tester.pump(UnaMotion.crumple);
-          await tester.pumpAndSettle();
+          await tester.pump(_frame);
+          await tester.pump(_frame);
+          // CA-014-04: la card dice el nombre del PDF; CA-014-16: sin anuncios.
           expect(
-            announcements,
-            contains('Tarea eliminada. Siguiente: Programa.pdf'),
+            find.descendant(
+              of: find.byType(UndoCard),
+              matching: find.text('Mapa.pdf'),
+            ),
+            findsOneWidget,
           );
+          expect(announcements, isEmpty);
+          // CA-014-15: los archivos esperan mientras se puede deshacer.
+          expect(await store.storedIds(), {'p-t1', 'p-t2'});
+          await tester.pump(UnaMotion.undoWindow);
+          await tester.pumpAndSettle();
           expect(await store.storedIds(), {'p-t2'});
         },
       );

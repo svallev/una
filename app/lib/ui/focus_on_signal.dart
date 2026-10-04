@@ -5,11 +5,22 @@ import 'package:flutter/widgets.dart';
 /// [signal], y al montarse si ya hubo alguna señal (p. ej., la tarea nueva que
 /// aparece al colocarla arriba del todo, spec 002). Si se monta tapada (bajo la
 /// enhorabuena, spec 003), está excluida del foco y lo recibe al descubrirse.
+///
+/// Con [suspended] no pide el foco, ni al montarse ni con una señal nueva: la
+/// card de deshacer se lo lleva y nada puede competir con ella (CA-014-16).
 class FocusOnSignal extends StatefulWidget {
-  const FocusOnSignal({super.key, required this.signal, required this.child});
+  const FocusOnSignal({
+    super.key,
+    required this.signal,
+    required this.child,
+    this.suspended = false,
+  });
 
   final int signal;
   final Widget child;
+
+  /// Mientras es true, no pide el foco.
+  final bool suspended;
 
   @override
   State<FocusOnSignal> createState() => _FocusOnSignalState();
@@ -22,18 +33,18 @@ class _FocusOnSignalState extends State<FocusOnSignal> {
   @override
   void initState() {
     super.initState();
-    if (widget.signal > 0) _requestAfterFrame();
+    if (widget.signal > 0 && !widget.suspended) _requestAfterFrame();
   }
 
   @override
   void didUpdateWidget(FocusOnSignal old) {
     super.didUpdateWidget(old);
-    if (widget.signal != old.signal) _requestAfterFrame();
+    if (widget.signal != old.signal && !widget.suspended) _requestAfterFrame();
   }
 
   void _requestAfterFrame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || widget.suspended) return;
       _node.requestFocus();
       context.findRenderObject()?.sendSemanticsEvent(
         const FocusSemanticEvent(),

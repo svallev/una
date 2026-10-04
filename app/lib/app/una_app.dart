@@ -13,6 +13,7 @@ import '../features/complete/completion_controller.dart';
 import '../features/current_task/current_task_screen.dart';
 import '../features/delete/crumple_overlay.dart';
 import '../features/delete/deletion_controller.dart';
+import '../features/delete/undo_card_host.dart';
 import '../features/delete/undo_controller.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
@@ -192,11 +193,18 @@ class HomeRouter extends ConsumerWidget {
     } else {
       child = const TaskEditorScreen(key: ValueKey('first-editor'));
     }
+    // La card de deshacer vive dentro del nodo de la ruta de cada pantalla, no
+    // en una capa aparte: al volver a montarse la pantalla tras el arrugado,
+    // TalkBack no cuenta con un cambio de ventana para llegar a ella
+    // (CA-014-16, plan 014 §3).
+    final hasUndoCard = shown != null || hasEverHadTasks || crumpling;
     final screen = Semantics(
       key: child.key,
       scopesRoute: true,
       explicitChildNodes: true,
-      child: child,
+      child: hasUndoCard
+          ? UndoCardHost(host: UndoHost.home, child: child)
+          : child,
     );
     final screens = AnimatedSwitcher(
       // Al eliminar, la de detrás sustituye a la eliminada sin fundido (se

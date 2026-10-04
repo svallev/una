@@ -36,6 +36,8 @@ import '../complete/completion_controller.dart';
 import '../complete/hold_to_complete_button.dart';
 import '../delete/delete_task_action.dart';
 import '../delete/deletion_controller.dart';
+import '../delete/undo_card_host.dart';
+import '../delete/undo_controller.dart';
 import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
 import '../task_list/task_list_screen.dart';
@@ -83,9 +85,14 @@ class CurrentTaskScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final text = task.text ?? '';
     final mq = MediaQuery.of(context);
+    // Con la card de deshacer a la vista, el botón de completar no se ve y su
+    // sitio crece lo que haga falta para que nada quede tapado (CA-014-05).
+    final undoCard = faceOnly || chromeOnly
+        ? (visible: false, height: 0.0)
+        : UndoCardScope.of(context);
     Future<bool> complete() => completeTask(context, ref, task);
     Future<void> openMenu() => _openMenu(context, ref);
-    Future<void> delete() => confirmAndDeleteTask(context, ref, task);
+    Future<void> delete() => deleteTask(context, ref, task);
     Widget hidden(Widget child) => Visibility(
       visible: false,
       maintainSize: true,
@@ -179,6 +186,7 @@ class CurrentTaskScreen extends ConsumerWidget {
       String? webHost,
     }) => FocusOnSignal(
       signal: focusSignal,
+      suspended: undoCard.visible,
       child: Semantics(
         // Una imagen más alta que la pantalla se desplaza también con las
         // acciones del lector y de Switch Access (CA-007-09, WCAG 2.1.1).
@@ -323,7 +331,11 @@ class CurrentTaskScreen extends ConsumerWidget {
       right: !bleed,
       bottom: !bleed,
       child: Padding(
-        padding: bleed ? EdgeInsets.zero : contentPadding,
+        // En horizontal, el PDF y la web acaban encima de la card de deshacer;
+        // la imagen, que es un solo elemento, queda debajo (plan 014 §3).
+        padding: bleed
+            ? EdgeInsets.only(bottom: undoCard.visible ? undoCard.height : 0)
+            : contentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -425,13 +437,24 @@ class CurrentTaskScreen extends ConsumerWidget {
             if (!landscape)
               cta(
                 side(
-                  _Order(
-                    2,
-                    child: HoldToCompleteButton(
-                      label: l10n.completeButton,
-                      a11yAction: l10n.completeA11yAction,
-                      a11yHint: l10n.completeA11yHint,
-                      onComplete: complete,
+                  // Con la card, el botón se oculta (también al lector y al
+                  // teclado) y su sitio crece hasta cubrir la card (CA-014-05).
+                  _UndoCardSpace(
+                    card: undoCard,
+                    // Lo que ya hay bajo el botón: el margen del sistema, el
+                    // de abajo y la separación del PDF o la web.
+                    below:
+                        mq.padding.bottom +
+                        contentPadding.bottom +
+                        ((showPdf || showWeb) ? UnaSpace.m : 0),
+                    child: _Order(
+                      2,
+                      child: HoldToCompleteButton(
+                        label: l10n.completeButton,
+                        a11yAction: l10n.completeA11yAction,
+                        a11yHint: l10n.completeA11yHint,
+                        onComplete: complete,
+                      ),
                     ),
                   ),
                 ),
@@ -663,11 +686,14 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
           .read(colorPickerProvider)
           .pick(currentColorKey: task.colorKey),
     ),
-    // La confirmación sustituye al menú (CA-004-01).
+    // Elimina directamente, sin confirmación (CA-014-01).
     MenuAction.delete || MenuAction.allTasks => null,
   };
   if (action == MenuAction.allTasks) return openTaskList(context, ref);
-  if (editor == null) return confirmAndDeleteTask(context, ref, task);
+  if (editor == null) {
+    await deleteTask(context, ref, task);
+    return;
+  }
   await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
 }
 
@@ -691,9 +717,7 @@ class _MissingAttachment extends ConsumerWidget {
       isPdf: task.attachment?.isPdf ?? false,
       header: header,
       onRemove: interactive ? () => _remove(context, ref) : () {},
-      onDelete: interactive
-          ? () => confirmAndDeleteTask(context, ref, task)
-          : () {},
+      onDelete: interactive ? () => deleteTask(context, ref, task) : () {},
     );
   }
 
@@ -703,6 +727,9 @@ class _MissingAttachment extends ConsumerWidget {
   /// "Quitar adjunto" (con texto).
   Future<void> _remove(BuildContext context, WidgetRef ref) async {
     if (_busy(ref)) return;
+    // Editar hace definitiva una eliminación que aún se podía deshacer
+    // (CA-014-11), antes de escribir.
+    ref.read(undoProvider.notifier).commit();
     final l10n = AppLocalizations.of(context);
     final view = View.of(context);
     final direction = Directionality.of(context);
@@ -902,6 +929,39 @@ class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
 
   @override
   Widget build(BuildContext context) => widget.builder(_scroll);
+}
+
+/// El sitio del botón de abajo mientras se ve la card de deshacer (CA-014-05):
+/// el botón sigue ocupando su sitio, pero no se ve ni se puede enfocar, y el
+/// sitio crece hasta que lo desplazable de arriba acaba encima de la card.
+/// [below] es lo que hay entre este sitio y el borde de la pantalla.
+class _UndoCardSpace extends StatelessWidget {
+  const _UndoCardSpace({
+    required this.card,
+    required this.below,
+    required this.child,
+  });
+
+  final ({bool visible, double height}) card;
+  final double below;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!card.visible) return child;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: (card.height - below).clamp(0, double.infinity),
+      ),
+      child: Visibility(
+        visible: false,
+        maintainSize: true,
+        maintainAnimation: true,
+        maintainState: true,
+        child: ExcludeFocus(child: child),
+      ),
+    );
+  }
 }
 
 class _Order extends StatelessWidget {

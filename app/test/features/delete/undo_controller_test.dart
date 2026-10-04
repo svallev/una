@@ -800,6 +800,14 @@ void main() {
       expect(phase(), UndoPhase.visible);
     }
 
+    /// Con la card a la vista, `pumpAndSettle` no se asienta (la barra de
+    /// tiempo repinta en cada fotograma) y avanzaría el reloj hasta que
+    /// caduque: se deja pasar un tiempo corto y fijo.
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
     PageRoute<void> page() => PageRouteBuilder<void>(
       pageBuilder: (_, _, _) => const ColoredBox(color: Colors.white),
     );
@@ -810,25 +818,25 @@ void main() {
       await holdByHand(tester, 't5');
 
       await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.byType(MenuSheet), findsOneWidget);
       expect(phase(), UndoPhase.visible);
       navigator(tester).pop();
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.byType(MenuSheet), findsNothing);
       expect(phase(), UndoPhase.visible);
 
       await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
-      await tester.pumpAndSettle();
+      await settle(tester);
       await tester.tap(find.text('Todas mis tareas'));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.byType(TaskListScreen), findsOneWidget);
       expect(phase(), UndoPhase.none);
 
       // Volver del listado (botón o gesto atrás, CL-014-17).
       await holdByHand(tester, 't4');
       await navigator(tester).maybePop();
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.byType(TaskListScreen), findsNothing);
       expect(phase(), UndoPhase.none);
     });
@@ -838,12 +846,12 @@ void main() {
       await pump(tester);
       await holdByHand(tester, 't5');
       unawaited(navigator(tester).push(page()));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(phase(), UndoPhase.none);
 
       await holdByHand(tester, 't4');
       navigator(tester).pop();
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(phase(), UndoPhase.none);
     });
 
@@ -858,21 +866,21 @@ void main() {
       await holdByHand(tester, 't5');
       final guarded = page();
       unawaited(undo().guardNavigation(guarded, () => nav.push(guarded)));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(phase(), UndoPhase.visible);
 
       // Una vez consumida, la misma ruta sí cuenta: volver de ella.
       nav.pop();
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(phase(), UndoPhase.none);
 
       // Volver de su ruta tampoco (ir a "Todo hecho." desde el listado).
       final list = page();
       unawaited(nav.push(list));
-      await tester.pumpAndSettle();
+      await settle(tester);
       await holdByHand(tester, 't1');
       undo().guardNavigation(list, nav.pop);
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(phase(), UndoPhase.visible);
       undo().commit();
 
@@ -882,11 +890,11 @@ void main() {
       final other = page();
       final later = page();
       unawaited(undo().guardNavigation(later, () => nav.push(other)));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(phase(), UndoPhase.none);
       await holdByHand(tester, 't3');
       unawaited(nav.push(later));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(phase(), UndoPhase.none);
 
       // Si la navegación falla, la guarda tampoco se queda.
@@ -901,7 +909,7 @@ void main() {
       );
       expect(phase(), UndoPhase.visible);
       unawaited(nav.push(failing));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(phase(), UndoPhase.none);
     });
 

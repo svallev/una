@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SemanticsSortKey;
 import 'package:flutter/scheduler.dart' show Ticker;
+import 'package:flutter/semantics.dart' show FocusSemanticEvent;
 import 'package:flutter/services.dart';
 
 import '../../app/theme/tokens.g.dart';
@@ -52,6 +53,7 @@ class UndoCard extends StatefulWidget {
     this.onScreenReaderChanged,
     this.focusNode,
     this.sortKey,
+    this.requestsFocus = false,
   });
 
   /// La tarea eliminada: su etiqueta y el color de la barra.
@@ -78,6 +80,13 @@ class UndoCard extends StatefulWidget {
 
   /// Orden de lectura frente a sus hermanos (va la primera, CA-014-16).
   final SemanticsSortKey? sortKey;
+
+  /// Si lleva el foco a sí misma al aparecer y con cada eliminación nueva
+  /// (CA-014-16, CA-014-20): el aviso de foco al lector, siempre, y el foco de
+  /// entrada de "Deshacer" con un lector o un teclado físico en uso (P-014-3).
+  /// No se pide a sí misma el foco si no se lo piden: el cambio de ventana no
+  /// basta para llevar a TalkBack a la card (plan 014 §1).
+  final bool requestsFocus;
 
   /// Claves para los tests y las medidas.
   static const contentKey = ValueKey('undo-card-content');
@@ -150,6 +159,7 @@ class _UndoCardState extends State<UndoCard> with TickerProviderStateMixin {
     _ticker = createTicker((_) => _fraction.value = widget.fraction())..start();
     FocusManager.instance.addHighlightModeListener(_onHighlightMode);
     _notifyShown();
+    _requestEntryFocus();
   }
 
   @override
@@ -173,6 +183,7 @@ class _UndoCardState extends State<UndoCard> with TickerProviderStateMixin {
       _semanticsKey = GlobalKey();
       _fraction.value = widget.fraction();
       _notifyShown();
+      _requestEntryFocus();
     }
   }
 
@@ -185,6 +196,34 @@ class _UndoCardState extends State<UndoCard> with TickerProviderStateMixin {
       widget.onShown(
         serial,
         screenReader: MediaQuery.accessibleNavigationOf(context),
+      );
+    });
+  }
+
+  /// Foco explícito tras el primer fotograma de cada serie (plan §3): el nodo
+  /// de la serie ya existe y el aviso al lector llega a él. Con un lector
+  /// ([MediaQuery.accessibleNavigation]) o un teclado físico (modo
+  /// tradicional) también el foco de entrada de "Deshacer"; con el tacto sin
+  /// lector, no (CA-014-20).
+  void _requestEntryFocus() {
+    if (!widget.requestsFocus) return;
+    final serial = widget.serial;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.serial != serial) return;
+      final reader = MediaQuery.accessibleNavigationOf(context);
+      final keyboard =
+          FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+      if (reader || keyboard) {
+        if (_node.hasFocus) {
+          // Ya lo tenía (otra eliminación seguida): el controlador empieza de
+          // cero con cada serie y no se entera si no se le avisa.
+          widget.onFocusChanged(serial, UndoFocus.keyboard, focused: true);
+        } else {
+          _node.requestFocus();
+        }
+      }
+      _semanticsKey.currentContext?.findRenderObject()?.sendSemanticsEvent(
+        const FocusSemanticEvent(),
       );
     });
   }

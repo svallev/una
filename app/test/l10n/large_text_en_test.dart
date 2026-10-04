@@ -21,7 +21,7 @@ import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/attachments/pdf_strip.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/placement_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
@@ -91,12 +91,17 @@ Future<void> _closeMenu(WidgetTester tester) async {
   expect(find.byType(MenuSheet), findsNothing);
 }
 
-/// Menú → Eliminar (deja la hoja de eliminar abierta).
-Future<void> _openDeleteSheet(WidgetTester tester) async {
+/// Menú → Eliminar (sin confirmación): deja la card de deshacer a la vista
+/// tras el arrugado (spec 014).
+Future<void> _deleteFromMenu(WidgetTester tester) async {
   await _openMenu(tester);
   await tester.tap(find.text(_en.menuDelete));
-  await tester.pumpAndSettle();
-  expect(find.byType(DeleteConfirmSheet), findsOneWidget);
+  await tester.pump(_frame);
+  await tester.pump(_frame);
+  await tester.pump(UnaMotion.crumple);
+  await tester.pump(_frame);
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(find.byType(UndoCard), findsOneWidget);
 }
 
 /// Tarea con un PDF ya guardado en [store].
@@ -290,7 +295,7 @@ void main() {
     _noOverflow(tester, 'menú con 1 tarea');
   });
 
-  testWidgets('CA-010-12: hoja de eliminar de una tarea de texto', (
+  testWidgets('CA-010-12: card de deshacer de una tarea de texto largo', (
     tester,
   ) async {
     await pumpEn(
@@ -300,36 +305,21 @@ void main() {
         await _pdfTask(store, 'p', rank: 'MB'),
       ],
     );
-    await _openDeleteSheet(tester);
-    _noOverflow(tester, 'hoja de eliminar (texto)');
-    // Los botones de la hoja se alcanzan aunque se desplace.
-    await tester.ensureVisible(
-      find.byWidgetPredicate(
-        (w) => w is BrutalButton && w.label == _en.deleteConfirm,
-      ),
-    );
-    await tester.pumpAndSettle();
-    _noOverflow(tester, 'hoja de eliminar, botón de confirmar');
-    final cancel = find.byWidgetPredicate(
-      (w) => w is BrutalButton && w.label == _en.editorCancel,
-    );
-    await tester.ensureVisible(cancel);
-    await tester.pumpAndSettle();
-    _noOverflow(tester, 'hoja de eliminar, botón de cancelar');
-    await tester.tap(cancel);
-    await tester.pumpAndSettle();
-    expect(find.byType(DeleteConfirmSheet), findsNothing);
+    await _deleteFromMenu(tester);
+    _noOverflow(tester, 'card de deshacer (texto)');
+    expect(find.text(_en.undoDeletedTitle), findsOneWidget);
+    expect(find.text(_en.undoButton), findsOneWidget);
   });
 
-  testWidgets('CA-010-12: hoja de eliminar de una tarea con PDF', (
+  testWidgets('CA-010-12: card de deshacer de una tarea con PDF', (
     tester,
   ) async {
     await pumpEn(
       tester,
       tasks: [await _pdfTask(store, 'p', text: _long.first, rank: 'MA')],
     );
-    await _openDeleteSheet(tester);
-    _noOverflow(tester, 'hoja de eliminar (PDF)');
+    await _deleteFromMenu(tester);
+    _noOverflow(tester, 'card de deshacer (PDF)');
   });
 
   testWidgets('CA-010-12: tarea actual con imagen (con y sin texto)', (
@@ -558,19 +548,13 @@ void main() {
 
   testWidgets('CA-010-12: "Todo hecho."', (tester) async {
     await pumpEn(tester, tasks: [textTasks().first]);
-    await _openDeleteSheet(tester);
-    await tester.tap(
-      find.byWidgetPredicate(
-        (w) => w is BrutalButton && w.label == _en.deleteConfirm,
-      ),
-    );
-    await tester.pump(_frame);
-    await tester.pump(_frame);
-    await tester.pump(UnaMotion.sheetOut);
-    await tester.pump(UnaMotion.crumple);
-    await tester.pumpAndSettle();
+    await _deleteFromMenu(tester);
     expect(find.byType(AllDoneScreen), findsOneWidget);
     expect(find.text(_en.emptyDoneBody), findsWidgets);
+    _noOverflow(tester, 'todo hecho con la card de deshacer');
+    // Al acabar el tiempo, vuelve "Crear una tarea".
+    await tester.pumpAndSettle();
+    expect(find.byType(UndoCard), findsNothing);
     _noOverflow(tester, 'todo hecho');
   });
 

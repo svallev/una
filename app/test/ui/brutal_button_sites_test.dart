@@ -7,7 +7,6 @@ import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/ports/license_source.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/settings/licenses_screen.dart';
 import 'package:app/features/settings/settings_screen.dart';
@@ -184,30 +183,6 @@ void main() {
   });
 
   group('Sitios sensibles (CA-013-04, CA-004-10)', () {
-    testWidgets(
-      'CA-013-04 / CA-004-10: confirmación de eliminar: "Cancelar" y "Eliminar" son un nodo cada uno y el aviso de foco llega a "Cancelar"',
-      (tester) async {
-        final handle = tester.ensureSemantics();
-        final events = _recordFocusEvents(tester);
-        await pumpUnaApp(
-          tester,
-          repo: InMemoryTaskRepository(),
-          tasks: ['Primera'],
-          screenReader: true,
-        );
-        await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Eliminar'));
-        await tester.pumpAndSettle();
-        expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-        final cancel = _expectSingleButtonNode(tester, 'Cancelar');
-        _expectSingleButtonNode(tester, 'Eliminar');
-        expect(events, contains(cancel));
-        expectNoUnnamedSemanticsStops(tester);
-        handle.dispose();
-      },
-    );
-
     testWidgets(
       'CA-013-04 / CA-008-21: confirmación de un enlace (política de privacidad): "Cancelar" y "Abrir" son un nodo cada uno y el aviso de foco llega a "Cancelar"',
       (tester) async {

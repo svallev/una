@@ -589,9 +589,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('"Eliminar tarea" del lector abre la confirmación', (
-      tester,
-    ) async {
+    testWidgets('CA-014-19: "Eliminar tarea" del lector elimina sin '
+        'confirmación', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpWeb(tester);
       final node = tester.getSemantics(
@@ -602,9 +601,8 @@ void main() {
       );
       node.owner!.performAction(node.id, SemanticsAction.customAction, id);
       await tester.pumpAndSettle();
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-      // Una hoja: la página sigue.
-      expect(web.last.stops, 0);
+      expect(find.byType(DeleteConfirmSheet), findsNothing);
+      expect(find.byType(TaskWeb), findsNothing);
       handle.dispose();
     });
   });
@@ -750,9 +748,6 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Eliminar'));
-      await tester.pumpAndSettle();
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-      await tester.tap(find.text('Eliminar').last);
       await tester.pumpAndSettle();
       expect(find.byType(TaskWeb), findsNothing);
       expect(driver.disposed, isTrue);

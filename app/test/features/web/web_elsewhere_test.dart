@@ -14,6 +14,7 @@ import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
 import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/features/web/task_web.dart';
@@ -449,7 +450,7 @@ void main() {
         });
 
         testWidgets('el arrugado$how muestra la barra y la zona en blanco, la '
-            'confirmación y el anuncio dicen el dominio', (tester) async {
+            'card dice el dominio y no hay anuncio', (tester) async {
           final announcements = listenAnnouncements(tester);
           await pumpWith(tester, [
             _webTask('w', _address, rank: 'A'),
@@ -461,19 +462,8 @@ void main() {
 
           await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
           await tester.pumpAndSettle();
+          // Sin confirmación (CA-014-01).
           await tester.tap(find.text('Eliminar'));
-          await tester.pumpAndSettle();
-          expect(
-            tester
-                .widget<DeleteConfirmSheet>(find.byType(DeleteConfirmSheet))
-                .label,
-            _host,
-          );
-          await tester.tap(
-            find.byWidgetPredicate(
-              (w) => w is BrutalButton && w.label == 'Eliminar',
-            ),
-          );
           await tester.pump(frame);
           await tester.pump(frame);
           await tester.pump(
@@ -495,11 +485,18 @@ void main() {
           expect(web.drivers.where((d) => d != page), hasLength(lessThan(2)));
 
           await tester.pump(UnaMotion.crumple);
-          await tester.pumpAndSettle();
+          await tester.pump(frame);
+          await tester.pump(frame);
+          // CA-014-04: la card dice el dominio; CA-014-16: sin anuncios.
           expect(
-            announcements,
-            contains('Tarea eliminada. Siguiente: $_nextHost'),
+            find.descendant(
+              of: find.byType(UndoCard),
+              matching: find.text(_host),
+            ),
+            findsOneWidget,
           );
+          expect(announcements, isEmpty);
+          await tester.pumpAndSettle();
           // La siguiente (web) se ve con su propia WebView.
           expect(tester.widget<WebBar>(find.byType(WebBar)).host, _nextHost);
           expect(web.last, isNot(page));
