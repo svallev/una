@@ -61,7 +61,8 @@ Android puede copiar los datos de las apps a tu cuenta de Google (copia de segur
 
 ## Cuánto tiempo se guarda y cómo borrarlo
 
-- **Eliminar o completar una tarea la borra del todo**, con su texto y sus adjuntos. No queda histórico ni papelera.
+- **Completar una tarea la borra del todo**, con su texto y sus adjuntos. No queda histórico ni papelera.
+- **Eliminar una tarea se puede deshacer unos segundos** (por defecto 4; más si tu móvil tiene ajustes de accesibilidad que piden más tiempo). Durante ese tiempo la app guarda en memoria el texto de la tarea y no borra sus archivos. **Después se borra del todo**, con su texto y sus adjuntos, y no queda papelera. Si cierras la app o la dejas en segundo plano, se borra en ese momento.
 - **Desinstalar la app borra todo** lo que guardó en tu móvil. Las copias de seguridad que ya hubiera hecho el sistema las gestionas tú en tu cuenta de Google.
 
 ## Menores
@@ -133,7 +134,8 @@ Android can copy apps' data to your Google account (system backup) and move it t
 
 ## How long data is kept and how to delete it
 
-- **Deleting or completing a task erases it completely**, text and attachments included. There is no history or trash.
+- **Completing a task erases it completely**, text and attachments included. There is no history or trash.
+- **Deleting a task can be undone for a few seconds** (4 by default; longer if your phone has accessibility settings that ask for more time). During that time the app keeps the task's text in memory and does not erase its files. **After that it is erased completely**, text and attachments included, with no trash. If you close the app or leave it in the background, it is erased at that moment.
 - **Uninstalling the app erases everything** it stored on your phone. Backups the system already made are managed by you in your Google account.
 
 ## Children
@@ -160,4 +162,5 @@ If the app ever changes what it does with data (for example, with sync or notifi
 6. **Responsable y contacto:** dependen de la cuenta de Play (personal u organización, PD-3) y del dominio (PD-2). Una cuenta personal puede exigir mostrar dirección y teléfono.
 7. **Dónde se aloja la web de la política** (ADR-0009 y ADR-0010 usan Vercel): que sea pública, estable, en ES y EN, y que el proveedor no ponga analítica ni registros que contradigan "sin terceros". Una sola dirección para los dos idiomas (P-012-2).
 8. **Afirmaciones sin fuente aún:** "sin publicidad" (cierto por ausencia de SDK, sin cita), el compromiso de consentimiento futuro (apoya P4) y "puedes desactivar las copias en los ajustes de Android". Confirmarlas al revisar.
-9. **No es asesoramiento jurídico:** conviene que la revise una persona con conocimiento de RGPD/LOPDGDD antes de publicarla.
+9. **Eliminar se puede deshacer (spec 014, ADR-0021):** el texto de la política lo dice (unos segundos, memoria, después se borra del todo). Es un hecho de comportamiento, no de datos recogidos: no cambia "Data not collected". Comprobar al revisar que "4 segundos" sigue siendo el valor por defecto y que "segundo plano" sigue haciendo definitiva la eliminación. Los archivos del adjunto siguen en el disco mientras se puede deshacer (`threat-model.md`, T-7).
+10. **No es asesoramiento jurídico:** conviene que la revise una persona con conocimiento de RGPD/LOPDGDD antes de publicarla.
