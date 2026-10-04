@@ -27,10 +27,10 @@ flowchart LR
 | `palette` | `classic` (por defecto), `neon`, `mono` × 5 índices | Una tarea nueva nunca repite el color de la tarea actual |
 | `font` | Archivo (500–900), Space Mono (400/700); tamaños; interletrado; cortes de longitud de nota | Las fuentes se **empaquetan** (licencia OFL); nunca se cargan de Google Fonts. **[Hecho]** `app/assets/fonts/`, desde github.com/google/fonts @ `23e54b51`: Archivo variable (ejes wght y wdth; `FontWeight` fija el grosor), Space Mono 400/700 |
 | `space` | 2 · 4 · 8 · 12 · 16 · 20 · 24 · 28 · 40 | 24 es el margen lateral |
-| `size` | objetivo táctil de 44, icono de 22, trazo de 2,4, ancho máximo del contenido de 600 (tablets, CL-001-7); card de deshacer: 112 de contenido + barra de 6, botón de 44 y entrada de 24 (spec 014) | En Android se usan 48 dp por las pautas de Material ("Deshacer" se ve de 44 y su zona táctil mide 48) |
-| `border` | ancho de 3, radio de 0; anillo de foco de 3 desplazado 3 (teclado e interruptores) | |
+| `size` | objetivo táctil de 44, icono de 22, trazo de 2,4, ancho máximo del contenido de 600 (tablets, CL-001-7); card de deshacer: 112 de contenido + barra de 6, botón de 44 y entrada de 24, separaciones de 14 y 3, relleno de 14 del botón, icono "deshacer" de 18 con trazo de 2,8 y desplazamiento de 2 al pulsar (spec 014) | En Android se usan 48 dp por las pautas de Material ("Deshacer" se ve de 44 y su zona táctil mide 48) |
+| `border` | ancho de 3, radio de 0; anillo de foco de 3 desplazado 3 (teclado e interruptores); borde de 2 de "Deshacer" (spec 014) | |
 | `shadow` | sombras duras sin desenfoque: 5/1 (botón), 3 (icono), 4/10/9 (listado) | |
-| `motion` | duraciones y curvas del prototipo; card de deshacer: `undoWindow` 4 s, `undoWindowLegacyA11y` 10 s (Android 8 y 9 con un servicio de accesibilidad, ADR-0021), tope `undoWindowMax` de 10 min y entrada `undoEnter` de 220 ms con la curva `sheet` (spec 014) | Con "reducir movimiento": fundido de 400 ms. El tiempo de la card **no** cambia con "reducir movimiento" ni con "Quitar animaciones" (CA-014-06) |
+| `motion` | duraciones y curvas del prototipo; card de deshacer: `undoWindow` 4 s, `undoWindowLegacyA11y` 10 s (Android 8 y 9 con un servicio de accesibilidad, ADR-0021), tope `undoWindowMax` de 10 min y entrada `undoEnter` de 220 ms con la curva `sheet`, y la etiqueta en dos líneas desde la escala de texto 1,3 (`undoLabelTwoLinesTextScale`) (spec 014) | Con "reducir movimiento": fundido de 400 ms. El tiempo de la card **no** cambia con "reducir movimiento" ni con "Quitar animaciones" (CA-014-06) |
 
 ## Tamaño del texto de la tarea
 

@@ -251,6 +251,12 @@ abstract final class UnaSizes {
   static const double undoBar = 6.0;
   static const double undoButton = 44.0;
   static const double undoEnterOffset = 24.0;
+  static const double undoGap = 14.0;
+  static const double undoTextGap = 3.0;
+  static const double undoButtonPadX = 14.0;
+  static const double undoButtonPress = 2.0;
+  static const double undoIcon = 18.0;
+  static const double undoIconStroke = 2.8;
 }
 
 abstract final class UnaBorders {
@@ -258,6 +264,7 @@ abstract final class UnaBorders {
   static const double focusWidth = 3.0;
   static const double sectionWidth = 4.0;
   static const double hairlineWidth = 1.0;
+  static const double undoButtonWidth = 2.0;
   static const double noneRadius = 0.0;
 }
 
@@ -432,4 +439,5 @@ abstract final class UnaMotion {
   static const double pdfZoomMax = 4.0;
   static const double pdfZoomStep = 1.5;
   static const double pdfZoomDoubleTap = 2.5;
+  static const double undoLabelTwoLinesTextScale = 1.3;
 }
