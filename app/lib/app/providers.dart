@@ -32,6 +32,7 @@ import '../domain/usecases/edit_task.dart';
 import '../domain/usecases/import_image.dart';
 import '../domain/usecases/import_pdf.dart';
 import '../domain/usecases/reorder_task.dart';
+import '../domain/usecases/restore_deleted_task.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
 final taskRepositoryProvider = Provider<TaskRepository>(
@@ -60,7 +61,9 @@ final importRegistryProvider = Provider<ImportRegistry>(
   (ref) => ImportRegistry(),
 );
 
-/// Único servicio de borrado de archivos de adjuntos (CA-007-16).
+/// Único servicio de borrado de archivos de adjuntos (CA-007-16). Uno por
+/// app: guarda en memoria qué adjuntos de eliminaciones se pueden deshacer
+/// (ADR-0021).
 final attachmentJanitorProvider = Provider<AttachmentJanitor>(
   (ref) => AttachmentJanitor(
     store: ref.watch(attachmentStoreProvider),
@@ -202,6 +205,14 @@ final deleteCurrentTaskProvider = Provider<DeleteCurrentTask>(
 
 final deletePendingTaskProvider = Provider<DeletePendingTask>(
   (ref) => DeletePendingTask(
+    repository: ref.watch(taskRepositoryProvider),
+    janitor: ref.watch(attachmentJanitorProvider),
+  ),
+);
+
+/// Deshacer una eliminación (CA-014-09, ADR-0021).
+final restoreDeletedTaskProvider = Provider<RestoreDeletedTask>(
+  (ref) => RestoreDeletedTask(
     repository: ref.watch(taskRepositoryProvider),
     janitor: ref.watch(attachmentJanitorProvider),
   ),

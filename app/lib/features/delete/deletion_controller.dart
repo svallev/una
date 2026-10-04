@@ -54,12 +54,18 @@ class DeletionController extends Notifier<DeletionState> {
       task: task,
       generation: generation,
     );
+    final janitor = ref.read(attachmentJanitorProvider);
     final DeletionResult result;
     try {
       result = await ref.read(deleteCurrentTaskProvider).call(task);
     } on Object {
       state = DeletionState(DeletionPhase.idle, generation: generation);
       rethrow;
+    }
+    // Provisional hasta que haya card (T-014-06): la eliminación es definitiva
+    // al guardarla, como antes (ADR-0021: los archivos, después de la fila).
+    if (result.deleted.attachment case final a?) {
+      await janitor.discardHeld(a.id);
     }
     state = DeletionState(
       DeletionPhase.crumpling,

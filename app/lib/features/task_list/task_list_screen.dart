@@ -499,8 +499,14 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     final before = _tasks;
     final index = before.indexWhere((t) => t.id == task.id);
+    final janitor = ref.read(attachmentJanitorProvider);
     try {
       final result = await ref.read(taskListProvider.notifier).delete(task.id);
+      // Provisional hasta que haya card (T-014-08): definitiva al guardarla,
+      // como antes (ADR-0021: los archivos, después de la fila).
+      if (result.deleted.attachment case final a?) {
+        await janitor.discardHeld(a.id);
+      }
       if (!mounted) return;
       messenger?.hideCurrentSnackBar();
       if (result.remaining == 0) {
