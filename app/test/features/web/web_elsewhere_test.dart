@@ -13,13 +13,11 @@ import 'package:app/features/attachments/task_thumbnail.dart';
 import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/features/web/task_web.dart';
 import 'package:app/features/web/web_bar.dart';
-import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
@@ -275,8 +273,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('eliminar desde el listado: la confirmación y el anuncio dicen '
-        'el dominio', (tester) async {
+    testWidgets('CA-014-04, CA-009-14: eliminar desde el listado: la card '
+        'dice el dominio, sin anuncios', (tester) async {
       final announcements = listenAnnouncements(tester);
       await pumpWith(tester, [
         sampleTask(id: 't0', text: 'Primera', rank: 'A'),
@@ -285,7 +283,6 @@ void main() {
       ], screenReader: true);
       await openList(tester);
 
-      // La web: la confirmación dice su dominio.
       await tester.tap(
         find.descendant(
           of: find.byWidget(rowFor(tester, 'w')),
@@ -294,33 +291,14 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
+      await tester.pump();
+      await tester.pump(frame);
+      expect(find.text('¿Eliminar esta tarea?'), findsNothing);
       expect(
-        tester
-            .widget<DeleteConfirmSheet>(find.byType(DeleteConfirmSheet))
-            .label,
-        _host,
+        find.descendant(of: find.byType(UndoCard), matching: find.text(_host)),
+        findsOneWidget,
       );
-      await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
-
-      // La actual: el anuncio dice el dominio de la siguiente (la web).
-      await tester.tap(
-        find.descendant(
-          of: find.byWidget(rowFor(tester, 't0')),
-          matching: find.byWidgetPredicate(
-            (w) => w is UnaIcon && w.icon == UnaIcons.trash,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
-      await tester.tap(
-        find.byWidgetPredicate(
-          (w) => w is BrutalButton && w.label == 'Eliminar',
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(announcements, contains('Tarea eliminada. Siguiente: $_host'));
+      expect(announcements, isEmpty);
     });
   });
 

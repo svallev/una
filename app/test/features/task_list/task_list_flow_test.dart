@@ -2,7 +2,7 @@ import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
@@ -35,7 +35,10 @@ Future<void> _doubleTap(WidgetTester tester, Finder f) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _confirmDelete(WidgetTester tester, String text) async {
+/// Pulsa "Eliminar tarea" de la fila [text]: sin hoja (CA-014-02), la fila se
+/// guarda al momento y la card de deshacer aparece (el reloj sigue con
+/// `tester.pump`, por eso no se espera a que se asiente).
+Future<void> _deleteRow(WidgetTester tester, String text) async {
   await tester.tap(
     find
         .descendant(
@@ -48,18 +51,8 @@ Future<void> _confirmDelete(WidgetTester tester, String text) async {
         )
         .last,
   );
-  await tester.pumpAndSettle();
-  expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-  // Pasada la ventana del doble toque (CL-006-5).
-  await tester.pump(UnaMotion.doubleTapWindow);
-  await tester.tap(
-    find.descendant(
-      of: find.byType(DeleteConfirmSheet),
-      matching: find.text('Eliminar'),
-    ),
-  );
   await tester.pump();
-  await tester.pump(UnaMotion.sheetOut + frame);
+  await tester.pump(frame);
 }
 
 Finder _buttonOf(String text, {required bool edit}) => find
@@ -140,85 +133,60 @@ void main() {
     });
   });
 
-  group('Eliminar (CA-006-14)', () {
+  group('Eliminar (CA-006-14, CA-014-02)', () {
     testWidgets(
-      'una intermedia: sin arrugado, la fila desaparece y se anuncia cuántas quedan',
+      'una intermedia: sin hoja ni arrugado, la fila desaparece y la card de '
+      'deshacer ocupa el sitio de "Nueva tarea", sin anuncios',
       (tester) async {
         final announcements = listenAnnouncements(tester);
         final repo = await openList(
           tester,
           tasks: ['Primera', 'Segunda', 'Tercera'],
         );
-        await _confirmDelete(tester, 'Segunda');
+        await _deleteRow(tester, 'Segunda');
         expect(find.byType(CrumpleOverlay), findsNothing);
-        await tester.pumpAndSettle();
+        expect(find.text('¿Eliminar esta tarea?'), findsNothing);
         expect(find.byType(TaskListScreen), findsOneWidget);
         expect(shownOrder(tester), ['Primera', 'Tercera']);
         expect(await order(repo), ['Primera', 'Tercera']);
-        expect(announcements, ['Tarea eliminada. Quedan 2']);
+        expect(find.byType(UndoCard), findsOneWidget);
+        expect(find.text('Nueva tarea'), findsNothing);
+        expect(announcements, isEmpty);
       },
     );
 
     testWidgets('la primera: la siguiente pasa a ser la actual', (
       tester,
     ) async {
-      final announcements = listenAnnouncements(tester);
       await openList(tester, tasks: ['Primera', 'Segunda', 'Tercera']);
-      await _confirmDelete(tester, 'Primera');
-      await tester.pumpAndSettle();
+      await _deleteRow(tester, 'Primera');
       final rows = tester.widgetList<TaskListRow>(find.byType(TaskListRow));
       expect(rows.first.task.text, 'Segunda');
       expect(rows.first.first, isTrue);
       expect(handleOf('Segunda'), findsNothing);
-      expect(announcements, ['Tarea eliminada. Siguiente: Segunda']);
     });
 
     testWidgets(
-      'CL-006-3: la última pendiente lleva a "Todo hecho." y atrás no vuelve al listado',
+      'CL-006-3: la última pendiente lleva a "Todo hecho." con la card y atrás '
+      'no vuelve al listado',
       (tester) async {
         final announcements = listenAnnouncements(tester);
         await openList(tester, tasks: ['Primera', 'Segunda']);
-        await _confirmDelete(tester, 'Segunda');
-        await tester.pumpAndSettle();
-        // CL-006-2: queda una sola, con sus acciones y "Nueva tarea".
+        await _deleteRow(tester, 'Segunda');
+        // CL-006-2: queda una sola, con sus acciones y la card (no "Nueva
+        // tarea").
         expect(shownOrder(tester), ['Primera']);
-        expect(find.text('Nueva tarea'), findsOneWidget);
-        await _confirmDelete(tester, 'Primera');
-        await tester.pumpAndSettle();
+        await tester.pump(UnaMotion.doubleTapWindow + frame);
+        await _deleteRow(tester, 'Primera');
+        await tester.pump(frame);
         expect(find.byType(TaskListScreen), findsNothing);
         expect(find.byType(AllDoneScreen), findsOneWidget);
         expect(find.byType(CrumpleOverlay), findsNothing);
-        expect(announcements.last, 'Tarea eliminada. Todo hecho.');
+        expect(find.byType(UndoCard), findsOneWidget);
+        expect(announcements, isEmpty);
         expect(await tester.binding.handlePopRoute(), isFalse);
-        await tester.pumpAndSettle();
+        await tester.pump(frame);
         expect(find.byType(TaskListScreen), findsNothing);
-      },
-    );
-
-    testWidgets('cancelar la confirmación vuelve al listado sin cambios', (
-      tester,
-    ) async {
-      final repo = await openList(tester, tasks: ['Primera', 'Segunda']);
-      await tester.tap(_buttonOf('Segunda', edit: false));
-      await tester.pumpAndSettle();
-      await tester.pump(UnaMotion.doubleTapWindow);
-      await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
-      expect(find.byType(TaskListScreen), findsOneWidget);
-      expect(await order(repo), ['Primera', 'Segunda']);
-    });
-
-    testWidgets(
-      'CL-006-5: un doble toque sobre Eliminar no activa ni cierra la hoja',
-      (tester) async {
-        await openList(tester, tasks: ['Primera', 'Segunda']);
-        await tester.tap(_buttonOf('Segunda', edit: false));
-        await tester.pump(const Duration(milliseconds: 60));
-        // El segundo toque cae en el fondo de la hoja mientras sube.
-        await tester.tapAt(const Offset(195, 100));
-        await tester.pumpAndSettle();
-        expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-        expect(find.byType(TaskEditorScreen), findsNothing);
       },
     );
 
@@ -227,13 +195,15 @@ void main() {
     ) async {
       final repo = _Repo()..failDelete = true;
       await openList(tester, repo: repo, tasks: ['Primera', 'Segunda']);
-      await _confirmDelete(tester, 'Segunda');
-      await tester.pumpAndSettle();
+      await _deleteRow(tester, 'Segunda');
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('No hemos podido eliminar la tarea'), findsOneWidget);
+      expect(find.byType(UndoCard), findsNothing);
       expect(shownOrder(tester), ['Primera', 'Segunda']);
       repo.failDelete = false;
       await tester.tap(find.text('Reintentar'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(shownOrder(tester), ['Primera']);
     });
   });

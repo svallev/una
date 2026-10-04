@@ -24,7 +24,6 @@ import 'package:app/features/attachments/pdf_strip.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/placement_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
@@ -36,7 +35,6 @@ import 'package:app/features/web/url_sheet.dart';
 import 'package:app/features/web/web_bar.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:app/main.dart';
-import 'package:app/ui/brutal_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -762,8 +760,8 @@ void main() {
         await _expireUndo(tester);
       });
 
-      testWidgets('listado: filas de texto, PDF y web, hoja de mover, hoja de '
-          'eliminar y anuncios de eliminar desde la fila', (tester) async {
+      testWidgets('listado: filas de texto, PDF y web, hoja de mover y card de '
+          'deshacer al eliminar desde la fila', (tester) async {
         await pumpWith(tester, [
           sampleTask(id: 't0', text: _neutral[0], rank: 'MA'),
           await _pdfTask(store, 'p', rank: 'MB'),
@@ -785,36 +783,37 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(MoveSheet), findsNothing);
 
-        // Eliminar la última desde su acción: "Quedan 3".
+        // Eliminar la última desde su acción: sin hoja ni anuncios, con la
+        // card de deshacer (CA-014-02, CA-014-19).
         tester.takeAnnouncements();
         await _rowAction(
           tester,
           l10n.a11yRowPosition(4, 4, _neutral[1]),
           l10n.deleteA11yAction,
         );
-        await tester.pumpAndSettle();
-        await tester.pump(UnaMotion.doubleTapWindow);
-        expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-        expectNoL10nLeaks(tester, languageCode: lang);
-        await _confirmListDelete(tester, l10n);
+        await tester.pump();
+        await tester.pump(_frame);
+        expect(find.byType(UndoCard), findsOneWidget);
         var said = tester.takeAnnouncements();
-        expect(_messages(said), [l10n.a11yDeletedFromList(3)]);
+        expect(said, isEmpty);
         expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
+        await _expireUndo(tester);
 
-        // Eliminar la actual desde su acción: "Siguiente: …" (la del PDF).
+        // Eliminar la actual desde su acción: la card dice su texto.
         await _rowAction(
           tester,
           l10n.a11yRowCurrent(3, _neutral[0]),
           l10n.deleteA11yAction,
         );
-        await tester.pumpAndSettle();
-        await tester.pump(UnaMotion.doubleTapWindow);
-        await _confirmListDelete(tester, l10n);
+        await tester.pump();
+        await tester.pump(_frame);
+        expect(find.byType(UndoCard), findsOneWidget);
         said = tester.takeAnnouncements();
-        expect(said, hasLength(1));
+        expect(said, isEmpty);
         expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
         expect(find.byType(TaskListScreen), findsOneWidget);
         expectNoL10nLeaks(tester, languageCode: lang);
+        await _expireUndo(tester);
       });
     });
 
@@ -912,19 +911,4 @@ Future<void> _rowAction(WidgetTester tester, String row, String action) async {
     (id) => CustomSemanticsAction.getAction(id)!.label == action,
   );
   node.owner!.performAction(node.id, SemanticsAction.customAction, id);
-}
-
-/// Confirma la hoja de eliminar del listado y deja salir la hoja.
-Future<void> _confirmListDelete(
-  WidgetTester tester,
-  AppLocalizations l10n,
-) async {
-  await tester.tap(
-    find.byWidgetPredicate(
-      (w) => w is BrutalButton && w.label == l10n.deleteConfirm,
-    ),
-  );
-  await tester.pumpAndSettle();
-  await tester.pump(UnaMotion.sheetOut);
-  await tester.pumpAndSettle();
 }

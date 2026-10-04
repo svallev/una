@@ -48,7 +48,7 @@ class TaskListRow extends StatelessWidget {
     this.actions = const {},
     this.onEdit,
     this.onDelete,
-    this.onDeleteTap,
+    this.touchBlocked,
     this.onMove,
     this.focusNode,
     this.semanticsKey,
@@ -71,12 +71,14 @@ class TaskListRow extends StatelessWidget {
 
   final VoidCallback? onEdit;
 
-  /// Eliminar con el teclado o el lector.
+  /// Eliminar con el teclado, el lector o el dedo.
   final VoidCallback? onDelete;
 
-  /// Eliminar tocando el botón con el dedo (la hoja ignora el segundo toque
-  /// de un doble toque, CL-006-5). Sin indicar, [onDelete].
-  final VoidCallback? onDeleteTap;
+  /// Si es true, un toque con el dedo sobre los botones de la fila no hace
+  /// nada: justo después de eliminar, la fila de debajo sube a ese sitio y un
+  /// doble toque podría pulsar sus botones (CL-014-2). El teclado y el lector
+  /// no cuentan.
+  final bool Function()? touchBlocked;
 
   /// Foco de teclado del control principal: el asa o, en la primera fila,
   /// "Editar" (CA-006-17).
@@ -158,6 +160,7 @@ class TaskListRow extends StatelessWidget {
           if (!first)
             _RowButton(
               onPressed: onMove,
+              touchBlocked: touchBlocked,
               focusNode: focusNode,
               drag: drag,
               child: const _Grip(),
@@ -193,13 +196,14 @@ class TaskListRow extends StatelessWidget {
           const SizedBox(width: _gap),
           _RowButton(
             onPressed: onEdit,
+            touchBlocked: touchBlocked,
             focusNode: first ? focusNode : null,
             child: const UnaIcon(UnaIcons.edit, size: UnaSizes.listIcon),
           ),
           const SizedBox(width: _gap),
           _RowButton(
             onPressed: onDelete,
-            onTap: onDeleteTap,
+            touchBlocked: touchBlocked,
             child: const UnaIcon(UnaIcons.trash, size: UnaSizes.listIcon),
           ),
         ],
@@ -257,14 +261,24 @@ class TaskListRow extends StatelessWidget {
     }
     final reading = semanticsLabel;
     if (reading == null) return ExcludeSemantics(child: body);
-    return Semantics(
-      key: semanticsKey,
-      container: true,
-      label: reading,
-      onTap: onEdit,
-      onTapHint: editHint,
-      customSemanticsActions: actions,
-      excludeSemantics: true,
+    // El nodo de la fila sigue el foco de teclado de su control principal:
+    // así TalkBack, que sigue el foco de entrada, lleva su foco a la fila
+    // cuando se le pide (CA-014-18).
+    final node = focusNode;
+    return ListenableBuilder(
+      listenable: node ?? Listenable.merge(const []),
+      builder: (context, child) => Semantics(
+        key: semanticsKey,
+        container: true,
+        label: reading,
+        focusable: node != null,
+        focused: node?.hasFocus ?? false,
+        onTap: onEdit,
+        onTapHint: editHint,
+        customSemanticsActions: actions,
+        excludeSemantics: true,
+        child: child,
+      ),
       child: body,
     );
   }
@@ -278,16 +292,16 @@ class _RowButton extends StatefulWidget {
   const _RowButton({
     required this.onPressed,
     required this.child,
-    this.onTap,
+    this.touchBlocked,
     this.focusNode,
     this.drag,
   });
 
-  /// Teclado (Intro/Espacio).
+  /// Teclado (Intro/Espacio) y toque con el dedo.
   final VoidCallback? onPressed;
 
-  /// Toque con el dedo; sin indicar, [onPressed].
-  final VoidCallback? onTap;
+  /// Si es true, el toque con el dedo no hace nada (CL-014-2).
+  final bool Function()? touchBlocked;
   final FocusNode? focusNode;
   final Widget child;
   final RowDragCallbacks? drag;
@@ -306,7 +320,12 @@ class _RowButtonState extends State<_RowButton> {
     Widget button = GestureDetector(
       excludeFromSemantics: true,
       behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap ?? onPressed,
+      onTap: onPressed == null
+          ? null
+          : () {
+              if (widget.touchBlocked?.call() ?? false) return;
+              onPressed();
+            },
       dragStartBehavior: DragStartBehavior.down,
       onVerticalDragStart: drag == null
           ? null

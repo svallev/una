@@ -22,3 +22,23 @@ Resultado: **el foco del lector llega a la card en los cinco caminos** (evento d
 - El foco en la card se comprueba por el recuadro y la voz; no se midió el tiempo exacto hasta el foco ni se probó con el texto al 200 % (T-014-10).
 - Girar con `adb emu rotate` (sensor virtual): `settings put system user_rotation` y `wm user-rotation lock` no hacen girar la app, que gira por `OrientationEventListener`.
 - Al terminar: TalkBack apagado, `accelerometer_rotation` 1, rotación en 0, el `integration_test` temporal borrado.
+
+## T-014-08: listado con TalkBack (2026-10-04)
+
+Mismo método que en T-014-06 (emulador `Pixel_6a`, API 37, inglés; `integration_test` **temporal**, no se sube; TalkBack activado con `settings`; capturas a 1 y 3 s de cada paso; acciones del árbol semántico, no toques de `adb`). Cinco tareas ("Primera" a "Quinta"). **No se usó el Xiaomi.**
+
+| Paso | Resultado | Estado |
+|---|---|---|
+| Eliminar "Segunda" con la acción "Eliminar tarea" de la fila (CA-014-02, CA-014-19) | La fila desaparece, la card ocupa el sitio de "Nueva tarea" y el recuadro verde de TalkBack está en ella ("Button, Task deleted, Segunda, Undo"); barra del color de la nota | [Hecho] |
+| Segunda eliminación con la card a la vista (CA-014-08) | La misma card cambia a "Tercera" (barra de su color, llena) y el foco vuelve a ella | [Hecho] |
+| Deshacer desde el listado (CA-014-10, CA-014-18) | La fila vuelve a su sitio ("2 of 4. In list. 4 items") **con el foco de TalkBack en la fila**. **Fallo en la primera pasada:** el foco se quedaba en el título "All tasks" | [Hecho] tras el arreglo |
+| Eliminar las demás hasta la última pendiente (CA-014-02) | "All done." con la card ("Double-tap to activate", etiqueta "Primera", sin "Crear una tarea") y el foco en la card | [Hecho] |
+| Deshacer desde "Todo hecho." (CA-014-10, CA-014-18) | Se abre otra vez el listado y, tras la transición, el foco está en la fila ("1 of 1. Current task: Primera"). **Fallo en la primera pasada:** el foco se quedaba en el texto de ayuda (primer nodo de la ruta nueva) | [Hecho] tras el arreglo |
+
+**Fallo y arreglo.** El aviso de foco (`FocusSemanticEvent`) a la fila **sí se enviaba** (comprobado con trazas) pero TalkBack lo ignoraba, aun esperando 500 ms o 1,2 s: el foco se quedaba en el título o en la ayuda. TalkBack sigue el **foco de entrada**, y el nodo de la fila (`excludeSemantics`) no lo reflejaba (su control está dentro de lo excluido). **Arreglo:** el nodo de la fila lleva `focusable` y `focused` según el `FocusNode` de su control (`TaskListRow`, `ListenableBuilder`); con eso TalkBack lleva su foco a la fila. Esperas: 160 ms tras quitarse la card y 600 ms si el listado es una ruta nueva (con 160 y 600 ya funciona en los dos caminos; no se probaron valores menores).
+
+### Observaciones
+
+- El panel de voz de TalkBack tapa "Nueva tarea" en las capturas (no es de la app).
+- No se midió con el lector el tiempo hasta el primer foco ni el texto al 200 % (T-014-10).
+- Ajustes restaurados: TalkBack apagado, `integration_test` temporal borrado.

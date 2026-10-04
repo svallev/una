@@ -10,7 +10,6 @@ import 'package:app/features/attachments/task_thumbnail.dart';
 import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
@@ -215,31 +214,33 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('CA-004-01: eliminar una fila sin texto dice "Foto"', (
-      tester,
-    ) async {
-      await openListWith(tester, [
-        sampleTask(id: 't0', text: 'Primera', rank: 'A'),
-        await imageTask('t1', rank: 'B'),
-      ]);
-      await tester.tap(
-        find.descendant(
-          of: find.byWidget(rowFor(tester, 't1')),
-          matching: find.byWidgetPredicate(
-            (w) => w is UnaIcon && w.icon == UnaIcons.trash,
+    testWidgets(
+      'CA-014-04: eliminar una fila sin texto dice "Foto" en la card',
+      (tester) async {
+        await openListWith(tester, [
+          sampleTask(id: 't0', text: 'Primera', rank: 'A'),
+          await imageTask('t1', rank: 'B'),
+        ]);
+        await tester.tap(
+          find.descendant(
+            of: find.byWidget(rowFor(tester, 't1')),
+            matching: find.byWidgetPredicate(
+              (w) => w is UnaIcon && w.icon == UnaIcons.trash,
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byType(DeleteConfirmSheet),
-          matching: find.textContaining('Foto'),
-        ),
-        findsOneWidget,
-      );
-    });
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(find.text('¿Eliminar esta tarea?'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(UndoCard),
+            matching: find.text('Foto'),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('CA-007-20: completar y eliminar', () {

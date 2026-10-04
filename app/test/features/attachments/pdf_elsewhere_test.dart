@@ -15,7 +15,6 @@ import 'package:app/features/attachments/task_thumbnail.dart';
 import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
@@ -212,9 +211,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('CA-004-01: eliminar una fila sin texto dice el nombre', (
-      tester,
-    ) async {
+    testWidgets('CA-014-04: eliminar una fila sin texto dice el nombre en la '
+        'card', (tester) async {
       await openListWith(tester, [
         sampleTask(id: 't0', text: 'Primera', rank: 'A'),
         await pdfTask('t1', rank: 'B'),
@@ -227,13 +225,15 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.text('¿Eliminar esta tarea?'), findsNothing);
       expect(
-        tester
-            .widget<DeleteConfirmSheet>(find.byType(DeleteConfirmSheet))
-            .label,
-        'Programa.pdf',
+        find.descendant(
+          of: find.byType(UndoCard),
+          matching: find.text('Programa.pdf'),
+        ),
+        findsOneWidget,
       );
     });
   });

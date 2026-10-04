@@ -11,6 +11,7 @@ import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/complete_current_task.dart' show TaskNotCurrent;
 import '../../l10n/generated/app_localizations.dart';
+import '../task_list/task_list_screen.dart';
 import 'deletion_controller.dart';
 import 'undo_controller.dart';
 
@@ -60,8 +61,15 @@ Future<bool> deleteTask(BuildContext context, WidgetRef ref, Task task) async {
 ///
 /// La pantalla que la lanza puede desaparecer al recuperar (la principal se
 /// monta de nuevo sin fundido): todo lo que hace falta después se guarda antes.
-Future<void> undoDeletion(BuildContext context, WidgetRef ref) =>
-    _Restoration.of(context, ref).run();
+///
+/// [onListRestored] lo da el listado, que es quien resalta la fila, la lleva a
+/// la vista y le da el foco (CA-014-10); desde "Todo hecho." con el listado
+/// como destino se abre aquí.
+Future<void> undoDeletion(
+  BuildContext context,
+  WidgetRef ref, {
+  Future<void> Function(Task task)? onListRestored,
+}) => _Restoration.of(context, ref, onListRestored: onListRestored).run();
 
 /// Cuánto se espera, como mucho, a que la BD dé por actual la tarea recuperada
 /// antes de mostrarla (la recuperada es siempre la actual en la pantalla
@@ -78,13 +86,21 @@ class _Restoration {
     required this.direction,
     required this.theme,
     required this.bottom,
+    required this.navigator,
+    required this.onListRestored,
   });
 
-  factory _Restoration.of(BuildContext context, WidgetRef ref) {
+  factory _Restoration.of(
+    BuildContext context,
+    WidgetRef ref, {
+    Future<void> Function(Task task)? onListRestored,
+  }) {
     final mq = MediaQuery.of(context);
     return _Restoration(
       container: ProviderScope.containerOf(context),
       messenger: ScaffoldMessenger.maybeOf(context),
+      navigator: Navigator.maybeOf(context),
+      onListRestored: onListRestored,
       l10n: AppLocalizations.of(context),
       view: View.of(context),
       direction: Directionality.of(context),
@@ -102,6 +118,8 @@ class _Restoration {
   final TextDirection direction;
   final ThemeData theme;
   final double bottom;
+  final NavigatorState? navigator;
+  final Future<void> Function(Task task)? onListRestored;
 
   UndoController get _undo => container.read(undoProvider.notifier);
 
@@ -118,9 +136,44 @@ class _Restoration {
   }
 
   Future<void> _restored(Restored restored) async {
-    // El listado y "Todo hecho." que vuelve a él son de T-014-08.
-    if (restored.host != UndoHost.home || restored.returnTo != null) return;
-    await _untilCurrent(restored.task.id);
+    switch (restored.host) {
+      case UndoHost.list:
+        // La fila vuelve a su sitio dentro del listado, que la resalta.
+        await onListRestored?.call(restored.task);
+      case UndoHost.home:
+        // Se eliminó la última desde el listado: se vuelve a él (CA-014-10).
+        if (restored.returnTo == UndoHost.list &&
+            await _backToList(restored.task)) {
+          return;
+        }
+        await _homeRestored(restored.task);
+    }
+  }
+
+  /// Abre otra vez el listado con la fila recuperada: él se encarga del
+  /// resalte, el desplazamiento, el foco y el anuncio cuando ya se ve. La
+  /// navegación lleva la guarda de un solo uso (plan 014 §1); la tarea ya es
+  /// la actual, sin fundido por debajo. Devuelve false si no se pudo abrir.
+  Future<bool> _backToList(Task task) async {
+    final navigator = this.navigator;
+    if (navigator == null) return false;
+    await _untilCurrent(task.id);
+    final List<Task> tasks;
+    try {
+      tasks = await container.read(taskRepositoryProvider).pendingTasks();
+    } on Object {
+      // Sin registrar nada: el error puede llevar datos del usuario.
+      return false;
+    }
+    if (!navigator.mounted) return false;
+    container.read(undoRestorationsProvider.notifier).bump();
+    final route = TaskListScreen.route(tasks, restored: task);
+    _undo.guardNavigation(route, () => unawaited(navigator.push(route)));
+    return true;
+  }
+
+  Future<void> _homeRestored(Task task) async {
+    await _untilCurrent(task.id);
     // Otra eliminación en marcha lleva su propio foco.
     if (container.read(deletionProvider).busy) return;
     // Sin fundido y con el foco en la tarea (también para el lector: no se
@@ -170,8 +223,6 @@ class _Restoration {
       _undo.commit();
       return;
     }
-    final retry = FocusNode(debugLabel: 'undo-retry');
-    final retrySemantics = GlobalKey();
     ProviderSubscription<UndoState>? sub;
     var handled = false;
     // Cierra el aviso solo una vez (un toque en "Reintentar" ya lo cierra).
@@ -190,25 +241,17 @@ class _Restoration {
           bottom: bottom,
         ),
         persist: true,
-        content: Row(
-          children: [
-            Expanded(
-              child: Text(noSpace ? l10n.storageErrorNoSpace : l10n.undoError),
-            ),
-            TextButton(
-              focusNode: retry,
-              style: TextButton.styleFrom(
-                foregroundColor: theme.colorScheme.inversePrimary,
-              ),
-              onPressed: () {
-                // Solo vuelve a pedir la recuperación: no guarda la tarea.
-                release();
-                messenger.hideCurrentSnackBar();
-                unawaited(run());
-              },
-              child: Semantics(key: retrySemantics, child: Text(l10n.retry)),
-            ),
-          ],
+        content: _RetryContent(
+          message: noSpace ? l10n.storageErrorNoSpace : l10n.undoError,
+          retryLabel: l10n.retry,
+          color: theme.colorScheme.inversePrimary,
+          takesFocus: () => !handled,
+          onRetry: () {
+            // Solo vuelve a pedir la recuperación: no guarda la tarea.
+            release();
+            messenger.hideCurrentSnackBar();
+            unawaited(run());
+          },
         ),
       ),
     );
@@ -223,7 +266,6 @@ class _Restoration {
       controller.closed.then((reason) {
         final wasHandled = handled;
         release();
-        retry.dispose();
         // Deslizarlo o "Descartar": ya no se quiere recuperar.
         if (!wasHandled &&
             (reason == SnackBarClosedReason.dismiss ||
@@ -232,17 +274,73 @@ class _Restoration {
         }
       }),
     );
+  }
+}
+
+/// El texto del aviso y su botón "Reintentar", con su propio foco: el
+/// `ScaffoldMessenger` muestra el aviso en todos los `Scaffold` (también el de
+/// la pantalla que queda debajo), así que ni el foco ni la clave pueden ser
+/// compartidos. Solo el que se ve pide el foco del teclado y del lector
+/// (CA-014-23).
+class _RetryContent extends StatefulWidget {
+  const _RetryContent({
+    required this.message,
+    required this.retryLabel,
+    required this.color,
+    required this.takesFocus,
+    required this.onRetry,
+  });
+
+  final String message;
+  final String retryLabel;
+  final Color color;
+
+  /// Si el aviso sigue pendiente (no se ha tocado ni cerrado).
+  final bool Function() takesFocus;
+  final VoidCallback onRetry;
+
+  @override
+  State<_RetryContent> createState() => _RetryContentState();
+}
+
+class _RetryContentState extends State<_RetryContent> {
+  final _focus = FocusNode(debugLabel: 'undo-retry');
+  final _semantics = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (handled) return;
+      if (!mounted || !widget.takesFocus()) return;
+      // La copia de una pantalla tapada no cuenta.
+      if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
       final keyboard =
           FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-      if (retry.context != null &&
-          (keyboard || MediaQuery.accessibleNavigationOf(retry.context!))) {
-        retry.requestFocus();
+      if (keyboard || MediaQuery.accessibleNavigationOf(context)) {
+        _focus.requestFocus();
       }
-      retrySemantics.currentContext?.findRenderObject()?.sendSemanticsEvent(
+      _semantics.currentContext?.findRenderObject()?.sendSemanticsEvent(
         const FocusSemanticEvent(),
       );
     });
   }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(child: Text(widget.message)),
+      TextButton(
+        focusNode: _focus,
+        style: TextButton.styleFrom(foregroundColor: widget.color),
+        onPressed: widget.onRetry,
+        child: Semantics(key: _semantics, child: Text(widget.retryLabel)),
+      ),
+    ],
+  );
 }
