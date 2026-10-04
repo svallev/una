@@ -31,3 +31,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-014-01 | Hecha: 5 claves de la spec §7 (ES/EN, `undoA11yLabel` con `{label}`) y descripciones sin la hoja; las que se retiran siguen hasta T-014-09. Tokens del plan §2; `validate-tokens`: `onInkMuted/ink` 13,01 y barra ≥ 3:1 sobre `undoTrack` con **todas** las paletas (mín. 4,47, neon); falla con `onInkMuted #555555` o `undoTrack #C8C8C8` (probado en una copia). `gen-l10n` sin avisos; `spec_014_strings_test` (5, fallaban antes); 1535 tests en verde, analyze limpio. **[Pendiente]** T-014-05: sin token la separación de 14, el icono "deshacer" 18/2,8 ni el relleno de 14 del botón. | (este commit) |

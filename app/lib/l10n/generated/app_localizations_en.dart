@@ -209,6 +209,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteError => 'We couldn\'t delete the task';
 
   @override
+  String get undoDeletedTitle => 'Task deleted';
+
+  @override
+  String get undoButton => 'Undo';
+
+  @override
+  String undoA11yLabel(String label) {
+    return 'Undo. Task deleted: $label';
+  }
+
+  @override
+  String get a11yUndone => 'Task restored';
+
+  @override
+  String get undoError => 'We couldn\'t restore the task';
+
+  @override
   String get listTitle => 'All tasks';
 
   @override

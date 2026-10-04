@@ -272,7 +272,7 @@ abstract class AppLocalizations {
   /// **'Editar tarea'**
   String get editorTagEdit;
 
-  /// Enlace para descartar (CA-002-07) y botón de la confirmación de eliminar (CA-004-01)
+  /// Enlace del editor para descartar sin guardar. CA-002-07
   ///
   /// In es, this message translates to:
   /// **'Cancelar'**
@@ -350,7 +350,7 @@ abstract class AppLocalizations {
   /// **'Editar'**
   String get menuEdit;
 
-  /// Menú (spec 004). CA-005-11
+  /// Menú: elimina la tarea actual al momento, con la card de deshacer (specs 004 y 014). CA-005-11, CA-014-01
   ///
   /// In es, this message translates to:
   /// **'Eliminar'**
@@ -410,7 +410,7 @@ abstract class AppLocalizations {
   /// **'Eliminar'**
   String get deleteConfirm;
 
-  /// Acción del lector de pantalla que abre la confirmación de eliminar. CA-004-10
+  /// Acción del lector de pantalla (tarea actual y filas del listado) y botón de la tarjeta "Adjunto no disponible": elimina la tarea al momento, con la card de deshacer. CA-014-19, CA-006-16, CA-007-19
   ///
   /// In es, this message translates to:
   /// **'Eliminar tarea'**
@@ -428,11 +428,41 @@ abstract class AppLocalizations {
   /// **'Tarea eliminada. Todo hecho.'**
   String get a11yDeletedAllDone;
 
-  /// Aviso con Reintentar si falla la eliminación. CA-004-13
+  /// Aviso con Reintentar si falla la eliminación (menú, fila o acción del lector); no hay animación ni card. CA-004-13, CA-014-22
   ///
   /// In es, this message translates to:
   /// **'No hemos podido eliminar la tarea'**
   String get deleteError;
+
+  /// Título de la card de deshacer, sobre la etiqueta de la tarea. CA-014-03
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea eliminada'**
+  String get undoDeletedTitle;
+
+  /// Botón de la card de deshacer, con su icono; recupera la tarea eliminada. CA-014-03, CA-014-09
+  ///
+  /// In es, this message translates to:
+  /// **'Deshacer'**
+  String get undoButton;
+
+  /// Lectura de la card de deshacer como un solo elemento con papel de botón (CA-014-16); label es la etiqueta completa de la tarea eliminada (CA-014-04). Empieza por el texto visible del botón, undoButton (Voice Access, WCAG 2.5.3)
+  ///
+  /// In es, this message translates to:
+  /// **'Deshacer. Tarea eliminada: {label}'**
+  String undoA11yLabel(String label);
+
+  /// Único anuncio al deshacer, cuando la pantalla de destino ya se ve. CA-014-18
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea recuperada'**
+  String get a11yUndone;
+
+  /// Aviso con Reintentar si falla la recuperación (mismo estilo que deleteError; sin espacio, storageErrorNoSpace). CA-014-23
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido recuperar la tarea'**
+  String get undoError;
 
   /// Título y nombre de la pantalla del listado. CA-006-02, CA-006-17
   ///

@@ -209,6 +209,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get deleteError => 'No hemos podido eliminar la tarea';
 
   @override
+  String get undoDeletedTitle => 'Tarea eliminada';
+
+  @override
+  String get undoButton => 'Deshacer';
+
+  @override
+  String undoA11yLabel(String label) {
+    return 'Deshacer. Tarea eliminada: $label';
+  }
+
+  @override
+  String get a11yUndone => 'Tarea recuperada';
+
+  @override
+  String get undoError => 'No hemos podido recuperar la tarea';
+
+  @override
   String get listTitle => 'Todas las tareas';
 
   @override
