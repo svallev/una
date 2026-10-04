@@ -141,6 +141,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
   - **Entonces** la pantalla gira sola y en horizontal se ven **la página al ancho y el logotipo**, sin barra, menú, botón de completar ni pie, como con imagen y PDF (propietario, 2026-09-28). La página no se recarga al girar.
   - **No gira** con los avisos de CA-009-08, 09, 10, CL-009-4 ni el de recargas seguidas de CA-009-11 (como "Adjunto no disponible"; este último, enmienda del propietario, 2026-09-29).
   - El resto es como CA-008-11: vuelve a vertical al poner el móvil en vertical, respeta el bloqueo de rotación, sigue pudiendo completar o eliminar con las acciones del lector, y si se completa o se elimina en horizontal y la siguiente tarea no tiene adjunto, vuelve a vertical. Si gira con una confirmación abierta, la confirmación sigue abierta.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar en horizontal, además se ve la card de deshacer (CL-014-7); la confirmación de eliminar ya no existe.
 - **CA-009-16 Pantalla encendida**
   - **Dado** el ajuste "Mantener la pantalla encendida con adjuntos" activo
   - **Cuando** se ve la tarea actual web, en vertical o en horizontal
@@ -155,6 +156,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     - **Listado:** insignia negra de 44 px con "WEB" entre el asa y el texto, como el prototipo; decorativa para el lector;
     - **Etiqueta:** en el listado, en la confirmación de eliminar y en los anuncios, la etiqueta es el **dominio** (CA-009-14);
     - **Completar y eliminar:** la rotura y el arrugado muestran la tarea con la barra; la zona de la página puede verse en blanco (propietario, 2026-09-28: la página en vivo no se puede fotografiar de forma fiable para la animación). Con reducir movimiento, sus alternativas.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* la etiqueta sin texto (dominio) se usa en la card de deshacer (CA-014-04), ya no en la confirmación; deshacer vuelve a cargar la dirección guardada (CL-014-9).
 
 **Accesibilidad**
 
@@ -184,6 +186,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
     | Toca un enlace de la página | Donde estaba | Ninguno (CA-009-11) |
     | Vuelve del navegador ("Abrir en el navegador") | Donde estaba | Ninguno |
     | Gira a horizontal | La página | Ninguno |
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* los anuncios de eliminar pasan a la lectura de la card de deshacer (CA-014-16).
 
 - **CA-009-20 Reducir movimiento, teclado y texto grande**
   - **Dado** "reducir movimiento", un teclado o el texto al 200 %

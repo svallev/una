@@ -15,7 +15,7 @@ Formato MADR simplificado ([plantilla](0000-template.md)). Nuevos ADR con la ski
 | [0009](0009-monorepo-y-landing.md) | Monorepo: `app/` y `landing/` | Aceptado |
 | [0010](0010-vercel-web-de-pruebas.md) | Web de pruebas en Vercel | Aceptado (S6 en local) |
 | [0011](0011-eliminar-sin-deshacer.md) | Eliminar es definitivo (sin deshacer), con marca de borrado sin contenido | Sustituido por ADR-0012 |
-| [0012](0012-sin-historico.md) | Sin histórico: completar y eliminar borran la tarea del todo | Aceptado |
+| [0012](0012-sin-historico.md) | Sin histórico: completar y eliminar borran la tarea del todo | Aceptado; sustituido en parte por ADR-0021 (momento del borrado) |
 | [0013](0013-sin-visor-de-imagenes.md) | Sin visor de imágenes: la imagen se ve y se amplía en la propia tarea | Aceptado (excepción a P6) |
 | [0014](0014-solo-pdf-en-la-v1.md) | En la v1 solo se adjuntan PDF, que se ven, giran y se amplían en la propia tarea | Aceptado; enmendado por ADR-0015 (sin "Volver a vertical") |
 | [0015](0015-sin-volver-a-vertical.md) | Sin "Volver a vertical": la tarea con adjunto vuelve a vertical solo al girar el móvil | Aceptado (excepción a P6 sin el botón) |
@@ -24,3 +24,4 @@ Formato MADR simplificado ([plantilla](0000-template.md)). Nuevos ADR con la ski
 | [0018](0018-web-sin-navegacion.md) | Tarea web sin navegación: solo se ve la página de la dirección guardada | Aceptado (2026-09-29); enmienda el ADR-0007 y el ADR-0016 |
 | [0019](0019-ocultar-recientes-sin-bloquear-capturas.md) | Ocultar "Recientes" sin bloquear las capturas: A (`setRecentsScreenshotEnabled`) en Android 13+ y B (`FLAG_SECURE` en `onPause`) en 8–12 | Aceptado (2026-09-30); provisional en Android 8–12 hasta PD-10 |
 | [0020](0020-voz-del-sistema-en-anuncios.md) | Los anuncios, los nombres de las acciones del lector y los títulos de las hojas se oyen con la voz del sistema | Aceptado (2026-10-01; excepción a P6, WCAG 3.1.2; spec 013) |
+| [0021](0021-eliminar-con-deshacer.md) | Eliminar con deshacer: la tarea sale de la BD al instante y sus archivos esperan a que el borrado sea definitivo | Aceptado (2026-10-04; spec 014); sustituye en parte al ADR-0012; excepción a P6 (10 s en Android 8 y 9) |

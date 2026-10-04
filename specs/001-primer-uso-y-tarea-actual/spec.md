@@ -145,6 +145,7 @@ Posición de las tareas nuevas (002), completar (003), menú (005), adjuntos (00
   - **Dado** que la app pasó a segundo plano
   - **Cuando** vuelve a primer plano
   - **Entonces** si pasaron menos de 10 minutos se ve la misma pantalla; si pasaron 10 minutos o más, se ve la tarea actual (o el editor de la primera tarea si no hay ninguna).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* pasar a segundo plano hace definitiva una eliminación que aún se podía deshacer: al volver no hay card (CA-014-11, CL-014-15).
 
 ## 11. Ajustes durante la implementación (aprobados por el propietario el 2026-09-24)
 

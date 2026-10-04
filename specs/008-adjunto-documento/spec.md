@@ -118,6 +118,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - Si gira con la confirmación de un enlace abierta, la confirmación sigue abierta en la nueva orientación.
   - ~~"Volver a vertical" dura mientras se vea esa tarea: si sale de ella y vuelve con el móvil aún en horizontal, se ve en vertical hasta que el móvil pase por vertical.~~ (Sin objeto desde la enmienda de 2026-09-28.)
   - Respeta el bloqueo de rotación del sistema. En tablets y plegables, en horizontal usa todo el ancho de la pantalla (como CA-007-11).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar en horizontal, además se ve la card de deshacer (CL-014-7).
 - **CA-008-12 Enlaces del PDF, sin nada peligroso**
   - **Dado** un PDF con JavaScript, formularios, acciones, archivos incrustados o enlaces
   - **Cuando** se muestra
@@ -156,6 +157,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - **Dado** cualquier camino que deje un PDF sin uso: completar o eliminar la tarea (desde la pantalla principal o el listado), quitar o sustituir el PDF al editar, "Quitar adjunto" en "Adjunto no disponible", cancelar el editor o la importación, un error, tiempo agotado o falta de espacio, o un fallo al guardar
   - **Cuando** termina la operación
   - **Entonces** no queda ningún archivo de ese PDF (el PDF, lo que la app haya preparado para mostrarlo rápido y su última posición) ni temporales, con **el mismo borrado** que la 007; si falla, lo recoge el barrido del siguiente arranque (después del primer fotograma). Un PDF que se está importando nunca se barre.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar la tarea, el PDF se borra cuando la eliminación es definitiva (CA-014-15); deshacer lo recupera con su última posición (CA-014-09).
 - **CA-008-17 Copia de seguridad (ADR-0004, R-10)**
   - **Dado** tareas con PDF
   - **Cuando** Android hace la copia de seguridad
@@ -164,6 +166,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - **Dado** que falta, está vacío o no se puede abrir el PDF de una tarea
   - **Cuando** se abre la app o se muestra la tarea
   - **Entonces** no se cierra ni se bloquea la app, y se ve la tarjeta de CA-007-19 con el icono de documento y **una sola acción** ("Quitar adjunto" o "Eliminar tarea"). Si solo falta lo que la app preparó para mostrarlo rápido, se regenera sin avisar.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "Eliminar tarea" elimina sin confirmación y con deshacer (CA-014-01).
 
 **Donde aparece el PDF**
 
@@ -174,6 +177,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
     - **Listado (cierra CA-006-02):** insignia negra de 44 px con "PDF" entre el asa y el texto, como el prototipo; decorativa para el lector. También con "Adjunto no disponible".
     - **Sin texto:** en el listado, en la confirmación de eliminar (cierra CA-004-01) y en los anuncios, la etiqueta es el **nombre del archivo**.
     - **Completar y eliminar (cierra CL-003-4):** la rotura y el arrugado muestran lo que se ve en la tarea (franja y página visible); con reducir movimiento, sus alternativas.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* la etiqueta sin texto (nombre del archivo) se usa en la card de deshacer (CA-014-04), ya no en la confirmación.
 
 **Accesibilidad**
 
@@ -208,6 +212,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
     | Enlace sin app para abrirlo | El enlace | El texto del error |
     | Gira a horizontal | La página visible | Ninguno |
     | ~~"Volver a vertical"~~ (quitado, 2026-09-28) | — | — |
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* los anuncios de eliminar pasan a la lectura de la card de deshacer (CA-014-16).
 
 - **CA-008-22 Reducir movimiento, teclado y texto grande**
   - **Dado** "reducir movimiento", un teclado o el texto al 200 %
