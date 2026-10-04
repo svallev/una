@@ -91,3 +91,14 @@ Arreglo del hallazgo 2: `una/a11y` devuelve también `touchExploration` (`Access
 | Switch Access, TalkBack apagado | `accessibleNavigation=true` pero `reader=false`; la barra baja desde el primer fotograma (0,93 a 0,3 s, 0,06 a 3,8 s) y la card caduca a los ≈ 4,0 s; no se pide foco de entrada | [Hecho] |
 
 Con Switch Access en API 37 no hay "Tiempo para actuar" definido (`interactiveUiTimeout=0`), así que dura 4 s; con el ajuste puesto duraría lo que diga el sistema (CA-014-06). **[Suposición]** TalkBack y Switch Access a la vez: `accessibleNavigation` ya es `true` y no cambia al encender el segundo, así que ese cambio con la app abierta no hace releer el canal (poco probable; la siguiente eliminación lo lee de nuevo).
+
+## Xiaomi 15T Pro: p90 de raster del arrugado (2026-10-04)
+
+`flutter drive --profile --no-dds --keep-app-running` con `delete_perf_test.dart` (una ejecución; con permiso del propietario, sin capturas). Se desinstaló solo `invalid.pending.app.profile`; la app real no se tocó.
+
+| | Fotogramas | Build medio / p90 / peor | Raster medio / p90 / p99 / peor | Fuera de presupuesto |
+|---|---|---|---|---|
+| Baseline (spec 004, ejec. 1) | 259 | 0,6 / 0,8 / 7,9 ms | 4,0 / 5,6 / 15,3 / 23,5 ms | 2 |
+| Ahora (con la entrada de la card en la ventana) | 259 | 0,7 / 0,9 / 12,4 ms | 4,7 / 5,9 / 15,4 / 23,8 ms | 2 |
+
+[Hecho] Raster p90 +0,3 ms frente al baseline (en el rango de las tres ejecuciones de entonces, 5,5–5,7), mismos fotogramas fuera de presupuesto. Sin empeoramiento apreciable. El peor fotograma de build (12,4 ms) es único; **[Suposición]** es el primero de la card al montarse.
