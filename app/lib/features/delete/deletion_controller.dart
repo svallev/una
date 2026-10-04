@@ -86,4 +86,15 @@ class DeletionController extends Notifier<DeletionState> {
     // El foco va a la nueva tarea o a "Todo hecho." (CA-004-11).
     ref.read(screenFocusProvider.notifier).signal();
   }
+
+  /// La app pasa a segundo plano durante el arrugado: termina ya, sin card
+  /// (pasar a segundo plano hace definitiva la eliminación, CA-014-11); al
+  /// volver se ve la siguiente sin repetir la animación (CA-004-03,
+  /// CL-014-15). Mientras aún se guarda no hace nada: `delete` lo termina al
+  /// acabar, y así no se puede empezar otra eliminación entre medias.
+  void finishNow() {
+    if (state.phase != DeletionPhase.crumpling) return;
+    state = DeletionState(DeletionPhase.idle, generation: state.generation);
+    ref.read(screenFocusProvider.notifier).signal();
+  }
 }

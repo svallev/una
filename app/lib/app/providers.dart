@@ -15,6 +15,7 @@ import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/license_package.dart';
 import '../domain/entities/task.dart';
+import '../domain/ports/accessibility_timeouts.dart';
 import '../domain/ports/attachment_store.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
@@ -216,6 +217,13 @@ final restoreDeletedTaskProvider = Provider<RestoreDeletedTask>(
     repository: ref.watch(taskRepositoryProvider),
     janitor: ref.watch(attachmentJanitorProvider),
   ),
+);
+
+/// "Tiempo para actuar" del sistema (CA-014-06): se consulta al empezar cada
+/// eliminación. Sin canal (como ahora, hasta el canal `una/a11y` de Android),
+/// 4 s.
+final accessibilityTimeoutsProvider = Provider<AccessibilityTimeouts>(
+  (ref) => const NoAccessibilityTimeouts(),
 );
 
 final reorderTaskProvider = Provider<ReorderTask>(

@@ -13,6 +13,7 @@ import '../features/complete/completion_controller.dart';
 import '../features/current_task/current_task_screen.dart';
 import '../features/delete/crumple_overlay.dart';
 import '../features/delete/deletion_controller.dart';
+import '../features/delete/undo_controller.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -43,6 +44,10 @@ class UnaApp extends ConsumerStatefulWidget {
 class _UnaAppState extends ConsumerState<UnaApp> {
   late final AppLifecycleListener _lifecycle;
   final _navigatorKey = GlobalKey<NavigatorState>();
+  // Ir a otra pantalla hace definitiva la eliminación (CA-014-07).
+  late final _undoObserver = UndoNavigationObserver(
+    () => ref.read(undoProvider.notifier),
+  );
   DateTime? _hiddenAt;
   int _resetGeneration = 0;
 
@@ -50,7 +55,14 @@ class _UnaAppState extends ConsumerState<UnaApp> {
   void initState() {
     super.initState();
     _lifecycle = AppLifecycleListener(
-      onHide: () => _hiddenAt = ref.read(clockProvider).now(),
+      onHide: () {
+        _hiddenAt = ref.read(clockProvider).now();
+        // Segundo plano (`hidden`; la cortina y los diálogos del sistema,
+        // `inactive`, no cuentan, CA-014-12): el arrugado acaba ya y la
+        // eliminación es definitiva, sin card (CA-014-11).
+        ref.read(deletionProvider.notifier).finishNow();
+        ref.read(undoProvider.notifier).appHidden();
+      },
       onShow: _onShow,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,6 +106,7 @@ class _UnaAppState extends ConsumerState<UnaApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: _navigatorKey,
+      navigatorObservers: [_undoObserver],
       debugShowCheckedModeBanner: false,
       onGenerateTitle: (_) => AppIdentity.displayName,
       theme: UnaTheme.light(),
