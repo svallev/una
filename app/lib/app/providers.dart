@@ -10,6 +10,7 @@ import '../data/attachments/memory_attachment_store.dart';
 import '../data/licenses/flutter_license_source.dart';
 import '../data/links/native_link_opener.dart';
 import '../data/links/new_tab.dart';
+import '../data/platform/accessibility_timeouts.dart';
 import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
@@ -219,11 +220,11 @@ final restoreDeletedTaskProvider = Provider<RestoreDeletedTask>(
   ),
 );
 
-/// "Tiempo para actuar" del sistema (CA-014-06): se consulta al empezar cada
-/// eliminación. Sin canal (como ahora, hasta el canal `una/a11y` de Android),
-/// 4 s.
+/// "Tiempo para actuar" del sistema (CA-014-06): el canal `una/a11y` de
+/// Android, consultado al empezar cada eliminación (nunca antes del primer
+/// fotograma, P2). Sin canal (iOS, web de pruebas, tests) o con un error, 4 s.
 final accessibilityTimeoutsProvider = Provider<AccessibilityTimeouts>(
-  (ref) => const NoAccessibilityTimeouts(),
+  (ref) => const ChannelAccessibilityTimeouts(),
 );
 
 final reorderTaskProvider = Provider<ReorderTask>(
