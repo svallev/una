@@ -110,6 +110,7 @@ class _UndoCardHostState extends ConsumerState<UndoCardHost> {
                       widget.onUndo ??
                       () => unawaited(undoDeletion(context, ref)),
                   onShown: undo.cardShown,
+                  screenReaderFor: undo.screenReaderFor,
                   onFocusChanged: undo.focusChanged,
                   onScreenReaderChanged: undo.screenReaderChanged,
                   focusNode: _focusNode,

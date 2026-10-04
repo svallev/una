@@ -89,10 +89,16 @@ class _H {
       (await container.read(deletePendingTaskProvider).call(id)).deleted;
 
   /// Elimina [id] y lo deja con la card a la vista (desde el listado).
+  ///
+  /// [screenReader] es lo que dice el canal (`touchExploration`, TalkBack): el
+  /// controlador lo lee en `hold`, y la respuesta llega antes de nada más
+  /// (`pump`).
   Future<Task> deleteAndShow(String id, {bool screenReader = false}) async {
+    timeouts.touchExploration = screenReader;
     final task = await delete(id);
     expect(undo.hold(task, host: UndoHost.list, epoch: undo.epoch), isTrue);
-    undo.cardShown(state.serial, screenReader: screenReader);
+    await tester.pump();
+    undo.cardShown(state.serial);
     return task;
   }
 
@@ -180,7 +186,7 @@ void main() {
       final h = await _harness(tester);
       await h.deleteAndShow('b');
       await tester.pump(const Duration(seconds: 2));
-      h.undo.cardShown(h.state.serial, screenReader: true);
+      h.undo.cardShown(h.state.serial);
       await tester.pump(const Duration(seconds: 2));
       expect(h.state.phase, UndoPhase.none);
     });
@@ -308,14 +314,18 @@ void main() {
 
     testWidgets('CA-014-17: el foco del lector que llega antes de dibujarse '
         'la card también cuenta como primer foco', (tester) async {
-      final h = await _harness(tester);
+      final h = await _harness(
+        tester,
+        timeouts: FakeAccessibilityTimeouts(touchExploration: true),
+      );
       final task = await h.delete('b');
       h.undo.hold(task, host: UndoHost.list, epoch: h.undo.epoch);
       final serial = h.state.serial;
+      await tester.pump();
       h.undo
         ..focusChanged(serial, UndoFocus.reader, focused: true)
         ..focusChanged(serial, UndoFocus.reader, focused: false)
-        ..cardShown(serial, screenReader: true);
+        ..cardShown(serial);
       await tester.pump(const Duration(seconds: 4));
       expect(h.state.phase, UndoPhase.none);
     });
@@ -325,10 +335,12 @@ void main() {
       final h = await _harness(tester);
       await h.deleteAndShow('b', screenReader: true);
       await tester.pump(const Duration(minutes: 1));
-      h.undo.screenReaderChanged(enabled: true);
+      // Aviso de cambio con el lector aún activo: no hace nada.
+      h.undo.screenReaderChanged();
       await tester.pump(const Duration(minutes: 1));
       expect(h.state.phase, UndoPhase.visible);
-      h.undo.screenReaderChanged(enabled: false);
+      h.timeouts.touchExploration = false;
+      h.undo.screenReaderChanged();
       await tester.pump(const Duration(milliseconds: 3990));
       expect(h.state.phase, UndoPhase.visible);
       await tester.pump(const Duration(milliseconds: 10));
@@ -339,9 +351,92 @@ void main() {
       await tester.pump(const Duration(minutes: 1));
       expect(h.state.phase, UndoPhase.visible);
       // El aviso de pérdida de foco no llega: lo dice el apagado del lector.
-      h.undo.screenReaderChanged(enabled: false);
+      h.timeouts.touchExploration = false;
+      h.undo.screenReaderChanged();
       await tester.pump(const Duration(seconds: 4));
       expect(h.state.phase, UndoPhase.none);
+    });
+
+    testWidgets('CA-014-17: Switch Access (servicio activo, sin exploración '
+        'táctil) no cuenta como lector: sin foco, el tiempo corre y caduca a '
+        'los 4 s', (tester) async {
+      // Con Switch Access, `accessibleNavigation` de Flutter vale true, pero
+      // el canal dice touchExploration false (T-014-10b).
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(accessibleNavigation: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      final h = await _harness(
+        tester,
+        timeouts: FakeAccessibilityTimeouts(
+          serviceEnabled: true,
+          touchExploration: false,
+        ),
+      );
+      await h.deleteAndShow('b', screenReader: false);
+      await tester.pump(const Duration(seconds: 1));
+      expect(h.undo.fraction, lessThan(1));
+      // Android 8 y 9 con un servicio activo: 10 s (CA-014-06).
+      await tester.pump(const Duration(seconds: 9));
+      expect(h.state.phase, UndoPhase.none);
+    });
+
+    testWidgets('CA-014-17: la exploración táctil llega con la cuenta ya en '
+        'marcha: pasa a esperar el primer foco, sin perder lo corrido', (
+      tester,
+    ) async {
+      final timeouts = FakeAccessibilityTimeouts(
+        touchExploration: true,
+        gate: Completer<void>(),
+      );
+      final h = await _harness(tester, timeouts: timeouts);
+      await h.deleteAndShow('b', screenReader: true);
+      await tester.pump(const Duration(seconds: 1));
+      timeouts.gate!.complete();
+      await tester.pump();
+      expect(h.undo.fraction, closeTo(0.75, 1e-9));
+      await tester.pump(const Duration(minutes: 1));
+      expect(h.state.phase, UndoPhase.visible);
+      expect(h.undo.fraction, closeTo(0.75, 1e-9));
+      h.undo
+        ..focusChanged(h.state.serial, UndoFocus.reader, focused: true)
+        ..focusChanged(h.state.serial, UndoFocus.reader, focused: false);
+      await tester.pump(const Duration(seconds: 3));
+      expect(h.state.phase, UndoPhase.none);
+    });
+
+    testWidgets('CA-014-17: si el canal falla, no hay lector: 4 s sin esperar '
+        'foco', (tester) async {
+      final h = await _harness(
+        tester,
+        timeouts: FakeAccessibilityTimeouts(error: const _Leaky()),
+      );
+      final task = await h.delete('b');
+      h.undo.hold(task, host: UndoHost.list, epoch: h.undo.epoch);
+      await tester.pump();
+      expect(await h.undo.screenReaderFor(h.state.serial), isFalse);
+      expect(h.undo.screenReader, isFalse);
+      h.undo.cardShown(h.state.serial);
+      await tester.pump(const Duration(seconds: 4));
+      expect(h.state.phase, UndoPhase.none);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CA-014-17: "screenReaderFor" da lo que dice el canal para '
+        'esa eliminación y false para otra', (tester) async {
+      final h = await _harness(tester);
+      await h.deleteAndShow('b', screenReader: true);
+      final serial = h.state.serial;
+      expect(await h.undo.screenReaderFor(serial), isTrue);
+      expect(h.undo.screenReader, isTrue);
+      expect(await h.undo.screenReaderFor(serial + 1), isFalse);
+
+      // La del canal se vuelve a pedir en cada eliminación.
+      await h.deleteAndShow('c', screenReader: false);
+      expect(await h.undo.screenReaderFor(h.state.serial), isFalse);
+      expect(h.undo.screenReader, isFalse);
+      expect(h.timeouts.reads, 2);
     });
 
     testWidgets('CA-014-17, CA-014-20: con teclado, el foco solo detiene el '
@@ -397,8 +492,8 @@ void main() {
 
       h.undo
         ..focusChanged(first, UndoFocus.reader, focused: false)
-        ..cardShown(first, screenReader: false)
-        ..cardShown(second, screenReader: true);
+        ..cardShown(first)
+        ..cardShown(second);
       // No hereda el foco de la anterior: espera al primero de esta.
       await tester.pump(const Duration(minutes: 1));
       expect(h.state.phase, UndoPhase.visible);
@@ -417,14 +512,14 @@ void main() {
       final task = await h.delete('a');
       expect(h.undo.hold(task, host: UndoHost.home, epoch: h.undo.epoch), true);
       expect(h.state.phase, UndoPhase.crumpling);
-      h.undo.cardShown(h.state.serial, screenReader: false);
+      h.undo.cardShown(h.state.serial);
       await tester.pump(const Duration(seconds: 10));
       expect(h.state.phase, UndoPhase.crumpling);
       expect(await h.undo.undo(), isNull, reason: 'sin card no se deshace');
 
       h.undo.show();
       expect(h.state.phase, UndoPhase.visible);
-      h.undo.cardShown(h.state.serial, screenReader: false);
+      h.undo.cardShown(h.state.serial);
       await tester.pump(const Duration(milliseconds: 3990));
       expect(h.state.phase, UndoPhase.visible);
       await tester.pump(const Duration(milliseconds: 10));

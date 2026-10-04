@@ -64,12 +64,54 @@ void main() {
     });
   });
 
+  group('CA-014-17: la exploración táctil (TalkBack) sale del canal, no de '
+      'accessibleNavigation', () {
+    test('TalkBack: touchExploration true', () async {
+      answer(
+        (_) async => {
+          'recommendedMs': 10000,
+          'serviceEnabled': true,
+          'touchExploration': true,
+        },
+      );
+      expect((await timeouts.read()).touchExploration, isTrue);
+    });
+
+    test('Switch Access sin TalkBack: servicio activo y touchExploration '
+        'false', () async {
+      answer(
+        (_) async => {
+          'recommendedMs': 10000,
+          'serviceEnabled': true,
+          'touchExploration': false,
+        },
+      );
+      final read = await timeouts.read();
+      expect(read.serviceEnabled, isTrue);
+      expect(read.touchExploration, isFalse);
+    });
+
+    test('un nativo sin el campo, o con otro tipo, es false', () async {
+      answer((_) async => {'recommendedMs': 4000, 'serviceEnabled': true});
+      expect((await timeouts.read()).touchExploration, isFalse);
+      answer(
+        (_) async => {
+          'recommendedMs': 4000,
+          'serviceEnabled': true,
+          'touchExploration': 'true',
+        },
+      );
+      expect((await timeouts.read()).touchExploration, isFalse);
+    });
+  });
+
   group('CA-014-06: sin canal o con un error, (null, false) → 4 s', () {
     test('sin canal (MissingPluginException)', () async {
       // Sin manejador registrado, el canal lanza MissingPluginException.
       final read = await timeouts.read();
       expect(read.recommendedMs, isNull);
       expect(read.serviceEnabled, isFalse);
+      expect(read.touchExploration, isFalse);
     });
 
     test('con PlatformException', () async {
@@ -77,6 +119,7 @@ void main() {
       final read = await timeouts.read();
       expect(read.recommendedMs, isNull);
       expect(read.serviceEnabled, isFalse);
+      expect(read.touchExploration, isFalse);
     });
 
     test('método sin implementar (notImplemented)', () async {
@@ -84,6 +127,7 @@ void main() {
       final read = await timeouts.read();
       expect(read.recommendedMs, isNull);
       expect(read.serviceEnabled, isFalse);
+      expect(read.touchExploration, isFalse);
     });
 
     test('respuesta nula', () async {
@@ -91,6 +135,7 @@ void main() {
       final read = await timeouts.read();
       expect(read.recommendedMs, isNull);
       expect(read.serviceEnabled, isFalse);
+      expect(read.touchExploration, isFalse);
     });
 
     test('valores de otro tipo: se toman como ausentes', () async {
@@ -98,6 +143,7 @@ void main() {
       final read = await timeouts.read();
       expect(read.recommendedMs, isNull);
       expect(read.serviceEnabled, isFalse);
+      expect(read.touchExploration, isFalse);
     });
 
     test('una respuesta que no es un mapa', () async {
@@ -105,6 +151,7 @@ void main() {
       final read = await timeouts.read();
       expect(read.recommendedMs, isNull);
       expect(read.serviceEnabled, isFalse);
+      expect(read.touchExploration, isFalse);
     });
 
     test('la web de pruebas no llama al canal', () async {
@@ -112,6 +159,7 @@ void main() {
       final read = await const ChannelAccessibilityTimeouts(web: true).read();
       expect(read.recommendedMs, isNull);
       expect(read.serviceEnabled, isFalse);
+      expect(read.touchExploration, isFalse);
       expect(calls, isEmpty);
     });
   });

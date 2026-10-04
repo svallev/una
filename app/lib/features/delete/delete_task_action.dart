@@ -246,6 +246,7 @@ class _Restoration {
           retryLabel: l10n.retry,
           color: theme.colorScheme.inversePrimary,
           takesFocus: () => !handled,
+          screenReader: () => _undo.screenReader,
           onRetry: () {
             // Solo vuelve a pedir la recuperación: no guarda la tarea.
             release();
@@ -288,6 +289,7 @@ class _RetryContent extends StatefulWidget {
     required this.retryLabel,
     required this.color,
     required this.takesFocus,
+    required this.screenReader,
     required this.onRetry,
   });
 
@@ -297,6 +299,10 @@ class _RetryContent extends StatefulWidget {
 
   /// Si el aviso sigue pendiente (no se ha tocado ni cerrado).
   final bool Function() takesFocus;
+
+  /// Si hay un lector con exploración táctil (TalkBack) según el canal, no
+  /// `accessibleNavigation` (con Switch Access también es `true`, T-014-10b).
+  final bool Function() screenReader;
   final VoidCallback onRetry;
 
   @override
@@ -316,7 +322,7 @@ class _RetryContentState extends State<_RetryContent> {
       if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
       final keyboard =
           FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-      if (keyboard || MediaQuery.accessibleNavigationOf(context)) {
+      if (keyboard || widget.screenReader()) {
         _focus.requestFocus();
       }
       _semantics.currentContext?.findRenderObject()?.sendSemanticsEvent(

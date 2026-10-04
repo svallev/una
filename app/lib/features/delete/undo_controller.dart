@@ -143,7 +143,17 @@ class UndoController extends Notifier<UndoState> {
 
   // Estado del foco, de cero con cada eliminación (plan §4).
   bool _shown = false;
+
+  /// Si hay un lector con exploración táctil (TalkBack): lo dice el canal
+  /// `una/a11y` (`touchExploration`), no `MediaQuery.accessibleNavigation`, que
+  /// con Switch Access también vale `true` (T-014-10b). Falso hasta que llega
+  /// la respuesta (pocos milisegundos tras [hold]).
   bool _screenReader = false;
+
+  /// Se completa con [_screenReader] cuando llega la respuesta del canal de
+  /// esta eliminación (con false si falla): la card espera a que se sepa antes
+  /// de pedir el foco de entrada ([screenReaderFor]).
+  Completer<bool>? _readerFact;
   bool _readerSeen = false;
   bool _readerFocused = false;
   bool _keyboardFocused = false;
@@ -199,6 +209,11 @@ class UndoController extends Notifier<UndoState> {
     _commitPending = false;
     _resetFocus();
     _serial++;
+    final previousFact = _readerFact;
+    if (previousFact != null && !previousFact.isCompleted) {
+      previousFact.complete(false);
+    }
+    _readerFact = Completer<bool>();
     _task = task;
     _janitor = janitor;
     _countdown = UndoCountdown(
@@ -214,7 +229,7 @@ class UndoController extends Notifier<UndoState> {
       returnTo: returnTo,
       serial: _serial,
     );
-    unawaited(_readDuration(_serial));
+    unawaited(_readSystem(_serial));
     return true;
   }
 
@@ -226,15 +241,31 @@ class UndoController extends Notifier<UndoState> {
     state = state._copyWith(UndoPhase.visible);
   }
 
-  /// La card número [serial] ya se ha dibujado (tras su primer fotograma).
-  /// Con el lector ([screenReader]), el tiempo espera a su primer foco; si
-  /// no, empieza (CA-014-17). Solo cuenta la primera vez.
-  void cardShown(int serial, {required bool screenReader}) {
+  /// La card número [serial] ya se ha dibujado (tras su primer fotograma): el
+  /// tiempo empieza (CA-014-17). Si el canal dice que hay un lector con
+  /// exploración táctil, espera a su primer foco: la respuesta llega a la vez
+  /// que [hold] la pide, y si tarda más (o falla) el tiempo corre; así una
+  /// lectura que no llega nunca no deja la card sin caducar. Solo cuenta la
+  /// primera vez.
+  void cardShown(int serial) {
     if (!_isCurrent(serial) || _shown) return;
     _shown = true;
-    _screenReader = screenReader;
     _sync();
   }
+
+  /// Si hay lector con exploración táctil en la eliminación número [serial]
+  /// (CA-014-17): lo que dice el canal, o false si falla o es otra
+  /// eliminación. La card lo espera para decidir si pide el foco de entrada
+  /// de "Deshacer".
+  Future<bool> screenReaderFor(int serial) {
+    final fact = _readerFact;
+    if (fact == null || serial != _serial) return Future.value(false);
+    return fact.future;
+  }
+
+  /// Lo último que dijo el canal sobre el lector (para quien lo necesita en
+  /// el momento, como el aviso de error con "Reintentar").
+  bool get screenReader => _screenReader;
 
   /// El foco del lector o el del teclado entra en la card número [serial] o
   /// sale de ella: mientras está, el tiempo no corre (CA-014-17). El del
@@ -253,15 +284,14 @@ class UndoController extends Notifier<UndoState> {
     _sync();
   }
 
-  /// El lector se ha apagado con la card a la vista: el aviso de que pierde el
-  /// foco puede no llegar, así que el tiempo sigue (o empieza, si esperaba su
-  /// primer foco).
-  void screenReaderChanged({required bool enabled}) {
-    if (enabled || state.phase != UndoPhase.visible) return;
-    _screenReader = false;
-    _readerFocused = false;
-    _sync();
-  }
+  /// El sistema ha cambiado de ajustes de accesibilidad con la card a la vista
+  /// (la card lo sabe por `MediaQuery.accessibleNavigation`, que cambia al
+  /// encender o apagar TalkBack): se vuelve a leer el canal. Si el lector se ha
+  /// apagado, el aviso de que pierde el foco puede no llegar, así que el
+  /// tiempo sigue (o empieza, si esperaba su primer foco). Encenderlo no
+  /// cambia nada. No hace falta volver a leerlo al volver de segundo plano:
+  /// pasar a él hace definitiva la eliminación ([appHidden]).
+  void screenReaderChanged() => unawaited(_recheckReader(_serial));
 
   /// La eliminación pasa a ser definitiva (CA-014-11, CA-014-15): la card
   /// desaparece **ya**, se suelta la tarea y sus archivos se borran aparte,
@@ -378,22 +408,47 @@ class UndoController extends Notifier<UndoState> {
         _ => false,
       };
 
-  /// El "Tiempo para actuar" del sistema llega después de empezar: solo
-  /// alarga (CA-014-06). Sin canal o con un error, 4 s.
-  Future<void> _readDuration(int serial) async {
+  /// Lo que dice el sistema llega después de empezar: el "Tiempo para actuar",
+  /// que solo alarga (CA-014-06), y si hay lector con exploración táctil
+  /// (CA-014-17). Sin canal o con un error, 4 s y sin lector.
+  Future<void> _readSystem(int serial) async {
     final SystemTimeouts timeouts;
     try {
       timeouts = await ref.read(accessibilityTimeoutsProvider).read();
     } on Object {
+      _readerKnown(serial, false);
       return;
     }
     if (!ref.mounted || serial != _serial) return;
+    _screenReader = timeouts.touchExploration;
+    _readerKnown(serial, timeouts.touchExploration);
     const rule = UndoDuration(
       base: UnaMotion.undoWindow,
       legacyA11y: UnaMotion.undoWindowLegacyA11y,
       max: UnaMotion.undoWindowMax,
     );
     _countdown?.extendTo(rule(timeouts));
+    _sync();
+  }
+
+  void _readerKnown(int serial, bool reader) {
+    final fact = _readerFact;
+    if (serial != _serial || fact == null || fact.isCompleted) return;
+    fact.complete(reader);
+  }
+
+  Future<void> _recheckReader(int serial) async {
+    final bool reader;
+    try {
+      reader = (await ref.read(accessibilityTimeoutsProvider).read())
+          .touchExploration;
+    } on Object {
+      return;
+    }
+    if (!ref.mounted || serial != _serial) return;
+    if (state.phase != UndoPhase.visible || reader || !_screenReader) return;
+    _screenReader = false;
+    _readerFocused = false;
     _sync();
   }
 

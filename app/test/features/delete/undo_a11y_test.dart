@@ -46,6 +46,7 @@ Future<_FailingInsertRepo> _pump(
   List<String> tasks = const ['Primera', 'Segunda'],
   List<Task> extra = const [],
   bool screenReader = false,
+  bool? touchExploration,
   double textScale = 1.0,
   Size size = const Size(390, 844),
   double bottomInset = 0,
@@ -65,7 +66,7 @@ Future<_FailingInsertRepo> _pump(
     clock: TesterClock(tester),
     overrides: [
       accessibilityTimeoutsProvider.overrideWithValue(
-        FakeAccessibilityTimeouts(),
+        FakeAccessibilityTimeouts(touchExploration: touchExploration),
       ),
       attachmentStoreProvider.overrideWithValue(_store),
       pdfImporterProvider.overrideWithValue(FakePdfImporter(_store)),
@@ -406,6 +407,34 @@ void main() {
       await tester.pump(UnaMotion.undoWindow * 3);
       expect(_card, findsOneWidget, reason: 'el foco del teclado detiene');
       expect(_container(tester).read(undoProvider).cardVisible, isTrue);
+    });
+
+    testWidgets('CA-014-17: con TalkBack (exploración táctil) el tiempo no '
+        'empieza hasta el primer foco de la card y no corre mientras lo '
+        'tiene', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester, screenReader: true);
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(UnaMotion.undoWindow * 3);
+      expect(_card, findsOneWidget);
+      expect(_container(tester).read(undoProvider).cardVisible, isTrue);
+      handle.dispose();
+    });
+
+    testWidgets('CA-014-17: con Switch Access (`accessibleNavigation` true '
+        'pero sin exploración táctil) no cuenta como lector: no se pide el '
+        'foco de entrada y la card caduca a los 4 s sin foco', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester, screenReader: true, touchExploration: false);
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_card, findsOneWidget);
+      expect(_focusLabel(), isNot('undo'));
+      await tester.pump(UnaMotion.undoWindow);
+      await tester.pump();
+      expect(_card, findsNothing);
+      handle.dispose();
     });
 
     testWidgets('CA-014-20: con la pantalla táctil y sin lector, el foco no '

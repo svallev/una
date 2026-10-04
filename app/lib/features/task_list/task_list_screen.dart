@@ -987,6 +987,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     fraction: () => own ? undo.fraction : 1.0,
                     onUndo: _undoDeletion,
                     onShown: undo.cardShown,
+                    screenReaderFor: undo.screenReaderFor,
                     onFocusChanged: undo.focusChanged,
                     onScreenReaderChanged: undo.screenReaderChanged,
                     focusNode: _undoFocus,

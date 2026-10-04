@@ -29,9 +29,9 @@ const _en = Locale('en');
 /// Lo que la card ha avisado.
 class _Calls {
   int undos = 0;
-  final shown = <(int, bool)>[];
+  final shown = <int>[];
   final focus = <(int, UndoFocus, bool)>[];
-  final readers = <bool>[];
+  int readerChanges = 0;
 }
 
 /// La card sola, abajo del todo, como la pone su sitio. Volver a llamarla con
@@ -48,6 +48,8 @@ Future<_Calls> _pump(
   EdgeInsets padding = EdgeInsets.zero,
   bool reduced = false,
   bool screenReader = false,
+  bool? accessibleNavigation,
+  bool requestsFocus = false,
   FocusNode? focusNode,
   Widget Function(Widget card)? wrap,
 }) async {
@@ -61,10 +63,13 @@ Future<_Calls> _pump(
     serial: serial,
     fraction: fraction ?? () => 1,
     onUndo: () => c.undos++,
-    onShown: (s, {required screenReader}) => c.shown.add((s, screenReader)),
+    onShown: c.shown.add,
+    // Lo que dice el canal `una/a11y` (touchExploration, TalkBack).
+    screenReaderFor: (_) async => screenReader,
     onFocusChanged: (s, source, {required focused}) =>
         c.focus.add((s, source, focused)),
-    onScreenReaderChanged: ({required enabled}) => c.readers.add(enabled),
+    onScreenReaderChanged: () => c.readerChanges++,
+    requestsFocus: requestsFocus,
     focusNode: focusNode,
   );
   await tester.pumpWidget(
@@ -81,7 +86,8 @@ Future<_Calls> _pump(
           padding: padding,
           viewPadding: padding,
           disableAnimations: reduced,
-          accessibleNavigation: screenReader,
+          // TalkBack activa los dos; Switch Access, solo este.
+          accessibleNavigation: accessibleNavigation ?? screenReader,
         ),
         child: child!,
       ),
@@ -519,7 +525,8 @@ void main() {
                   serial: 1,
                   fraction: () => 1,
                   onUndo: () {},
-                  onShown: (_, {required screenReader}) {},
+                  onShown: (_) {},
+                  screenReaderFor: (_) async => false,
                   onFocusChanged: (_, _, {required focused}) {},
                   sortKey: const OrdinalSortKey(0),
                 ),
@@ -564,20 +571,49 @@ void main() {
     testWidgets('CA-014-17: avisa de que se ha dibujado tras su primer '
         'fotograma, una vez por serie, con el lector o sin él', (tester) async {
       final calls = await _pump(tester, serial: 3, screenReader: true);
-      expect(calls.shown, [(3, true)]);
+      expect(calls.shown, [3]);
       await tester.pump(UnaMotion.undoEnter);
-      expect(calls.shown, [(3, true)]);
+      expect(calls.shown, [3]);
       await _pump(tester, calls: calls, serial: 4, screenReader: true);
-      expect(calls.shown, [(3, true), (4, true)]);
+      expect(calls.shown, [3, 4]);
       final other = await _pump(tester, task: sampleTask(id: 'x'), serial: 4);
       expect(other.shown, isEmpty, reason: 'la misma serie no vuelve a avisar');
     });
 
-    testWidgets('CA-014-17: si el lector se apaga con la card a la vista, lo '
-        'dice', (tester) async {
+    testWidgets('CA-014-17: si el sistema cambia de lector con la card a la '
+        'vista (accessibleNavigation), avisa para que se vuelva a leer el '
+        'canal', (tester) async {
       final calls = await _pump(tester, screenReader: true);
+      expect(calls.readerChanges, 0);
       await _pump(tester, calls: calls, screenReader: false);
-      expect(calls.readers, [false]);
+      expect(calls.readerChanges, 1);
+    });
+
+    testWidgets('CA-014-17, CA-014-20: el foco de entrada de "Deshacer" se '
+        'pide con TalkBack (lo dice el canal), no con Switch Access aunque '
+        '`accessibleNavigation` sea true', (tester) async {
+      final talkBack = FocusNode();
+      final switchAccess = FocusNode();
+      addTearDown(talkBack.dispose);
+      addTearDown(switchAccess.dispose);
+      await _pump(
+        tester,
+        screenReader: true,
+        requestsFocus: true,
+        focusNode: talkBack,
+      );
+      await tester.pump();
+      expect(talkBack.hasFocus, isTrue);
+
+      await _pump(
+        tester,
+        screenReader: false,
+        accessibleNavigation: true,
+        requestsFocus: true,
+        focusNode: switchAccess,
+      );
+      await tester.pump();
+      expect(switchAccess.hasFocus, isFalse);
     });
   });
 

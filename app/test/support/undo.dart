@@ -19,16 +19,24 @@ class TesterClock implements Clock {
 
 /// "Tiempo para actuar" del sistema simulado (sin canal). Con [gate], la
 /// respuesta espera a que se complete; con [error], falla.
+///
+/// [touchExploration] es la exploración táctil (TalkBack) que lee el canal.
+/// Sin darlo (null) vale lo mismo que `accessibleNavigation` de la plataforma
+/// de pruebas, como en un móvil con TalkBack, donde ambos son `true`; con
+/// Switch Access, `accessibleNavigation` es `true` y la exploración táctil
+/// `false` (T-014-10b): ese caso se pide con `touchExploration: false`.
 class FakeAccessibilityTimeouts implements AccessibilityTimeouts {
   FakeAccessibilityTimeouts({
     this.recommendedMs,
     this.serviceEnabled = false,
+    this.touchExploration,
     this.gate,
     this.error,
   });
 
   int? recommendedMs;
   bool serviceEnabled;
+  bool? touchExploration;
   Completer<void>? gate;
   Object? error;
 
@@ -42,6 +50,16 @@ class FakeAccessibilityTimeouts implements AccessibilityTimeouts {
     if (g != null) await g.future;
     final e = error;
     if (e != null) throw e;
-    return (recommendedMs: recommendedMs, serviceEnabled: serviceEnabled);
+    return (
+      recommendedMs: recommendedMs,
+      serviceEnabled: serviceEnabled,
+      touchExploration:
+          touchExploration ??
+          TestWidgetsFlutterBinding
+              .instance
+              .platformDispatcher
+              .accessibilityFeatures
+              .accessibleNavigation,
+    );
   }
 }

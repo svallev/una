@@ -232,7 +232,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
 
 ## 6. Accesibilidad
 
-- **Tiempo ajustable (WCAG 2.2.1):** 4 s por defecto, o el "Tiempo para actuar" del sistema si es mayor (CA-014-06). Con el lector, el tiempo no empieza hasta que la card recibe el foco y no corre mientras lo tiene; con un teclado físico, lo mismo con su foco (CA-014-17). La duración no cambia con "reducir movimiento" ni con "Quitar animaciones".
+- **Tiempo ajustable (WCAG 2.2.1):** 4 s por defecto, o el "Tiempo para actuar" del sistema si es mayor (CA-014-06). Con el lector, el tiempo no empieza hasta que la card recibe el foco y no corre mientras lo tiene; con un teclado físico, lo mismo con su foco (CA-014-17). La duración no cambia con "reducir movimiento" ni con "Quitar animaciones". *Nota (T-014-10b):* "lector" es TalkBack (exploración táctil, que lee el canal nativo); con Switch Access el tiempo corre desde que aparece la card y se alarga con el tiempo del sistema, sin esperar a un foco.
 - **Excepción a P6 (decisión del propietario, 2026-10-04; se registra en el ADR-0021):** en Android 8 y 9, que no tienen "Tiempo para actuar", la card dura 10 s con un servicio de accesibilidad activo. Para quien usa Switch Access ahí no llega a las diez veces del tiempo por defecto que pide WCAG 2.2.1 (serían 40 s). Lo mitigan que con TalkBack y con teclado el tiempo se detiene mientras la card tiene el foco, y que en Android 10 o posterior manda el ajuste del sistema. Se revisa si la beta lo señala.
 - **Foco y lectura:** el foco del lector llega a la card aunque la pantalla de debajo se vuelva a montar; mientras se ve, la card es lo primero en el orden de lectura; se lee una sola vez, empezando por "Deshacer", y no es una región en vivo (CA-014-16). Al deshacer, un único anuncio cuando la pantalla ya se ve y el foco en la tarea recuperada (CA-014-18). Sin anuncios durante el arrugado (lo prefiere `a11y-reviewer`: un anuncio inicial lo cortaría el cierre del menú y duplicaría la card).
 - **Alternativas:** "Deshacer" es un botón normal, sin gesto; la acción del lector "Eliminar tarea" se mantiene, ahora sin hoja (CA-014-19). Teclado y switch: CA-014-20.
@@ -329,7 +329,7 @@ Se retiran, si nada más los usa (lo comprueba el plan): `deleteTitle`, `deleteB
 - **Tiempo:**
   - Se mide con un reloj inyectable, no con un `AnimationController`: Flutter acorta las animaciones con "Quitar animaciones" salvo con `AnimationBehavior.preserve`, como en `crumple_overlay.dart`.
   - **[Suposición, verificar en el plan con la documentación vigente]** El tiempo del sistema se lee con `AccessibilityManager.getRecommendedTimeoutMillis(4000, FLAG_CONTENT_CONTROLS | FLAG_CONTENT_TEXT)` (API 29+), por un canal nativo.
-  - "Servicio de accesibilidad activo": `MediaQuery.accessibleNavigation` o `AccessibilityManager.isEnabled`.
+  - "Servicio de accesibilidad activo": `AccessibilityManager.isEnabled`. "Hay lector" (CA-014-17): `AccessibilityManager.isTouchExplorationEnabled` por el canal; `MediaQuery.accessibleNavigation` no vale porque con Switch Access también es `true` (nota de T-014-10b; los criterios no cambian: Switch Access no es el "lector" de CA-014-17 y su tiempo corre).
 - **Teclado:** el foco del teclado solo se mueve con `FocusManager.highlightMode` en modo tradicional (teclado físico). Con la pantalla táctil no se mueve, porque si no el tiempo no correría nunca.
 - **Segundo plano [Suposición]:** `AppLifecycleState` `hidden`/`paused`, no `inactive` (cortina de notificaciones).
 - **Tokens:**

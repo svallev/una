@@ -9,13 +9,17 @@ import io.flutter.plugin.common.MethodChannel
 /**
  * Canal `una/a11y` (spec 014, CA-014-06; ADR-0021): cuánto tiempo pide el
  * sistema para la card de deshacer. Solo lee `AccessibilityManager` (sin
- * permisos, sin escribir nada, sin oyentes y sin logcat) y devuelve dos
+ * permisos, sin escribir nada, sin oyentes y sin logcat) y devuelve tres
  * hechos; la regla de la duración está en Dart (`UndoDuration`):
  * - `recommendedMs`: el "Tiempo para actuar" para un aviso de 4 s con controles
  *   y texto (`getRecommendedTimeoutMillis`, Android 10 o posterior); null antes,
  *   que el sistema no lo tiene;
  * - `serviceEnabled`: si hay algún servicio de accesibilidad activo (`isEnabled`).
- *   No se guarda ni se registra: dejaría deducir que se usa tecnología de apoyo.
+ * - `touchExploration`: si hay un lector con exploración táctil, TalkBack
+ *   (`isTouchExplorationEnabled`). Es lo que Dart cuenta como "lector" para
+ *   esperar el primer foco: `accessibleNavigation` de Flutter vale `true` también
+ *   con Switch Access (API 37, T-014-10b).
+ *   Ninguno se guarda ni se registra: dejaría deducir que se usa tecnología de apoyo.
  * Un solo método, `timeouts`, sin argumentos; el resto, `notImplemented`.
  */
 class AccessibilityTimeouts(private val context: Context) : MethodChannel.MethodCallHandler {
@@ -34,7 +38,11 @@ class AccessibilityTimeouts(private val context: Context) : MethodChannel.Method
     }
 
     private fun timeouts(): Map<String, Any?> {
-        val none = mapOf("recommendedMs" to null, "serviceEnabled" to false)
+        val none = mapOf(
+            "recommendedMs" to null,
+            "serviceEnabled" to false,
+            "touchExploration" to false,
+        )
         val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
             ?: return none
         return try {
@@ -46,7 +54,11 @@ class AccessibilityTimeouts(private val context: Context) : MethodChannel.Method
             } else {
                 null
             }
-            mapOf("recommendedMs" to recommended, "serviceEnabled" to manager.isEnabled)
+            mapOf(
+                "recommendedMs" to recommended,
+                "serviceEnabled" to manager.isEnabled,
+                "touchExploration" to manager.isTouchExplorationEnabled,
+            )
         } catch (e: RuntimeException) {
             // Un fallo del sistema es "nada que alargar" (4 s), sin dejarlo en logcat.
             none

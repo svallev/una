@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SemanticsSortKey;
@@ -14,10 +16,13 @@ import '../attachments/task_labels.dart';
 import 'undo_controller.dart' show UndoFocus;
 
 /// La card número `serial` ya se ha dibujado (`UndoController.cardShown`).
-typedef UndoShownCallback = void Function(
-  int serial, {
-  required bool screenReader,
-});
+typedef UndoShownCallback = void Function(int serial);
+
+/// Si hay un lector con exploración táctil (TalkBack) en la eliminación
+/// número `serial`, según el canal `una/a11y`
+/// (`UndoController.screenReaderFor`). `MediaQuery.accessibleNavigation` no
+/// sirve: con Switch Access también vale `true` (T-014-10b).
+typedef UndoScreenReaderQuery = Future<bool> Function(int serial);
 
 /// El foco del lector o del teclado entra en la card número `serial` o sale
 /// de ella (`UndoController.focusChanged`).
@@ -27,9 +32,10 @@ typedef UndoFocusCallback = void Function(
   required bool focused,
 });
 
-/// El lector se ha encendido o apagado con la card a la vista
+/// Los ajustes de accesibilidad del sistema han cambiado con la card a la vista
+/// (`MediaQuery.accessibleNavigation`): el controlador vuelve a leer el canal
 /// (`UndoController.screenReaderChanged`).
-typedef UndoScreenReaderCallback = void Function({required bool enabled});
+typedef UndoScreenReaderCallback = VoidCallback;
 
 /// Card de deshacer (spec 014, tableros 12 y 13; prototipo `.undo`): franja
 /// negra abajo, a todo el ancho, con la papelera, "Tarea eliminada", la
@@ -49,6 +55,7 @@ class UndoCard extends StatefulWidget {
     required this.fraction,
     required this.onUndo,
     required this.onShown,
+    required this.screenReaderFor,
     required this.onFocusChanged,
     this.onScreenReaderChanged,
     this.focusNode,
@@ -71,6 +78,7 @@ class UndoCard extends StatefulWidget {
   /// guardas (350 ms, una sola vez) son del controlador.
   final VoidCallback onUndo;
   final UndoShownCallback onShown;
+  final UndoScreenReaderQuery screenReaderFor;
   final UndoFocusCallback onFocusChanged;
   final UndoScreenReaderCallback? onScreenReaderChanged;
 
@@ -136,7 +144,7 @@ class _UndoCardState extends State<UndoCard> with TickerProviderStateMixin {
   FocusNode get _node => widget.focusNode ?? (_ownNode ??= FocusNode());
   bool _focused = false;
   bool _down = false;
-  bool? _screenReader;
+  bool? _accessibleNavigation;
 
   /// Nodo del lector de esta serie: uno nuevo con cada eliminación, para que
   /// se lea con la etiqueta nueva (CA-014-08).
@@ -162,14 +170,17 @@ class _UndoCardState extends State<UndoCard> with TickerProviderStateMixin {
     _requestEntryFocus();
   }
 
+  /// `accessibleNavigation` ya no dice si hay lector (con Switch Access también
+  /// vale `true`): solo avisa de que algo ha cambiado (TalkBack encendido o
+  /// apagado) para que el controlador vuelva a leer el canal.
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final reader = MediaQuery.accessibleNavigationOf(context);
-    final before = _screenReader;
-    _screenReader = reader;
-    if (before != null && before != reader) {
-      widget.onScreenReaderChanged?.call(enabled: reader);
+    final accessible = MediaQuery.accessibleNavigationOf(context);
+    final before = _accessibleNavigation;
+    _accessibleNavigation = accessible;
+    if (before != null && before != accessible) {
+      widget.onScreenReaderChanged?.call();
     }
   }
 
@@ -193,39 +204,43 @@ class _UndoCardState extends State<UndoCard> with TickerProviderStateMixin {
     final serial = widget.serial;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || widget.serial != serial) return;
-      widget.onShown(
-        serial,
-        screenReader: MediaQuery.accessibleNavigationOf(context),
-      );
+      widget.onShown(serial);
     });
   }
 
   /// Foco explícito tras el primer fotograma de cada serie (plan §3): el nodo
-  /// de la serie ya existe y el aviso al lector llega a él. Con un lector
-  /// ([MediaQuery.accessibleNavigation]) o un teclado físico (modo
-  /// tradicional) también el foco de entrada de "Deshacer"; con el tacto sin
-  /// lector, no (CA-014-20).
+  /// de la serie ya existe y el aviso al lector llega a él. Con un lector con
+  /// exploración táctil (TalkBack, según el canal: [UndoCard.screenReaderFor])
+  /// o un teclado físico (modo tradicional) también el foco de entrada de
+  /// "Deshacer"; con el tacto sin lector, o con Switch Access, no (CA-014-20).
   void _requestEntryFocus() {
     if (!widget.requestsFocus) return;
     final serial = widget.serial;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || widget.serial != serial) return;
-      final reader = MediaQuery.accessibleNavigationOf(context);
-      final keyboard =
-          FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-      if (reader || keyboard) {
-        if (_node.hasFocus) {
-          // Ya lo tenía (otra eliminación seguida): el controlador empieza de
-          // cero con cada serie y no se entera si no se le avisa.
-          widget.onFocusChanged(serial, UndoFocus.keyboard, focused: true);
-        } else {
-          _node.requestFocus();
-        }
-      }
-      _semanticsKey.currentContext?.findRenderObject()?.sendSemanticsEvent(
-        const FocusSemanticEvent(),
-      );
+      unawaited(_entryFocus(serial));
     });
+  }
+
+  Future<void> _entryFocus(int serial) async {
+    // La respuesta del canal se pidió al guardar la eliminación: casi siempre
+    // ya está.
+    final reader = await widget.screenReaderFor(serial);
+    if (!mounted || widget.serial != serial) return;
+    final keyboard =
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    if (reader || keyboard) {
+      if (_node.hasFocus) {
+        // Ya lo tenía (otra eliminación seguida): el controlador empieza de
+        // cero con cada serie y no se entera si no se le avisa.
+        widget.onFocusChanged(serial, UndoFocus.keyboard, focused: true);
+      } else {
+        _node.requestFocus();
+      }
+    }
+    _semanticsKey.currentContext?.findRenderObject()?.sendSemanticsEvent(
+      const FocusSemanticEvent(),
+    );
   }
 
   void _onHighlightMode(FocusHighlightMode _) {
