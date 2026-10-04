@@ -514,6 +514,38 @@ void main() {
     }
   });
 
+  group('Guías de Flutter con la card a la vista (spec 014 §6)', () {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('CA-014-03: objetivos táctiles y etiquetas, en la pantalla '
+          'principal (texto ×$scale)', (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pump(tester, textScale: scale, size: const Size(360, 800));
+        await _deleteFromMenu(tester);
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+        expect(_card, findsOneWidget);
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        handle.dispose();
+      });
+    }
+
+    testWidgets('CA-014-03: objetivos táctiles y etiquetas, en "Todo hecho."', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester, tasks: ['Primera'], size: const Size(360, 800));
+      await _deleteFromMenu(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      expect(_card, findsOneWidget);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      handle.dispose();
+    });
+  });
+
   group('Deshacer: foco y anuncio (CA-014-18, CA-014-20, CA-014-23)', () {
     final undoButton = find.descendant(
       of: _card,

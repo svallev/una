@@ -1,6 +1,6 @@
 # Spec 014: Eliminar con deshacer
 
-- **Estado:** **Aprobada** (propietario, 2026-10-04), con el ADR-0021 aceptado y las enmiendas del §10 ya aplicadas. Revisada ese día por `spec-reviewer` y `a11y-reviewer`; sus hallazgos y las respuestas del propietario están aplicados (§9)
+- **Estado:** **Implementada parcialmente** (2026-10-04: T-014-01 a T-014-11 hechas, 1736 tests en verde y verificada en el emulador de API 37 y, para el raster del arrugado, en el Xiaomi; faltan las casillas de dispositivo de `dispositivo.md` y de `docs/PLAN.md` («Casillas de la 014»), que pasan a la auditoría de la spec 022, y la decisión del propietario sobre el hallazgo 1 de T-014-10; tabla CA → prueba en §11). Aprobada (propietario, 2026-10-04), con el ADR-0021 aceptado y las enmiendas del §10 ya aplicadas. Revisada ese día por `spec-reviewer` y `a11y-reviewer`; sus hallazgos y las respuestas del propietario están aplicados (§9)
 - **Fase:** F4b Nuevas funcionalidades (plan aprobado por el propietario el 2026-10-04). Es la primera de las specs 014–019.
 - **Reglas de producto:** R10 (eliminar, ahora sin confirmación y con deshacer), R16 (deshacer al eliminar), R12 (estado vacío "Todo hecho."), R13 (eliminar desde el listado)
 - **Pantallas del prototipo:** 12 "Eliminar con deshacer: la tarea" (`Deshacer.dc.html`; el tablero 6 `Eliminar.dc.html` es idéntico), 13 "Eliminar con deshacer: desde la lista" (`DeshacerLista.dc.html`) y 8 "Eliminar (se arruga)" (sin cambios). Ver `docs/design/screen-map.md`.
@@ -343,3 +343,32 @@ Se retiran, si nada más los usa (lo comprueba el plan): `deleteTitle`, `deleteB
   - `delete_confirm_sheet.dart` se retira;
   - cambian `deletion_controller.dart`, `delete_task_action.dart`, `task_list_screen.dart`, `current_task_screen.dart` y `all_done_screen.dart`;
   - `DeleteCurrentTask` y `DeletePendingTask` dejan de borrar los archivos al momento.
+
+## 11. Cierre: tabla CA → prueba y revisiones (2026-10-04)
+
+Los tests viven en `app/test/` (y `app/integration_test/` para el emulador). «Dispositivo» = lo que solo se ve con TalkBack, el teclado o el sistema reales: casilla en la 022 (`docs/PLAN.md`, «Casillas de la 014»).
+
+| CA | Pruebas principales | Dispositivo |
+|---|---|---|
+| 01, 22 | `deletion_flow_test`, `task_list_undo_test`, `undo_controller_test`, `*_elsewhere_test`, `missing_attachment_test`, `landscape_test` | `delete_flow` (emulador) |
+| 02 | `task_list_undo_test`, `task_list_flow_test`, `task_list_golden_test` | TalkBack en el listado (`dispositivo.md`) |
+| 03, 04, 05 | `undo_card_test`, `delete_golden_test`, `deletion_flow_test`, `undo_a11y_test` (geometría y guías de Flutter), `validate-tokens` (contraste) | 200 % y 600 dp (capturas) |
+| 06 | `undo_countdown_test`, `undo_duration_test`, `undo_controller_test`, `accessibility_timeouts_test`, `deletion_flow_test` | `accessibility_interactive_ui_timeout_ms` 10000 y 120000, `animator_duration_scale 0`; **API 26 y 28 pendientes (022)** |
+| 07, 11, 12 | `undo_controller_test`, `undo_commit_test`, `deletion_flow_test`, `task_list_undo_test`, `undo_a11y_test` | Cortina, diálogo, inicio, «Recientes», bloqueo |
+| 08 | `deletion_flow_test`, `task_list_undo_test`, `undo_controller_test` | TalkBack: segunda eliminación |
+| 09, 10 | `restore_deleted_task_test`, `repository_contract_test`, `deletion_flow_test`, `task_list_undo_test`, `*_elsewhere_test` | TalkBack: vuelta al listado con el foco en la fila |
+| 13 | `home_router_test`, `attachment_janitor_test`, `undo_controller_test` | `am kill` (emulador) |
+| 14, 15 | `delete_current_task_test`, `delete_pending_task_test`, `attachment_janitor_test`, `repository_contract_test`, `integration_test/*_flow_test` | — |
+| 16, 17, 18 | `undo_a11y_test`, `undo_card_test`, `undo_controller_test`, `task_list_undo_test`, `accessibility_timeouts_test` | **TalkBack real**: foco en la card, tiempo detenido, anuncio (hallazgo 1 pendiente del propietario) |
+| 19 | `semantics_language_test`, `landscape_test`, `task_list_undo_test`, `task_web_test` | — |
+| 20 | `undo_a11y_test`, `undo_card_test`, `delete_golden_test` | Teclado físico y Switch Access (emulador); Voice Access pendiente (022) |
+| 21 | `undo_card_test`, `deletion_flow_test`, `undo_controller_test` | — |
+| 23 | `restore_deleted_task_test`, `deletion_flow_test`, `task_list_undo_test`, `undo_a11y_test` | Aviso con TalkBack (pendiente 022) |
+
+Los CL-014-1 a 17 tienen cada uno al menos un test (el CL-014-14, «la app muere durante el arrugado», por el test de CA-014-13 de `home_router_test`). Textos: `spec_014_strings_test`.
+
+**Revisiones:**
+
+- `security-reviewer`: 0 altos, 0 medios, 3 bajos. **Corregido** (`84a4aa3`): `discardHeld` borraba los archivos aunque la fila hubiera llegado a la BD tras un fallo al confirmar la recuperación; ahora comprueba la BD (con test). **Aceptados/anotados**: el barrido solo corre al arrancar, así que si el sistema mata la app en segundo plano antes de que acabe el borrado, los archivos esperan al siguiente arranque (límite de CA-014-13; **[Pendiente]** valorar repetirlo al reanudar); y la excepción original no se guarda ni se registra (se mantiene).
+- `a11y-reviewer`: 0 altos, 3 medios, 3 bajos. **Corregido**: el test con las guías de Flutter (tamaño de objetivo y etiquetas) con la card a la vista (`undo_a11y_test`). **Registrados** en `docs/PLAN.md` («Casillas de la 014»): (M2) sin tope de espera al primer foco del lector (CA-014-17: si TalkBack no avisa del foco, la card no caduca; **decisión del propietario**); (M3) el anuncio «Tarea recuperada» sale a los 160 ms, antes o a la vez que el foco en dos caminos del listado (se mira con la voz real, junto al hallazgo 1); (B4) el aviso de error flotante usa un margen fijo y con 200 % podría tapar parte del botón que reaparece; (B5) Switch Access y Voice Access tienen 4 s en Android 10 o posterior si no hay «Tiempo para actuar» (la excepción de 10 s es solo de Android 8 y 9); (B6) en iOS faltará la espera al primer foco (sin canal, `touchExploration` es siempre `false`).
+- `/i18n-check`, `/tokens-validate` y `/security-check`: sin hallazgos (sin secretos ni archivos de firma, sin cambios de manifiesto, `pubspec.yaml` ni `pubspec.lock` respecto a `main`; `check-licenses.sh` en verde; `check-android-permissions.sh` sin cambios desde T-014-04).
