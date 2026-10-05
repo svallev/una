@@ -81,23 +81,65 @@ void main() {
   });
 
   test('CA-015-01a, CA-015-27: menuSettings y settingsClose cambian de texto '
-      '(T-015-09); las claves de las licencias de la 012 se retiran en '
-      'T-015-11, no antes', () {
+      '(T-015-09)', () {
     expect(es['menuSettings'], 'Ajustes');
     expect(en['menuSettings'], 'Settings');
     expect(es['settingsClose'], 'Cerrar ajustes');
     expect(en['settingsClose'], 'Close settings');
-    for (final k in [
+    expect(es.containsKey('settingsPrivacy'), isTrue);
+    expect(en.containsKey('settingsPrivacy'), isTrue);
+  });
+
+  test('CA-015-27, CA-015-14a: las claves retiradas de la 012 ya no están en '
+      'ninguna ARB, ni en la clase generada, ni sus descripciones', () {
+    const retired = [
       'settingsLicenses',
-      'settingsPrivacy',
       'settingsPrivacyHint',
       'licensesTitle',
+      'licensesLoading',
+      'licensesCount',
       'licensesBack',
-    ]) {
-      expect(es.containsKey(k), isTrue, reason: k);
-      expect(en.containsKey(k), isTrue, reason: k);
+      'licensesError',
+      'licensesTextOf',
+      'licensesAndroidLibraries',
+    ];
+    final generated = [
+      for (final f in ['', '_es', '_en'])
+        File('lib/l10n/generated/app_localizations$f.dart').readAsStringSync(),
+    ].join();
+    for (final k in retired) {
+      expect(es.containsKey(k), isFalse, reason: 'ES $k');
+      expect(en.containsKey(k), isFalse, reason: 'EN $k');
+      expect(es.containsKey('@$k'), isFalse, reason: 'ES @$k');
+      expect(en.containsKey('@$k'), isFalse, reason: 'EN @$k');
+      expect(generated, isNot(contains(RegExp('\\b$k\\b'))), reason: k);
     }
   });
+
+  test(
+    'CA-015-14a: no queda código de las pantallas de licencias de la 012',
+    () {
+      for (final path in [
+        'lib/app/bundled_licenses.dart',
+        'lib/data/licenses',
+        'lib/domain/ports/license_source.dart',
+        'lib/domain/entities/license_package.dart',
+      ]) {
+        expect(
+          FileSystemEntity.typeSync(path),
+          FileSystemEntityType.notFound,
+          reason: path,
+        );
+      }
+      final providers = File('lib/app/providers.dart').readAsStringSync();
+      expect(providers, isNot(contains('licensesProvider')));
+      expect(providers, isNot(contains('licenseSourceProvider')));
+      expect(
+        File('lib/main.dart').readAsStringSync(),
+        isNot(contains('registerBundledLicenses')),
+      );
+    },
+  );
 
   test('CA-015-03, CA-015-19: los tokens nuevos del interruptor y de las filas '
       'salen de tokens.json (plan §2)', () {

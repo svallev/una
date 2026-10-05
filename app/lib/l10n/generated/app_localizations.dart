@@ -1010,65 +1010,11 @@ abstract class AppLocalizations {
   /// **'Cerrar ajustes'**
   String get settingsClose;
 
-  /// Opción del nivel 1 que abre la lista de licencias. CA-012-01/03
-  ///
-  /// In es, this message translates to:
-  /// **'Licencias de código abierto'**
-  String get settingsLicenses;
-
   /// Opción del nivel 1 que abre la política en el navegador, directamente. CA-012-01, CA-015-12a
   ///
   /// In es, this message translates to:
   /// **'Política de privacidad'**
   String get settingsPrivacy;
-
-  /// Pista del lector de pantalla de Política de privacidad. CA-012-11
-  ///
-  /// In es, this message translates to:
-  /// **'Abre una página web en el navegador'**
-  String get settingsPrivacyHint;
-
-  /// Encabezado del nivel 2 (lista de licencias). CA-012-03/11
-  ///
-  /// In es, this message translates to:
-  /// **'Licencias de código abierto'**
-  String get licensesTitle;
-
-  /// Estado de carga del nivel 2; se anuncia al lector. CA-012-15
-  ///
-  /// In es, this message translates to:
-  /// **'Cargando licencias…'**
-  String get licensesLoading;
-
-  /// Bajo el nombre de cada elemento de la lista de licencias; el lector dice "nombre, N licencias". CA-012-03/11
-  ///
-  /// In es, this message translates to:
-  /// **'{count, plural, one{1 licencia} other{{count} licencias}}'**
-  String licensesCount(int count);
-
-  /// Botón de volver de los niveles 2 y 3. CA-012-02/11
-  ///
-  /// In es, this message translates to:
-  /// **'Volver'**
-  String get licensesBack;
-
-  /// Error de lectura de las licencias, con Reintentar. CA-012-15
-  ///
-  /// In es, this message translates to:
-  /// **'No se pudieron cargar las licencias.'**
-  String get licensesError;
-
-  /// Encabezado de cada texto de licencia en el nivel 3 cuando un elemento tiene varias (el título del nivel es el nombre del elemento). CA-012-03/11
-  ///
-  /// In es, this message translates to:
-  /// **'Licencia {n} de {total}'**
-  String licensesTextOf(int n, int total);
-
-  /// Nombre de la entrada propia de las bibliotecas de Android en la lista de licencias y título de su nivel 3; texto de la app, no de terceros. CA-013-01
-  ///
-  /// In es, this message translates to:
-  /// **'Bibliotecas de Android (AndroidX, Kotlin)'**
-  String get licensesAndroidLibraries;
 
   /// Encabezado de la pantalla de Ajustes (nivel 1), foco inicial del lector. CA-015-01b/20
   ///
@@ -1118,7 +1064,7 @@ abstract class AppLocalizations {
   /// **'Información'**
   String get settingsInfo;
 
-  /// Fila de Ajustes que abre en el navegador la web con las licencias de terceros, directamente. Sustituye a settingsLicenses. CA-015-12/14
+  /// Fila de Ajustes que abre en el navegador la web con las licencias de terceros, directamente. CA-015-12/14
   ///
   /// In es, this message translates to:
   /// **'Licencias de terceros'**
@@ -1130,7 +1076,7 @@ abstract class AppLocalizations {
   /// **'Ayuda'**
   String get settingsHelp;
 
-  /// Se une al nombre de las tres filas de web de Ajustes (no es una pista aparte). Sustituirá a settingsPrivacyHint. CA-015-20
+  /// Se une al nombre de las tres filas de web de Ajustes (no es una pista aparte). CA-015-20
   ///
   /// In es, this message translates to:
   /// **'Abre una página web en el navegador'**

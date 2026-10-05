@@ -1,8 +1,6 @@
 import 'dart:convert';
 
-import 'package:app/app/bundled_licenses.dart';
 import 'package:app/app/theme/tokens.g.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,13 +18,4 @@ void main() {
       expect(families, containsAll([UnaFonts.display, UnaFonts.mono]));
     },
   );
-
-  test('las licencias OFL de las fuentes quedan registradas', () async {
-    registerBundledLicenses();
-    final packages = <String>{};
-    await for (final l in LicenseRegistry.licenses) {
-      packages.addAll(l.packages);
-    }
-    expect(packages, containsAll(['Archivo', 'Space Mono']));
-  });
 }

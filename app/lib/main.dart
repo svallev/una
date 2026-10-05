@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app/bundled_licenses.dart';
 import 'app/providers.dart';
 import 'app/storage_errors.dart';
 import 'app/una_app.dart';
@@ -11,7 +10,6 @@ import 'features/attachments/pdf_boot.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  registerBundledLicenses();
   await bootstrap();
 }
 

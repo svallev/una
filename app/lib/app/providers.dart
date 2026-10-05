@@ -7,14 +7,12 @@ import 'package:uuid/uuid.dart';
 
 import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
-import '../data/licenses/flutter_license_source.dart';
 import '../data/links/native_link_opener.dart';
 import '../data/links/new_tab.dart';
 import '../data/platform/accessibility_timeouts.dart';
 import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
-import '../domain/entities/license_package.dart';
 import '../domain/entities/locale_choice.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/accessibility_timeouts.dart';
@@ -22,7 +20,6 @@ import '../domain/ports/attachment_store.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
 import '../domain/ports/image_importer.dart';
-import '../domain/ports/license_source.dart';
 import '../domain/ports/link_opener.dart';
 import '../domain/ports/pdf_importer.dart';
 import '../domain/ports/task_repository.dart';
@@ -108,24 +105,6 @@ final importPdfProvider = Provider<ImportPdf>(
 final linkOpenerProvider = Provider<LinkOpener>(
   (ref) => const NativeLinkOpener(),
 );
-
-/// De dónde salen las licencias (spec 012): el registro de Flutter; en los
-/// tests, una fuente falsa. No lee nada hasta que se pide [licensesProvider].
-final licenseSourceProvider = Provider<LicenseSource>(
-  (ref) => FlutterLicenseSource(),
-);
-
-/// Las licencias de lo de terceros (CA-012-03). Se leen solo al abrir el nivel 2
-/// (CA-012-16) y se sueltan al salir. Una lista vacía es un error (spec 012 §5).
-/// Sin reintento automático (el de Riverpod 3 taparía el error): "Reintentar"
-/// invalida el proveedor (CA-012-15).
-final licensesProvider = FutureProvider.autoDispose<List<LicensePackage>>((
-  ref,
-) async {
-  final packages = await ref.watch(licenseSourceProvider).load();
-  if (packages.isEmpty) throw const LicensesUnavailable();
-  return packages;
-}, retry: (_, _) => null);
 
 /// Web de pruebas (ADR-0010): la tarea web no tiene WebView; se ve como la
 /// tarjeta del prototipo, con "Abrir página →" (CL-009-5).
