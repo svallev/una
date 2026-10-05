@@ -56,7 +56,7 @@ El resto de lo que señaló la revisión de la 012 queda **aceptado** por decisi
 
 ## 3. Criterios de aceptación
 
-- **CA-013-01 Nombre de las bibliotecas de Android traducido (012-A-M3, propietario, 2026-10-01)**
+- **CA-013-01 Nombre de las bibliotecas de Android traducido (012-A-M3, propietario, 2026-10-01)** *(**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: **obsoleto** al retirarse las pantallas de licencias, ADR-0026)*
   - **Dado** la lista de licencias (nivel 2 de la 012)
   - **Cuando** la app está en español o en inglés
   - **Entonces** la entrada propia de las bibliotecas de Android se llama así, en la fila y como título de su nivel 3:
@@ -67,7 +67,7 @@ El resto de lo que señaló la revisión de la 012 queda **aceptado** por decisi
     - el texto de la licencia no cambia.
   - La fila sigue diciendo "nombre, N licencias" (CA-012-11). Ocupa en la lista el lugar que le toca por orden alfabético **del nombre que se ve** (CL-013-1).
   - La comprobación de completitud de CA-012-03 sigue encontrando esta entrada en los dos idiomas.
-- **CA-013-02 Cambio de idioma con la entrada abierta**
+- **CA-013-02 Cambio de idioma con la entrada abierta** *(**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: **obsoleto** con las pantallas de licencias)*
   - **Dado** el nivel 2 o el nivel 3 de esta entrada, abiertos
   - **Cuando** el usuario cambia el idioma del sistema y vuelve antes de 10 minutos (CA-010-06, CA-012-07)
   - **Entonces**:
@@ -83,14 +83,14 @@ El resto de lo que señaló la revisión de la 012 queda **aceptado** por decisi
   - **Entonces** la posición **y la sombra** pasan al estado nuevo **al instante**, sin fotogramas intermedios. Se mantiene el hundido como señal de que se ha pulsado: es un cambio de estado, no movimiento.
   - Sin "reducir movimiento", todo es como hoy (`motion.duration.press`, 80 ms).
   - El **relleno** de "mantener pulsado" del botón de completar no cambia y sigue lo que dice la spec 003 (CL-003-5): indica el progreso, no es una animación decorativa.
-- **CA-013-04 Ninguna parada del lector sin nombre (012-A-B3, parte de código)**
+- **CA-013-04 Ninguna parada del lector sin nombre (012-A-B3, parte de código)** *(**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: se aplica a **Ajustes** y a la página de Idioma, CA-015-20g)*
   - **Dado** el árbol de accesibilidad de los tres niveles de la pantalla temporal de la 012
   - **Cuando** se inspecciona cada nivel (con y sin el aviso, y con la lista cargada, cargando y con error)
   - **Entonces** ningún nodo enfocable o con acciones (tocar, desplazar…) se queda sin etiqueta ni valor. La única excepción son los contenedores de desplazamiento (el texto del nivel 3, la lista del nivel 2 y los desplazables de los niveles 1 y de "Reintentar"; ampliada por el propietario el 2026-10-01, P-013-7), es decir, los nodos cuyas **únicas** acciones son de desplazar (`scrollUp`, `scrollDown`, `scrollLeft`, `scrollRight`, `scrollToOffset`):
     - conservan sus acciones de desplazar, para TalkBack y Switch Access (CA-012-12);
     - no llevan el indicador de enfocable ni de botón, así que el lector no se para en ellos con un nombre vacío.
   - Con teclado, el área de texto del nivel 3 se sigue pudiendo enfocar, con su anillo y sus teclas de desplazamiento (CA-012-12).
-- **CA-013-05 Orden del lector y de Switch Access (012-A-B3, propietario, 2026-10-01)**
+- **CA-013-05 Orden del lector y de Switch Access (012-A-B3, propietario, 2026-10-01)** *(**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: se aplica a **Ajustes** y a la página de Idioma: título → filas, con cada aviso donde se ve → Cerrar o Volver, CA-015-20g)*
   - **Dado** TalkBack activo en cualquiera de los tres niveles
   - **Cuando** se recorre la pantalla de principio a fin
   - **Entonces** el orden es el que se ve, con el botón al final: título → opciones, filas o texto → aviso "No hay ninguna app…" (si lo hay; se ve **debajo** de las opciones, CA-012-04) → "Cerrar" (nivel 1) o "Volver" (niveles 2 y 3), **lo último**, como "Volver a la tarea" en el listado (spec 006).

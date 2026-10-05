@@ -20,7 +20,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 - **CA-005-01 Abrir el menú**
   - **Dado** la pantalla principal con una tarea actual
   - **Cuando** pulsa el botón de menú
-  - **Entonces**, como en el prototipo, el fondo se oscurece (`ink` al 55 %, fundido de 0,16 s) y sube en 0,2 s una hoja de color papel con borde superior de 3 px, sin esquinas redondeadas ni asa, con dos bloques: **"Esta tarea"** (etiqueta en monoespaciada, X para cerrar, **Editar** y **Eliminar** en rojo, separados por una línea) y, tras un separador de 4 px, el bloque general (**Todas mis tareas**, **+ Nueva tarea** como botón principal y el enlace subrayado **Configuración y perfil**).
+  - **Entonces**, como en el prototipo, el fondo se oscurece (`ink` al 55 %, fundido de 0,16 s) y sube en 0,2 s una hoja de color papel con borde superior de 3 px, sin esquinas redondeadas ni asa, con dos bloques: **"Esta tarea"** (etiqueta en monoespaciada, X para cerrar, **Editar** y **Eliminar** en rojo, separados por una línea) y, tras un separador de 4 px, el bloque general (**Todas mis tareas**, **+ Nueva tarea** como botón principal y el enlace subrayado ~~**Configuración y perfil**~~ **Ajustes**; **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: se llama "Ajustes" y es un botón, CA-005-09).
 - **CA-005-02 Cerrar el menú**
   - **Dado** el menú abierto
   - **Cuando** toca la X, toca fuera, desliza hacia abajo (DEV-21) o usa el gesto atrás
@@ -49,14 +49,14 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
   - **Dado** una tarea con URL
   - **Cuando** elige "Editar"
   - **Entonces** se abre la hoja "Cargar URL" con la dirección actual; al confirmar se actualiza la URL y se genera una nueva captura (spec 009).
-- **CA-005-09 Nueva tarea y Configuración**
+- **CA-005-09 Nueva tarea y Ajustes** *(~~Configuración~~, enmienda 2026-10-05)*
   - **Dado** el menú
-  - **Cuando** elige "Nueva tarea" (o toca el texto "Configuración y perfil")
-  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" **es un botón** (rol de botón para el lector, objetivo táctil ≥ 44 pt, con anillo de foco) que abre, sin cerrar el menú, la pantalla temporal de la spec 012 (licencias de código abierto y política de privacidad; DEV-49); al salir de ella el menú sigue tal como estaba (CA-012-02). **Enmienda 2026-09-30 (spec 012, propietario):** ~~era solo texto, sin interacción ni rol de botón (enmienda 2026-09-29; antes cerraba el menú)~~. La Configuración completa sigue siendo una spec futura (enmienda 2026-09-29: ya no es la 010) y sustituirá a la temporal. Un doble toque rápido la abre una sola vez (CL-012-2).
+  - **Cuando** elige "Nueva tarea" (o toca el enlace ~~"Configuración y perfil"~~ "Ajustes")
+  - **Entonces** "Nueva tarea" abre el editor (spec 002). "Configuración y perfil" **es un botón** (rol de botón para el lector, objetivo táctil ≥ 44 pt, con anillo de foco) que abre, sin cerrar el menú, la pantalla temporal de la spec 012 (licencias de código abierto y política de privacidad; DEV-49); al salir de ella el menú sigue tal como estaba (CA-012-02). **Enmienda 2026-09-30 (spec 012, propietario):** ~~era solo texto, sin interacción ni rol de botón (enmienda 2026-09-29; antes cerraba el menú)~~. La Configuración completa sigue siendo una spec futura (enmienda 2026-09-29: ya no es la 010) y sustituirá a la temporal. Un doble toque rápido la abre una sola vez (CL-012-2). **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: el enlace pasa a llamarse **"Ajustes"** (`menuSettings`) y abre la pantalla de la spec 015 **cerrando el menú** (antes, la temporal de la 012, **sin** cerrarlo); al salir de Ajustes se vuelve a la **tarea actual** con el menú ya cerrado (CA-015-01a y 02). El objetivo táctil pasa a ≥ 44 pt visibles y zona de ≥ 48 dp en Android.
 - **CA-005-12 Total de tareas (añadido por el propietario, DEV-22)**
   - **Dado** el menú con más de una tarea pendiente
   - **Cuando** se muestra
-  - **Entonces** la fila "Todas mis tareas" muestra a la derecha el número total de tareas pendientes, en texto pequeño (Space Mono de 14 px en negrita, como "Configuración y perfil"), alineado con el borde derecho del botón "Nueva tarea"; el lector lo lee como "Todas mis tareas, 3 tareas". Con una sola tarea no aparece.
+  - **Entonces** la fila "Todas mis tareas" muestra a la derecha el número total de tareas pendientes, en texto pequeño (Space Mono de 14 px en negrita, como ~~"Configuración y perfil"~~ "Ajustes"), alineado con el borde derecho del botón "Nueva tarea"; el lector lo lee como "Todas mis tareas, 3 tareas". Con una sola tarea no aparece.
 - **CA-005-11 Acciones aún no disponibles**
   - **Dado** el menú antes de las specs 004 y 006
   - **Cuando** elige "Eliminar" o "Todas mis tareas" (con varias tareas)
@@ -101,7 +101,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
 | `menuAllTasksOnlyOne` | Solo tienes esta tarea | This is your only task |
 | `menuAllTasksCount` | {count, plural, =1{1 tarea} other{{count} tareas}} | {count, plural, =1{1 task} other{{count} tasks}} |
 | `menuNewTask` | Nueva tarea | New task |
-| `menuSettings` | Configuración y perfil | Settings and profile |
+| `menuSettings` | ~~Configuración y perfil~~ Ajustes | ~~Settings and profile~~ Settings | Enmienda 2026-10-05 (spec 015) |
 | `menuClose` | Cerrar menú | Close menu |
 | `editorTagEdit` | Editar tarea | Edit task |
 | `editorSaveChanges` | Guardar cambios | Save changes |

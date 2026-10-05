@@ -11,7 +11,7 @@
   - **Completar sigue sin deshacer** (P-4 de la spec 003).
   - DEV-51 (nueva: la duración y el tiempo de accesibilidad); DEV-09, DEV-10 y DEV-23 quedan obsoletas; DEV-24, DEV-25 y DEV-26 siguen.
   - ADR-0020 (voz del sistema en los anuncios y las acciones del lector).
-- **Dependencias:** 001, 003 (animación, bloqueo e "Todo hecho."), 004 (arrugado), 005 (menú), 006 (listado), 007–009 (etiquetas y adjuntos), 012 ("Configuración y perfil", que hace de Ajustes hasta la spec 015). Sin esquema de BD nuevo, sin permisos ni dependencias nuevas **[Suposición]** (lo propone el ADR-0021).
+- **Dependencias:** 001, 003 (animación, bloqueo e "Todo hecho."), 004 (arrugado), 005 (menú), 006 (listado), 007–009 (etiquetas y adjuntos), 012 ("Configuración y perfil", que hace de Ajustes hasta la spec 015; ~~"Configuración y perfil"~~ **Ajustes** desde la 015, enmienda 2026-10-05). Sin esquema de BD nuevo, sin permisos ni dependencias nuevas **[Suposición]** (lo propone el ADR-0021).
 - **Enmiendas a otras specs y documentos:** en el §10, aplicadas al aprobarla (2026-10-04).
 
 > Esta spec describe **qué** y **por qué**, sin tecnología. El **cómo** va en `plan.md` y en el ADR-0021; las notas técnicas van solo en el anexo, que no es normativo.
@@ -117,7 +117,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
   - **Cuando** ocurre cualquiera de estas cosas (durante el arrugado solo puede pasar la última, CA-014-01):
     - se elimina otra tarea (CA-014-08);
     - se completa una tarea (con el botón oculto, solo con la acción del lector "Completar tarea");
-    - se va a otra pantalla (CA-014-07): el listado desde el menú, la pantalla principal desde el listado (con "Volver a la tarea" o el gesto atrás), el editor para crear o para editar (aunque luego se cancele) o "Configuración y perfil" (Ajustes desde la spec 015);
+    - se va a otra pantalla (CA-014-07): el listado desde el menú, la pantalla principal desde el listado (con "Volver a la tarea" o el gesto atrás), el editor para crear o para editar (aunque luego se cancele) o ~~"Configuración y perfil"~~ **"Ajustes"** (spec 015, CA-015-24: abrir Ajustes confirma la eliminación pendiente);
     - se edita sin ir a otra pantalla: la hoja "Cargar URL" de una tarea web o "Quitar adjunto" en "Adjunto no disponible";
     - se reordena: al levantar una fila para arrastrarla o al elegir una opción de mover (hoja "Mover" o acción del lector). "Es una interacción que indica que ya no quiero deshacer" (propietario, 2026-10-04);
     - la app pasa a segundo plano: otra app delante, la pantalla de inicio, "Recientes", la pantalla apagada o bloqueada, o el navegador al abrir un enlace;
@@ -215,7 +215,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
 | CL-014-10 | Recuperar una tarea con "Adjunto no disponible" | Vuelve igual, con la misma tarjeta |
 | CL-014-11 | Se empieza a arrastrar una fila (o se elige "Mover") con la card visible | La card desaparece y la eliminación es definitiva (CA-014-11); el arrastre o el movimiento siguen con normalidad |
 | CL-014-12 | Se elimina la tarea actual y, con la card, se abre el listado desde el menú | Al abrirse el listado, la card desaparece y la eliminación es definitiva (CA-014-07). **[Hecho]** El prototipo dejaba deshacer desde el listado |
-| CL-014-13 | "Configuración y perfil" con la card visible | Al abrirla, la eliminación es definitiva (CA-014-11) |
+| CL-014-13 | ~~"Configuración y perfil"~~ **"Ajustes"** (enmienda 2026-10-05, spec 015) con la card visible | Al abrirla, la eliminación es definitiva (CA-014-11) |
 | CL-014-14 | La app muere durante el arrugado | Definitiva (CA-014-13); al abrir no se repite la animación ni aparece la card |
 | CL-014-15 | Pasar a segundo plano durante el arrugado o con la card, y volver en menos de 10 min (CA-001-12) | La misma pantalla, sin animación y sin card: pasar a segundo plano ya la hizo definitiva (CA-014-11) |
 | CL-014-16 | Eliminar la última pendiente desde la pantalla principal | Arrugado con "Todo hecho." detrás (DEV-26); después, la card sobre "Todo hecho." sin "Crear una tarea", que aparece cuando la card desaparece |

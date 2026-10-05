@@ -132,7 +132,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
 
 ## 8. Fuera de alcance
 
-Posición de las tareas nuevas (002), completar (003), menú (005), adjuntos (007–009), idioma (010), Configuración (spec futura de Configuración y perfil; enmienda 2026-09-29).
+Posición de las tareas nuevas (002), completar (003), menú (005), adjuntos (007–009), idioma (010), Configuración (~~spec futura de Configuración y perfil; enmienda 2026-09-29~~ **Ajustes, spec 015**; enmienda 2026-10-05).
 
 ## 9. Preguntas abiertas
 

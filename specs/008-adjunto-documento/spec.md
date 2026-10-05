@@ -134,9 +134,9 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
     - cualquier otro enlace (`javascript:`, `file:`, `content:`, `intent:`, `data:`, lanzar una app o un archivo, esquemas desconocidos) **no hace nada**.
   - Si no hay ninguna app para abrirlo, "No hay ninguna app para abrir este enlace."
 - **CA-008-13 Pantalla encendida (solo PDF)**
-  - **Dado** el ajuste "Mantener la pantalla encendida con adjuntos" activo
+  - **Dado** el ajuste ~~"Mantener la pantalla encendida con adjuntos"~~ "Pantalla siempre activa" activo
   - **Cuando** se ve la tarea actual con PDF, en vertical o en horizontal
-  - **Entonces** la pantalla no se apaga, con el límite de 10 minutos sin tocar y las mismas condiciones de CA-007-12.
+  - **Entonces** la pantalla no se apaga, ~~con el límite de 10 minutos sin tocar y~~ **sin límite de tiempo** y con las mismas condiciones de CA-007-12. **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)** (CA-015-04a a 04d).
 
 **Validar, guardar y borrar**
 

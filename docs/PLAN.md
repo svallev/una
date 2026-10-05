@@ -80,6 +80,8 @@ flowchart LR
 
 ### Hallazgos de la 012 para la auditoría de F5
 
+> **Spec 015 (aprobada 2026-10-05; se aplica al implementarla):** las pantallas de licencias se retiran (ADR-0026). **Se anulan** 012-A-M3 y 012-A-B3 (ya corregidos en la 013; el nodo y la lista desaparecen) y 012-T-TD1 (los cuatro `height: 1.5` de `licenses_screen.dart` y `license_detail_screen.dart` desaparecen con los archivos). **Pasan a la auditoría 022, sobre Ajustes:** las casillas de la 012 que no eran de las licencias (`specs/012-configuracion-temporal/dispositivo.md` §8). 012-S1 se acepta como riesgo residual (T-5, `threat-model.md`).
+
 Registrados en el cierre de la spec 012 (2026-09-30). Los corregidos (M1, M2 y B1 del lector de pantalla) constan en `7448f4e`; el resto, por decisión del propietario, **se deja para F5**. Sin hallazgos altos en ninguna revisión.
 
 **`security-reviewer` (0 altos, 0 medios, 5 bajos):**

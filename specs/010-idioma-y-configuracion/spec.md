@@ -1,7 +1,7 @@
 # Spec 010: Idioma automático
 
 - **Estado:** Implementada (2026-09-30; verificación manual en el emulador confirmada por el propietario)
-- **Alcance reducido (propietario, 2026-09-29):** la v1 es una beta de pruebas y **no tiene pantalla de Configuración**. La entrada "Configuración y perfil" del menú se queda **solo como texto**, sin interacción (propietario, 2026-09-29; DEV-18) hasta una spec futura que diseñará el propietario. **Enmienda 2026-09-30 (spec 012):** ya no es solo texto: es un botón que abre una pantalla temporal con licencias y política de privacidad (DEV-49; DEV-18 cerrada); la Configuración completa sigue siendo la spec futura. Solo dos idiomas, español e inglés, **sin selector**: lo decide el sistema. Solo Android (D17). La carpeta conserva el nombre `010-idioma-y-configuracion` para no romper enlaces ni la rama.
+- **Alcance reducido (propietario, 2026-09-29):** la v1 es una beta de pruebas y **no tiene pantalla de Configuración**. La entrada "Configuración y perfil" del menú se queda **solo como texto**, sin interacción (propietario, 2026-09-29; DEV-18) hasta una spec futura que diseñará el propietario. **Enmienda 2026-09-30 (spec 012):** ya no es solo texto: es un botón que abre una pantalla temporal con licencias y política de privacidad (DEV-49; DEV-18 cerrada); la Configuración completa sigue siendo la spec futura. Solo dos idiomas, español e inglés, ~~**sin selector**: lo decide el sistema~~ **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: **hay selector** en Ajustes (spec 015, ADR-0023): "Como el sistema" (por defecto, las reglas de esta spec), Español o English; con uno elegido la app no mira el sistema. Solo Android (D17). La carpeta conserva el nombre `010-idioma-y-configuracion` para no romper enlaces ni la rama.
 - **Reglas de producto:** R15. D13 y D14 están aplazadas junto con la pantalla de Configuración (§8)
 - **Pantallas del prototipo:** ninguna nueva. La entrada "Configuración y perfil" ya existe (DEV-05 revocada; DEV-18 cerrada por la spec 012, DEV-49)
 - **Decisiones y ADR relacionados:** D13 (aplazada), D17; constitución P6, P7, P10
@@ -23,16 +23,16 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
 
 **Estado de partida [Hecho]:** la detección automática ya existe y tiene tests de CA-010-01 y 02. Pero conserva restos del cambio manual de idioma (CA-010-03, ahora retirado) y un test que lo cita. Esta spec **verifica** el comportamiento y **retira esos restos** (P10: no construir el futuro). No añade pantallas.
 
-- **CA-010-01 Detección automática**
+- **CA-010-01 Detección automática** *(**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: vale para la opción "Como el sistema"; con un idioma elegido, la app no mira el sistema, CA-015-09)*
   - **Dado** que el idioma preferido del dispositivo es cualquier variante `es-*` (es-ES, es-MX, es-419…) o `ca-*` (catalán)
   - **Cuando** se abre la app
   - **Entonces** la app está en español; con cualquier otro idioma (incluidos gl, eu y pt), en inglés. **El catalán abre en español** (decisión del propietario, 2026-09-30; antes, inglés). Los demás idiomas cooficiales (gl, eu) siguen en inglés hasta que el propietario decida otra cosa.
-- **CA-010-02 Lista de idiomas del sistema**
+- **CA-010-02 Lista de idiomas del sistema** *(**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: vale para "Como el sistema", CA-015-09)*
   - **Dado** que el dispositivo tiene varios idiomas preferidos (p. ej. `fr-FR`, `es-ES`)
   - **Cuando** se abre la app
   - **Entonces** se usa el **primero** de la lista que la app admite (en el ejemplo, español); si no admite ninguno, inglés.
   - **[Suposición]** Android entrega a la app la lista completa de idiomas preferidos, no solo el primero. Se confirma una vez en el emulador.
-- **CA-010-03** *(Retirado el 2026-09-29: cambio manual de idioma. Pasa a la spec futura de Configuración y perfil. Se quitan de la app sus restos y su test)*
+- **CA-010-03** *(Retirado el 2026-09-29: cambio manual de idioma. ~~Pasa a la spec futura de Configuración y perfil~~ **Lo implementa la spec 015 (Ajustes, CA-015-06 a 10; enmienda 2026-10-05)**. Se quitan de la app sus restos y su test)*
 - **CA-010-04 Formatos**
   - **Dado** la app en español y en inglés
   - **Cuando** se muestran números o plurales
@@ -46,11 +46,11 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
   - **Dado** un cambio del nombre de la app en su única fuente de configuración
   - **Cuando** se genera una nueva compilación
   - **Entonces** el nombre cambia en los tres sitios donde aparece (bajo el icono, como título de la app en "Recientes" y en el logotipo) sin tocar código. El nombre no está escrito tal cual en ningún otro archivo de la app ni en los textos traducidos.
-- **CA-010-06 Cambio de idioma con la app abierta**
+- **CA-010-06 Cambio de idioma con la app abierta** *(**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: vale para "Como el sistema"; con un idioma elegido no cambia nada; y en un punto, la web se recarga al volver, CA-015-08 y 15)*
   - **Dado** la app abierta en cualquier pantalla
   - **Cuando** el usuario cambia el idioma del sistema y **vuelve antes de 10 minutos** (CA-001-12)
   - **Entonces** la app está en el idioma nuevo, sin reiniciarse, y conserva lo que había:
-    - la tarea actual con su adjunto: la imagen, el PDF con su página y su zoom, y la web sin recargarse;
+    - la tarea actual con su adjunto: la imagen, el PDF con su página y su zoom, y la web ~~sin recargarse~~ (**se recarga al volver**, spec 015: Ajustes tapa la tarea);
     - el editor con el texto que se estaba escribiendo;
     - la hoja o el listado que estuvieran abiertos.
   - Con TalkBack, el foco sigue en el mismo elemento (o, si ya no existe, en el primero de la pantalla) y se lee en el idioma nuevo, sin anuncios extra. Si había una hoja abierta, el foco sigue dentro.
@@ -59,7 +59,7 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
   - **Dado** la app en español o en inglés
   - **Cuando** se recorre lo que expone al lector de pantalla
   - **Entonces** todo lo que sale de los textos de la app está en ese idioma: etiquetas, pistas, valores, nombres de las acciones personalizadas, títulos de las hojas y anuncios. Ninguno está en el otro idioma, tampoco después de CA-010-06.
-  - Pantallas que se recorren: bienvenida, editor, tarea actual (solo texto, con imagen, con PDF y con web), menú, hojas (adjuntar, URL, eliminar), listado, "Todo hecho." y el error de almacenamiento. **Enmienda 2026-09-30 (spec 012):** también los tres niveles de "Configuración y perfil", el aviso "No hay ninguna app para abrir este enlace." y la confirmación de enlace de la política; el texto de las licencias queda fuera (contenido de terceros, en inglés, marcado como tal para el lector; CA-012-03 y CA-012-07).
+  - Pantallas que se recorren: bienvenida, editor, tarea actual (solo texto, con imagen, con PDF y con web), menú, hojas (adjuntar, URL, eliminar), listado, "Todo hecho." y el error de almacenamiento. **Enmienda 2026-09-30 (spec 012):** también los tres niveles de "Configuración y perfil" (~~los tres niveles~~ **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: **Ajustes y la página de Idioma**; ya no hay pantallas de licencias, ADR-0026), el aviso "No hay ninguna app para abrir este enlace." y la confirmación de enlace de la política; el texto de las licencias queda fuera (contenido de terceros, en inglés, marcado como tal para el lector; CA-012-03 y CA-012-07).
   - Quedan fuera: el texto que escribe el usuario, el contenido de las páginas web, los selectores del sistema (fotos, archivos) y el teclado.
 - **CA-010-08** *(Retirado el 2026-09-29: "sin perfil". Se decide con la pantalla de Configuración)*
 - **CA-010-09** *(Retirado el 2026-09-29: licencias de código abierto. Pasan a la spec futura de Configuración y perfil; mostrarlas en la app es un requisito de publicación que se revisa en F5)*
@@ -77,7 +77,7 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
   - **Entonces** mantienen el mismo orden que antes del cambio (CA-007-21, CA-008-20, CA-006-16 y CA-009-18).
 - **CA-010-12 Texto grande en inglés**
   - **Dado** la app en inglés con el texto del sistema al 200 %
-  - **Cuando** se muestran las mismas pantallas y hojas que en CA-010-07 (con las de la spec 012, enmienda 2026-09-30; su 200 % a 360 dp se exige en CA-012-13)
+  - **Cuando** se muestran las mismas pantallas y hojas que en CA-010-07 (con las de la spec 012, enmienda 2026-09-30; su 200 % a 360 dp se exige en CA-012-13; **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: **Ajustes y la página de Idioma**, en CA-015-22)
   - **Entonces** no hay cortes, solapes ni desbordamientos (igual que ya se exige en español).
 
 ## 4. Casos límite
@@ -88,9 +88,9 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
 | CL-010-2 | Sistema en un idioma que la app no admite (p. ej. `fr` o `de`) y **sin español ni inglés en su lista** | App en inglés, también la voz de la interfaz y del contenido del usuario (CA-010-10). Los selectores del sistema (fotos, archivos) siguen en el idioma del sistema, y los anuncios se oyen con su voz: aceptado (ADR-0020; enmienda 2026-10-01, spec 013; ampliado por ADR-0023, 2026-10-05) |
 | CL-010-3 | Variantes regionales (`es-MX`, `en-GB`) | Textos y formatos de español o inglés sin variante. TalkBack puede usar la voz por defecto del idioma (p. ej. la de España) en vez de la regional: aceptado en la beta. Se comprueba una vez en el emulador |
 | CL-010-4 | Sistema en un idioma de derecha a izquierda (árabe, hebreo) | App en inglés, de izquierda a derecha; al cambiarlo con la app abierta, se comporta como en CA-010-06 |
-| CL-010-5 | El sistema cierra la app mientras el usuario está en Ajustes | Arranque normal, ya en el idioma nuevo |
-| CL-010-6 | Ajustes › Idiomas de la app (Android 13+) | La app no aparece en esa lista: el idioma solo lo decide el sistema (§8) |
-| CL-010-7 | Pulsar "Configuración y perfil" en el menú | No pasa nada: es solo texto (subrayado, como el enlace del prototipo), sin acción y sin rol de botón. No cierra el menú (propietario, 2026-09-29; enmienda de CL-010-7). Lo sustituye la spec futura de Configuración y perfil. **Enmienda 2026-09-30 (spec 012, propietario):** ~~no pasa nada~~ pulsarla abre, sin cerrar el menú, la pantalla temporal con licencias y política de privacidad (es un botón para el lector); un doble toque rápido la abre una sola vez (CL-012-2) |
+| CL-010-5 | El sistema cierra la app mientras el usuario está en **Ajustes del sistema** (**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: no es la pantalla Ajustes de la app) | Arranque normal, ya en el idioma nuevo |
+| CL-010-6 | **Ajustes del sistema** › Idiomas de la app (Android 13+) | La app no aparece en esa lista: ~~el idioma solo lo decide el sistema~~ el idioma se elige en Ajustes de la app (spec 015, CL-015-10; §8) |
+| CL-010-7 | Pulsar "Configuración y perfil" en el menú | No pasa nada: es solo texto (subrayado, como el enlace del prototipo), sin acción y sin rol de botón. No cierra el menú (propietario, 2026-09-29; enmienda de CL-010-7). Lo sustituye ~~la spec futura de Configuración y perfil~~ la spec 015 (Ajustes). **Enmienda 2026-09-30 (spec 012, propietario):** ~~no pasa nada~~ pulsarla abre, sin cerrar el menú, la pantalla temporal con licencias y política de privacidad (es un botón para el lector); un doble toque rápido la abre una sola vez (CL-012-2). **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: el enlace se llama "Ajustes" y abre la pantalla de la 015 **cerrando el menú** |
 
 ## 5. Estados vacíos y de error
 
@@ -112,15 +112,15 @@ Ninguno nuevo. Se reutilizan los que ya existen, incluido "Configuración y perf
 
 ## 8. Fuera de alcance
 
-- **Pantalla de Configuración y perfil completa** (spec futura, diseño del propietario; retoma D13 y D14 y sustituirá a la temporal de la spec 012, que ya cerró DEV-18). Incluirá:
-  - el selector manual de idioma;
+- **Pantalla de Configuración y perfil completa** (~~spec futura~~ **la spec 015, Ajustes; enmienda 2026-10-05**: sustituye a la temporal de la spec 012; retoma D13 y D14). **El selector manual de idioma y el interruptor de pantalla encendida existen ya en la 015**; lo que sigue fuera es lo demás. Incluirá:
+  - ~~el selector manual de idioma~~ (ya en la 015);
   - el interruptor "Mantener la pantalla encendida" (hasta entonces está siempre activa con imagen, PDF y web: D10, CA-007-12, CA-009-16);
   - los textos de Privacidad y de Copias de seguridad;
   - la versión (las licencias de código abierto y la política de privacidad ya están en la pantalla temporal de la spec 012).
   Los borradores de esos textos están en el historial de git de este archivo.
 - **Ocultar el contenido en la miniatura de "Recientes"**: pasa a F5 (antes "[Pendiente, spec 010]" en CL-007-11, CL-008-13 y CL-009-10). **[Actualizado 2026-09-30]** Lo resuelve la spec 011 (`specs/011-ocultar-recientes/`, ADR-0019), **Implementada parcialmente** (falta PD-10 / T-011-09). No añade textos ni ajustes, así que esta spec no cambia.
 - Anuncios con la marca de idioma de la app (CA-010-10, excepción): ~~se revisan en F5~~ revisados en la spec 013: se quedan con la voz del sistema (ADR-0020, 2026-10-01).
-- Idioma por app de Android 13+.
+- Idioma por app de Android 13+ (`localeConfig`; también lo deja fuera la spec 015, ADR-0023).
 - iOS (D17, fase F-iOS).
 - Tema y paletas, notificaciones (Bloque 4); páginas legales y ayuda, exportar e importar (Bloque 5); biometría (D11).
 
@@ -129,7 +129,7 @@ Ninguno nuevo. Se reutilizan los que ya existen, incluido "Configuración y perf
 Ninguna. Decisiones del propietario del 2026-09-29:
 
 - sin pantalla de Configuración **completa** en la beta (enmienda 2026-09-30: hay una temporal, spec 012, solo con licencias y política de privacidad);
-- solo español e inglés, elegidos por el sistema;
+- solo español e inglés, ~~elegidos por el sistema~~ (enmienda 2026-10-05, spec 015: **elegibles en Ajustes**, o "Como el sistema");
 - el texto del usuario se lee con la voz del idioma de la app (CA-010-10);
 - los anuncios con la voz del sistema se aceptan ~~y se revisan en F5~~ (revisado el 2026-10-01: ADR-0020, spec 013);
 - "Recientes" pasa a F5 y el ajuste de pantalla encendida, a la spec futura.
