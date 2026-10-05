@@ -7,6 +7,7 @@ import '../../domain/entities/staged_attachment.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../delete/undo_controller.dart';
 import 'url_sheet.dart';
 
 /// Editar una tarea web, desde el menú o desde el listado (CA-009-05): en
@@ -46,6 +47,9 @@ Future<void> _save(
   final messenger = ScaffoldMessenger.maybeOf(context);
   final l10n = AppLocalizations.of(context);
   final web = StagedWeb(id: ref.read(idGeneratorProvider).newId(), url: url);
+  // Guardar hace definitiva una eliminación que aún se podía deshacer; abrir la
+  // hoja o cerrarla sin guardar, no (CA-014-11, CA-014-12).
+  ref.read(undoProvider.notifier).commit();
   try {
     await ref
         .read(editTaskProvider)

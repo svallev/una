@@ -24,6 +24,9 @@ class MainActivity : FlutterActivity() {
         }
         // Enlaces de un PDF (spec 008).
         MethodChannel(messenger, LinkOpener.CHANNEL).setMethodCallHandler(LinkOpener(this))
+        // "Tiempo para actuar" del sistema para la card de deshacer (spec 014).
+        MethodChannel(messenger, AccessibilityTimeouts.CHANNEL)
+            .setMethodCallHandler(AccessibilityTimeouts(applicationContext))
         // Endurecimiento y limpieza de la WebView de la tarea web (spec 009). Como
         // plugin, para pedir la WebView al de `webview_flutter` (ya registrado).
         flutterEngine.plugins.add(WebViewHardening())

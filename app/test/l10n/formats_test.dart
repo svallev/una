@@ -33,12 +33,5 @@ void main() {
       expect(en.editorCharsLeft(1), '1 character left');
       expect(en.editorCharsLeft(5), '5 characters left');
     });
-
-    test('CA-010-04: anuncio de eliminar desde el listado', () {
-      expect(es.a11yDeletedFromList(1), 'Tarea eliminada. Queda 1');
-      expect(es.a11yDeletedFromList(3), 'Tarea eliminada. Quedan 3');
-      expect(en.a11yDeletedFromList(1), 'Task deleted. 1 left');
-      expect(en.a11yDeletedFromList(3), 'Task deleted. 3 left');
-    });
   });
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Valida design/tokens.json: estructura mínima, formato de colores y contraste WCAG AA
-// de las combinaciones de texto documentadas en docs/design/tokens.md.
+// Valida design/tokens.json: estructura mínima, formato de colores, contraste WCAG AA
+// de las combinaciones de texto (4,5:1) y de los elementos no textuales (3:1, WCAG 1.4.11)
+// documentadas en docs/design/tokens.md.
 // Uso: node tools/validate-tokens.mjs   (sin dependencias)
 import { readFileSync } from "node:fs";
 
@@ -59,7 +60,14 @@ const checks = [
   ["error/surface", hex(C.error.$value), hex(C.surface.$value)],
   ["ink/dangerFill", ink, hex(C.dangerFill.$value)],
   ["onInk/ink", hex(C.onInk.$value), ink],
+  // Etiqueta de la tarea en la card de deshacer (spec 014, CA-014-03).
+  ["onInkMuted/ink", hex(C.onInkMuted.$value), ink],
 ];
+// 4. Contraste no textual (3:1, WCAG 1.4.11): la barra de tiempo de la card de deshacer
+//    es del color de la nota eliminada y se vacía sobre su pista (spec 014, CA-014-03).
+//    Se comprueban todas las paletas (la activa, classic, y las de futuro theming).
+const nonTextChecks = [];
+const undoTrack = hex(C.undoTrack.$value);
 const ph = rgba(C.placeholder.$value);
 for (const [name, pal] of Object.entries(tokens.palette)) {
   if (name.startsWith("$")) continue;
@@ -67,6 +75,7 @@ for (const [name, pal] of Object.entries(tokens.palette)) {
     const bg = hex(pal[i].$value);
     checks.push([`ink/${name}.${i}`, ink, bg]);
     if (name === "classic") checks.push([`placeholder/${name}.${i}`, blend(ph, bg), bg]);
+    nonTextChecks.push([`${name}.${i}/undoTrack`, bg, undoTrack]);
   }
 }
 checks.push(["placeholder/paper", blend(ph, hex(C.paper.$value)), hex(C.paper.$value)]);
@@ -75,9 +84,16 @@ for (const [name, fg, bg] of checks) {
   const r = ratio(fg, bg);
   if (r < 4.5) errors.push(`Contraste insuficiente ${name}: ${r.toFixed(2)} (< 4.5)`);
 }
+for (const [name, fg, bg] of nonTextChecks) {
+  const r = ratio(fg, bg);
+  if (r < 3) errors.push(`Contraste no textual insuficiente ${name}: ${r.toFixed(2)} (< 3)`);
+}
 
 if (errors.length) {
   console.error("❌ tokens.json no es válido:\n - " + errors.join("\n - "));
   process.exit(1);
 }
-console.log(`✅ tokens.json válido (${checks.length} combinaciones de contraste AA comprobadas)`);
+console.log(
+  `✅ tokens.json válido (${checks.length} combinaciones de contraste AA de texto y ` +
+    `${nonTextChecks.length} no textuales comprobadas)`,
+);

@@ -162,7 +162,7 @@ void main() {
         );
         await SemanticsService.sendAnnouncement(
           tester.view,
-          l10n.a11yDeletedFromList(2),
+          l10n.a11yUndone,
           TextDirection.ltr,
         );
         expectNoL10nLeaks(tester, languageCode: locale.languageCode);

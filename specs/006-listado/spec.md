@@ -1,6 +1,6 @@
 # Spec 006: Todas las tareas (listado)
 
-- **Estado:** Implementada (2026-09-26; aprobada por el propietario tras probarla en el móvil, TalkBack incluido) · Aprobada (2026-09-26, propietario). Reescrita ese día con sus decisiones tras la revisión (spec-reviewer y a11y-reviewer). Partes diferidas marcadas en los CA (adjuntos 007–009)
+- **Estado:** **Enmendada por la spec 014** (aprobada 2026-10-04; ADR-0021): eliminar sin confirmación y con deshacer. Implementada (2026-09-26; aprobada por el propietario tras probarla en el móvil, TalkBack incluido) · Aprobada (2026-09-26, propietario). Reescrita ese día con sus decisiones tras la revisión (spec-reviewer y a11y-reviewer). Partes diferidas marcadas en los CA (adjuntos 007–009)
 - **Reglas de producto:** R7 (acceso en dos pasos), R13 (reordenar, editar y eliminar desde el listado)
 - **Pantallas del prototipo:** 5 "Todas las tareas (con acciones)"
 - **Decisiones y ADR:** ADR-0002 (rank), ADR-0011 (eliminar es definitivo), DEV-09 (revocada), DEV-11, DEV-14, DEV-18, DEV-21, DEV-24, DEV-27 a DEV-34
@@ -37,6 +37,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
   - La **primera fila** es la tarea actual: texto más grande (20 px, peso 800), **sin asa** y **sin etiqueta visible** (la etiqueta "Lo siguiente" del prototipo está oculta y no se muestra). Las demás: texto de 16 px (peso 600) y el asa a la izquierda.
   - El texto de cada fila se recorta a **3 líneas** con "…" (DEV-29); el lector de pantalla lee el texto completo.
   - Imagen: CA-007-20. *[Diferido a 008–009]* Miniatura de 44 px (imagen) o insignia con la extensión en mayúsculas (PDF, DOCX…; "WEB" para las URL) entre el asa y el texto; sin texto, se muestra el nombre del archivo o el dominio.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* mientras se ve la card de deshacer, ocupa el sitio de "Nueva tarea" (CA-014-05).
 - **CA-006-03 Volver**
   - **Dado** el listado
   - **Cuando** pulsa "Volver a la tarea" o usa el gesto atrás
@@ -48,6 +49,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
   - **Dado** una fila que no es la primera
   - **Cuando** pone el dedo en el asa y lo mueve más de 6 px en vertical
   - **Entonces** la fila se levanta al instante: sigue al dedo, se inclina −1,5° y su sombra crece a `listItemDragging`; las demás se desplazan (0,2 s) para hacerle hueco. Al soltar, queda en la nueva posición y se guarda en ese momento.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* levantar la fila hace definitiva una eliminación que aún se podía deshacer (CA-014-11).
 - **CA-006-05 Arrastrar desde toda la fila (DEV-27)**
   - **Dado** una fila que no es la primera
   - **Cuando** mantiene pulsado un momento (150 ms, `listHoldDrag`) en cualquier punto de la fila, también sobre Editar o Eliminar, y después mueve el dedo
@@ -103,6 +105,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
     - si era la última pendiente, se va directamente a "Todo hecho." (CA-004-07, sin animación) y el listado deja de existir: el gesto atrás no vuelve a él (CL-006-3);
     - si falla la escritura: CA-004-13, con el aviso sobre el listado y la fila en su sitio.
   - Se puede eliminar cualquier fila, no solo la primera.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* **sin confirmación**: la fila desaparece al momento y aparece la card de deshacer (CA-014-02); ya no "No hay deshacer". Si era la última, "Todo hecho." con la card, y "Deshacer" vuelve al listado (CA-014-10).
 - **CA-006-15 Crear desde el listado**
   - **Dado** el listado
   - **Cuando** pulsa "Nueva tarea"
@@ -120,6 +123,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
   - **Cuando** abre las acciones de una fila
   - **Entonces** encuentra, en este orden: las de mover que correspondan (CA-006-09), "Editar tarea" y "Eliminar tarea". Mover cambia la posición al instante; "Eliminar tarea" abre la confirmación (nunca elimina directamente).
   - Con teclado físico, se llega con Tab al asa de cada fila y se abre "Mover" con Intro o Espacio (CA-006-08).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "Eliminar tarea" elimina directamente (CA-014-19); elegir una opción de mover hace definitiva una eliminación que aún se podía deshacer (CA-014-11).
 - **CA-006-17 Foco y anuncios**
   - **Dado** un lector de pantalla activo
   - **Cuando** ocurre cada acción
@@ -139,6 +143,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
     | Crear "A la cola" (o en otra posición distinta de la 1) | La fila nueva | "Tarea añadida en la posición {n} de {total}" |
     | Volver a la pantalla principal | La tarea actual | Ninguno |
     | Error al mover o al eliminar | Sin cambios | El texto del aviso |
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* las filas de eliminar y "Cancelar la confirmación" quedan sustituidas por CA-014-16 a CA-014-18.
 
 - **CA-006-18 Lectura de las filas**
   - **Dado** un lector de pantalla
@@ -149,6 +154,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
     - el lector informa de cuántas filas hay y de cuáles están a la vista;
     - con el lector activo, la ayuda dice "La primera es la que tienes ahora. Usa las acciones de cada tarea para cambiar el orden, editarla o eliminarla." (DEV-33).
   - Tras el texto, el tipo de adjunto si hay: imagen, CA-007-21; *[documento y URL: 008–009]*.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* mientras se ve la card de deshacer, es lo primero en el orden de lectura (CA-014-16).
 - **CA-006-19 Reducir movimiento**
   - **Dado** "reducir movimiento" activado
   - **Cuando** se reordena, se crea o se desplaza la lista por programa
@@ -180,6 +186,8 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
 | CL-006-9 | Segundo plano con el listado abierto | < 10 min: al volver, el mismo listado en la misma posición de desplazamiento; ≥ 10 min: la tarea actual (CA-001-12) |
 | CL-006-10 | Texto grande (200 %) en un móvil de 360 dp | Las filas crecen en alto (siguen recortadas a 3 líneas); nada se corta ni se solapa; los botones siguen alcanzables y de ≥ 48 dp. Con la escala de texto ≥ 1,3, la ayuda se desplaza con la lista en lugar de quedarse fija; la fila de la flecha y el título sigue fija, para que el orden de lectura de CA-006-18 no cambie (DEV-34; enmienda del propietario, 2026-09-26) |
 | CL-006-11 | Texto de 10 000 caracteres en una fila | 3 líneas con "…"; el lector lee el texto completo |
+
+*Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* CL-006-3: "Todo hecho." con la card de deshacer, y "Deshacer" vuelve al listado (CA-014-10). CL-006-5: ya no hay hoja; ver CL-014-2.
 
 ## 5. Estados vacíos y de error
 

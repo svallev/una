@@ -184,29 +184,27 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get deleteTitle => '¿Eliminar esta tarea?';
-
-  @override
-  String deleteBody(String label) {
-    return '“$label” desaparecerá sin marcarse como hecha.';
-  }
-
-  @override
-  String get deleteConfirm => 'Eliminar';
-
-  @override
   String get deleteA11yAction => 'Eliminar tarea';
 
   @override
-  String a11yDeletedNext(String text) {
-    return 'Tarea eliminada. Siguiente: $text';
+  String get deleteError => 'No hemos podido eliminar la tarea';
+
+  @override
+  String get undoDeletedTitle => 'Tarea eliminada';
+
+  @override
+  String get undoButton => 'Deshacer';
+
+  @override
+  String undoA11yLabel(String label) {
+    return 'Deshacer. Tarea eliminada: $label';
   }
 
   @override
-  String get a11yDeletedAllDone => 'Tarea eliminada. Todo hecho.';
+  String get a11yUndone => 'Tarea recuperada';
 
   @override
-  String get deleteError => 'No hemos podido eliminar la tarea';
+  String get undoError => 'No hemos podido recuperar la tarea';
 
   @override
   String get listTitle => 'Todas las tareas';
@@ -267,17 +265,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String a11yAddedAt(int position, int total) {
     return 'Tarea añadida en la posición $position de $total';
-  }
-
-  @override
-  String a11yDeletedFromList(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Tarea eliminada. Quedan $count',
-      one: 'Tarea eliminada. Queda 1',
-    );
-    return '$_temp0';
   }
 
   @override

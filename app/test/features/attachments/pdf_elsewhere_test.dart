@@ -5,6 +5,7 @@ import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/pdf_position.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/features/attachments/missing_attachment_card.dart';
@@ -14,10 +15,9 @@ import 'package:app/features/attachments/task_thumbnail.dart';
 import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
-import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -211,9 +211,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('CA-004-01: eliminar una fila sin texto dice el nombre', (
-      tester,
-    ) async {
+    testWidgets('CA-014-04: eliminar una fila sin texto dice el nombre en la '
+        'card', (tester) async {
       await openListWith(tester, [
         sampleTask(id: 't0', text: 'Primera', rank: 'A'),
         await pdfTask('t1', rank: 'B'),
@@ -226,13 +225,15 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.text('¿Eliminar esta tarea?'), findsNothing);
       expect(
-        tester
-            .widget<DeleteConfirmSheet>(find.byType(DeleteConfirmSheet))
-            .label,
-        'Programa.pdf',
+        find.descendant(
+          of: find.byType(UndoCard),
+          matching: find.text('Programa.pdf'),
+        ),
+        findsOneWidget,
       );
     });
   });
@@ -310,8 +311,7 @@ void main() {
     for (final reduced in [false, true]) {
       testWidgets(
         'el arrugado${reduced ? ' (reducir movimiento: fundido)' : ''} '
-        'muestra lo que se veía, la confirmación dice el nombre y el '
-        'anuncio también',
+        'muestra lo que se veía, la card dice el nombre y no hay anuncio',
         (tester) async {
           final announcements = listenAnnouncements(tester);
           await repo.insert(await pdfTask('t1', rank: 'A', name: 'Mapa.pdf'));
@@ -326,19 +326,8 @@ void main() {
 
           await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
           await tester.pumpAndSettle();
+          // Sin confirmación (CA-014-01).
           await tester.tap(find.text('Eliminar'));
-          await tester.pumpAndSettle();
-          expect(
-            tester
-                .widget<DeleteConfirmSheet>(find.byType(DeleteConfirmSheet))
-                .label,
-            'Mapa.pdf',
-          );
-          await tester.tap(
-            find.byWidgetPredicate(
-              (w) => w is BrutalButton && w.label == 'Eliminar',
-            ),
-          );
           await tester.pump(_frame);
           await tester.pump(_frame);
           await tester.pump(
@@ -354,14 +343,62 @@ void main() {
           expect(await faceColor(tester, overlay), _visiblePage);
           expect(find.byType(MissingAttachmentCard), findsNothing);
           await tester.pump(UnaMotion.crumple);
-          await tester.pumpAndSettle();
+          await tester.pump(_frame);
+          await tester.pump(_frame);
+          // CA-014-04: la card dice el nombre del PDF; CA-014-16: sin anuncios.
           expect(
-            announcements,
-            contains('Tarea eliminada. Siguiente: Programa.pdf'),
+            find.descendant(
+              of: find.byType(UndoCard),
+              matching: find.text('Mapa.pdf'),
+            ),
+            findsOneWidget,
           );
+          expect(announcements, isEmpty);
+          // CA-014-15: los archivos esperan mientras se puede deshacer.
+          expect(await store.storedIds(), {'p-t1', 'p-t2'});
+          await tester.pump(UnaMotion.undoWindow);
+          await tester.pumpAndSettle();
           expect(await store.storedIds(), {'p-t2'});
         },
       );
     }
+  });
+
+  testWidgets('CA-014-09: deshacer devuelve el PDF en su última posición y '
+      'sus archivos siguen', (tester) async {
+    await repo.insert(await pdfTask('t1', rank: 'A', name: 'Mapa.pdf'));
+    await repo.insert(await pdfTask('t2', rank: 'B'));
+    await store.writePosition('p-t1', const PdfPosition(page: 7, offset: 0.25));
+    await pumpUnaApp(tester, repo: repo, overrides: overrides());
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pump(_frame);
+    await tester.pump(UnaMotion.crumple);
+    await tester.pump(_frame);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await repo.findById('t1'), isNull);
+    taskPdfCalls.clear();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(UndoCard),
+        matching: find.byKey(UndoCard.buttonKey),
+      ),
+    );
+    await tester.pump(_frame);
+    await tester.pump(UnaMotion.sheetOut * 2);
+    await tester.pumpAndSettle();
+
+    expect((await repo.currentTask())!.id, 't1');
+    expect(find.byType(MissingAttachmentCard), findsNothing);
+    expect(
+      taskPdfCalls.last.initialPosition,
+      const PdfPosition(page: 7, offset: 0.25),
+    );
+    await tester.pump(UnaMotion.undoWindow * 2);
+    await tester.pumpAndSettle();
+    expect(await store.storedIds(), {'p-t1', 'p-t2'});
   });
 }

@@ -100,6 +100,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - En horizontal se sigue pudiendo completar o eliminar con las acciones del lector (CA-003-07, CA-004-10). Es un modo solo para ver la imagen más grande (excepción a WCAG 1.3.4 y 2.1.1, §6).
   - Respeta el bloqueo de rotación del sistema. El resto de la app (y la tarea sin imagen) queda solo en vertical.
   - En tablets y plegables, en horizontal usa todo el ancho de la pantalla aunque el resto de la app esté limitado a 600 px (CL-001-7).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar en horizontal, además se ve la card de deshacer (CL-014-7).
 - **CA-007-12 Pantalla encendida, con límite (D10)**
   - **Dado** que el ajuste "Mantener la pantalla encendida con adjuntos" está activo (por defecto sí; su pantalla llega con la spec futura de Configuración y perfil; en la beta está siempre activo, enmienda 2026-09-29)
   - **Cuando** se ve la tarea actual con imagen
@@ -142,6 +143,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Cuando** termina la operación (una vez guardada, si la hay)
   - **Entonces** no queda ningún archivo de esa imagen (versiones completa, de pantalla y miniatura) ni ningún temporal. **Todos los caminos usan el mismo borrado.**
   - Si falla, en el siguiente arranque (después del primer fotograma, sin retrasar CA-001-09) se barren las imágenes que no pertenecen a ninguna tarea y todos los temporales. Una imagen que se está importando en ese momento nunca se barre.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar la tarea, los archivos se borran cuando la eliminación es definitiva (CA-014-15), no al momento.
 - **CA-007-17 Las completadas conservan la imagen (D8)**
   - **Dado** que se completa una tarea con imagen
   - **Cuando** se consulta el almacenamiento
@@ -163,6 +165,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - La tarjeta, sobre el color de la nota: recuadro blanco con borde y sombra, el texto de la tarea (si lo hay), el aviso en rojo con el icono de imagen y la acción (DEV-40).
   - Si solo faltan la miniatura o la versión de pantalla, o no se pueden leer, se regeneran en segundo plano sin avisar; si tampoco se puede, se ve la tarjeta.
   - En el listado, la fila muestra la insignia "FOTO" o "IMAGEN" en lugar de la miniatura.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "Eliminar tarea" elimina sin confirmación y con deshacer (CA-014-01).
 
 **Donde aparece la imagen**
 
@@ -173,6 +176,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - **Listado (cierra CA-006-02):** miniatura de 44 px, recortada, entre el asa y el texto, como el prototipo; decorativa para el lector.
     - **Sin texto:** en el listado, en la confirmación de eliminar (cierra CA-004-01) y en los anuncios, se usa "Foto" (de la cámara) o "Imagen" (de la galería).
     - **Completar y eliminar (cierra CL-003-4):** la rotura y el arrugado muestran la imagen recortada, como la tarea; con reducir movimiento, sus alternativas.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* la etiqueta sin texto se usa en la card de deshacer (CA-014-04), ya no en la confirmación.
 
 **Accesibilidad**
 
@@ -187,6 +191,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - fila del listado (cierra CA-006-18): "{n} de {total}: {texto}. Con foto", o "{n} de {total}: Foto" sin texto;
     - anuncios de completar y eliminar sin texto (cierra CL-003-8): "Tarea completada. Siguiente: Foto".
   - Sin visor no hay acciones de zoom ni teclas de zoom: para ampliar, la lupa del sistema (ADR-0013).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* los anuncios de eliminar pasan a la lectura de la card de deshacer (CA-014-16).
 - **CA-007-22 Foco y anuncios**
   - **Dado** un lector de pantalla activo
   - **Cuando** ocurre cada acción

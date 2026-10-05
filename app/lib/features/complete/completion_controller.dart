@@ -9,6 +9,7 @@ import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/complete_current_task.dart';
 import '../delete/deletion_controller.dart';
+import '../delete/undo_controller.dart';
 
 /// Fases de completar (spec 003):
 /// - `completing`: se guarda y la tarea sigue en pantalla con el relleno lleno;
@@ -57,6 +58,9 @@ class CompletionController extends Notifier<CompletionState> {
   /// (CA-003-12).
   Future<CompletionResult?> complete(Task task) async {
     if (state.busy || ref.read(deletionProvider).busy) return null;
+    // Completar hace definitiva una eliminación que aún se podía deshacer,
+    // antes de cambiar la cola (CA-014-11).
+    ref.read(undoProvider.notifier).commit();
     state = CompletionState(CompletionPhase.completing, task: task);
     final CompletionResult result;
     try {

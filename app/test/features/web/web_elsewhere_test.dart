@@ -1,5 +1,5 @@
 // La tarea web fuera de la pantalla principal (spec 009, T-009-16): insignia
-// "WEB" y dominio como etiqueta en el listado, la confirmación de eliminar y
+// "WEB" y dominio como etiqueta en el listado, la card de deshacer y
 // los anuncios; en las caras de completar y eliminar, la barra y la zona de la
 // página en blanco, sin WebView (CA-009-17, CA-009-18, CL-009-11).
 import 'package:app/app/providers.dart';
@@ -13,12 +13,11 @@ import 'package:app/features/attachments/task_thumbnail.dart';
 import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/delete/crumple_overlay.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/task_list/task_list_row.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/features/web/task_web.dart';
 import 'package:app/features/web/web_bar.dart';
-import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
@@ -274,8 +273,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('eliminar desde el listado: la confirmación y el anuncio dicen '
-        'el dominio', (tester) async {
+    testWidgets('CA-014-04, CA-009-14: eliminar desde el listado: la card '
+        'dice el dominio, sin anuncios', (tester) async {
       final announcements = listenAnnouncements(tester);
       await pumpWith(tester, [
         sampleTask(id: 't0', text: 'Primera', rank: 'A'),
@@ -284,7 +283,6 @@ void main() {
       ], screenReader: true);
       await openList(tester);
 
-      // La web: la confirmación dice su dominio.
       await tester.tap(
         find.descendant(
           of: find.byWidget(rowFor(tester, 'w')),
@@ -293,33 +291,14 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
+      await tester.pump();
+      await tester.pump(frame);
+      expect(find.text('¿Eliminar esta tarea?'), findsNothing);
       expect(
-        tester
-            .widget<DeleteConfirmSheet>(find.byType(DeleteConfirmSheet))
-            .label,
-        _host,
+        find.descendant(of: find.byType(UndoCard), matching: find.text(_host)),
+        findsOneWidget,
       );
-      await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
-
-      // La actual: el anuncio dice el dominio de la siguiente (la web).
-      await tester.tap(
-        find.descendant(
-          of: find.byWidget(rowFor(tester, 't0')),
-          matching: find.byWidgetPredicate(
-            (w) => w is UnaIcon && w.icon == UnaIcons.trash,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
-      await tester.tap(
-        find.byWidgetPredicate(
-          (w) => w is BrutalButton && w.label == 'Eliminar',
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(announcements, contains('Tarea eliminada. Siguiente: $_host'));
+      expect(announcements, isEmpty);
     });
   });
 
@@ -449,7 +428,7 @@ void main() {
         });
 
         testWidgets('el arrugado$how muestra la barra y la zona en blanco, la '
-            'confirmación y el anuncio dicen el dominio', (tester) async {
+            'card dice el dominio y no hay anuncio', (tester) async {
           final announcements = listenAnnouncements(tester);
           await pumpWith(tester, [
             _webTask('w', _address, rank: 'A'),
@@ -461,19 +440,8 @@ void main() {
 
           await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
           await tester.pumpAndSettle();
+          // Sin confirmación (CA-014-01).
           await tester.tap(find.text('Eliminar'));
-          await tester.pumpAndSettle();
-          expect(
-            tester
-                .widget<DeleteConfirmSheet>(find.byType(DeleteConfirmSheet))
-                .label,
-            _host,
-          );
-          await tester.tap(
-            find.byWidgetPredicate(
-              (w) => w is BrutalButton && w.label == 'Eliminar',
-            ),
-          );
           await tester.pump(frame);
           await tester.pump(frame);
           await tester.pump(
@@ -495,11 +463,18 @@ void main() {
           expect(web.drivers.where((d) => d != page), hasLength(lessThan(2)));
 
           await tester.pump(UnaMotion.crumple);
-          await tester.pumpAndSettle();
+          await tester.pump(frame);
+          await tester.pump(frame);
+          // CA-014-04: la card dice el dominio; CA-014-16: sin anuncios.
           expect(
-            announcements,
-            contains('Tarea eliminada. Siguiente: $_nextHost'),
+            find.descendant(
+              of: find.byType(UndoCard),
+              matching: find.text(_host),
+            ),
+            findsOneWidget,
           );
+          expect(announcements, isEmpty);
+          await tester.pumpAndSettle();
           // La siguiente (web) se ve con su propia WebView.
           expect(tester.widget<WebBar>(find.byType(WebBar)).host, _nextHost);
           expect(web.last, isNot(page));
@@ -508,4 +483,41 @@ void main() {
       }
     },
   );
+
+  testWidgets('CA-014-09, CL-014-9: deshacer devuelve la tarea web y la '
+      'página se vuelve a cargar desde su dirección', (tester) async {
+    await pumpWith(tester, [
+      _webTask('w', _address, rank: 'A'),
+      _webTask('v', _nextAddress, rank: 'B'),
+    ]);
+    web.last.started(_address);
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pump(frame);
+    await tester.pump(UnaMotion.crumple);
+    await tester.pump(frame);
+    await tester.pump(frame);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await repo.findById('w'), isNull);
+    final drivers = web.drivers.length;
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(UndoCard),
+        matching: find.byKey(UndoCard.buttonKey),
+      ),
+    );
+    await tester.pump(frame);
+    await tester.pump(UnaMotion.sheetOut * 2);
+    await tester.pump(frame);
+
+    expect((await repo.currentTask())!.id, 'w');
+    // Una WebView nueva que carga la dirección guardada.
+    expect(web.drivers.length, greaterThan(drivers));
+    expect(web.last.loads.map((u) => u.toString()), [_address]);
+    expect(find.text(_host), findsWidgets);
+    await tester.pumpAndSettle();
+  });
 }

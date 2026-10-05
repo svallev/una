@@ -1,4 +1,5 @@
 import 'package:app/app/providers.dart';
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/link_target.dart';
@@ -11,7 +12,7 @@ import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/pdf_strip.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/web/web_bar.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/wordmark.dart';
@@ -351,8 +352,9 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('eliminar con PDF en horizontal: sale la confirmación y, sin '
-        'más tareas con adjunto, vuelve a vertical', (tester) async {
+    testWidgets('CA-014-19, CL-014-7: eliminar con PDF en horizontal elimina '
+        'sin confirmación, con la card, y sin más tareas con adjunto vuelve '
+        'a vertical', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpApp(tester, [
         await pdfTask(rank: 'B'),
@@ -363,11 +365,13 @@ void main() {
       taskPdfCalls.last.actions.entries
           .firstWhere((e) => e.key.label == 'Eliminar tarea')
           .value();
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Eliminar'));
-      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(UnaMotion.crumple);
+      await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('Sin adjunto'), findsOneWidget);
       expect(rotating(), isFalse);
+      // La card sigue (CL-014-7) y se puede deshacer.
+      expect(find.byType(UndoCard), findsOneWidget);
       handle.dispose();
     });
   });
@@ -566,8 +570,9 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('eliminar en horizontal: sale la confirmación y, sin más '
-        'tareas con adjunto, vuelve a vertical', (tester) async {
+    testWidgets('CA-014-19, CL-014-7: eliminar en horizontal elimina sin '
+        'confirmación, con la card, y sin más tareas con adjunto vuelve a '
+        'vertical', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpApp(tester, [
         webTask(rank: 'B'),
@@ -577,12 +582,12 @@ void main() {
       await shown(tester);
       await turn(tester, landscape: true);
       performOnNode(tester, 'Eliminar tarea');
-      await tester.pumpAndSettle();
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-      await tester.tap(find.text('Eliminar'));
-      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(UnaMotion.crumple);
+      await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('Sin adjunto'), findsOneWidget);
       expect(rotating(), isFalse);
+      expect(find.byType(UndoCard), findsOneWidget);
       handle.dispose();
     });
 

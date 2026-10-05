@@ -11,7 +11,6 @@ import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/features/web/task_web.dart';
@@ -589,9 +588,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('"Eliminar tarea" del lector abre la confirmación', (
-      tester,
-    ) async {
+    testWidgets('CA-014-19: "Eliminar tarea" del lector elimina sin '
+        'confirmación', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpWeb(tester);
       final node = tester.getSemantics(
@@ -602,9 +600,7 @@ void main() {
       );
       node.owner!.performAction(node.id, SemanticsAction.customAction, id);
       await tester.pumpAndSettle();
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-      // Una hoja: la página sigue.
-      expect(web.last.stops, 0);
+      expect(find.byType(TaskWeb), findsNothing);
       handle.dispose();
     });
   });
@@ -750,9 +746,6 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Eliminar'));
-      await tester.pumpAndSettle();
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
-      await tester.tap(find.text('Eliminar').last);
       await tester.pumpAndSettle();
       expect(find.byType(TaskWeb), findsNothing);
       expect(driver.disposed, isTrue);

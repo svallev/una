@@ -11,11 +11,17 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'pump_app.dart';
+import 'undo.dart';
 
 /// Monta la app completa (UnaApp) con un repositorio en memoria y las tareas
 /// indicadas (la primera, la actual). El sistema está en [locale] (español
 /// por defecto); con [firstRunDone] a false, arranca en la bienvenida. Con
 /// [bottomInset] > 0, el sistema reserva ese margen abajo (barra de navegación).
+///
+/// Sin [clock], el reloj es el del test (`TesterClock`): la cuenta atrás de la
+/// card de deshacer avanza con `tester.pump` (spec 014). Con la card a la vista
+/// `pumpAndSettle` no se asienta hasta que caduca (la barra repinta en cada
+/// fotograma), pero con un reloj real nunca caducaría.
 Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   WidgetTester tester, {
   required T repo,
@@ -76,7 +82,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
           await readBootState(repo, repo),
         ),
         colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
-        if (clock != null) clockProvider.overrideWithValue(clock),
+        clockProvider.overrideWithValue(clock ?? TesterClock(tester)),
         ...overrides,
       ],
       child: const UnaApp(),

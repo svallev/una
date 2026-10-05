@@ -14,7 +14,7 @@ String? attachmentKindLabel(AppLocalizations l10n, Task task) =>
       final a => a.isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage,
     };
 
-/// Cómo se nombra la tarea en el listado, la confirmación de eliminar y los
+/// Cómo se nombra la tarea en el listado, la card de deshacer y los
 /// anuncios: su texto o, sin texto, "Foto"/"Imagen" (CA-007-20, CL-003-8) o
 /// el nombre del PDF ("PDF" si no tiene, CA-008-19). Una tarea web (sin
 /// texto) se nombra por su dominio, sin `www.` (CA-009-17), o "WEB" si la

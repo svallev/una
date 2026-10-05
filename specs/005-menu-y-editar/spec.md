@@ -63,6 +63,7 @@ Reunir en un único menú las acciones sobre la tarea actual (editar, eliminar) 
   - **Entonces** no pasa nada y se ven activos (DEV-18, decisión del propietario); llegan con las specs 004 y 006.
   - *Enmienda (spec 004, CA-004-01):* "Eliminar" abre la confirmación.
   - *Enmienda (spec 006, CA-006-01):* "Todas mis tareas" abre el listado.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "Eliminar" elimina sin confirmación y con deshacer (CA-014-01).
 - **CA-005-10 Menú bloqueado durante las animaciones**
   - **Dado** que se está completando o eliminando la tarea
   - **Cuando** toca el botón de menú

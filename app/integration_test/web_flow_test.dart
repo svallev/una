@@ -54,6 +54,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'fixtures/selfsigned_tls.dart';
+import 'support/undo.dart';
 
 const _airplane = bool.fromEnvironment('UNA_AIRPLANE');
 const _hardening = ChannelWebViewHardening();
@@ -293,19 +294,17 @@ Future<void> _openList(WidgetTester tester) async {
   expect(find.byType(TaskListScreen), findsOneWidget);
 }
 
-/// Menú → Eliminar → Eliminar.
+/// Menú → Eliminar (sin confirmación): se espera al final del arrugado y a que
+/// la card de deshacer caduque, que es cuando la eliminación es definitiva
+/// (CA-014-15).
 Future<void> _deleteFromMenu(WidgetTester tester) async {
   final l10n = _l10n(tester);
   await tester.tap(find.bySemanticsLabel(l10n.menuButton));
   await _settle(tester);
   await tester.tap(find.text(l10n.menuDelete));
+  await pumpUntilCard(tester);
+  await pumpUntilCardGone(tester);
   await _settle(tester);
-  await tester.tap(
-    find.byWidgetPredicate(
-      (w) => w is BrutalButton && w.label == l10n.deleteConfirm,
-    ),
-  );
-  await _settle(tester, const Duration(seconds: 4));
 }
 
 /// Una WebView suelta, sin la app, para mirar qué queda de `una.test`.

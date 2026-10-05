@@ -145,6 +145,43 @@ void _contract(
       expect(await repo.remove('missing'), isFalse);
     });
 
+    test('CA-014-09 (ADR-0021): quitar y volver a guardar la misma tarea la '
+        'deja idéntica (id, rank, color, fechas y adjunto) y en el mismo '
+        'sitio, también la primera', () async {
+      Task dated(Task t) => Task(
+        id: t.id,
+        text: t.text,
+        attachment: t.attachment,
+        status: t.status,
+        rank: t.rank,
+        colorKey: t.colorKey,
+        createdAt: DateTime.utc(2026, 9, 20, 8, 15),
+        updatedAt: DateTime.utc(2026, 9, 25, 18, 40, 12, 345),
+      );
+      final tasks = [
+        dated(_task('a', 'C', color: 2, attachment: _image('ia'))),
+        dated(_task('b', 'M', color: 5, attachment: _pdf('pb'))),
+        dated(_task('c', 'T', color: 7, attachment: _web('wc'))),
+        dated(_task('d', 'X', color: 3, text: 'Sin adjunto')),
+      ];
+      for (final t in tasks) {
+        await repo.insert(t);
+      }
+      final before = await repo.pendingTasks();
+      expect(before, tasks);
+
+      for (final t in [tasks[1], tasks[0], tasks[2], tasks[3]]) {
+        expect(await repo.remove(t.id), isTrue);
+        expect(await repo.findById(t.id), isNull);
+        await repo.insert(t);
+        expect(await repo.findById(t.id), t);
+        expect(await repo.pendingTasks(), before);
+      }
+      expect(await repo.currentTask(), tasks.first);
+      expect(await repo.attachmentIds(), {'ia', 'pb', 'wc'});
+      expect(await repo.countPending(), 4);
+    });
+
     test('CA-001-05 / CA-003-11 / CA-004-08 (ADR-0012): guardar una tarea '
         'activa hasEverHadTasks; quitarla no lo desactiva', () async {
       expect(await settings.hasEverHadTasks(), isFalse);

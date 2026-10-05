@@ -54,6 +54,13 @@ abstract final class UnaIcons {
     'M9 7l2-2a4 4 0 0 1 6 6l-2 2',
     'M15 17l-2 2a4 4 0 0 1-6-6l2-2',
   ]);
+
+  /// Flecha que da la vuelta hacia la izquierda: "Deshacer" de la card de
+  /// deshacer (prototipo, `.undobtn`; spec 014).
+  static const arrowUTurnLeft = UnaIconData([
+    'M9 14L4 9l5-5',
+    'M4 9h10a6 6 0 0 1 0 12h-3',
+  ]);
   static const lock = UnaIconData([
     'M5 11h14v10H5z',
     'M8 11V7a4 4 0 0 1 8 0v4',

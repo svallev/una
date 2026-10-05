@@ -1,6 +1,6 @@
 # Spec 004: Eliminar una tarea
 
-- **Estado:** Implementada (2026-09-26; aprobada por el propietario tras probarla en el móvil, TalkBack incluido) · Aprobada (2026-09-26, propietario). Reescrita ese día con sus decisiones: sin deshacer y sin "Nada pendiente.". Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009)
+- **Estado:** **Enmendada por la spec 014** (aprobada 2026-10-04; ADR-0021): sin confirmación y con deshacer de 4 s; las enmiendas están en cada CA. Implementada (2026-09-26; aprobada por el propietario tras probarla en el móvil, TalkBack incluido) · Aprobada (2026-09-26, propietario). Reescrita ese día con sus decisiones: sin deshacer y sin "Nada pendiente.". Partes diferidas marcadas en los CA (listado 006, adjuntos 007–009)
 - **Reglas de producto:** R10, R12 (estado vacío "Todo hecho."), R13 (eliminar desde el listado)
 - **Pantallas del prototipo:** 6 "Eliminar", 8 "Eliminar (se arruga)"
 - **Decisiones y ADR:** D7, ADR-0011 (sustituye a ADR-0006), DEV-18, DEV-21, DEV-23, DEV-24, DEV-25, DEV-26
@@ -10,10 +10,12 @@
 
 Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un gesto que se siente definitivo (el papel se arruga y va a la papelera). **Es definitivo:** la única red de seguridad es la confirmación.
 
+> *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* la red de seguridad pasa a ser el deshacer de 4 s, después de eliminar; no hay confirmación.
+
 ## 2. Historias de usuario
 
 - **HU-004-1** Como usuario, quiero eliminar una tarea que ya no aplica sin marcarla como hecha.
-- **HU-004-2** Como usuario, quiero que me pregunten antes de eliminar, porque no se puede deshacer.
+- **HU-004-2** Como usuario, quiero que me pregunten antes de eliminar, porque no se puede deshacer. *(Enmienda, spec 014: sustituida por HU-014-1 y HU-014-2.)*
 
 ## 3. Criterios de aceptación
 
@@ -27,10 +29,12 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
     - la etiqueta es el texto de la tarea, recortado a 3 líneas con "…" (mismo criterio que "¿Dónde la pones?", DEV-23); el lector de pantalla lee el texto completo;
     - desde el listado (botón eliminar de cada fila) se abre la misma hoja (CA-006-14);
     - si la tarea no tiene texto, la etiqueta es "Foto" o "Imagen" (CA-007-20); el nombre del archivo o el dominio *[Diferido a 008–009]*.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* **retirado**: no hay hoja de confirmación; lo sustituyen CA-014-01 y CA-014-02.
 - **CA-004-02 Cancelar**
   - **Dado** la hoja de confirmación
   - **Cuando** pulsa "Cancelar", toca fuera, usa el gesto atrás o la desliza hacia abajo (DEV-21)
   - **Entonces** no cambia nada, se vuelve a la tarea actual (no al menú) y el foco queda en la tarea. Desde el listado, se vuelve al listado con el foco en la fila (CA-006-14).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* **retirado** (ya no hay hoja).
 
 **Eliminar la tarea actual**
 
@@ -38,6 +42,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
   - **Dado** la confirmación
   - **Cuando** pulsa "Eliminar"
   - **Entonces** la eliminación se guarda **antes** de empezar la animación (ADR-0011): la tarea deja de estar en la cola y ya no tiene contenido. *Enmienda (ADR-0012, aceptado 2026-09-26; implementada 2026-09-27):* la tarea se borra del todo, sin marca de borrado. Si la app se mata o pasa a segundo plano durante la animación, al volver se ve la siguiente tarea o "Todo hecho.", sin repetir la animación.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* la eliminación se guarda al elegir "Eliminar" (o la acción del lector), sin hoja; si la app muere antes de que desaparezca la card de deshacer, la eliminación es definitiva (CA-014-13).
 - **CA-004-04 Animación de arrugado**
   - **Dado** la eliminación guardada
   - **Cuando** empieza la animación
@@ -46,6 +51,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
     - detrás ya se ve la siguiente tarea, con su color y su texto, o "Todo hecho." si era la última;
     - el logotipo y el botón de menú se quedan (el menú no responde, CA-005-10); el botón "Pulsa para completar" se oculta y la papelera aparece en su lugar.
   - Al terminar, la siguiente tarea es la actual.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "la hoja se cierra" pasa a "el menú se cierra"; al terminar aparece la card de deshacer (CA-014-03).
 - **CA-004-05 Bloqueo durante la animación**
   - **Dado** la animación en curso
   - **Cuando** el usuario toca el menú o el botón de completar, usa las acciones del lector de pantalla o hace el gesto atrás
@@ -54,6 +60,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
   - **Dado** que se ha eliminado una tarea
   - **Cuando** termina la animación
   - **Entonces** no aparece ningún aviso ni opción de deshacer: la eliminación es definitiva (decisión del propietario, ADR-0011).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* **sustituido**: tras el arrugado aparece la card de deshacer durante 4 s (CA-014-03 a CA-014-10).
 
 **Estado vacío**
 
@@ -61,6 +68,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
   - **Dado** que se elimina la última tarea pendiente
   - **Cuando** termina la animación
   - **Entonces** se ve el mismo "Todo hecho." que al completar la última (CA-003-05): los mismos textos, el botón "Crear una tarea" y el mismo comportamiento (CA-003-10). **No existe** la pantalla "Nada pendiente." del prototipo (DEV-24).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* mientras se ve la card de deshacer, "Crear una tarea" no se ve (CA-014-05, CL-014-16).
 - **CA-004-08 Reabrir sin pendientes**
   - **Dado** que no queda ninguna tarea pendiente y hay al menos una completada **o eliminada**
   - **Cuando** se abre la app en frío (o vuelve de segundo plano tras 10 min, CA-001-12)
@@ -78,6 +86,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
     - no quedan filas de adjuntos ni archivos suyos (en cuanto haya adjuntos, 007–009);
     - solo queda la marca de borrado (ADR-0011).
   - *Enmienda (ADR-0012, aceptado 2026-09-26; implementada 2026-09-27):* no queda **nada**: ni la fila ni la marca de borrado.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "no queda nada" se cumple cuando la eliminación es definitiva (CA-014-15); hasta entonces sus archivos siguen en el disco.
 
 **Accesibilidad**
 
@@ -85,10 +94,12 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
   - **Dado** un lector de pantalla o acceso por switch
   - **Cuando** invoca la acción personalizada "Eliminar tarea" sobre la tarea actual
   - **Entonces** se abre la hoja de confirmación (nunca elimina directamente), con el foco inicial en "Cancelar". Con teclado, Esc equivale a "Cancelar".
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* la acción **elimina directamente**, sin hoja (CA-014-19).
 - **CA-004-11 Anuncio y foco**
   - **Dado** un lector de pantalla activo
   - **Cuando** se elimina la tarea actual
   - **Entonces** se hace **un único anuncio**, "Tarea eliminada. Siguiente: {texto}" (o "Tarea eliminada. Todo hecho."), y al terminar el foco pasa a la nueva tarea actual (o al título "Todo hecho.", leído como un solo texto), como en CA-003-07.
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* **sustituido** por CA-014-16 (foco en la card, sin anuncio) y CA-014-18 (deshacer).
 - **CA-004-12 Reducir movimiento**
   - **Dado** "reducir movimiento" activado
   - **Cuando** se elimina la tarea actual
@@ -100,6 +111,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
   - **Dado** un fallo de escritura al confirmar
   - **Cuando** pulsa "Eliminar"
   - **Entonces** la hoja se cierra, no hay animación, la tarea sigue siendo la actual y aparece el aviso "No hemos podido eliminar la tarea" con "Reintentar" (mismo estilo que `completeError`).
+  - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "la hoja se cierra" pasa a "el menú se cierra"; ver también CA-014-22.
 
 ## 4. Casos límite
 
@@ -109,6 +121,8 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
 | CL-004-2 | Pasar a segundo plano con la hoja de confirmación abierta | Al volver (< 10 min), la hoja sigue abierta; tras 10 min, la tarea actual sin hoja (CA-001-12) |
 | CL-004-3 | Falla el borrado de los archivos de un adjunto | No se avisa: los archivos huérfanos se borran en el siguiente arranque, después del primer fotograma (no retrasa CA-001-09). Imagen: CA-007-16; documento y URL, 008–009 |
 | CL-004-4 | Texto grande (200 %) | La hoja hace scroll si no cabe; "Eliminar" y "Cancelar" siempre alcanzables y de al menos 44 pt |
+
+*Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* CL-004-1, CL-004-2 y CL-004-4 eran de la hoja y quedan obsoletos (ver CL-014-1).
 
 ## 5. Estados vacíos y de error
 
@@ -124,6 +138,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
 - Acción personalizada "Eliminar tarea" en la tarea actual (CA-004-10) y en cada fila del listado (CA-006-16).
 - Un único anuncio y el foco en la nueva tarea actual o en "Todo hecho." (CA-004-11).
 - Reducir movimiento: fundido de 0,6 s (CA-004-12). Texto grande: CL-004-4.
+- *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* sin hoja; la accesibilidad de la card de deshacer está en la spec 014, §6.
 
 ## 7. Textos (ES / EN)
 
@@ -139,9 +154,11 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
 
 Se reutilizan `editorCancel` ("Cancelar", se amplía su descripción), `retry`, `emptyDoneTitle*`, `emptyDoneBody` y `emptyCreate`. **No** se añaden `toastDeleted`, `toastUndo`, `a11yDeletedUndo` ni `emptyNone*`.
 
+*Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* `deleteTitle`, `deleteBody`, `deleteConfirm`, `a11yDeletedNext` y `a11yDeletedAllDone` se retiran; los textos de la card están en la spec 014, §7.
+
 ## 8. Fuera de alcance
 
-- **Deshacer** tras eliminar (decisión del propietario, 2026-09-26; ADR-0011).
+- **Deshacer** tras eliminar (decisión del propietario, 2026-09-26; ADR-0011). *(Enmienda, spec 014: ya no está fuera de alcance; deshacer de 4 s, ADR-0021.)*
 - La pantalla "Nada pendiente." (DEV-24).
 - Papelera recuperable. Eliminar varias a la vez.
 

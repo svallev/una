@@ -19,6 +19,13 @@ class ImportRegistry {
 ///
 /// Los borrados no lanzan: si fallan, el barrido del siguiente arranque los
 /// recoge. Nunca borra filas de la BD, solo archivos sin fila.
+///
+/// Eliminar es en dos tiempos (ADR-0021): la fila sale de la BD al momento y
+/// los archivos se **retienen** ([hold]) mientras se puede deshacer; cuando la
+/// eliminación es definitiva, [discardHeld] los borra (CA-014-15) y, si se
+/// deshace, [releaseHeld] los suelta ya con su fila de vuelta. La retención
+/// vive solo en memoria: si la app muere, el barrido del siguiente arranque
+/// los recoge (CA-014-13).
 class AttachmentJanitor {
   AttachmentJanitor({
     required this.store,
@@ -29,6 +36,33 @@ class AttachmentJanitor {
   final AttachmentStore store;
   final TaskRepository repository;
   final ImportRegistry registry;
+
+  /// Adjuntos de una eliminación que aún se puede deshacer: el barrido no los
+  /// toca. Aparte de las importaciones ([registry]): que termine una no suelta
+  /// la otra.
+  final Set<String> _held = {};
+
+  /// Copia de los adjuntos retenidos.
+  Set<String> get held => {..._held};
+
+  /// Retiene los archivos del adjunto [id] (antes de quitar su fila). Devuelve
+  /// si lo ha añadido: solo suelta quien lo retuvo, así dos eliminaciones a la
+  /// vez de la misma tarea no se quitan la protección.
+  bool hold(String id) => _held.add(id);
+
+  /// Deja de retener el adjunto [id] sin borrar nada: su fila ha vuelto a la BD
+  /// (deshacer) o no se llegó a quitar (fallo al eliminar).
+  void releaseHeld(String id) => _held.remove(id);
+
+  /// La eliminación del adjunto retenido [id] es definitiva: deja de retenerlo
+  /// y borra sus archivos. No lanza (CA-014-15). Si la fila existe (una
+  /// recuperación que falló al confirmar pero sí llegó a escribirse), no borra.
+  Future<void> discardHeld(String id) async {
+    _held.remove(id);
+    // Protección primero y BD después, como el barrido.
+    if (await _inDatabase(id)) return;
+    await discard(id);
+  }
 
   /// Borra los archivos del adjunto guardado [id], que ya no tiene tarea.
   Future<void> discard(String id) async {
@@ -63,9 +97,10 @@ class AttachmentJanitor {
   void release(String id) => registry.remove(id);
 
   /// Borra los adjuntos que no pertenecen a ninguna tarea y todas las
-  /// preparaciones, salvo las importaciones en curso (CA-007-16). También los
-  /// de una tarea completada o eliminada si la app murió antes de `discard`,
-  /// y los que deja la migración a v2 (ADR-0012).
+  /// preparaciones, salvo las importaciones en curso (CA-007-16) y las
+  /// eliminaciones que aún se pueden deshacer (ADR-0021). También los de una
+  /// tarea completada o eliminada si la app murió antes de `discard` o de
+  /// `discardHeld` (CA-014-13), y los que deja la migración a v2 (ADR-0012).
   Future<void> sweep() async {
     final active = registry.active;
     // Primero el disco y después la BD: lo que se guarde entre medias no está
@@ -74,11 +109,19 @@ class AttachmentJanitor {
     final staging = await store.stagingIds();
     final known = await repository.attachmentIds();
     // Protegidas: las activas al empezar (que pueden haberse guardado ya y no
-    // estar en `known`) y las que empiecen durante el barrido.
+    // estar en `known`), las que empiecen durante el barrido y las retenidas.
     bool protected(String id) =>
-        active.contains(id) || registry.active.contains(id);
+        active.contains(id) ||
+        registry.active.contains(id) ||
+        _held.contains(id);
     for (final id in stored) {
-      if (!known.contains(id) && !protected(id)) await discard(id);
+      if (known.contains(id) || protected(id)) continue;
+      // Justo antes de borrar, otra vez la BD: una tarea eliminada y recuperada
+      // mientras el barrido avanza ya no está retenida, pero sí en la BD
+      // (deshacer guarda antes de soltar). Por eso, la protección primero y la
+      // BD después: al revés, una recuperación entre las dos se perdería.
+      if (await _inDatabase(id)) continue;
+      await discard(id);
     }
     for (final name in staging) {
       // La cámara escribe `<id>.camera` junto a la preparación `<id>`.
@@ -89,6 +132,16 @@ class AttachmentJanitor {
           // Ídem.
         }
       }
+    }
+  }
+
+  /// ¿Tiene fila el adjunto [id]? Una consulta por candidato (son pocos). Si
+  /// no se puede leer, se deja para otro barrido.
+  Future<bool> _inDatabase(String id) async {
+    try {
+      return (await repository.attachmentIds()).contains(id);
+    } on Object {
+      return true;
     }
   }
 }

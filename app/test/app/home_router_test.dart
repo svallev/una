@@ -1,6 +1,7 @@
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
+import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/color_picker.dart';
 import 'package:app/domain/entities/license_package.dart';
@@ -11,6 +12,7 @@ import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
 import 'package:app/features/menu/menu_sheet.dart';
@@ -26,6 +28,8 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../features/task_list/list_harness.dart' show FakeClock, background;
+import '../support/app_harness.dart';
+import '../support/attachments.dart';
 import '../support/pump_app.dart';
 
 class _FakeClock implements Clock {
@@ -83,6 +87,17 @@ Future<InMemoryTaskRepository> _pumpApp(
   );
   await tester.pump();
   return repo;
+}
+
+/// Un almacén que, mientras "el proceso está muerto", no borra nada: lo que
+/// pasaría si el sistema mata la app con una eliminación por deshacer.
+class _KillableStore extends MemoryAttachmentStore {
+  bool dead = false;
+
+  @override
+  Future<void> delete(String id) async {
+    if (!dead) await super.delete(id);
+  }
 }
 
 /// Los tres niveles de la Configuración (spec 012) y cómo llegar a cada uno
@@ -496,4 +511,49 @@ void main() {
       },
     );
   }
+
+  testWidgets('CA-014-13: si la app muere con la card a la vista, al abrir de '
+      'nuevo no hay card ni tarea eliminada y el barrido borra sus archivos', (
+    tester,
+  ) async {
+    final store = _KillableStore();
+    final repo = InMemoryTaskRepository();
+    final attachment = await store.commit(
+      stageImage(store, 'a1'),
+      DateTime.utc(2026, 9, 20),
+    );
+    final base = sampleTask(id: 't1', text: 'Horario', rank: 'MB');
+    await repo.insert(base.withContent('Horario', attachment, base.updatedAt));
+    await repo.insert(sampleTask(id: 't2', text: 'Siguiente', rank: 'MC'));
+    final overrides = [attachmentStoreProvider.overrideWithValue(store)];
+    await pumpUnaApp(tester, repo: repo, overrides: overrides);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(UnaMotion.crumple);
+    await tester.pump(const Duration(milliseconds: 32));
+    expect(find.byType(UndoCard), findsOneWidget);
+    expect(await repo.findById('t1'), isNull);
+    // Mientras se puede deshacer, los archivos siguen en el disco.
+    expect(await store.storedIds(), {'a1'});
+
+    // El sistema mata el proceso: no corre nada más (ni el borrado al cerrar).
+    store.dead = true;
+    await tester.pumpWidget(const SizedBox());
+    store.dead = false;
+    expect(await store.storedIds(), {'a1'});
+
+    await pumpUnaApp(tester, repo: repo, overrides: overrides);
+    expect(find.byType(UndoCard), findsNothing);
+    expect(find.text('Siguiente'), findsOneWidget);
+    expect(find.text('Horario'), findsNothing);
+    // El barrido va tras el primer fotograma (CA-001-09).
+    expect(await store.storedIds(), {'a1'});
+    await tester.pump(UnaApp.sweepDelay);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(await store.storedIds(), isEmpty);
+  });
 }

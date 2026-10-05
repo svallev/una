@@ -61,6 +61,31 @@ void main() {
     await _golden(tester, 'task_list_move_es');
   }, skip: _skip);
 
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('CA-014-02, CA-014-03: listado con la card de deshacer '
+        '(texto ×$scale)', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await openList(tester, tasks: _tasks, repo: InMemoryTaskRepository());
+      await tester.tap(
+        find
+            .descendant(
+              of: rowOf('Comprar pan').first,
+              matching: find.byWidgetPredicate(
+                (w) =>
+                    w is CustomPaint &&
+                    w.painter.runtimeType.toString() == '_UnaIconPainter',
+              ),
+            )
+            .last,
+      );
+      await tester.pump();
+      // La card ya entró (0,22 s) y la barra está llena.
+      await tester.pump(const Duration(milliseconds: 300));
+      await _golden(tester, 'task_list_undo_es_x$scale');
+    }, skip: _skip);
+  }
+
   testWidgets('CA-006-15: fila resaltada al crearla', (tester) async {
     await openList(tester, tasks: _tasks.take(3).toList());
     await tester.tap(find.text('Nueva tarea'));

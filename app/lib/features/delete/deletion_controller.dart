@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/delete_current_task.dart';
 import '../complete/completion_controller.dart';
+import 'undo_controller.dart';
 
 /// Fases de eliminar la tarea actual (spec 004):
 /// - `deleting`: se guarda y la tarea sigue en pantalla;
@@ -46,8 +47,16 @@ class DeletionController extends Notifier<DeletionState> {
   /// arrugado. Devuelve null si ya había una eliminación o una compleción en
   /// curso. Si falla al guardar, vuelve a `idle` y relanza el error
   /// (CA-004-13).
+  ///
+  /// La eliminación anterior, si aún se podía deshacer, pasa a ser definitiva
+  /// **antes** de escribir, también si luego falla (CA-014-08, CA-014-22). La
+  /// de [task] queda retenida en [UndoController] hasta que la card
+  /// desaparezca (ADR-0021).
   Future<DeletionResult?> delete(Task task) async {
     if (state.busy || ref.read(completionProvider).busy) return null;
+    final undo = ref.read(undoProvider.notifier);
+    undo.commit();
+    final epoch = undo.epoch;
     final generation = state.generation;
     state = DeletionState(
       DeletionPhase.deleting,
@@ -61,6 +70,9 @@ class DeletionController extends Notifier<DeletionState> {
       state = DeletionState(DeletionPhase.idle, generation: generation);
       rethrow;
     }
+    // La card espera al final del arrugado; si la app pasó a segundo plano
+    // mientras se guardaba, la eliminación ya es definitiva y no hay card.
+    undo.hold(result.deleted, host: UndoHost.home, epoch: epoch);
     state = DeletionState(
       DeletionPhase.crumpling,
       task: result.deleted,
@@ -73,11 +85,33 @@ class DeletionController extends Notifier<DeletionState> {
     return result;
   }
 
-  /// Fin del arrugado: ya se ve la siguiente tarea (o "Todo hecho.").
+  /// Fin del arrugado: ya se ve la siguiente tarea (o "Todo hecho.") y,
+  /// encima, la card de deshacer, a la que va el foco (CA-014-01, CA-014-16).
+  /// Si la eliminación ya es definitiva (segundo plano, otra acción), no hay
+  /// card y el foco va a la tarea o al título, como antes.
   void finish() {
     if (!state.busy) return;
     state = DeletionState(DeletionPhase.idle, generation: state.generation);
-    // El foco va a la nueva tarea o a "Todo hecho." (CA-004-11).
+    _showCardOrFocus();
+  }
+
+  void _showCardOrFocus() {
+    final undo = ref.read(undoProvider.notifier);
+    if (ref.read(undoProvider).phase == UndoPhase.crumpling) {
+      undo.show();
+    } else {
+      ref.read(screenFocusProvider.notifier).signal();
+    }
+  }
+
+  /// La app pasa a segundo plano durante el arrugado: termina ya, sin card
+  /// (pasar a segundo plano hace definitiva la eliminación, CA-014-11); al
+  /// volver se ve la siguiente sin repetir la animación (CA-004-03,
+  /// CL-014-15). Mientras aún se guarda no hace nada: `delete` lo termina al
+  /// acabar, y así no se puede empezar otra eliminación entre medias.
+  void finishNow() {
+    if (state.phase != DeletionPhase.crumpling) return;
+    state = DeletionState(DeletionPhase.idle, generation: state.generation);
     ref.read(screenFocusProvider.notifier).signal();
   }
 }

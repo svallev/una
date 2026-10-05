@@ -16,7 +16,9 @@ import '../../ui/brutal_button.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/una_icons.dart';
 import '../attachments/task_labels.dart';
-import '../delete/delete_confirm_sheet.dart';
+import '../delete/delete_task_action.dart';
+import '../delete/undo_card.dart';
+import '../delete/undo_controller.dart';
 import '../editor/task_editor_screen.dart';
 import '../web/edit_web_task.dart';
 import 'move_sheet.dart';
@@ -55,17 +57,24 @@ Future<void> openTaskList(BuildContext context, WidgetRef ref) async {
 /// Listado de la cola (prototipo, pantalla 5): cabecera, ayuda, filas
 /// reordenables y "Nueva tarea".
 class TaskListScreen extends ConsumerStatefulWidget {
-  const TaskListScreen({super.key, required this.initial});
+  const TaskListScreen({super.key, required this.initial, this.restored});
 
   /// La cola leída al abrir; se usa hasta que llega la de la BD.
   final List<Task> initial;
 
+  /// Al deshacer desde "Todo hecho." se abre otra vez el listado con la tarea
+  /// recuperada: se resalta, se lleva a la vista y recibe el foco cuando ya se
+  /// ve (CA-014-10, CA-014-18).
+  final Task? restored;
+
   /// Como en el prototipo, el listado aparece y desaparece sin transición.
-  static Route<void> route(List<Task> initial) => PageRouteBuilder<void>(
-    transitionDuration: Duration.zero,
-    reverseTransitionDuration: Duration.zero,
-    pageBuilder: (_, _, _) => TaskListScreen(initial: initial),
-  );
+  static Route<void> route(List<Task> initial, {Task? restored}) =>
+      PageRouteBuilder<void>(
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (_, _, _) =>
+            TaskListScreen(initial: initial, restored: restored),
+      );
 
   /// Con la escala de texto a partir de aquí, la cabecera y la ayuda se
   /// desplazan con la lista (DEV-34).
@@ -140,6 +149,29 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   /// Última petición de foco ya atendida (CA-006-17).
   int _handledFocus = 0;
 
+  /// Foco de teclado de "Deshacer": vive aquí para que no se pierda al pasar
+  /// la card de una eliminación a la siguiente (CA-014-08).
+  final _undoFocus = FocusNode(debugLabel: 'undo-list');
+
+  /// La card de la eliminación anterior, mientras se guarda la siguiente: se
+  /// queda a la vista sin volver a entrar (CA-014-08).
+  ({Task task, int serial})? _bridge;
+
+  /// Hay una eliminación guardándose: no empieza otra a la vez.
+  bool _deleting = false;
+
+  /// Cuándo se empezó la última eliminación: un segundo toque en menos de
+  /// 350 ms sobre los botones de la fila que sube no hace nada (CL-014-2).
+  DateTime? _lastDelete;
+
+  /// Fila que ocupa el lugar de la última eliminada: si la card desaparece con
+  /// el foco del teclado en ella, el foco va allí (CA-014-20).
+  String? _focusAfterCard;
+
+  /// Se va a "Todo hecho." con la card: la card se lleva el foco y la señal de
+  /// foco de pantalla no compite (CA-014-16).
+  bool _leaving = false;
+
   static const _gap = UnaSpace.sm;
 
   List<Task> get _tasks => ref.read(taskListProvider).tasks ?? widget.initial;
@@ -149,6 +181,14 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     super.initState();
     // Un arrastre interrumpido no guarda nada (CA-006-11).
     _lifecycle = AppLifecycleListener(onHide: _cancelDrag);
+    final restored = widget.restored;
+    if (restored != null) {
+      // El listado se abre al deshacer desde "Todo hecho.": la fila recuperada
+      // ya está, falta resaltarla, llevarla a la vista y darle el foco.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_restoredHere(restored, newRoute: true));
+      });
+    }
   }
 
   @override
@@ -159,6 +199,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     _tapTimer?.cancel();
     _scroll.dispose();
     _newTaskFocus.dispose();
+    _undoFocus.dispose();
     _pointerY.dispose();
     super.dispose();
   }
@@ -215,6 +256,14 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   /// Lo que tarda en cerrarse una hoja.
   static const _sheetClosed = UnaMotion.sheetOut;
 
+  /// Tras quitarse la card con el foco del lector en ella, TalkBack tarda en
+  /// soltarlo: el aviso de foco a la fila recuperada espera a que pase.
+  static const _cardGone = UnaMotion.sheetOut;
+
+  /// Al abrirse el listado como ruta nueva, TalkBack enfoca el primer nodo
+  /// cuando ya ha cambiado la ventana: el foco a la fila espera más.
+  static const _newRouteSettled = Duration(milliseconds: 600);
+
   /// Lo que tarda en cerrarse el editor (`TaskEditorScreen.route`).
   Duration get _editorClosed =>
       _reduced ? UnaMotion.reducedMotionFade : UnaMotion.sheetOut;
@@ -254,6 +303,29 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       return;
     }
     if (index == 0) return go(0);
+    if (index < tasks.length - 1) {
+      // Una fila intermedia que no está construida (se deshizo desde lejos):
+      // se salta a donde debería estar y se afina cuando ya existe.
+      final known = _heights.values;
+      final average = known.isEmpty
+          ? 0.0
+          : known.reduce((a, b) => a + b) / known.length;
+      final max = _scroll.position.maxScrollExtent;
+      _scroll.jumpTo((index * (average + _gap)).clamp(0.0, max));
+      for (var i = 0; i < 4 && mounted && _scroll.hasClients; i++) {
+        await WidgetsBinding.instance.endOfFrame;
+        final built = _slotKeys[id]?.currentContext;
+        if (built != null && built.mounted) {
+          await Scrollable.ensureVisible(
+            built,
+            alignment: 0.5,
+            duration: Duration.zero,
+          );
+          return;
+        }
+      }
+      return;
+    }
     // Abajo del todo: la lista es perezosa y el final se conoce al llegar.
     await go(_scroll.position.maxScrollExtent);
     for (var i = 0; i < 4 && mounted && _scroll.hasClients; i++) {
@@ -270,6 +342,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   /// Mueve [task] a [to] (0 = actual) por cualquier vía: arrastre, "Mover" o
   /// acción del lector (CA-006-04/08/16).
   Future<void> _move(Task task, int to, {bool afterSheet = false}) async {
+    // Reordenar hace definitiva la eliminación (CA-014-11): "es una
+    // interacción que indica que ya no quiero deshacer".
+    ref.read(undoProvider.notifier).commit();
     final l10n = AppLocalizations.of(context);
     // Arriba del todo: la lista sube en el mismo fotograma en que cambia el
     // orden, para que la fila se reutilice (misma fila para el lector) en
@@ -330,6 +405,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     final row = rowContext.findRenderObject() as RenderBox?;
     if (from < 1 || area == null || row == null || !_scroll.hasClients) return;
     _tapId = null; // Un toque seguido de arrastre no edita (CL-006-7).
+    ref.read(undoProvider.notifier).commit(); // Levantar la hace definitiva.
     final known = _heights.values;
     final average = known.isEmpty
         ? row.size.height
@@ -475,61 +551,134 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     if (mounted) _focusRow(task.id, after: _editorClosed);
   }
 
-  /// [byTouch]: desde el botón de la fila con el dedo. Solo entonces la hoja
-  /// ignora el segundo toque de un doble toque (CL-006-5); con el lector o el
-  /// teclado responde desde el principio.
-  Future<void> _delete(Task task, {bool byTouch = false}) async {
-    if (_drag != null) return;
-    final confirmed = await showDeleteConfirmSheet(
-      context,
-      label: taskLabel(AppLocalizations.of(context), task),
-      ignoreEarlyTaps: byTouch,
-    );
-    if (!mounted) return;
-    if (confirmed != true) {
-      _focusRow(task.id, after: _sheetClosed);
-      return;
-    }
-    await _deleteConfirmed(task);
-  }
-
-  /// Sin arrugado (CA-006-14): la fila desaparece y las de debajo suben.
-  Future<void> _deleteConfirmed(Task task) async {
+  /// Elimina [task] sin confirmación (CA-014-02, CA-014-19): la fila
+  /// desaparece sin animación y las de debajo suben; la card de deshacer
+  /// aparece a la vez, en el sitio de "Nueva tarea". Si era la última
+  /// pendiente, se va a "Todo hecho." con la card (CA-014-10).
+  ///
+  /// La eliminación anterior pasa a ser definitiva **antes** de escribir
+  /// (CA-014-08, CA-014-22); su card se queda a la vista mientras tanto, sin
+  /// volver a entrar.
+  Future<void> _delete(Task task) async {
+    if (_drag != null || _deleting) return;
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
+    final undo = ref.read(undoProvider.notifier);
     final before = _tasks;
     final index = before.indexWhere((t) => t.id == task.id);
+    _deleting = true;
+    _lastDelete = ref.read(clockProvider).now();
+    final shown = ref.read(undoProvider);
+    if (shown.cardVisible && shown.host == UndoHost.list) {
+      _bridge = (task: shown.task!, serial: shown.serial);
+    }
+    undo.commit();
+    final epoch = undo.epoch;
     try {
       final result = await ref.read(taskListProvider.notifier).delete(task.id);
-      if (!mounted) return;
-      messenger?.hideCurrentSnackBar();
-      if (result.remaining == 0) {
-        // "Todo hecho." y el listado deja de existir (CL-006-3).
-        _announce(l10n.a11yDeletedAllDone, afterSheet: true);
-        Navigator.of(context).popUntil((r) => r.isFirst);
-        return;
-      }
+      final last = result.remaining == 0;
       final rest = [
         for (final t in before)
           if (t.id != task.id) t,
       ];
-      final target = rest[math.min(math.max(index, 0), rest.length - 1)];
-      _focusRow(target.id, after: _sheetClosed);
-      final next = result.next;
-      _announce(
-        result.wasCurrent && next != null
-            ? l10n.a11yDeletedNext(taskLabel(l10n, next))
-            : l10n.a11yDeletedFromList(result.remaining),
-        afterSheet: true,
+      _focusAfterCard = rest.isEmpty
+          ? null
+          : rest[math.min(math.max(index, 0), rest.length - 1)].id;
+      final held = undo.hold(
+        result.deleted,
+        host: last ? UndoHost.home : UndoHost.list,
+        epoch: epoch,
+        returnTo: last ? UndoHost.list : null,
       );
+      if (!mounted) {
+        // La pantalla se cerró mientras se guardaba: sin dónde mostrar la
+        // card, es definitiva.
+        undo.commit();
+        return;
+      }
+      messenger?.hideCurrentSnackBar();
+      if (last) {
+        // "Todo hecho." con la card y el listado deja de existir (CL-006-3);
+        // ir allí no hace definitiva la eliminación (guarda de un solo uso).
+        _leaving = held;
+        if (route == null) {
+          navigator.popUntil((r) => r.isFirst);
+        } else {
+          undo.guardNavigation(
+            route,
+            () => navigator.popUntil((r) => r.isFirst),
+          );
+        }
+      }
     } on TaskNotPending {
       messenger?.hideCurrentSnackBar();
     } on Object catch (e) {
       if (!mounted) return;
       _showError(
         isNoSpaceError(e) ? l10n.storageErrorNoSpace : l10n.deleteError,
-        () => _deleteConfirmed(task),
+        () => _delete(task),
       );
+    } finally {
+      _deleting = false;
+      if (mounted && _bridge != null) setState(() => _bridge = null);
+    }
+  }
+
+  /// Un toque sobre los botones de la fila, justo después de eliminar, no hace
+  /// nada (CL-014-2).
+  bool _touchBlocked() {
+    final at = _lastDelete;
+    return at != null &&
+        ref.read(clockProvider).now().difference(at) <
+            UnaMotion.doubleTapWindow;
+  }
+
+  /// "Deshacer" de la card del listado (CA-014-09): el listado resalta la fila
+  /// recuperada, la lleva a la vista y le da el foco.
+  void _undoDeletion() => unawaited(
+    undoDeletion(
+      context,
+      ref,
+      onListRestored: (task) => _restoredHere(task, newRoute: false),
+    ),
+  );
+
+  /// La fila [task] ya está de vuelta (CA-014-10, CA-014-18): resaltada, a la
+  /// vista y con el foco, y un único anuncio cuando ya se ve. Si el listado es
+  /// una ruta nueva ([newRoute]), el lector la toma por un cambio de ventana:
+  /// el foco y el anuncio esperan a que pase.
+  Future<void> _restoredHere(Task task, {required bool newRoute}) async {
+    final l10n = AppLocalizations.of(context);
+    await _untilListed(task.id);
+    if (!mounted) return;
+    ref.read(taskListProvider.notifier).flash(task.id);
+    _focusRow(task.id, after: newRoute ? _newRouteSettled : _cardGone);
+    _announce(l10n.a11yUndone, afterSheet: true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (mounted) await _reveal(task.id);
+  }
+
+  /// La BD avisa un instante después de insertar: hasta que la fila está en la
+  /// cola que se ve, no hay nada que resaltar.
+  Future<void> _untilListed(String id) async {
+    bool listed() => _tasks.any((t) => t.id == id);
+    if (listed()) return;
+    final done = Completer<void>();
+    void finish() {
+      if (!done.isCompleted) done.complete();
+    }
+
+    final sub = ref.listenManual(taskListProvider, (_, _) {
+      if (listed()) finish();
+    });
+    final timer = Timer(const Duration(seconds: 1), finish);
+    try {
+      await done.future;
+    } finally {
+      sub.close();
+      timer.cancel();
     }
   }
 
@@ -614,6 +763,29 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         MediaQuery.textScalerOf(context).scale(1) >=
         TaskListScreen.scrollHeaderFromTextScale;
     final drag = _drag;
+    final undoState = ref.watch(undoProvider);
+    final undo = ref.read(undoProvider.notifier);
+    // La card de deshacer ocupa el sitio de "Nueva tarea" mientras la
+    // eliminación es de este listado (CA-014-05); entre una eliminación y la
+    // siguiente se queda la anterior (CA-014-08).
+    final own = undoState.cardVisible && undoState.host == UndoHost.list;
+    final bridge = _bridge;
+    final cardTask = own ? undoState.task : bridge?.task;
+    final cardSerial = own ? undoState.serial : bridge?.serial;
+    // Si la card desaparece con el foco del teclado en ella, el foco va a la
+    // fila que ocupa el lugar de la eliminada (CA-014-20).
+    ref.listen(undoProvider, (previous, next) {
+      if (previous != null &&
+          previous.cardVisible &&
+          previous.host == UndoHost.list &&
+          next.phase == UndoPhase.none &&
+          !_deleting &&
+          _undoFocus.hasFocus &&
+          ModalRoute.of(context)?.isCurrent != false) {
+        final id = _focusAfterCard;
+        if (id != null) _focusRow(id);
+      }
+    });
 
     // Con texto grande, la ayuda pasa a la lista y aquí queda solo la fila
     // de la flecha y el título (DEV-34).
@@ -659,7 +831,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           actions: actions,
           onEdit: () => _edit(task),
           onDelete: () => _delete(task),
-          onDeleteTap: () => _delete(task, byTouch: true),
+          touchBlocked: _touchBlocked,
           onMove: first ? null : () => _openMove(task),
           focusNode: focusNode,
           semanticsKey: semanticsKey,
@@ -783,7 +955,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       // Al volver (botón, gesto atrás o tras eliminar la última), el foco va
       // a la tarea actual o a "Todo hecho." (CA-006-03, CA-006-17).
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) ref.read(screenFocusProvider.notifier).signal();
+        // Al eliminar la última, la card de "Todo hecho." se lleva el foco
+        // (CA-014-16): la señal de pantalla no compite con ella.
+        if (didPop && !_leaving) {
+          ref.read(screenFocusProvider.notifier).signal();
+        }
       },
       child: Scaffold(
         backgroundColor: UnaColors.paper,
@@ -804,12 +980,27 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     child: area,
                   ),
                 ),
-                _Bottom(
-                  label: l10n.listNewTask,
-                  focusNode: _newTaskFocus,
-                  semanticsKey: _newTaskSemantics,
-                  onPressed: _create,
-                ),
+                if (cardTask != null && cardSerial != null)
+                  UndoCard(
+                    task: cardTask,
+                    serial: cardSerial,
+                    fraction: () => own ? undo.fraction : 1.0,
+                    onUndo: _undoDeletion,
+                    onShown: undo.cardShown,
+                    screenReaderFor: undo.screenReaderFor,
+                    onFocusChanged: undo.focusChanged,
+                    onScreenReaderChanged: undo.screenReaderChanged,
+                    focusNode: _undoFocus,
+                    sortKey: const OrdinalSortKey(_Order.undo),
+                    requestsFocus: true,
+                  )
+                else
+                  _Bottom(
+                    label: l10n.listNewTask,
+                    focusNode: _newTaskFocus,
+                    semanticsKey: _newTaskSemantics,
+                    onPressed: _create,
+                  ),
               ],
             ),
           ),
@@ -823,6 +1014,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 /// "Volver". El título va primero: TalkBack enfoca el primer elemento de la
 /// pantalla (lección de la spec 004).
 abstract final class _Order {
+  /// La card de deshacer, mientras se ve: la primera (CA-014-16).
+  static const undo = -1.0;
   static const title = 0.0;
   static const help = 1.0;
   static const list = 2.0;

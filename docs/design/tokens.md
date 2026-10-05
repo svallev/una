@@ -23,14 +23,14 @@ flowchart LR
 
 | Grupo | Contenido | Notas |
 |---|---|---|
-| `color` | ink, paper, line, surface, textMuted, disabled, error, dangerFill, paperFiber, onInk, scrim, placeholder, pressed, selection | `error #B3241A` para texto; `dangerFill #FF5A4E` para el botón Eliminar (texto en ink) |
+| `color` | ink, paper, line, surface, textMuted, disabled, error, dangerFill, paperFiber, onInk, onInkMuted, undoTrack, scrim, placeholder, pressed, selection | `error #B3241A` para texto; `dangerFill #FF5A4E` para el botón Eliminar (texto en ink). `onInkMuted #D9D6CF` (etiqueta) y `undoTrack #3A3936` (pista de la barra de tiempo), de la card de deshacer (spec 014) |
 | `palette` | `classic` (por defecto), `neon`, `mono` × 5 índices | Una tarea nueva nunca repite el color de la tarea actual |
 | `font` | Archivo (500–900), Space Mono (400/700); tamaños; interletrado; cortes de longitud de nota | Las fuentes se **empaquetan** (licencia OFL); nunca se cargan de Google Fonts. **[Hecho]** `app/assets/fonts/`, desde github.com/google/fonts @ `23e54b51`: Archivo variable (ejes wght y wdth; `FontWeight` fija el grosor), Space Mono 400/700 |
 | `space` | 2 · 4 · 8 · 12 · 16 · 20 · 24 · 28 · 40 | 24 es el margen lateral |
-| `size` | objetivo táctil de 44, icono de 22, trazo de 2,4, ancho máximo del contenido de 600 (tablets, CL-001-7) | En Android se usan 48 dp por las pautas de Material |
-| `border` | ancho de 3, radio de 0; anillo de foco de 3 desplazado 3 (teclado e interruptores) | |
+| `size` | objetivo táctil de 44, icono de 22, trazo de 2,4, ancho máximo del contenido de 600 (tablets, CL-001-7); card de deshacer: 112 de contenido + barra de 6, botón de 44 y entrada de 24, separaciones de 14 y 3, relleno de 14 del botón, icono "deshacer" de 18 con trazo de 2,8 y desplazamiento de 2 al pulsar (spec 014) | En Android se usan 48 dp por las pautas de Material ("Deshacer" se ve de 44 y su zona táctil mide 48) |
+| `border` | ancho de 3, radio de 0; anillo de foco de 3 desplazado 3 (teclado e interruptores); borde de 2 de "Deshacer" (spec 014) | |
 | `shadow` | sombras duras sin desenfoque: 5/1 (botón), 3 (icono), 4/10/9 (listado) | |
-| `motion` | duraciones y curvas del prototipo | Con "reducir movimiento": fundido de 400 ms |
+| `motion` | duraciones y curvas del prototipo; card de deshacer: `undoWindow` 4 s, `undoWindowLegacyA11y` 10 s (Android 8 y 9 con un servicio de accesibilidad, ADR-0021), tope `undoWindowMax` de 10 min y entrada `undoEnter` de 220 ms con la curva `sheet`, y la etiqueta en dos líneas desde la escala de texto 1,3 (`undoLabelTwoLinesTextScale`) (spec 014) | Con "reducir movimiento": fundido de 400 ms. El tiempo de la card **no** cambia con "reducir movimiento" ni con "Quitar animaciones" (CA-014-06) |
 
 ## Tamaño del texto de la tarea
 
@@ -50,10 +50,13 @@ Se multiplica por el `textScaler` del sistema con un **límite de ×1,6** para l
 | error sobre paper / surface | 5,85 / 6,60 | AA |
 | ink sobre dangerFill | 6,14 | AA |
 | onInk sobre ink | 18,88 | AA |
+| onInkMuted sobre ink (etiqueta de la card de deshacer, spec 014) | 13,01 | AA |
 | placeholder 0,42 (prototipo) | 2,30 – 2,75 | **Falla** → se sube a **0,66** (≥ 4,59) |
+
+**No textual (WCAG 1.4.11, ≥ 3:1), calculado el 2026-10-04:** la barra de tiempo de la card de deshacer es del color de la nota eliminada sobre `undoTrack`: 6,02 – 9,14 con `classic`, 4,47 – 10,57 con `neon` y 9,14 con `mono`. La pista contra `ink` (1,64) es decorativa.
 
 `line` y `disabled` no transmiten información por sí solos: los controles siempre tienen borde `ink`.
 
 ## Validación
 
-- La skill `/tokens-validate` y un test de CI comprueban que el JSON es válido, que están todos los grupos obligatorios, que el contraste de la tabla anterior se cumple y que el archivo generado está sincronizado.
+- La skill `/tokens-validate` y un test de CI comprueban que el JSON es válido, que están todos los grupos obligatorios, que el contraste de la tabla anterior se cumple (texto ≥ 4,5:1; la barra de la card de deshacer sobre su pista, ≥ 3:1 con todas las paletas) y que el archivo generado está sincronizado. **[Hecho]** (T-014-01) El validador falla si se oscurece `onInkMuted` (`#555555`: 2,53) o se aclara `undoTrack` (`#C8C8C8`: 1,02 – 1,54).

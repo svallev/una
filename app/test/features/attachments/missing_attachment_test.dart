@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:app/app/providers.dart';
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
@@ -12,7 +13,7 @@ import 'package:app/features/attachments/missing_attachment_card.dart';
 import 'package:app/features/attachments/pdf_strip.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
-import 'package:app/features/delete/delete_confirm_sheet.dart';
+import 'package:app/features/delete/undo_card.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:app/ui/una_icons.dart';
 import 'package:flutter/material.dart';
@@ -180,8 +181,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('sin texto: "Eliminar tarea" con la confirmación de '
-        'CA-004-01', (tester) async {
+    testWidgets('CA-014-01, CA-007-19: sin texto, "Eliminar tarea" elimina sin '
+        'confirmación y la card dice "Foto"', (tester) async {
       final handle = tester.ensureSemantics();
       await repo.insert(await imageTask(text: null));
       store.removeFile('a1', 'full-0-0.jpg');
@@ -192,8 +193,15 @@ void main() {
         findsOneWidget,
       );
       await tester.tap(find.text('Eliminar tarea'));
-      await tester.pumpAndSettle();
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(await repo.currentTask(), isNull);
+      await tester.pump(UnaMotion.crumple);
+      await tester.pump(const Duration(milliseconds: 32));
+      expect(
+        find.descendant(of: find.byType(UndoCard), matching: find.text('Foto')),
+        findsOneWidget,
+      );
       handle.dispose();
     });
 
@@ -305,8 +313,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('sin texto: se lee con el nombre y la acción es "Eliminar '
-        'tarea", con la confirmación', (tester) async {
+    testWidgets('CA-014-01, CA-008-18: sin texto, se lee con el nombre y '
+        '"Eliminar tarea" elimina sin confirmación', (tester) async {
       final handle = tester.ensureSemantics();
       await repo.insert(await pdfTask(text: null));
       store.removeFile('p1', 'document.pdf');
@@ -319,8 +327,18 @@ void main() {
       );
       expect(find.text('Quitar adjunto'), findsNothing);
       await tester.tap(find.text('Eliminar tarea'));
-      await tester.pumpAndSettle();
-      expect(find.byType(DeleteConfirmSheet), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(await repo.currentTask(), isNull);
+      await tester.pump(UnaMotion.crumple);
+      await tester.pump(const Duration(milliseconds: 32));
+      expect(
+        find.descendant(
+          of: find.byType(UndoCard),
+          matching: find.text('Programa.pdf'),
+        ),
+        findsOneWidget,
+      );
       handle.dispose();
     });
 
@@ -462,5 +480,34 @@ void main() {
     testWidgets('uno correcto, no', (tester) async {
       expect(await pumpViewer(tester, 'one_page.pdf'), 0);
     });
+  });
+
+  testWidgets('CL-014-10: deshacer una tarea con "Adjunto no disponible" la '
+      'devuelve igual, con la misma tarjeta', (tester) async {
+    await repo.insert(await imageTask(text: null));
+    store.removeFile('a1', 'full-0-0.jpg');
+    await pump(tester);
+    expect(find.byType(MissingAttachmentCard), findsOneWidget);
+    await tester.tap(find.text('Eliminar tarea'));
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(UnaMotion.crumple);
+    await tester.pump(const Duration(milliseconds: 32));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await repo.currentTask(), isNull);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(UndoCard),
+        matching: find.byKey(UndoCard.buttonKey),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(UnaMotion.sheetOut * 2);
+    await tester.pumpAndSettle();
+
+    expect((await repo.currentTask())!.attachment!.id, 'a1');
+    expect(find.byType(MissingAttachmentCard), findsOneWidget);
+    expect(find.text('Eliminar tarea'), findsOneWidget);
+    expect(find.byType(UndoCard), findsNothing);
   });
 }

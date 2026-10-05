@@ -1,6 +1,6 @@
 # ADR-0012: Sin histórico: completar y eliminar borran la tarea del todo
 
-- **Estado:** Aceptado (propietario, 2026-09-26)
+- **Estado:** Aceptado (propietario, 2026-09-26). Sustituido en parte por ADR-0021 (2026-10-04): solo el momento del borrado (deshacer de 4 s); lo demás sigue vigente
 - **Fecha:** 2026-09-26
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
 - **Relacionado:** sustituye a ADR-0011 (la marca de borrado) y a las decisiones D7 (en parte) y D8, y a la regla R14; specs 001, 003, 004 y 007; ADR-0002; ADR-0004

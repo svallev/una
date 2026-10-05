@@ -41,6 +41,12 @@ abstract final class UnaColors {
   /// Texto sobre ink (etiquetas, pantalla de enhorabuena)
   static const Color onInk = Color(0xFFFFFFFF);
 
+  /// Texto secundario sobre ink: etiqueta de la tarea en la card de deshacer (prototipo, Space Mono 11). 13,0:1 sobre ink (spec 014, CA-014-03)
+  static const Color onInkMuted = Color(0xFFD9D6CF);
+
+  /// Pista de la barra de tiempo de la card de deshacer (prototipo). La barra, del color de la nota, contrasta con ella al menos 3:1 (no textual; validate-tokens lo comprueba). CA-014-03
+  static const Color undoTrack = Color(0xFF3A3936);
+
   /// Velo bajo las hojas inferiores
   static const Color scrim = Color(0x8C111111);
 
@@ -241,6 +247,16 @@ abstract final class UnaSizes {
   static const double webBarIcon = 12.0;
   static const double removeAttachmentIcon = 14.0;
   static const double removeAttachmentStroke = 3.4;
+  static const double undoCard = 112.0;
+  static const double undoBar = 6.0;
+  static const double undoButton = 44.0;
+  static const double undoEnterOffset = 24.0;
+  static const double undoGap = 14.0;
+  static const double undoTextGap = 3.0;
+  static const double undoButtonPadX = 14.0;
+  static const double undoButtonPress = 2.0;
+  static const double undoIcon = 18.0;
+  static const double undoIconStroke = 2.8;
 }
 
 abstract final class UnaBorders {
@@ -248,6 +264,7 @@ abstract final class UnaBorders {
   static const double focusWidth = 3.0;
   static const double sectionWidth = 4.0;
   static const double hairlineWidth = 1.0;
+  static const double undoButtonWidth = 2.0;
   static const double noneRadius = 0.0;
 }
 
@@ -395,6 +412,18 @@ abstract final class UnaMotion {
 
   /// Avance de la línea de carga de la tarea web entre dos valores de progreso (CA-009-06); con reducir movimiento, salta
   static const Duration webLoadingProgress = Duration(milliseconds: 200);
+
+  /// Tiempo de la card de deshacer (D20); dura más si el "Tiempo para actuar" del sistema es mayor. No cambia con reducir movimiento. CA-014-06
+  static const Duration undoWindow = Duration(milliseconds: 4000);
+
+  /// Tiempo de la card de deshacer en Android 8 y 9 (sin "Tiempo para actuar") con un servicio de accesibilidad activo (ADR-0021, excepción a P6). CA-014-06
+  static const Duration undoWindowLegacyA11y = Duration(milliseconds: 10000);
+
+  /// Tope de 10 min del tiempo de la card de deshacer, por si el sistema devuelve un valor absurdo (el ajuste llega a 2 min). Plan de la 014, §1
+  static const Duration undoWindowMax = Duration(milliseconds: 600000);
+
+  /// Entrada de la card de deshacer: sube undoEnterOffset y se funde, con la curva sheet (prototipo: undoIn .22s). CA-014-03
+  static const Duration undoEnter = Duration(milliseconds: 220);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);
@@ -410,4 +439,5 @@ abstract final class UnaMotion {
   static const double pdfZoomMax = 4.0;
   static const double pdfZoomStep = 1.5;
   static const double pdfZoomDoubleTap = 2.5;
+  static const double undoLabelTwoLinesTextScale = 1.3;
 }

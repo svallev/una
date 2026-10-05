@@ -147,39 +147,6 @@ void main() {
     },
   );
 
-  testWidgets(
-    'CA-006-17: eliminar deja el foco en la fila que ocupa su lugar; cancelar, en la misma',
-    (tester) async {
-      final handle = tester.ensureSemantics();
-      await openList(
-        tester,
-        tasks: ['Primera', 'Segunda', 'Tercera'],
-        screenReader: true,
-      );
-      await _action(tester, '2 de 3: Segunda', 'Eliminar tarea');
-      await tester.pumpAndSettle();
-      await tester.pump(UnaMotion.doubleTapWindow);
-      await tester.tap(find.text('Cancelar'));
-      await _settleFocus(tester);
-      expect(_focusedRow(), 'Segunda');
-
-      await _action(tester, '2 de 3: Segunda', 'Eliminar tarea');
-      await tester.pumpAndSettle();
-      await tester.pump(UnaMotion.doubleTapWindow);
-      await tester.tap(find.text('Eliminar').last);
-      await _settleFocus(tester);
-      expect(_focusedRow(), 'Tercera');
-
-      await _action(tester, '2 de 2: Tercera', 'Eliminar tarea');
-      await tester.pumpAndSettle();
-      await tester.pump(UnaMotion.doubleTapWindow);
-      await tester.tap(find.text('Eliminar').last);
-      await _settleFocus(tester);
-      expect(_focusedRow(), 'Primera', reason: 'era la última: la anterior');
-      handle.dispose();
-    },
-  );
-
   testWidgets('CA-006-17: tras editar, el foco vuelve a la fila', (
     tester,
   ) async {
@@ -340,24 +307,6 @@ void main() {
     expect(focusEvents, contains(row.id));
     handle.dispose();
   });
-
-  testWidgets(
-    'CL-006-5: con el lector, la confirmación responde desde el principio',
-    (tester) async {
-      final handle = tester.ensureSemantics();
-      final repo = await openList(
-        tester,
-        tasks: ['Primera', 'Segunda'],
-        screenReader: true,
-      );
-      await _action(tester, '2 de 2: Segunda', 'Eliminar tarea');
-      await tester.pumpAndSettle(); // sin esperar la ventana del doble toque
-      await tester.tap(find.text('Eliminar').last);
-      await tester.pumpAndSettle();
-      expect(await order(repo), ['Primera']);
-      handle.dispose();
-    },
-  );
 
   testWidgets(
     'CA-006-18 / CL-006-10: con texto al 200 %, el mismo orden de lectura',

@@ -10,11 +10,13 @@ import '../data/attachments/memory_attachment_store.dart';
 import '../data/licenses/flutter_license_source.dart';
 import '../data/links/native_link_opener.dart';
 import '../data/links/new_tab.dart';
+import '../data/platform/accessibility_timeouts.dart';
 import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/license_package.dart';
 import '../domain/entities/task.dart';
+import '../domain/ports/accessibility_timeouts.dart';
 import '../domain/ports/attachment_store.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
@@ -32,6 +34,7 @@ import '../domain/usecases/edit_task.dart';
 import '../domain/usecases/import_image.dart';
 import '../domain/usecases/import_pdf.dart';
 import '../domain/usecases/reorder_task.dart';
+import '../domain/usecases/restore_deleted_task.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
 final taskRepositoryProvider = Provider<TaskRepository>(
@@ -60,7 +63,9 @@ final importRegistryProvider = Provider<ImportRegistry>(
   (ref) => ImportRegistry(),
 );
 
-/// Único servicio de borrado de archivos de adjuntos (CA-007-16).
+/// Único servicio de borrado de archivos de adjuntos (CA-007-16). Uno por
+/// app: guarda en memoria qué adjuntos de eliminaciones se pueden deshacer
+/// (ADR-0021).
 final attachmentJanitorProvider = Provider<AttachmentJanitor>(
   (ref) => AttachmentJanitor(
     store: ref.watch(attachmentStoreProvider),
@@ -205,6 +210,21 @@ final deletePendingTaskProvider = Provider<DeletePendingTask>(
     repository: ref.watch(taskRepositoryProvider),
     janitor: ref.watch(attachmentJanitorProvider),
   ),
+);
+
+/// Deshacer una eliminación (CA-014-09, ADR-0021).
+final restoreDeletedTaskProvider = Provider<RestoreDeletedTask>(
+  (ref) => RestoreDeletedTask(
+    repository: ref.watch(taskRepositoryProvider),
+    janitor: ref.watch(attachmentJanitorProvider),
+  ),
+);
+
+/// "Tiempo para actuar" del sistema (CA-014-06): el canal `una/a11y` de
+/// Android, consultado al empezar cada eliminación (nunca antes del primer
+/// fotograma, P2). Sin canal (iOS, web de pruebas, tests) o con un error, 4 s.
+final accessibilityTimeoutsProvider = Provider<AccessibilityTimeouts>(
+  (ref) => const ChannelAccessibilityTimeouts(),
 );
 
 final reorderTaskProvider = Provider<ReorderTask>(

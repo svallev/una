@@ -17,6 +17,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'support/undo.dart';
+
 Future<void> _wipeDatabase() async {
   final dir = await getApplicationDocumentsDirectory();
   // Solo en las apps de pruebas (`.debug`, `.profile`).
@@ -50,13 +52,17 @@ void main() {
 
     final task = await container.read(taskRepositoryProvider).currentTask();
 
-    // Se elimina como tras confirmar (sin simular los toques) y se miden los
-    // fotogramas del arrugado.
+    // Se elimina como desde el menú (sin simular los toques) y se miden los
+    // fotogramas del arrugado hasta que aparece la card de deshacer; la
+    // barra de la card no entra en la medida (con ella `pumpAndSettle` no se
+    // asienta).
     await binding.watchPerformance(() async {
       await container.read(deletionProvider.notifier).delete(task!);
-      await tester.pumpAndSettle();
+      await pumpUntilCard(tester);
     }, reportKey: 'delete_frames');
 
     expect(find.byType(CurrentTaskScreen), findsOneWidget);
+    // La eliminación se hace definitiva al caducar la card.
+    await pumpUntilCardGone(tester);
   });
 }
