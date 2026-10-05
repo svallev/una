@@ -3,6 +3,7 @@
 - **Spec:** `specs/015-ajustes/spec.md` (estado: Aprobada, 2026-10-05)
 - **ADR aplicables:** **ADR-0023** (idioma elegido en la app; amplía la excepción de voz del ADR-0020) y **ADR-0026** (licencias de terceros solo en una web; los textos siguen dentro del paquete), ambos Aceptados el 2026-10-05; ADR-0020 (voz del sistema en los anuncios; `appFrame` marca el idioma), ADR-0016 y ADR-0018 (los enlaces no se siguen dentro de la app), ADR-0019 («Recientes»), ADR-0021 (la eliminación pendiente se confirma al abrir otra pantalla), ADR-0004 (los ajustes viajan en la copia). **Sin ADR nuevo:** el plan desarrolla los dos ya aceptados, como el ADR-0021 en la 014.
 - **Estado del plan:** **Aprobado** (propietario, 2026-10-05), con la recomendación de P-015-1 (§11); revisado por `security-reviewer`, `a11y-reviewer` y `spec-reviewer` (§12).
+- **Enmienda del propietario (2026-10-05, tras la prueba en el móvil): las tres filas de web se abren directamente, sin confirmación, sin tarjeta y sin aviso previo** (CA-015-12a enmendada en la spec). Donde este plan o `tasks.md` hablen de «confirmación de enlace», `showLinkConfirmSheet`, «Cancelar», `allowRotation`, o del foco que vuelve a la fila tras cancelar, **ya no aplica**: la secuencia es `privacyLink` → `canOpen` → `open`, con el aviso «No hay ninguna app…» solo si no hay app o `open` da `false` (sin mover el foco). La implementa T-015-07b.
 
 ## 1. Resumen del enfoque
 

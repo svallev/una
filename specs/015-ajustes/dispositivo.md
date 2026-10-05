@@ -30,3 +30,17 @@ Mismo método que en T-015-09 (emulador `Pixel_6a`, API 37, inglés, `emulator-5
 
 Notas: el *bucle* del test temporal (`tester.pump` con la app en segundo plano) no avanzó mientras Chrome estaba delante, así que el guion trajo la app al frente por tiempo (`monkey -p invalid.pending.app.debug -c android.intent.category.LAUNCHER 1`). Ajustes restaurados: TalkBack apagado (`settings delete` + `accessibility_enabled 0`), Chrome y la app detenidos, datos de la app borrados, `integration_test` temporal borrado.
 
+
+## Xiaomi del propietario: TalkBack y voz a oído (2026-10-05)
+
+Versión de depuración (`invalid.pending.app.debug`, paquete aparte, sin tocar la app real ni sus datos) instalada desde `HEAD` tras T-015-10 (sistema en español, Android 16); TalkBack activado con `settings` y el propietario recorrió el guion a oído. Sin capturas. Al terminar: TalkBack apagado, paquete de depuración desinstalado.
+
+| Casilla | Resultado | Estado |
+|---|---|---|
+| Foco al título «Ajustes» al abrir (Cerrar no lo roba) | Correcto (propietario) | [Hecho] |
+| «Idioma, Como el sistema» y la voz de «Español»/«English» (CA-015-11, camino A) con la app en español y en inglés sobre un sistema en español | Correcto (propietario): cada nombre suena con su voz | [Hecho] |
+| Interruptor «Pantalla siempre activa»: estado dicho una sola vez por toque | Correcto (propietario) | [Hecho] |
+| Filas de web: «abre una página web» en el nombre; foco al cancelar la confirmación | Correcto (propietario), **con la confirmación de entonces**; la confirmación se retira después por decisión del propietario (CA-015-12a enmendada, T-015-07b) | [Hecho] (obsoleto: sin confirmación) |
+| Foco de vuelta a «Language» tras elegir English | Correcto (propietario) | [Hecho] |
+
+Quedan sin probar en el móvil los avisos de error (guardado y «No hay ninguna app…», hacen falta fallos provocados): T-015-14 con el emulador.
