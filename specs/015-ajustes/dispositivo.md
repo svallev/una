@@ -16,3 +16,17 @@ Método (como en la 014): TalkBack activado con `settings put secure enabled_acc
 | Aviso de guardado / de enlace (anuncio único y repetición) | No probado aquí (T-015-14) | [Pendiente] T-015-14 |
 
 Al terminar: TalkBack apagado (`settings delete` + `accessibility_enabled 0`), `integration_test` temporal borrado y datos de la app borrados.
+
+## T-015-10: vuelta a la tarea con TalkBack (2026-10-05)
+
+Mismo método que en T-015-09 (emulador `Pixel_6a`, API 37, inglés, `emulator-5554`; `integration_test` **temporal** que lleva la app real por los pasos, TalkBack activado con `settings`, `screencap` al ver cada marca). **No se usó el Xiaomi.**
+
+| Casilla | Resultado | Estado |
+|---|---|---|
+| Menú → «Settings» (CA-015-01a, P-015-1) | El menú se cierra y Ajustes sube; recuadro verde en el título «Settings» (Cerrar no lo roba) | [Hecho] |
+| Cerrar ajustes → foco al botón de menú (CA-015-02) | La tarea con el menú cerrado y el recuadro verde en el botón de menú («Double-tap to activate»), sin tocar nada más. A la primera, sin arreglos | [Hecho] |
+| Volver del navegador tras ≥ 10 minutos (CA-015-16): Ajustes → Política → «Open» → Chrome, 11 min 20 s fuera | La tarea actual, sin Ajustes ni menú, con el recuadro verde en el botón de menú | [Hecho] |
+| Voz de TalkBack al llegar al botón, panel de voz | Solo se ve el texto del panel («Double-tap to activate»); la voz y el anuncio completo no se comprueban en el emulador | [Pendiente] 022 |
+
+Notas: el *bucle* del test temporal (`tester.pump` con la app en segundo plano) no avanzó mientras Chrome estaba delante, así que el guion trajo la app al frente por tiempo (`monkey -p invalid.pending.app.debug -c android.intent.category.LAUNCHER 1`). Ajustes restaurados: TalkBack apagado (`settings delete` + `accessibility_enabled 0`), Chrome y la app detenidos, datos de la app borrados, `integration_test` temporal borrado.
+

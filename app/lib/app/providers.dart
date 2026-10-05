@@ -263,6 +263,27 @@ class ScreenFocus extends Notifier<int> {
   void signal() => state++;
 }
 
+/// El botón de menú de la tarea debe recuperar el foco (teclado y lector de
+/// pantalla): al cerrar Ajustes (spec 015, CA-015-02) y al volver a la tarea
+/// tras 10 minutos o más en segundo plano con alguna pantalla encima
+/// (CA-015-16). Es una petición pendiente, no un contador: si el botón existe
+/// la toma en cuanto se pide; si se monta después (la tarea se vuelve a crear
+/// al volver de los 10 minutos), la toma al crearse; y quien la pide la retira
+/// en cuanto ha pasado el fotograma (sin botón, p. ej. la tarea con imagen en
+/// horizontal, no queda nada pendiente que se lleve el foco más tarde).
+final menuFocusProvider = NotifierProvider<MenuFocus, bool>(MenuFocus.new);
+
+class MenuFocus extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void request() => state = true;
+
+  void clear() {
+    if (state) state = false;
+  }
+}
+
 /// Tarea actual: arranca con la leída en el arranque y sigue los cambios de la BD.
 final currentTaskProvider = NotifierProvider<CurrentTaskController, Task?>(
   CurrentTaskController.new,

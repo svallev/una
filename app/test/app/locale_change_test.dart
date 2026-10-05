@@ -1114,9 +1114,10 @@ void main() {
         expect(find.text(after.settingsLanguage), findsOneWidget);
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
+        // El menú se cerró al abrir Ajustes (CA-015-01a): se vuelve a la tarea.
         expect(find.byType(SettingsScreen), findsNothing);
-        expect(find.byType(MenuSheet), findsOneWidget);
-        expect(find.text(after.menuAllTasks), findsOneWidget);
+        expect(find.byType(MenuSheet), findsNothing);
+        expect(find.text(_tasks.first), findsOneWidget);
       });
     });
   }

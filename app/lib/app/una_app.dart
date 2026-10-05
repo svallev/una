@@ -89,6 +89,16 @@ class _UnaAppState extends ConsumerState<UnaApp> {
     if (hiddenAt == null) return;
     if (ref.read(clockProvider).now().difference(hiddenAt) >=
         UnaApp.resetAfter) {
+      // Con alguna pantalla encima (Ajustes, el editor, el listado), la tarea
+      // vuelve con el foco en el botón de menú (CA-015-16). Quien se monte con
+      // la petición pendiente la toma; si no hay botón, se retira tras el
+      // fotograma.
+      if (_navigatorKey.currentState?.canPop() ?? false) {
+        ref.read(menuFocusProvider.notifier).request();
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => ref.read(menuFocusProvider.notifier).clear(),
+        );
+      }
       _navigatorKey.currentState?.popUntil((r) => r.isFirst);
       setState(
         () => _resetGeneration++,

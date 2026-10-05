@@ -35,11 +35,13 @@ import '../../support/fake_web_page_driver.dart';
 import '../../support/pdfrx.dart';
 import '../../support/pump_app.dart' show sampleTask;
 import '../task_list/list_harness.dart' show FakeClock, background;
+import 'settings_harness.dart' show focusedLabel;
 
 /// Ajustes (spec 015) abierto sobre una tarea con web, PDF o imagen: la tarea
 /// de debajo no cambia (CA-015-15), no pide girar (CL-015-2) y se abre desde el
-/// menú de cualquier tarea (CA-015-01a). Mientras no llega T-015-10, el menú
-/// sigue debajo y al cerrar Ajustes se vuelve a él.
+/// menú de cualquier tarea (CA-015-01a). El menú se cierra al abrirlo y al
+/// cerrar Ajustes se vuelve a la tarea (CA-015-02), con el foco en el botón de
+/// menú.
 ///
 /// Texto de las tareas neutro (ni ES ni EN).
 
@@ -217,13 +219,14 @@ void main() {
     await tester.tap(find.text(_menuLabel));
     await settle(tester, pdf: pdf);
     expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(find.byType(MenuSheet), findsNothing, reason: 'el menú se cerró');
   }
 
   Future<void> closeSettings(WidgetTester tester, {bool pdf = false}) async {
     await tester.tap(find.bySemanticsLabel('Cerrar ajustes'));
     await settle(tester, pdf: pdf);
     expect(find.byType(SettingsScreen), findsNothing);
-    expect(find.byType(MenuSheet), findsOneWidget);
+    expect(find.byType(MenuSheet), findsNothing);
   }
 
   /// Abre la política, confirma y comprueba que se pidió al navegador.
@@ -252,14 +255,15 @@ void main() {
       ('con web', () async => _webTask()),
     ];
     for (final (name, build) in kinds) {
-      testWidgets('$name: abre el nivel 1 y al cerrar vuelve al menú', (
+      testWidgets('$name: abre el nivel 1 y al cerrar vuelve a la tarea', (
         tester,
       ) async {
         await pumpWith(tester, await build());
         await openSettings(tester);
         expect(find.byType(SettingsScreen), findsOneWidget);
         await closeSettings(tester);
-        expect(find.text(_menuLabel), findsOneWidget);
+        expect(find.text(_menuLabel), findsNothing);
+        expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
       });
     }
   });
@@ -337,6 +341,51 @@ void main() {
       expect(web.last.loads.last, Uri.parse(_webAddress));
       expect(web.drivers, hasLength(2), reason: 'una WebView nueva');
       expect(web.last, isNot(same(page)));
+      // CA-015-16: la tarea, con el foco en el botón de menú.
+      expect(focusedLabel(tester), 'Menú de la tarea');
+    });
+
+    testWidgets('CA-015-16: volver del navegador a 9:59 deja Ajustes y sin '
+        'petición de foco; a 10:00 la tarea tiene el foco de teclado y del '
+        'lector en el botón de menú (un solo aviso)', (tester) async {
+      final handle = tester.ensureSemantics();
+      final focusEvents = <int>[];
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(SystemChannels.accessibility, (
+            message,
+          ) async {
+            final map = message! as Map<Object?, Object?>;
+            if (map['type'] == 'focus') focusEvents.add(map['nodeId']! as int);
+            return null;
+          });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+      final clock = await pumpWith(tester, sampleTask(text: 'Zxq texto'));
+      await openSettings(tester);
+      await openPolicyInBrowser(tester);
+      focusEvents.clear();
+
+      background(tester, clock, const Duration(minutes: 9, seconds: 59));
+      await settle(tester);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(focusedLabel(tester), isNot('Menú de la tarea'));
+      expect(focusEvents, isEmpty);
+
+      background(tester, clock, UnaApp.resetAfter);
+      await settle(tester);
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.byType(MenuSheet), findsNothing);
+      expect(focusedLabel(tester), 'Menú de la tarea');
+      final node = tester.getSemantics(
+        find.bySemanticsLabel('Menú de la tarea'),
+      );
+      expect(focusEvents, [node.id]);
+      handle.dispose();
     });
 
     testWidgets('PDF: conserva su página y su zoom (mismo visor, mismo '
@@ -398,9 +447,7 @@ void main() {
       );
       expect(controller.currentZoom, closeTo(zoom, 0.0001));
       expect(controller.visibleRect.top, closeTo(top, 0.5));
-      // Con el menú cerrado, el lector vuelve a leer la misma página.
-      await tester.tapAt(const Offset(20, 60)); // Fuera de la hoja.
-      await settle(tester, pdf: true);
+      // Con el menú ya cerrado, el lector vuelve a leer la misma página.
       expect(find.byType(MenuSheet), findsNothing);
       expect(find.bySemanticsLabel(page2), findsOneWidget);
       // pdfrx deja temporizadores propios: se desmonta y se dejan correr.
@@ -483,9 +530,6 @@ void main() {
 
         // De vuelta: cerrado todo, gira otra vez.
         await closeSettings(tester);
-        expect(rotating(), isFalse, reason: 'el menú sigue abierto');
-        await tester.tapAt(const Offset(20, 60)); // Fuera de la hoja.
-        await settle(tester);
         expect(find.byType(MenuSheet), findsNothing);
         expect(rotating(), isTrue);
       });
@@ -525,6 +569,13 @@ void main() {
       expect(find.byType(Wordmark), findsOneWidget);
       expect(find.bySemanticsLabel('Menú de la tarea'), findsNothing);
       expect(rotating(), isTrue);
+
+      // Sin botón no queda nada pendiente: al volver a vertical, el botón
+      // nuevo no se lleva el foco.
+      tester.view.physicalSize = const Size(390, 844);
+      await settle(tester);
+      expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
+      expect(focusedLabel(tester), isNot('Menú de la tarea'));
     });
   });
 }

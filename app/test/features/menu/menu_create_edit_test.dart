@@ -188,6 +188,8 @@ void main() {
           await tester.tap(find.text(settings));
           await tester.pumpAndSettle();
           expect(find.byType(SettingsScreen), findsOneWidget);
+          // El menú se cerró al abrir Ajustes (CA-015-01a, P-015-1).
+          expect(find.byType(MenuSheet), findsNothing);
           handle.dispose();
         },
       );

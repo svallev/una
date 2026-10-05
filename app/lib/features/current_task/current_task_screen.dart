@@ -17,6 +17,7 @@ import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/focus_on_signal.dart';
 import '../../ui/full_width.dart';
+import '../../ui/request_focus.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
@@ -40,6 +41,8 @@ import '../delete/undo_card_host.dart';
 import '../delete/undo_controller.dart';
 import '../editor/task_editor_screen.dart';
 import '../menu/menu_sheet.dart';
+import '../settings/settings_route.dart';
+import '../settings/settings_screen.dart';
 import '../task_list/task_list_screen.dart';
 import '../web/edit_web_task.dart';
 import '../web/task_web.dart';
@@ -285,14 +288,16 @@ class CurrentTaskScreen extends ConsumerWidget {
             if (!landscape)
               _Order(
                 1,
-                child: SquareIconButton(
-                  icon: UnaIcons.menu,
+                child: _MenuButton(
                   label: l10n.menuButton,
                   fill: withAttachment
                       ? UnaColors.surface
                       : UnaPalettes.classic[task.colorKey %
                             UnaPalettes.classic.length],
                   onPressed: openMenu,
+                  // Las copias que se ven mientras se arruga o se completa no
+                  // reciben el foco.
+                  takesFocus: !faceOnly && !chromeOnly,
                 ),
               ),
           ],
@@ -687,14 +692,98 @@ Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
           .pick(currentColorKey: task.colorKey),
     ),
     // Elimina directamente, sin confirmación (CA-014-01).
-    MenuAction.delete || MenuAction.allTasks => null,
+    MenuAction.delete || MenuAction.allTasks || MenuAction.settings => null,
   };
   if (action == MenuAction.allTasks) return openTaskList(context, ref);
+  if (action == MenuAction.settings) return _openSettings(context, ref);
   if (editor == null) {
     await deleteTask(context, ref, task);
     return;
   }
   await Navigator.of(context).push(TaskEditorScreen.route(context, editor));
+}
+
+/// "Ajustes" (spec 015, CA-015-01a): el menú ya se cierra y Ajustes sube a la
+/// vez (P-015-1). Una eliminación pendiente pasa a ser definitiva **antes** de
+/// empujar la ruta (CA-015-24; el observador de navegación lo repetiría).
+/// Al cerrarla (Cerrar, atrás o Escape) se vuelve a la tarea y el foco va al
+/// botón de menú (CA-015-02).
+Future<void> _openSettings(BuildContext context, WidgetRef ref) async {
+  ref.read(undoProvider.notifier).commit();
+  await openSettings(context);
+  // Si la tarea ya no está (volvió tras 10 minutos o más), el botón nuevo toma
+  // el foco al crearse (CA-015-16).
+  if (!context.mounted) return;
+  ref.read(menuFocusProvider.notifier).request();
+}
+
+/// Botón de menú de la tarea: posee su `FocusNode` y su clave para que, al
+/// volver de Ajustes, el foco del teclado y del lector de pantalla vuelva a él
+/// (CA-015-02, CA-015-16). Toma la petición de [menuFocusProvider] en cuanto se
+/// pide o, si se monta con ella pendiente, al crearse.
+class _MenuButton extends ConsumerStatefulWidget {
+  const _MenuButton({
+    required this.label,
+    required this.fill,
+    required this.onPressed,
+    required this.takesFocus,
+  });
+
+  final String label;
+  final Color fill;
+  final VoidCallback onPressed;
+  final bool takesFocus;
+
+  @override
+  ConsumerState<_MenuButton> createState() => _MenuButtonState();
+}
+
+class _MenuButtonState extends ConsumerState<_MenuButton> {
+  final _focus = FocusNode(debugLabel: 'task menu');
+  final _key = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.takesFocus && ref.read(menuFocusProvider)) _take();
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  /// Pide el foco cuando termina la transición de vuelta y retira la
+  /// petición. Va tras el primer fotograma: aquí aún no se puede leer el
+  /// contexto ni cambiar un proveedor.
+  void _take() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      requestFocusAfter(
+        after: settingsTransition(context),
+        isMounted: () => mounted,
+        node: _focus,
+        semantics: _key,
+      );
+      ref.read(menuFocusProvider.notifier).clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(menuFocusProvider, (_, pending) {
+      if (pending && widget.takesFocus) _take();
+    });
+    return SquareIconButton(
+      icon: UnaIcons.menu,
+      label: widget.label,
+      fill: widget.fill,
+      onPressed: widget.onPressed,
+      focusNode: _focus,
+      semanticsKey: _key,
+    );
+  }
 }
 
 /// "Adjunto no disponible" en la pantalla principal, con su única acción

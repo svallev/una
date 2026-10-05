@@ -101,7 +101,7 @@ void main() {
     );
 
     testWidgets(
-      'CA-015-02: Cerrar ajustes, el atrás del sistema y Escape suben un nivel (hasta T-015-10, al menú que sigue debajo, con el foco en el botón)',
+      'CA-015-02: Cerrar ajustes, el atrás del sistema y Escape vuelven a la tarea (con el menú ya cerrado y el foco en el botón de menú)',
       (tester) async {
         await openSettingsScreen(tester);
         for (final close in <Future<void> Function()>[
@@ -113,10 +113,12 @@ void main() {
           await close();
           await settleSettings(tester);
           expect(find.byType(SettingsScreen), findsNothing);
-          expect(find.byType(MenuSheet), findsOneWidget);
-          expect(_focusIsInMenu(), isTrue);
-          expect(focusedLabel(tester), 'Ajustes');
+          expect(find.byType(MenuSheet), findsNothing);
+          expect(_focusIsInMenu(), isFalse);
+          expect(focusedLabel(tester), 'Menú de la tarea');
           // Vuelve a abrir para la siguiente forma de cerrar.
+          await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+          await tester.pumpAndSettle();
           await tester.tap(find.text('Ajustes'));
           await settleSettings(tester);
         }
@@ -157,7 +159,7 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await settleSettings(tester);
         expect(find.byType(SettingsScreen), findsNothing);
-        expect(find.byType(MenuSheet), findsOneWidget);
+        expect(find.byType(MenuSheet), findsNothing);
       },
     );
 
@@ -178,7 +180,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Cerrar ajustes'));
       await settleSettings(tester);
       expect(find.byType(SettingsScreen), findsNothing);
-      expect(find.byType(MenuSheet), findsOneWidget);
+      expect(find.byType(MenuSheet), findsNothing);
     });
 
     testWidgets('CL-015-1: un doble toque en "Idioma" abre una sola página', (
@@ -211,7 +213,8 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await settleSettings(tester);
         expect(await repo.countPending(), 2);
-        expect(find.text('Eliminar'), findsOneWidget);
+        expect(find.byType(MenuSheet), findsNothing);
+        expect(find.text('Primera'), findsOneWidget);
       },
     );
 

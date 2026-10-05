@@ -111,7 +111,7 @@ Future<FakeOpener> openSettingsScreen(
   return o;
 }
 
-/// Lo que se busca solo dentro de Ajustes (el menú sigue debajo).
+/// Lo que se busca solo dentro de Ajustes (la tarea sigue montada debajo).
 Finder inSettings(Finder f) =>
     find.descendant(of: find.byType(SettingsScreen), matching: f);
 

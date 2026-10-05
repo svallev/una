@@ -28,7 +28,9 @@ Route<T> settingsRoute<T>(BuildContext context, WidgetBuilder builder) {
 /// completa, **sube desde abajo en 200 ms** (`sheetIn`) y **baja en 160 ms**
 /// (`sheetOut`), con las curvas de las hojas; con "reducir movimiento", en el
 /// mismo fotograma (0 ms). Opaca: cuando termina de subir, lo que hay debajo
-/// deja de dibujarse.
+/// deja de dibujarse. **Absorbe los punteros mientras sube**: un segundo toque
+/// sobre "Ajustes" (CL-015-1) no puede caer sobre la fila que pasa bajo el
+/// dedo.
 Route<T> settingsSheetRoute<T>(BuildContext context, WidgetBuilder builder) {
   final reduced = MediaQuery.disableAnimationsOf(context);
   return PageRouteBuilder<T>(
@@ -44,7 +46,26 @@ Route<T> settingsSheetRoute<T>(BuildContext context, WidgetBuilder builder) {
               reverseCurve: UnaMotion.sheetOutCurve,
             ),
           ),
+      child: _AbsorbWhileRising(animation: animation, child: child),
+    ),
+  );
+}
+
+/// Absorbe los toques mientras la ruta sube (`forward`). Al bajar ya los
+/// ignora la propia ruta modal.
+class _AbsorbWhileRising extends StatelessWidget {
+  const _AbsorbWhileRising({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: animation,
+    builder: (context, child) => AbsorbPointer(
+      absorbing: animation.status == AnimationStatus.forward,
       child: child,
     ),
+    child: child,
   );
 }
