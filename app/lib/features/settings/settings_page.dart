@@ -128,7 +128,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 : UnaIcons.arrowLeft,
                             label: widget.root
                                 ? l10n.settingsClose
-                                : l10n.licensesBack,
+                                : l10n.settingsBack,
                             fill: UnaColors.paper,
                             onPressed: _leave,
                           ),
