@@ -1,6 +1,6 @@
 # ADR-0020: Los anuncios, los nombres de las acciones del lector y los títulos de las hojas se oyen con la voz del sistema
 
-- **Estado:** Aceptado (propietario, 2026-10-01, junto con la aprobación de la spec 013)
+- **Estado:** Aceptado (propietario, 2026-10-01, junto con la aprobación de la spec 013). Sustituido en parte por ADR-0023 (2026-10-05): solo el alcance de la excepción, que pasa a "el idioma de la app no es el primer idioma del sistema"; lo demás sigue vigente
 - **Fecha:** 2026-10-01
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** spec 013 (D-013-2), spec 010 (CA-010-10, CL-010-2, §8 y §9), spec 012 (hallazgo 012-A-B2), constitución P6 y P7
