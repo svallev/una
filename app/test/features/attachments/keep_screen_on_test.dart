@@ -8,9 +8,11 @@ import 'package:app/domain/entities/web_load_failure.dart';
 import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/features/attachments/keep_screen_on_controller.dart';
 import 'package:app/features/attachments/task_image.dart';
+import 'package:app/features/settings/settings_controller.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/app_harness.dart';
@@ -38,9 +40,8 @@ void main() {
     web = FakeWebPages();
     store = MemoryAttachmentStore();
     awake = _FakeAwake();
-    // "Pantalla siempre activa" está apagada por defecto (spec 015); estos
-    // tests (de las specs 007-009) parten de ella encendida. T-015-04 los
-    // reescribe con el ajuste de Ajustes.
+    // "Pantalla siempre activa" está apagada por defecto (CA-015-05); casi
+    // todos estos tests parten de ella encendida en Ajustes.
     repo = InMemoryTaskRepository();
     await repo.setKeepScreenOn(true);
   });
@@ -107,52 +108,106 @@ void main() {
     }
   }
 
-  testWidgets('CA-007-12: con la tarea actual con imagen, la pantalla no se '
-      'apaga; tras 10 minutos sin tocarla, sí', (tester) async {
+  testWidgets('CA-015-04a: con la tarea actual con imagen, la pantalla no se '
+      'apaga, ni tras 60 minutos sin tocarla', (tester) async {
     await repo.insert(await imageTask());
     await pump(tester);
     expect(awake.calls, [true]);
 
     await tester.pump(const Duration(minutes: 9, seconds: 59));
     expect(awake.on, isTrue);
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(minutes: 50, seconds: 1));
+    // Sin límite: ni se retira ni se vuelve a pedir.
+    expect(awake.calls, [true]);
+  });
+
+  testWidgets('CA-015-04a: los toques ya no cuentan: no hay temporizador que '
+      'reiniciar', (tester) async {
+    await repo.insert(await imageTask());
+    await pump(tester);
+    await tester.pump(const Duration(minutes: 9));
+    await tester.tapAt(const Offset(40, 40));
+    final touch = TestPointer(1, PointerDeviceKind.touch);
+    tester.binding.handlePointerEvent(touch.hover(const Offset(200, 400)));
+    await tester.pump(const Duration(minutes: 30));
+    expect(awake.calls, [true]);
+    // Ningún temporizador pendiente del controlador (el test lo comprueba al
+    // terminar): no hace falta avanzar el reloj más.
+  });
+
+  testWidgets('CA-015-04b: con el ajuste apagado (por defecto) nunca, ni con '
+      'una imagen', (tester) async {
+    repo = InMemoryTaskRepository();
+    expect(await repo.keepScreenOn(), isFalse);
+    await repo.insert(await imageTask());
+    await pump(tester);
+    await tester.pump(const Duration(minutes: 1));
+    expect(awake.calls, isEmpty);
+  });
+
+  testWidgets('CA-015-04c: cambiar el ajuste se nota al volver a la tarea, '
+      'sin reiniciar la app', (tester) async {
+    await repo.setKeepScreenOn(false);
+    await repo.insert(await imageTask());
+    await pump(tester, tasks: ['Otra']);
+    expect(awake.calls, isEmpty);
+
+    // Como en Ajustes: se enciende con la tarea debajo (la ruta de Ajustes la
+    // dejaría fuera de la vista) y se ve al volver.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(TaskImage)),
+    );
+    expect(
+      await container.read(settingsProvider.notifier).setKeepScreenOn(true),
+      SaveResult.saved,
+    );
+    await tester.pump();
+    expect(awake.on, isTrue);
+
+    // Y al apagarlo se suelta.
+    await container.read(settingsProvider.notifier).setKeepScreenOn(false);
+    await tester.pump();
     expect(awake.calls, [true, false]);
   });
 
-  testWidgets('CA-007-12: cada toque reinicia los 10 minutos', (tester) async {
-    await repo.insert(await imageTask());
-    await pump(tester);
-    await tester.pump(const Duration(minutes: 9));
-    // Un toque en cualquier parte (aquí, el logotipo).
-    await tester.tapAt(const Offset(40, 40));
-    await tester.pump(const Duration(minutes: 9));
-    expect(awake.on, isTrue);
-    await tester.pump(const Duration(minutes: 1));
-    expect(awake.on, isFalse);
-
-    // Pasados los 10 minutos, tocar la vuelve a mantener encendida.
-    await tester.tapAt(const Offset(40, 40));
-    await tester.pump();
-    expect(awake.on, isTrue);
-    await tester.pump(const Duration(minutes: 10));
+  testWidgets('CA-015-04c: con un ajuste encendido y una tarea solo de texto, '
+      'nunca', (tester) async {
+    await pump(tester, tasks: ['Llamar']);
+    await tester.pump(const Duration(minutes: 30));
+    expect(awake.calls, isEmpty);
   });
 
-  testWidgets('CA-007-12: con TalkBack, explorar tocando (hover táctil) '
-      'reinicia los 10 minutos; un ratón, no', (tester) async {
+  testWidgets('CA-015-04d: con inactive, hidden y paused se retira la '
+      'petición, y resumed la restablece', (tester) async {
     await repo.insert(await imageTask());
     await pump(tester);
-    await tester.pump(const Duration(minutes: 9));
-    final touch = TestPointer(1, PointerDeviceKind.touch);
-    tester.binding.handlePointerEvent(touch.hover(const Offset(200, 400)));
-    await tester.pump(const Duration(minutes: 9));
     expect(awake.on, isTrue);
-    final mouse = TestPointer(2, PointerDeviceKind.mouse);
-    tester.binding.handlePointerEvent(mouse.hover(const Offset(200, 400)));
-    await tester.pump(const Duration(minutes: 1));
+    // Las transiciones válidas de Flutter: cada paso, por separado.
+    for (final (state, expected) in [
+      (AppLifecycleState.inactive, false),
+      (AppLifecycleState.hidden, false),
+      (AppLifecycleState.paused, false),
+      (AppLifecycleState.hidden, false),
+      (AppLifecycleState.inactive, false),
+      (AppLifecycleState.resumed, true),
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+      await tester.pump();
+      expect(awake.on, expected, reason: '$state');
+    }
+  });
+
+  testWidgets('CA-015-04d: el dispose del controlador libera la petición', (
+    tester,
+  ) async {
+    await repo.insert(await imageTask());
+    await pump(tester);
+    expect(awake.on, isTrue);
+    await tester.pumpWidget(const SizedBox());
     expect(awake.on, isFalse);
   });
 
-  testWidgets('CA-007-12: al abrir el menú, el editor o el listado vuelve el '
+  testWidgets('CA-015-04c: al abrir el menú, el editor o el listado vuelve el '
       'apagado normal; al volver, no', (tester) async {
     await repo.insert(await imageTask());
     await pump(tester, tasks: ['Otra']);
@@ -175,7 +230,7 @@ void main() {
     expect(awake.on, isFalse);
   });
 
-  testWidgets('CA-007-12: en segundo plano, apagado normal; al volver, '
+  testWidgets('CA-015-04d: en segundo plano, apagado normal; al volver, '
       'encendida de nuevo', (tester) async {
     await repo.insert(await imageTask());
     await pump(tester);
@@ -193,16 +248,15 @@ void main() {
     ]);
     await tester.pump();
     expect(awake.on, isTrue);
-    await tester.pump(const Duration(minutes: 10));
   });
 
-  testWidgets('CA-007-12: con una tarea sin imagen, nunca', (tester) async {
+  testWidgets('CA-015-04c: con una tarea sin imagen, nunca', (tester) async {
     await pump(tester, tasks: ['Llamar']);
     await tester.pump(const Duration(seconds: 1));
     expect(awake.calls, isEmpty);
   });
 
-  testWidgets('CA-007-12: al completar y pasar a una tarea sin imagen, vuelve '
+  testWidgets('CA-015-04c: al completar y pasar a una tarea sin imagen, vuelve '
       'el apagado normal', (tester) async {
     await repo.insert(await imageTask(rank: 'A'));
     await pump(tester, tasks: ['Siguiente']);
@@ -214,7 +268,7 @@ void main() {
     expect(awake.on, isFalse);
   });
 
-  testWidgets('CA-007-12: con el ajuste desactivado, nunca', (tester) async {
+  testWidgets('CA-015-04b: con el ajuste desactivado, nunca', (tester) async {
     await repo.insert(await imageTask());
     await repo.setKeepScreenOn(false);
     await pump(tester);
@@ -222,24 +276,22 @@ void main() {
     expect(awake.calls, isEmpty);
   });
 
-  group('CA-008-13: pantalla encendida con PDF', () {
+  group('CA-015-04a: pantalla encendida con PDF', () {
     final pdfViewer = find.byKey(const Key('fake-task-pdf'));
 
-    testWidgets('en vertical, la pantalla no se apaga; tras 10 minutos sin '
-        'tocarla, sí', (tester) async {
+    testWidgets('CA-015-04a: en vertical, la pantalla no se apaga, ni tras 60 '
+        'minutos sin tocarla', (tester) async {
       await repo.insert(await pdfTask());
       await pump(tester);
       expect(pdfViewer, findsOneWidget);
       expect(awake.calls, [true]);
 
-      await tester.pump(const Duration(minutes: 9, seconds: 59));
-      expect(awake.on, isTrue);
-      await tester.pump(const Duration(seconds: 1));
-      expect(awake.calls, [true, false]);
+      await tester.pump(const Duration(minutes: 60));
+      expect(awake.calls, [true]);
     });
 
-    testWidgets('en horizontal, igual; girar no cuenta como tocar ni la '
-        'apaga un momento', (tester) async {
+    testWidgets('CA-015-04a: en horizontal, igual; girar no la apaga un '
+        'momento', (tester) async {
       await repo.insert(await pdfTask());
       await pump(tester);
       addTearDown(tester.view.reset);
@@ -250,35 +302,10 @@ void main() {
       // Es el horizontal: sin menú (CA-008-11).
       expect(find.bySemanticsLabel('Menú de la tarea'), findsNothing);
       expect(awake.calls, [true]);
-      await tester.pump(const Duration(minutes: 4));
       await turn(tester, landscape: false);
       await turn(tester, landscape: true);
+      await tester.pump(const Duration(minutes: 60));
       expect(awake.calls, [true]);
-
-      // Solo los toques reinician los 10 minutos (CA-007-12).
-      await tester.pump(const Duration(minutes: 1));
-      expect(awake.calls, [true, false]);
-    });
-
-    testWidgets('en horizontal, un toque en el PDF reinicia los 10 minutos', (
-      tester,
-    ) async {
-      await repo.insert(await pdfTask());
-      await pump(tester);
-      addTearDown(tester.view.reset);
-      await turn(tester, landscape: true);
-      await tester.pump(const Duration(minutes: 9));
-      await tester.tapAt(tester.getCenter(pdfViewer));
-      await tester.pump(const Duration(minutes: 9));
-      expect(awake.on, isTrue);
-      await tester.pump(const Duration(minutes: 1));
-      expect(awake.on, isFalse);
-
-      // Pasados los 10 minutos, tocar la vuelve a mantener encendida.
-      await tester.tapAt(tester.getCenter(pdfViewer));
-      await tester.pump();
-      expect(awake.on, isTrue);
-      await tester.pump(const Duration(minutes: 10));
     });
 
     testWidgets('al abrir el menú, apagado normal; al cerrarlo, encendida', (
@@ -293,7 +320,6 @@ void main() {
       await tester.tapAt(const Offset(20, 60)); // Fuera de la hoja.
       await tester.pumpAndSettle();
       expect(awake.on, isTrue);
-      await tester.pump(const Duration(minutes: 10));
     });
 
     testWidgets('en horizontal y en segundo plano, apagado normal; al volver, '
@@ -316,7 +342,6 @@ void main() {
       ]);
       await tester.pump();
       expect(awake.on, isTrue);
-      await tester.pump(const Duration(minutes: 10));
     });
 
     testWidgets('al completar y pasar a una tarea sin adjunto, vuelve el '
@@ -343,7 +368,7 @@ void main() {
     });
   });
 
-  group('CA-009-16: pantalla encendida con la web', () {
+  group('CA-015-04a: pantalla encendida con la web', () {
     const address = 'https://www.congreso.ejemplo.com/programa';
     // Mientras carga, la vista está montada pero fuera del escenario.
     final view = find.byKey(const ValueKey('web-view-0'), skipOffstage: false);
@@ -362,22 +387,20 @@ void main() {
       );
     }
 
-    testWidgets('en vertical, la pantalla no se apaga; tras 10 minutos sin '
-        'tocarla, sí', (tester) async {
+    testWidgets('CA-015-04a: en vertical, la pantalla no se apaga, ni tras 60 '
+        'minutos sin tocarla', (tester) async {
       await repo.insert(webTask());
       await pump(tester);
       await tester.pump();
       expect(view, findsOneWidget);
       expect(awake.calls, [true]);
 
-      await tester.pump(const Duration(minutes: 9, seconds: 59));
-      expect(awake.on, isTrue);
-      await tester.pump(const Duration(seconds: 1));
-      expect(awake.calls, [true, false]);
+      await tester.pump(const Duration(minutes: 60));
+      expect(awake.calls, [true]);
     });
 
-    testWidgets('en horizontal, igual; girar no la apaga un momento, y un '
-        'toque en la página reinicia los 10 minutos', (tester) async {
+    testWidgets('CA-015-04a: en horizontal, igual; girar no la apaga un '
+        'momento', (tester) async {
       await repo.insert(webTask());
       await pump(tester);
       addTearDown(tester.view.reset);
@@ -391,12 +414,8 @@ void main() {
       expect(view, findsOneWidget);
       expect(find.bySemanticsLabel('Menú de la tarea'), findsNothing);
       expect(awake.calls, [true]);
-      await tester.pump(const Duration(minutes: 4));
-      await tester.tapAt(tester.getCenter(view));
-      await tester.pump(const Duration(minutes: 9));
+      await tester.pump(const Duration(minutes: 60));
       expect(awake.calls, [true]);
-      await tester.pump(const Duration(minutes: 1));
-      expect(awake.calls, [true, false]);
     });
 
     testWidgets('al abrir el menú, apagado normal; al cerrarlo, encendida', (
@@ -411,7 +430,6 @@ void main() {
       await tester.tapAt(const Offset(20, 60)); // Fuera de la hoja.
       await tester.pumpAndSettle();
       expect(awake.on, isTrue);
-      await tester.pump(const Duration(minutes: 10));
     });
 
     testWidgets('en segundo plano, apagado normal; al volver, encendida', (
@@ -433,7 +451,6 @@ void main() {
       ]);
       await tester.pump();
       expect(awake.on, isTrue);
-      await tester.pump(const Duration(minutes: 10));
     });
 
     testWidgets('con un aviso en lugar de la página, sigue encendida (se ve '
@@ -447,7 +464,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Reintentar'), findsOneWidget);
       expect(awake.on, isTrue);
-      await tester.pump(const Duration(minutes: 10));
     });
 
     testWidgets('al completar y pasar a una tarea sin adjunto, vuelve el '

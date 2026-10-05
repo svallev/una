@@ -1,14 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/entities/locale_choice.dart';
 import '../features/all_done/all_done_screen.dart';
 import '../features/app_error/storage_error_screen.dart';
-import '../features/attachments/keep_screen_on_controller.dart';
 import '../features/complete/celebration_overlay.dart';
 import '../features/complete/completion_controller.dart';
 import '../features/current_task/current_task_screen.dart';
@@ -124,18 +122,7 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       localeListResolutionCallback: choice == LocaleChoice.system
           ? (locales, _) => resolveAppLocale(locales)
           : null,
-      // Cada toque cuenta como uso para la pantalla encendida (CA-007-12),
-      // también explorar tocando con TalkBack (llega como *hover* táctil).
-      builder: (context, child) => Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (_) => ref.read(keepScreenOnProvider.notifier).touched(),
-        onPointerHover: (e) {
-          if (e.kind == PointerDeviceKind.touch) {
-            ref.read(keepScreenOnProvider.notifier).touched();
-          }
-        },
-        child: appFrame(context, child),
-      ),
+      builder: appFrame,
       home: HomeRouter(key: ValueKey(_resetGeneration)),
     );
   }
