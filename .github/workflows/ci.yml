@@ -107,10 +107,24 @@ jobs:
       - name: PDFium fijado (tools/pdfium.lock, threat-model §5)
         working-directory: app
         run: bash ../tools/check-pdfium.sh
-      - name: Licencias completas (spec 012, CA-012-03; threat-model §5)
+      - name: Licencias completas y archivo de avisos (spec 015, CA-015-14b; ADR-0026; threat-model §5)
         working-directory: app
         # Tras compilar: usa la caché de Gradle (--offline) y lo que ya está instalado; no instala nada.
+        # Emite app/build/third-party-notices.txt del APK de release comprobado y lo verifica ya emitido.
         run: bash ../tools/check-licenses.sh
+      - name: Archivo de avisos de terceros (el que se publica en la web; caduca a los 90 días)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: third-party-notices
+          path: app/build/third-party-notices.txt
+          if-no-files-found: error
+          retention-days: 90
+      - name: El archivo de avisos falla si le quitas una entrada o el cuerpo de un texto (negativo)
+        working-directory: app
+        # Muta copias en memoria del archivo emitido (un paquete de Dart, un .so, un artefacto de
+        # Android, unas fuentes, el cuerpo de un .txt o de un OFL) y exige que cada una falle y nombre
+        # la entrada; si alguna pasa, este paso falla.
+        run: bash ../tools/check-licenses.sh --negative
       - name: Tamaño de descarga (< 25 MB por ABI)
         working-directory: app
         # Las librerías nativas van sin comprimir dentro del APK (extractNativeLibs=false);

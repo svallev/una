@@ -17,7 +17,7 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 | **Rendimiento** | Arranque en frío → tarea visible; fps de las animaciones | `integration_test` + `FrameTiming`/timeline, en modo *profile* | Dispositivo real (manual en cada release; automatizable con un laboratorio de dispositivos más adelante) |
 | **Seguridad** | *Fixtures* maliciosas (EXIF con GPS, PDF con JS, `.pdf` que es HTML, SVG, *zip bomb*, URL `javascript:`/IDN) | Unitarios + integración | CI |
 | **Sistema fuera de la app ("Recientes")** | Que la tarjeta de "Recientes" no enseñe contenido y que las capturas con la app delante salgan con él (spec 011). No se ve desde `flutter test` | `tools/check-recents.sh` con `adb` (ver más abajo) | Emulador, en local, antes de cada entrega a testers; **no está en CI** (plan de la 011 §8) |
-| **Licencias empaquetadas** | Que todo lo que va dentro del APK de release (paquetes de Dart, bibliotecas nativas, AndroidX/Kotlin, fuentes) tiene su licencia en la pantalla de licencias (spec 012, CA-012-03) | `tools/check-licenses.sh` sobre los APK (ver más abajo) | CI (job Android, tras `check-pdfium.sh`) y en local |
+| **Licencias empaquetadas** | Que todo lo que va dentro del APK de release (paquetes de Dart, bibliotecas nativas, AndroidX/Kotlin, fuentes) tiene su aviso de licencia entre lo que se redistribuye, y que el **archivo de avisos** que se publica en la web (emitido del APK comprobado) está completo (spec 012, CA-012-03; spec 015, CA-015-14a/14b; ADR-0026) | `tools/check-licenses.sh` sobre los APK (ver más abajo) | CI (job Android, tras `check-pdfium.sh`) y en local |
 | **Manual de accesibilidad** | VoiceOver, TalkBack, Switch Control/Access, teclado, texto al 200 %, reducir movimiento | Checklist en la PR | Antes de cerrar cada spec y en F5 |
 
 ## Reglas
@@ -66,17 +66,25 @@ La cuenta atrás de la card, el foco del lector y lo que ocurre fuera de la app 
 
 **Qué se comprobó en T-014-10** (cada casilla con su resultado en `dispositivo.md`): TalkBack lee la card **una vez** y empieza por "Deshacer"; el tiempo no empieza hasta el primer foco, se detiene con él y sigue al salir (también al girar); `accessibility_interactive_ui_timeout_ms` 10000 y 120000; `animator_duration_scale 0` (4 s igual, sin desplazamiento); cortina de notificaciones y diálogo del sistema (no cuentan) frente a inicio, "Recientes" y pantalla bloqueada (definitiva); teclado (Tab, anillo, Intro doble y mantenido = una recuperación, Escape no hace nada); Switch Access (la card es lo primero del barrido, se activa y **no** detiene el tiempo, T-014-10b); aviso de error con un repositorio que falla; `tools/check-recents.sh` con la card visible (tarea, "Todo hecho.", listado y con el aviso; en **horizontal** el script falla igual con y sin la card: es la forma de la miniatura, límite del script); 200 % en vertical, horizontal y listado; card a 600 dp.
 
-## Licencias empaquetadas (spec 012, CA-012-03)
+## Licencias empaquetadas y archivo de avisos (spec 012, CA-012-03; spec 015, CA-015-14a/14b; ADR-0026)
 
-`tools/check-licenses.sh [apk]` se ejecuta **desde `app/`, tras `flutter build apk --release --split-per-abi`**; sin argumento revisa el APK de cada ABI de `tools/pdfium.lock`. Falla (salida 1) si:
+La app ya no muestra ninguna pantalla de licencias (se ven solo en la web, CA-015-14a), pero los textos que las licencias exigen acompañar siguen **dentro del paquete** sin mostrarse. `tools/check-licenses.sh [apk]` se ejecuta **desde `app/`, tras `flutter build apk --release --split-per-abi`**; sin argumento revisa el APK de cada ABI de `tools/pdfium.lock`. Falla (salida 1) si:
 
 - un paquete de Dart de release (`dart pub deps --no-dev`; los del SDK de Flutter cuentan con la entrada `flutter`) no está en `NOTICES` de Flutter (se descomprime `NOTICES.Z` con `python3`);
-- una biblioteca `lib/<abi>/*.so` no tiene entrada conocida (`libapp.so` se excluye): un `.so` nuevo obliga a añadir su caso a `so_entry` del script **y** su licencia a la pantalla;
+- una biblioteca `lib/<abi>/*.so` no tiene entrada conocida (`libapp.so` se excluye): un `.so` nuevo obliga a añadir su caso a `so_entry` del script **y** su aviso (en NOTICES o en `assets/licenses/`);
 - un artefacto de `releaseRuntimeClasspath` (Gradle, `--offline`; sin `io.flutter:*`, cuyo aviso ya va en `NOTICES`) no está, como `grupo:artefacto`, en `app/assets/licenses/android.txt`. **Al añadir uno, se comprueba la licencia de su POM contra `threat-model.md §5` y se anota en la PR** (si no es de la lista permitida, se para);
 - unas fuentes empaquetadas no llevan su `OFL.txt`, o falta dentro del APK alguno de `assets/licenses/{pdfium,sqlite,android}.txt`;
-- la primera línea de `pdfium.txt` no dice la release ni los sha256 de los `.tgz` de `tools/pdfium.lock` (al actualizar PDFium hay que regenerar `pdfium.txt`).
+- la primera línea de `pdfium.txt` no dice la release ni los sha256 de los `.tgz` de `tools/pdfium.lock` (al actualizar PDFium hay que regenerar `pdfium.txt`);
+- el `NOTICES.Z`, los tres `.txt` o los `OFL.txt` no son iguales en todos los APK (ABI).
 
-Necesita `python3`, `unzip`, `dart` y un JDK para Gradle (`JAVA_HOME`; en local, el JBR de Android Studio: `/Applications/Android Studio.app/Contents/jbr/Contents/Home`). No instala nada. Se probó que **falla** quitando una línea de `android.txt`, con un `.so` inventado y con otra versión en la línea de origen de `pdfium.txt` (salidas en `specs/012-configuracion-temporal/tasks.md`).
+**Archivo de avisos (T-015-12).** Si todo lo anterior pasa, el script **emite `app/build/third-party-notices.txt`** (en `build/`, ignorado por Git): cabecera con versión (`pubspec.yaml`), fecha UTC, nombre y sha256 de cada APK y sha256 de `NOTICES.Z` y de cada texto; la lista de entradas (`engine:`, `dart:`, `native:`, `android:`, `font:`, `license:`); el `NOTICES` de Flutter descomprimido, los tres `assets/licenses/*.txt` y cada `OFL.txt`, cada uno entre marcas `===== BEGIN … =====`/`===== END … =====`; sin rutas locales. Después lo **verifica sobre el archivo emitido** (no sobre las variables del emisor): vuelve a extraer los nombres del cuerpo con el mismo extractor de Python y exige cada paquete de Dart de release, cada `.so`, cada artefacto de Android (línea en el cuerpo de `android.txt`) y cada fuente (su OFL), que cada entrada esté en la lista, que los cuerpos coincidan **byte a byte** con los del APK y que la cabecera traiga los sha256 correctos. Se lo puede probar también:
+
+- `tools/check-licenses.sh --notices-file <ruta>` verifica un archivo ya emitido (p. ej. una copia mutada a mano) sin regenerarlo.
+- `tools/check-licenses.sh --negative` comprueba, sobre el archivo emitido, que **falla y nombra la entrada** al quitarle un paquete de Dart, un `.so` (de la lista o de NOTICES), un artefacto de Android, unas fuentes o al cortar el cuerpo de cada `.txt` y de cada OFL (14 mutaciones con las dependencias de hoy). Corre en CI como paso negativo.
+- **CI** sube el archivo (`actions/upload-artifact` fijada, 90 días, `if-no-files-found: error`). Como el artefacto caduca y el APK de CI no es el que se publica, `/release-checklist` pide **regenerarlo con el paquete que se publica y adjuntarlo a la release**, comparando los sha256 de `NOTICES.Z` y de los `.txt`.
+- **[Hecho]** (T-015-12, `flutter_tools` 3.47.5) `NOTICES.Z` va **siempre** en el APK de release: `asset.dart` lo añade sin ninguna opción que lo deje fuera y lo estaba en los tres APK compilados (la **[Suposición]** del ADR-0026 se confirma).
+
+Necesita `python3`, `unzip`, `dart` y un JDK para Gradle (`JAVA_HOME`; en local, el JBR de Android Studio: `/Applications/Android Studio.app/Contents/jbr/Contents/Home`). No instala nada. Se probó (spec 012) que **falla** quitando una línea de `android.txt`, con un `.so` inventado y con otra versión en la línea de origen de `pdfium.txt` (salidas en `specs/012-configuracion-temporal/tasks.md`).
 
 ## Puerta de publicación (spec 012, CA-012-05)
 
