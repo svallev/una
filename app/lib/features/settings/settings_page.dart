@@ -21,6 +21,15 @@ abstract final class SettingsOrder {
   static const leading = 3.0;
 }
 
+/// Orden de Tab de los niveles de Ajustes (CA-015-21a, 21f y 21g): Cerrar o
+/// Volver primero y después el contenido, **estén desplazados como estén**. Con
+/// el orden de lectura por geometría, una fila que sale por arriba de la
+/// pantalla (texto al 200 %) pasaría a ir antes que Cerrar.
+abstract final class SettingsFocusOrder {
+  static const leading = NumericFocusOrder(0);
+  static const content = NumericFocusOrder(1);
+}
+
 /// Marco de un nivel de Ajustes (spec 015; antes, de la 012): cabecera con el
 /// botón (Cerrar ajustes en el nivel 1, Volver en el 2) y el título como
 /// encabezado, y debajo el contenido.
@@ -69,6 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
+    FocusManager.instance.addListener(_revealFocus);
     // Al llegar, el foco del lector va al título (tabla de niveles de la spec).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -83,8 +93,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
+    FocusManager.instance.removeListener(_revealFocus);
     _titleFocus.dispose();
     super.dispose();
+  }
+
+  /// Lleva a la vista el control que recibe el foco (WCAG 2.4.11, CA-015-21f),
+  /// **en los dos sentidos**: la política de Tab por defecto solo desplaza hacia
+  /// delante y, al dar la vuelta (de la última fila a la primera, o con
+  /// Mayús+Tab desde Cerrar), dejaría la fila fuera de la pantalla.
+  void _revealFocus() {
+    final context = FocusManager.instance.primaryFocus?.context;
+    if (context == null || !context.mounted) return;
+    // Solo lo que hay dentro de esta página (no la tarea de debajo).
+    if (context.findAncestorStateOfType<_SettingsPageState>() != this) return;
+    for (final policy in const [
+      ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+    ]) {
+      Scrollable.ensureVisible(context, alignmentPolicy: policy);
+    }
   }
 
   /// Sube un nivel (el botón y Escape). Una sola vez, y nunca con otra ruta
@@ -110,70 +138,84 @@ class _SettingsPageState extends State<SettingsPage> {
             scopesRoute: true,
             namesRoute: true,
             explicitChildNodes: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Prototipo del listado: alto 68, `padding: 12px 20px 0`.
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    UnaSpace.ml - 1,
-                    UnaSpace.sm,
-                    UnaSpace.ml,
-                    0,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: UnaSizes.listHeader - UnaSpace.sm,
-                    ),
-                    child: Row(
-                      children: [
-                        Semantics(
-                          sortKey: const OrdinalSortKey(SettingsOrder.leading),
-                          child: SquareIconButton(
-                            icon: widget.root
-                                ? UnaIcons.close
-                                : UnaIcons.arrowLeft,
-                            label: widget.root
-                                ? l10n.settingsClose
-                                : l10n.settingsBack,
-                            fill: UnaColors.paper,
-                            autofocus: _keyboardFocus,
-                            onPressed: _leave,
-                          ),
+            child: FocusTraversalGroup(
+              policy: OrderedTraversalPolicy(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Prototipo del listado: alto 68, `padding: 12px 20px 0`.
+                  FocusTraversalOrder(
+                    order: SettingsFocusOrder.leading,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        UnaSpace.ml - 1,
+                        UnaSpace.sm,
+                        UnaSpace.ml,
+                        0,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minHeight: UnaSizes.listHeader - UnaSpace.sm,
                         ),
-                        const SizedBox(width: UnaSpace.sm - 1),
-                        Expanded(
-                          child: Semantics(
-                            key: _titleKey,
-                            container: true,
-                            header: true,
-                            sortKey: const OrdinalSortKey(SettingsOrder.title),
-                            // Solo es el foco inicial del lector: ni se activa
-                            // ni entra en el orden del teclado (CA-015-21a).
-                            child: Focus(
-                              focusNode: _titleFocus,
-                              onFocusChange: (v) =>
-                                  setState(() => _titleFocused = v),
-                              child: FocusRing(
-                                visible: _titleFocused && showsFocusHighlight,
-                                child: _FitTitle(widget.title),
+                        child: Row(
+                          children: [
+                            Semantics(
+                              sortKey: const OrdinalSortKey(
+                                SettingsOrder.leading,
+                              ),
+                              child: SquareIconButton(
+                                icon: widget.root
+                                    ? UnaIcons.close
+                                    : UnaIcons.arrowLeft,
+                                label: widget.root
+                                    ? l10n.settingsClose
+                                    : l10n.settingsBack,
+                                fill: UnaColors.paper,
+                                autofocus: _keyboardFocus,
+                                onPressed: _leave,
                               ),
                             ),
-                          ),
+                            const SizedBox(width: UnaSpace.sm - 1),
+                            Expanded(
+                              child: Semantics(
+                                key: _titleKey,
+                                container: true,
+                                header: true,
+                                sortKey: const OrdinalSortKey(
+                                  SettingsOrder.title,
+                                ),
+                                // Solo es el foco inicial del lector: ni se activa
+                                // ni entra en el orden del teclado (CA-015-21a).
+                                child: Focus(
+                                  focusNode: _titleFocus,
+                                  onFocusChange: (v) =>
+                                      setState(() => _titleFocused = v),
+                                  child: FocusRing(
+                                    visible:
+                                        _titleFocused && showsFocusHighlight,
+                                    child: _FitTitle(widget.title),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  // Sin clave, el contenido se leería antes que Cerrar o
-                  // después del título según su posición.
-                  child: Semantics(
-                    sortKey: const OrdinalSortKey(SettingsOrder.content),
-                    child: widget.child,
+                  Expanded(
+                    // Sin clave, el contenido se leería antes que Cerrar o
+                    // después del título según su posición.
+                    child: FocusTraversalOrder(
+                      order: SettingsFocusOrder.content,
+                      child: Semantics(
+                        sortKey: const OrdinalSortKey(SettingsOrder.content),
+                        child: widget.child,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
