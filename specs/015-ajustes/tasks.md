@@ -1,6 +1,6 @@
 # Tareas — Spec 015: Ajustes
 
-**Siguiente:** T-015-15 (T-015-14 hecha con pendientes; plan **Aprobado** el 2026-10-05; P-015-1 respondida como se recomienda; rama `feat/015-ajustes`) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-015-16 (T-015-15 hecha; plan **Aprobado** el 2026-10-05; P-015-1 respondida como se recomienda; rama `feat/015-ajustes`) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden** (nada en paralelo). Cada tarea termina con `dart format lib test integration_test`, `flutter analyze --fatal-infos` y `flutter test` en verde y un commit `feat(015): …` (o `test`/`docs`/`chore`). FVM no está instalado: `flutter` y `dart` del sistema. Emulador de API 37; nunca el Xiaomi sin permiso del propietario. Los tests que miden empiezan con `setUpAll(loadAppFonts)`. Con TalkBack en el emulador no valen los toques de `adb`: `integration_test` temporal + `screencap` y atajos de teclado de TalkBack (`docs/testing.md`, método de la 014). Cortes de sesión previstos: tras T-015-04, tras T-015-10 y antes del cierre. **Mientras la pantalla de la 012 siga en pie (hasta T-015-09), sus tests siguen en verde**: T-015-09 sustituye la pantalla y retira sus tests y los de las pantallas de licencias; las claves que se renombran o se retiran lo hacen en T-015-09 y T-015-11.
 
