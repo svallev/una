@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:app/app/app_identity.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/domain/entities/link_target.dart';
+import 'package:app/domain/services/privacy_link.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yaml/yaml.dart';
@@ -79,6 +81,56 @@ void main() {
         if (f.readAsStringSync().contains(url)) f.path,
     ];
     expect(hits, isEmpty);
+  });
+
+  group('CA-015-13a: las tres direcciones de las webs', () {
+    const keys = ['privacyPolicyUrl', 'thirdPartyLicensesUrl', 'helpUrl'];
+    final generated = {
+      'privacyPolicyUrl': AppIdentity.privacyPolicyUrl,
+      'thirdPartyLicensesUrl': AppIdentity.thirdPartyLicensesUrl,
+      'helpUrl': AppIdentity.helpUrl,
+    };
+
+    test(
+      'CA-015-13a: AppIdentity las toma de identity.yaml (fuente única)',
+      () {
+        for (final key in keys) {
+          expect(identity[key], isA<String>(), reason: key);
+          expect(generated[key], identity[key], reason: key);
+        }
+      },
+    );
+
+    test('CA-015-13a: cada una pasa privacyLink y no lleva consulta ni '
+        'fragmento', () {
+      for (final (key, address) in generated.entries.map(
+        (e) => (e.key, e.value),
+      )) {
+        expect(privacyLink(address), isA<WebLink>(), reason: key);
+        final uri = Uri.parse(address);
+        expect(uri.scheme, 'https', reason: key);
+        expect(uri.hasQuery, isFalse, reason: key);
+        expect(uri.hasFragment, isFalse, reason: key);
+        expect(address, isNot(contains('?')), reason: key);
+        expect(address, isNot(contains('#')), reason: key);
+      }
+    });
+
+    test('CA-015-13a: los marcadores son tres y distintos entre sí', () {
+      expect(generated.values.toSet(), hasLength(3));
+    });
+
+    test('CA-015-13a: ninguna está escrita en lib/ fuera de lo generado '
+        '(no salen de los ajustes ni del idioma)', () {
+      for (final key in keys) {
+        final url = identity[key] as String;
+        final hits = [
+          for (final f in _scannedFiles())
+            if (f.readAsStringSync().contains(url)) f.path,
+        ];
+        expect(hits, isEmpty, reason: key);
+      }
+    });
   });
 
   test('CA-012-05: CI ya comprueba lo generado y la marca del marcador '

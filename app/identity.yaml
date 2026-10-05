@@ -6,8 +6,12 @@
 displayName: "Una."   # nombre bajo el icono y en el sistema
 wordmark: "una."      # logotipo dentro de la app
 
-# Dirección de la política de privacidad (spec 012, CA-012-04/05): una sola para ES y EN. Se abre en el
-# navegador del sistema, nunca dentro de la app. Solo `https`.
-# [Pendiente PD-2] MARCADOR: la web aún no existe. `tools/check-release-config.sh` impide publicar con
-# un dominio reservado (example.com…); cámbiala por la definitiva cuando exista.
-privacyPolicyUrl: "https://example.com/privacy"
+# Direcciones de las tres webs (spec 012, CA-012-04/05; spec 015, CA-015-13a/13b): una sola de cada una
+# para ES y EN, sin `?` ni `#`. Se abren en el navegador del sistema, nunca dentro de la app. Solo
+# `https`, y las tres tienen que ser distintas entre sí.
+# [Pendiente PD-2] MARCADORES: las webs aún no existen. `tools/check-release-config.sh` impide publicar
+# con un dominio reservado (example.com…) o con dos direcciones iguales; cámbialas por las definitivas
+# cuando existan (y que coincidan con las de la ficha de la tienda).
+privacyPolicyUrl: "https://example.com/privacy"        # política de privacidad
+thirdPartyLicensesUrl: "https://example.com/licenses"  # licencias de terceros (ADR-0026)
+helpUrl: "https://example.com/help"                    # ayuda

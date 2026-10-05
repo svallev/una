@@ -2,6 +2,7 @@
 //
 //   dart run tool/gen_identity.dart          → escribe los archivos
 //   dart run tool/gen_identity.dart --check  → falla si alguno no está al día (CI)
+//   --root <carpeta>  → la carpeta de la app (por defecto `.`); así se prueba con una copia
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,10 +10,19 @@ import 'package:yaml/yaml.dart';
 
 void main(List<String> args) {
   final check = args.contains('--check');
-  final yaml = loadYaml(File('identity.yaml').readAsStringSync()) as YamlMap;
-  final displayName = yaml['displayName'] as String;
-  final wordmark = yaml['wordmark'] as String;
-  final privacyPolicyUrl = yaml['privacyPolicyUrl'] as String;
+  final rootIndex = args.indexOf('--root');
+  if (rootIndex >= 0 && rootIndex + 1 >= args.length) {
+    stderr.writeln('--root necesita un valor');
+    exit(2);
+  }
+  final root = rootIndex >= 0 ? args[rootIndex + 1] : '.';
+  final yaml =
+      loadYaml(File('$root/identity.yaml').readAsStringSync()) as YamlMap;
+  final displayName = _required(yaml, 'displayName');
+  final wordmark = _required(yaml, 'wordmark');
+  final privacyPolicyUrl = _required(yaml, 'privacyPolicyUrl');
+  final thirdPartyLicensesUrl = _required(yaml, 'thirdPartyLicensesUrl');
+  final helpUrl = _required(yaml, 'helpUrl');
 
   final outputs = <String, String Function(String? current)>{
     'lib/app/app_identity.g.dart': (_) =>
@@ -30,6 +40,14 @@ abstract final class AppIdentity {
   /// Dirección de la política de privacidad (una sola para ES y EN). Solo `https`; se abre en el
   /// navegador del sistema. Es un marcador hasta que exista la web (spec 012, CA-012-05).
   static const String privacyPolicyUrl = ${_dartString(privacyPolicyUrl)};
+
+  /// Dirección de la web de licencias de terceros (una sola para ES y EN; ADR-0026). Marcador
+  /// hasta que exista la web (spec 015, CA-015-13a).
+  static const String thirdPartyLicensesUrl = ${_dartString(thirdPartyLicensesUrl)};
+
+  /// Dirección de la web de ayuda (una sola para ES y EN). Marcador hasta que exista la web
+  /// (spec 015, CA-015-13a).
+  static const String helpUrl = ${_dartString(helpUrl)};
 }
 ''',
     'android/app/src/main/res/values/strings.xml': (_) =>
@@ -79,7 +97,7 @@ APP_DISPLAY_NAME = $displayName
 
   final stale = <String>[];
   outputs.forEach((path, build) {
-    final file = File(path);
+    final file = File('$root/$path');
     final current = file.existsSync() ? file.readAsStringSync() : null;
     final raw = build(current).trimLeft();
     final next = path.endsWith('.dart') ? _formatDart(raw) : raw;
@@ -102,6 +120,17 @@ APP_DISPLAY_NAME = $displayName
         ? 'Identidad al día.'
         : 'Identidad generada (${stale.length} archivos actualizados).',
   );
+}
+
+/// El valor de [key] como texto: si falta o no lo es, falla con un mensaje claro (no con un
+/// `TypeError`). La validez de las direcciones la comprueba la puerta de publicación.
+String _required(YamlMap yaml, String key) {
+  final value = yaml[key];
+  if (value is! String) {
+    stderr.writeln('identity.yaml: la clave `$key` falta o no es texto.');
+    exit(1);
+  }
+  return value;
 }
 
 String _ensureInclude(String xcconfig) =>
