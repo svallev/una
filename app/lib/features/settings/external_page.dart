@@ -95,19 +95,17 @@ class ExternalPageSession extends ChangeNotifier {
 /// 3. `open`: si da `false` (o lanza), el aviso; si abre, se quitan los avisos.
 ///
 /// No hay ruta nueva entre el toque y `open`, así que no hay foco que mover: la
-/// fila conserva el suyo y el aviso tampoco lo mueve. (Al volver del navegador
-/// el lector se lleva el foco al título: lo devuelve la pantalla, que escucha
-/// el ciclo de vida, CA-015-20h.) No se registra la
+/// fila conserva el suyo y el aviso tampoco lo mueve. No se registra la
 /// dirección ni el error (P4, P5): cualquier fallo del opener es "no se puede
-/// abrir". Devuelve si la página se abrió.
-Future<bool> openExternalPage(
+/// abrir".
+Future<void> openExternalPage(
   BuildContext context,
   WidgetRef ref,
   ExternalLink kind, {
   required ExternalPageSession session,
   SettingsLinks links = const SettingsLinks(),
 }) async {
-  if (session.busy) return false;
+  if (session.busy) return;
   session._busy = true;
   final opener = ref.read(linkOpenerProvider);
   try {
@@ -115,19 +113,17 @@ Future<bool> openExternalPage(
     // Se pregunta en cada toque, sin guardar la respuesta.
     if (link == null || !await opener.canOpen(link)) {
       if (context.mounted) session._showNoApp();
-      return false;
+      return;
     }
-    if (!context.mounted) return false;
+    if (!context.mounted) return;
     if (!await opener.open(link)) {
       if (context.mounted) session._showNoApp();
-      return false;
+      return;
     }
     if (context.mounted) session.clearNotice();
-    return true;
   } on Object {
     // Sin registrar nada: ni la dirección ni el error (T-4).
     if (context.mounted) session._showNoApp();
-    return false;
   } finally {
     session._busy = false;
   }
