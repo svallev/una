@@ -15,6 +15,7 @@ import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/license_package.dart';
+import '../domain/entities/locale_choice.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/accessibility_timeouts.dart';
 import '../domain/ports/attachment_store.dart';
@@ -313,6 +314,12 @@ class FirstRunController extends Notifier<bool> {
 /// Lee lo que decide la primera pantalla (CA-001-09). Con una tarea actual,
 /// es que ya se guardó alguna; si no, lo dice el ajuste: "Todo hecho." o el
 /// editor de la primera tarea (CA-003-11, CA-004-08, ADR-0012).
+///
+/// La tarea actual se lee **primero**: una base de datos inaccesible
+/// falla ahí y sale la pantalla de error de almacenamiento (CL-015-16). Los
+/// dos ajustes de Ajustes (idioma y pantalla siempre activa) se leen después,
+/// cada uno en su propio `try/catch`: si no se puede leer, vale su valor por
+/// defecto y el arranque sigue (CA-015-26).
 Future<BootState> readBootState(
   TaskRepository tasks,
   SettingsRepository settings,
@@ -322,8 +329,19 @@ Future<BootState> readBootState(
     currentTask: current,
     firstRunDone: await settings.firstRunDone(),
     hasEverHadTasks: current != null || await settings.hasEverHadTasks(),
-    keepScreenOn: await settings.keepScreenOn(),
+    keepScreenOn: await _orDefault(settings.keepScreenOn, false),
+    locale: await _orDefault(settings.locale, LocaleChoice.system),
   );
+}
+
+/// El valor de [read], o [fallback] ante **cualquier** fallo. No se registra
+/// el error (MASVS-STORAGE: el de SQLite puede llevar datos del usuario).
+Future<T> _orDefault<T>(Future<T> Function() read, T fallback) async {
+  try {
+    return await read();
+  } on Object {
+    return fallback;
+  }
 }
 
 /// Resultado del arranque.
@@ -332,14 +350,19 @@ class BootState {
     required this.currentTask,
     required this.firstRunDone,
     this.hasEverHadTasks = false,
-    this.keepScreenOn = true,
+    this.keepScreenOn = false,
+    this.locale = LocaleChoice.system,
   });
   final Task? currentTask;
   final bool firstRunDone;
   final bool hasEverHadTasks;
 
-  /// Ajuste "Mantener la pantalla encendida con adjuntos" (CA-007-12).
+  /// Ajuste "Pantalla siempre activa" (CA-015-04): apagado por defecto.
   final bool keepScreenOn;
+
+  /// Idioma elegido en Ajustes (CA-015-10): ya leído para que el primer
+  /// fotograma salga en ese idioma.
+  final LocaleChoice locale;
 }
 
 class UuidV7Ids implements IdGenerator {

@@ -34,11 +34,15 @@ void main() {
   late InMemoryTaskRepository repo;
   late FakeWebPages web;
 
-  setUp(() {
+  setUp(() async {
     web = FakeWebPages();
     store = MemoryAttachmentStore();
     awake = _FakeAwake();
+    // "Pantalla siempre activa" está apagada por defecto (spec 015); estos
+    // tests (de las specs 007-009) parten de ella encendida. T-015-04 los
+    // reescribe con el ajuste de Ajustes.
     repo = InMemoryTaskRepository();
+    await repo.setKeepScreenOn(true);
   });
 
   Future<Task> imageTask({String id = 't-img', String rank = 'M'}) async {
@@ -485,10 +489,10 @@ void main() {
     expect(awake.on, isFalse);
   });
 
-  test('el ajuste está activo por defecto y se guarda', () async {
+  test('CA-015-05: el ajuste está apagado por defecto y se guarda', () async {
     final r = InMemoryTaskRepository();
-    expect(await r.keepScreenOn(), isTrue);
-    await r.setKeepScreenOn(false);
     expect(await r.keepScreenOn(), isFalse);
+    await r.setKeepScreenOn(true);
+    expect(await r.keepScreenOn(), isTrue);
   });
 }

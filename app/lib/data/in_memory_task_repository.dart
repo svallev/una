@@ -1,17 +1,22 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../domain/entities/attachment.dart';
+import '../domain/entities/locale_choice.dart';
 import '../domain/entities/rank.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/task_repository.dart';
+import '../domain/services/settings_codec.dart';
 
 /// Implementación en memoria del repositorio (tests y contrato común con drift).
 class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   final Map<String, Task> _tasks = {};
   final StreamController<void> _changes = StreamController<void>.broadcast();
-  bool _firstRunDone = false;
-  bool _hasEverHadTasks = false;
-  bool _keepScreenOn = true;
+
+  /// Ajustes como en la tabla `settings`: clave → texto JSON, que leen los
+  /// mismos decodificadores que Drift (CA-015-26).
+  final Map<String, String> _settings = {};
 
   List<Task> get _pending => _tasks.values.where((t) => t.isPending).toList()
     // Con claves iguales (no debería haberlas), el id desempata: el orden
@@ -95,7 +100,7 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   @override
   Future<void> insert(Task task) async {
     _tasks[task.id] = task;
-    _hasEverHadTasks = true;
+    _settings[SettingKeys.hasEverHadTasks] = encodeFlag(true);
     _changes.add(null);
   }
 
@@ -128,20 +133,39 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
     return true;
   }
 
-  @override
-  Future<bool> hasEverHadTasks() async => _hasEverHadTasks;
+  /// Guarda [raw] tal cual, sin validar, como una fila de la tabla `settings`
+  /// (también ilegible o de una copia de seguridad): para probar CA-015-26
+  /// igual que en Drift.
+  @visibleForTesting
+  void putRawSetting(String key, String raw) => _settings[key] = raw;
 
   @override
-  Future<bool> firstRunDone() async => _firstRunDone;
+  Future<bool> hasEverHadTasks() async =>
+      decodeFlag(_settings[SettingKeys.hasEverHadTasks]);
 
   @override
-  Future<void> setFirstRunDone() async => _firstRunDone = true;
+  Future<bool> firstRunDone() async =>
+      decodeFlag(_settings[SettingKeys.firstRunDone]);
 
   @override
-  Future<bool> keepScreenOn() async => _keepScreenOn;
+  Future<void> setFirstRunDone() async =>
+      _settings[SettingKeys.firstRunDone] = encodeFlag(true);
 
   @override
-  Future<void> setKeepScreenOn(bool value) async => _keepScreenOn = value;
+  Future<bool> keepScreenOn() async =>
+      decodeKeepScreenOn(_settings[SettingKeys.keepScreenOn]);
+
+  @override
+  Future<void> setKeepScreenOn(bool value) async =>
+      _settings[SettingKeys.keepScreenOn] = encodeFlag(value);
+
+  @override
+  Future<LocaleChoice> locale() async =>
+      decodeLocaleChoice(_settings[SettingKeys.locale]);
+
+  @override
+  Future<void> setLocale(LocaleChoice choice) async =>
+      _settings[SettingKeys.locale] = encodeLocaleChoice(choice);
 
   Future<void> dispose() => _changes.close();
 }
