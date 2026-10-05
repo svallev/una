@@ -232,7 +232,8 @@ adb -s $S install -r /tmp/app-profile.apk
 | 3 | base (sin 015) | 403 | **422** | 439 | 466 |
 | 4 | nueva (015) | 403 | **421** | 447 | 459 |
 
-- **[Hecho]** CA-015-23: p50 de 418-421 ms (< 1 s) y la nueva no es más lenta que la base (media 423,5 ms la base y 419,5 ms la nueva: −4 ms; la diferencia entre las dos pasadas de la base es 3 ms). **[Pendiente]** repetirlo en el Xiaomi con permiso del propietario (casilla de la 022).
+- **[Hecho]** CA-015-23: p50 de 418-421 ms (< 1 s) y la nueva no es más lenta que la base (media 423,5 ms la base y 419,5 ms la nueva: −4 ms; la diferencia entre las dos pasadas de la base es 3 ms). **[Pendiente]** ~~repetirlo en el Xiaomi~~ hecho el 2026-10-05, abajo.
+- **Xiaomi 15T Pro (2026-10-05, con permiso del propietario; app real, `adb install -r`, datos intactos):** las mismas dos compilaciones, ocho pasadas alternadas (base, nueva, …) de 20 arranques con `tools/measure-cold-start.sh`, calentamiento y 5 s de espera antes de cada una. p50 base **210, 213, 224, 222** ms (media 217) y nueva **208, 236, 228, 220** ms (media 223); p90 219-307 ms. **[Hecho]** CA-015-23: p50 < 1 s con un margen enorme (≈ 22 % del presupuesto) y **sin diferencia** entre las dos (+6 ms, dentro de la deriva: la base varía 14 ms entre pasadas; la pasada 4 de la nueva tuvo un p90 de 307 ms y un arranque sin dato). Queda instalada la compilación de la rama.
 
 ## Cómo repetir la medición
 
