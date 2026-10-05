@@ -2,7 +2,7 @@
 
 - **Spec:** `specs/015-ajustes/spec.md` (estado: Aprobada, 2026-10-05)
 - **ADR aplicables:** **ADR-0023** (idioma elegido en la app; amplía la excepción de voz del ADR-0020) y **ADR-0026** (licencias de terceros solo en una web; los textos siguen dentro del paquete), ambos Aceptados el 2026-10-05; ADR-0020 (voz del sistema en los anuncios; `appFrame` marca el idioma), ADR-0016 y ADR-0018 (los enlaces no se siguen dentro de la app), ADR-0019 («Recientes»), ADR-0021 (la eliminación pendiente se confirma al abrir otra pantalla), ADR-0004 (los ajustes viajan en la copia). **Sin ADR nuevo:** el plan desarrolla los dos ya aceptados, como el ADR-0021 en la 014.
-- **Estado del plan:** **Borrador** (2026-10-05): revisado por `security-reviewer`, `a11y-reviewer` y `spec-reviewer` (§12, aplicado); pendiente de la respuesta de P-015-1 y de la aprobación del propietario (§11).
+- **Estado del plan:** **Aprobado** (propietario, 2026-10-05), con la recomendación de P-015-1 (§11); revisado por `security-reviewer`, `a11y-reviewer` y `spec-reviewer` (§12).
 
 ## 1. Resumen del enfoque
 
@@ -142,7 +142,9 @@ Todos los tests citan su CA; los que miden, con `setUpAll(loadAppFonts)`. Sin re
 
 ## 11. Preguntas para el propietario
 
-- **P-015-1 Cómo se abre Ajustes desde el menú.** El prototipo deja el menú debajo y lo quita a los 220 ms, con Ajustes subiendo encima. **Recomendación:** el menú se cierra con su animación de siempre y Ajustes sube a la vez (como al abrir el editor o el listado): se ven los dos a la vez unos 160 ms, sin retirar rutas a mano. Se registra en DEV-52. Si prefieres el efecto exacto del prototipo, habrá que retirar la ruta del menú (más trabajo y más riesgo para las guardas de la 014). **T-015-10 no empieza sin tu respuesta.**
+**[Hecho] Respuesta (propietario, 2026-10-05, al aprobar el plan):** P-015-1 **como se recomienda** (el menú se cierra con su animación y Ajustes sube a la vez; se anota en DEV-52). Las decisiones técnicas de abajo quedan aceptadas.
+
+- **P-015-1 Cómo se abre Ajustes desde el menú.** El prototipo deja el menú debajo y lo quita a los 220 ms, con Ajustes subiendo encima. **Recomendación:** el menú se cierra con su animación de siempre y Ajustes sube a la vez (como al abrir el editor o el listado): se ven los dos a la vez unos 160 ms, sin retirar rutas a mano. Se registra en DEV-52. Si prefieres el efecto exacto del prototipo, habrá que retirar la ruta del menú (más trabajo y más riesgo para las guardas de la 014). (Respondida: como se recomienda.)
 - **Decisiones técnicas que se anotan (sin pregunta; dilo si alguna no te gusta):** `firstRunDone` y `hasEverHadTasks` también se leen sin lanzar (fallo cerrado a `false`), más allá de los dos ajustes de la spec; la página de Idioma se queda en el idioma anterior con `Localizations.override`; el título deja de estar en el orden de Tab y Cerrar lo toma solo con teclado físico; separador de 1 px con el token `disabled` (DEV-38); `app/build/third-party-notices.txt` y artefacto de CI de 90 días; el aviso de guardado y el de enlace llevan la misma clave de orden y se leen por geometría; los iconos nuevos se copian del prototipo a `UnaIcons`; la página de Idioma congela su texto al elegir; el botón de menú gana su `FocusNode` y su clave.
 
 ## 12. Cambios tras la revisión del plan (2026-10-05)
