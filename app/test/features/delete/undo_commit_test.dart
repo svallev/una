@@ -135,11 +135,11 @@ void main() {
     expect(_card, findsNothing);
   });
 
-  testWidgets('CA-014-11, CL-014-13: "Configuración y perfil" la hace '
+  testWidgets('CA-014-11, CL-014-13, CA-015-24: "Ajustes" la hace '
       'definitiva', (tester) async {
     await _pump(tester);
     await _deleteFromMenu(tester);
-    await _menu(tester, 'Configuración y perfil');
+    await _menu(tester, 'Ajustes');
     expect(_phase(tester), UndoPhase.none);
     expect(_card, findsNothing);
   });

@@ -167,7 +167,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuNewTask => 'Nueva tarea';
 
   @override
-  String get menuSettings => 'Configuración y perfil';
+  String get menuSettings => 'Ajustes';
 
   @override
   String get menuClose => 'Cerrar menú';
@@ -554,7 +554,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get urlOpenPageWeb => 'Abrir página →';
 
   @override
-  String get settingsClose => 'Cerrar';
+  String get settingsClose => 'Cerrar ajustes';
 
   @override
   String get settingsLicenses => 'Licencias de código abierto';

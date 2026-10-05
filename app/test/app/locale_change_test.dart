@@ -5,13 +5,11 @@ import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
-import 'package:app/domain/entities/license_package.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/attachment_store.dart';
-import 'package:app/domain/ports/license_source.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
@@ -19,8 +17,7 @@ import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/menu/menu_sheet.dart';
-import 'package:app/features/settings/license_detail_screen.dart';
-import 'package:app/features/settings/licenses_screen.dart';
+import 'package:app/features/settings/language_page.dart';
 import 'package:app/features/settings/settings_controller.dart';
 import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
@@ -28,7 +25,6 @@ import 'package:app/features/web/web_bar.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -42,7 +38,6 @@ import '../support/fake_image_importer.dart';
 import '../support/fake_pdf_importer.dart';
 import '../support/fake_pdf_view.dart';
 import '../support/fake_web_page_driver.dart';
-import '../support/fonts.dart';
 import '../support/l10n_leaks.dart'
     show expectNoL10nLeaks, findL10nLeaks, semanticsTexts;
 import '../support/pdfrx.dart';
@@ -271,27 +266,6 @@ class _Opener implements LinkOpener {
 
   @override
   Future<bool> open(LinkTarget target) async => true;
-}
-
-/// Fuente de licencias sin registro (spec 012): un elemento con dos textos,
-/// neutros (ni ES ni EN) para no confundirlos con la interfaz. Cuenta las
-/// lecturas.
-class _LicenseSource implements LicenseSource {
-  int loads = 0;
-
-  @override
-  Future<List<LicensePackage>> load() async {
-    loads++;
-    return const [
-      LicensePackage(
-        name: 'zxq_pkg',
-        texts: [
-          LicenseText([(text: 'Zxq licence text one.', indent: 0)]),
-          LicenseText([(text: 'Zxq licence text two.', indent: 1)]),
-        ],
-      ),
-    ];
-  }
 }
 
 void main() {
@@ -1030,30 +1004,21 @@ void main() {
     });
   }
 
-  // La Configuración (spec 012, CA-012-07): los tres niveles cambian de idioma
-  // sin cerrarse; el texto de las licencias no cambia y sigue marcado como
-  // inglés para el lector.
+  // Ajustes (spec 015, CL-015-13): los dos niveles cambian de idioma sin
+  // cerrarse (el idioma del sistema cambia con "Como el sistema").
   for (final (from, to) in [('es', 'en'), ('en', 'es')]) {
     final before = _l10n(from);
     final after = _l10n(to);
 
-    group('CA-012-07 ($from → $to): la Configuración en caliente', () {
-      late _LicenseSource source;
-
-      setUp(() => source = _LicenseSource());
-
-      /// Abre el menú, "Configuración y perfil" y, según [depth], los niveles
-      /// 2 (1) y 3 (2).
+    group('CL-015-13 ($from → $to): Ajustes en caliente', () {
+      /// Abre el menú, "Ajustes" y, según [depth], la página de Idioma.
       Future<void> openLevel(WidgetTester tester, int depth) async {
         await pumpUnaApp(
           tester,
           repo: InMemoryTaskRepository(),
           locale: Locale(from),
           tasks: _tasks,
-          overrides: [
-            licenseSourceProvider.overrideWithValue(source),
-            linkOpenerProvider.overrideWithValue(_Opener()),
-          ],
+          overrides: [linkOpenerProvider.overrideWithValue(_Opener())],
         );
         await tester.tap(find.bySemanticsLabel(before.menuButton));
         await tester.pumpAndSettle();
@@ -1061,46 +1026,56 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(SettingsScreen), findsOneWidget);
         if (depth >= 1) {
-          await tester.tap(find.text(before.settingsLicenses));
+          await tester.tap(find.text(before.settingsLanguage));
           await tester.pumpAndSettle();
-          expect(find.byType(LicensesScreen), findsOneWidget);
-        }
-        if (depth >= 2) {
-          await tester.tap(find.text('zxq_pkg'));
-          await tester.pumpAndSettle();
-          expect(find.byType(LicenseDetailScreen), findsOneWidget);
+          expect(find.byType(LanguagePage), findsOneWidget);
         }
       }
 
-      Locale? localeOf(WidgetTester tester, Finder f) =>
-          tester.getSemantics(f).getSemanticsData().locale;
-
-      testWidgets('nivel 1: sigue abierto, con los textos y la pista del '
-          'lector en el idioma nuevo', (tester) async {
+      testWidgets('nivel 1: sigue abierto, con los textos y el nombre de las '
+          'filas de web en el idioma nuevo', (tester) async {
         final semantics = tester.ensureSemantics();
         await openLevel(tester, 0);
-        expect(find.text(before.menuSettings), findsOneWidget);
+        expect(find.text(before.settingsTitle), findsOneWidget);
         expect(find.text(before.settingsPrivacy), findsOneWidget);
         expect(find.bySemanticsLabel(before.settingsClose), findsOneWidget);
-        expect(semanticsTexts(tester), contains(before.settingsPrivacyHint));
+        expect(
+          semanticsTexts(tester),
+          contains('${before.settingsPrivacy}, ${before.settingsOpensWebHint}'),
+        );
         tester.takeAnnouncements();
 
         await _switchTo(tester, [Locale(to)]);
 
         expect(find.byType(SettingsScreen), findsOneWidget);
-        expect(find.text(after.menuSettings), findsOneWidget);
-        expect(find.text(after.settingsLicenses), findsOneWidget);
+        expect(find.text(after.settingsTitle), findsOneWidget);
+        expect(find.text(after.settingsLanguage), findsOneWidget);
+        expect(find.text(after.settingsLanguageSystem), findsOneWidget);
+        expect(find.text(after.settingsKeepAwake), findsOneWidget);
+        expect(find.text(after.settingsInfo), findsOneWidget);
         expect(find.text(after.settingsPrivacy), findsOneWidget);
+        expect(find.text(after.settingsThirdPartyLicenses), findsOneWidget);
+        expect(find.text(after.settingsHelp), findsOneWidget);
         expect(find.text(before.settingsPrivacy), findsNothing);
         expect(find.bySemanticsLabel(after.settingsClose), findsOneWidget);
         expect(find.bySemanticsLabel(before.settingsClose), findsNothing);
         final reads = semanticsTexts(tester);
-        expect(reads, contains(after.settingsPrivacyHint));
-        expect(reads, isNot(contains(before.settingsPrivacyHint)));
-        // El título dice lo mismo en el otro idioma (y no es el del sistema).
+        expect(
+          reads,
+          contains('${after.settingsPrivacy}, ${after.settingsOpensWebHint}'),
+        );
+        expect(
+          reads,
+          isNot(
+            contains(
+              '${before.settingsPrivacy}, ${before.settingsOpensWebHint}',
+            ),
+          ),
+        );
+        // El título sigue siendo un encabezado en el otro idioma.
         expect(
           tester
-              .getSemantics(find.text(after.menuSettings))
+              .getSemantics(find.text(after.settingsTitle).first)
               .flagsCollection
               .isHeader,
           isTrue,
@@ -1109,88 +1084,34 @@ void main() {
         semantics.dispose();
       });
 
-      testWidgets('nivel 2: sigue abierto, con "N licencias" en el idioma '
-          'nuevo y sin volver a leer las licencias', (tester) async {
+      testWidgets('nivel 2: sigue abierto, con "Como el sistema" y el idioma '
+          'que resulta ahora', (tester) async {
         final semantics = tester.ensureSemantics();
         await openLevel(tester, 1);
-        expect(source.loads, 1);
-        expect(find.text(before.licensesTitle), findsOneWidget);
-        expect(
-          find.bySemanticsLabel('zxq_pkg, ${before.licensesCount(2)}'),
-          findsOneWidget,
-        );
+        expect(find.text(before.settingsLanguage), findsOneWidget);
         tester.takeAnnouncements();
 
         await _switchTo(tester, [Locale(to)]);
 
-        expect(find.byType(LicensesScreen), findsOneWidget);
-        expect(find.text(after.licensesTitle), findsOneWidget);
-        expect(
-          find.bySemanticsLabel('zxq_pkg, ${after.licensesCount(2)}'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel('zxq_pkg, ${before.licensesCount(2)}'),
-          findsNothing,
-        );
-        expect(find.bySemanticsLabel(after.licensesBack), findsOneWidget);
-        expect(find.bySemanticsLabel(before.licensesBack), findsNothing);
-        expect(source.loads, 1, reason: 'no se vuelven a leer');
+        expect(find.byType(LanguagePage), findsOneWidget);
+        expect(find.text(after.settingsLanguage), findsOneWidget);
+        expect(find.text(after.settingsLanguageSystem), findsOneWidget);
+        expect(find.text(before.settingsLanguageSystem), findsNothing);
+        expect(find.bySemanticsLabel(after.settingsBack), findsOneWidget);
+        expect(find.bySemanticsLabel(before.settingsBack), findsNothing);
         _expectNoLeaksAfterSwitch(tester, to);
         semantics.dispose();
       });
 
-      testWidgets('nivel 3: sigue abierto; el título, los encabezados y '
-          'Volver cambian; el texto de la licencia no, y sigue marcado como '
-          'inglés', (tester) async {
-        final semantics = tester.ensureSemantics();
-        await openLevel(tester, 2);
-        final one = find.text('Zxq licence text one.');
-        final two = find.text('Zxq licence text two.');
-        expect(find.text(before.licensesTextOf(1, 2)), findsOneWidget);
-        expect(localeOf(tester, one), const Locale('en'));
-        tester.takeAnnouncements();
-
-        await _switchTo(tester, [Locale(to)]);
-
-        expect(find.byType(LicenseDetailScreen), findsOneWidget);
-        // El título es el nombre del elemento: no cambia.
-        expect(find.text('zxq_pkg'), findsOneWidget);
-        expect(find.text(after.licensesTextOf(1, 2)), findsOneWidget);
-        expect(find.text(after.licensesTextOf(2, 2)), findsOneWidget);
-        expect(find.text(before.licensesTextOf(1, 2)), findsNothing);
-        expect(find.bySemanticsLabel(after.licensesBack), findsOneWidget);
-        expect(find.bySemanticsLabel(before.licensesBack), findsNothing);
-        // El texto de la licencia, intacto y en inglés para el lector.
-        expect(one, findsOneWidget);
-        expect(two, findsOneWidget);
-        expect(localeOf(tester, one), const Locale('en'));
-        expect(localeOf(tester, two), const Locale('en'));
-        // Lo demás, en el idioma nuevo.
-        expect(
-          localeOf(tester, find.text(after.licensesTextOf(1, 2))),
-          Locale(to),
-        );
-        expect(
-          localeOf(tester, find.bySemanticsLabel(after.licensesBack)),
-          Locale(to),
-        );
-        _expectNoLeaksAfterSwitch(tester, to);
-        semantics.dispose();
-      });
-
-      testWidgets('los tres niveles siguen apilados: atrás sube de uno en '
+      testWidgets('los dos niveles siguen apilados: atrás sube de uno en '
           'uno tras el cambio', (tester) async {
-        await openLevel(tester, 2);
+        await openLevel(tester, 1);
         await _switchTo(tester, [Locale(to)]);
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
-        expect(find.byType(LicensesScreen), findsOneWidget);
-        expect(find.text(after.licensesTitle), findsOneWidget);
-        await tester.binding.handlePopRoute();
-        await tester.pumpAndSettle();
+        expect(find.byType(LanguagePage), findsNothing);
         expect(find.byType(SettingsScreen), findsOneWidget);
-        expect(find.text(after.settingsLicenses), findsOneWidget);
+        expect(find.text(after.settingsLanguage), findsOneWidget);
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
         expect(find.byType(SettingsScreen), findsNothing);
@@ -1199,329 +1120,4 @@ void main() {
       });
     });
   }
-
-  // La entrada de las bibliotecas de Android cambia de nombre (y de sitio en la
-  // lista) con el idioma; el foco y la fila abierta la siguen (spec 013,
-  // CA-013-02, P-013-3).
-  for (final (from, to) in [('es', 'en'), ('en', 'es')]) {
-    final before = _l10n(from);
-    final after = _l10n(to);
-
-    group('CA-013-02 ($from → $to): la entrada de Android al cambiar de '
-        'idioma', () {
-      setUpAll(loadAppFonts);
-
-      String androidName(AppLocalizations l10n) =>
-          l10n.licensesAndroidLibraries;
-      String labelOf(AppLocalizations l10n, String name) =>
-          '$name, ${l10n.licensesCount(1)}';
-
-      final inLicenses = find.byType(LicensesScreen);
-      final list = find.descendant(
-        of: inLicenses,
-        matching: find.byType(ListView),
-      );
-      final listScrollable = find.descendant(
-        of: inLicenses,
-        matching: find.byType(Scrollable),
-      );
-
-      /// Abre el nivel 2 con [count] paquetes "ant_NN" y la entrada de Android,
-      /// que va primera en inglés ("Android…") y última en español
-      /// ("Bibliotecas…"), de modo que cambia de sitio todo lo posible.
-      Future<void> openLicenses(WidgetTester tester, int count) async {
-        await pumpUnaApp(
-          tester,
-          repo: InMemoryTaskRepository(),
-          locale: Locale(from),
-          tasks: _tasks,
-          overrides: [
-            licenseSourceProvider.overrideWithValue(_ManySource(count)),
-            linkOpenerProvider.overrideWithValue(_Opener()),
-          ],
-        );
-        await tester.tap(find.bySemanticsLabel(before.menuButton));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(before.menuSettings));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(before.settingsLicenses));
-        await tester.pumpAndSettle();
-        expect(inLicenses, findsOneWidget);
-      }
-
-      /// Pone el foco de teclado en la fila de [name] (la lleva a la vista).
-      Future<void> focusRow(WidgetTester tester, String name) async {
-        await tester.scrollUntilVisible(
-          find.text(name),
-          300,
-          scrollable: listScrollable.first,
-        );
-        Focus.of(tester.element(find.text(name))).requestFocus();
-        await tester.pump();
-        expect(_focusedRow(), name);
-      }
-
-      /// La fila de [name] está entera dentro de la lista visible.
-      void expectInView(WidgetTester tester, String name) {
-        expect(find.text(name), findsOneWidget, reason: 'fila construida');
-        final row = tester.getRect(find.text(name));
-        final view = tester.getRect(list);
-        expect(row.top, greaterThanOrEqualTo(view.top));
-        expect(row.bottom, lessThanOrEqualTo(view.bottom));
-      }
-
-      /// Anota los avisos de foco que recibe el sistema de accesibilidad.
-      List<int> captureFocusEvents(WidgetTester tester) {
-        final events = <int>[];
-        tester.binding.defaultBinaryMessenger
-            .setMockDecodedMessageHandler<Object?>(
-              SystemChannels.accessibility,
-              (message) async {
-                final map = message! as Map<Object?, Object?>;
-                if (map['type'] == 'focus') events.add(map['nodeId']! as int);
-                return null;
-              },
-            );
-        addTearDown(
-          () => tester.binding.defaultBinaryMessenger
-              .setMockDecodedMessageHandler<Object?>(
-                SystemChannels.accessibility,
-                null,
-              ),
-        );
-        return events;
-      }
-
-      int nodeId(WidgetTester tester, String label) =>
-          tester.getSemantics(find.bySemanticsLabel(label)).id;
-
-      testWidgets('lista pequeña: la entrada sigue en la ventana, con el '
-          'mismo nodo y el foco de teclado, en su sitio nuevo', (tester) async {
-        final semantics = tester.ensureSemantics();
-        await openLicenses(tester, 2);
-        await focusRow(tester, androidName(before));
-        final id = nodeId(tester, labelOf(before, androidName(before)));
-
-        await _switchTo(tester, [Locale(to)]);
-
-        expect(find.text(androidName(before)), findsNothing);
-        expect(_focusedRow(), androidName(after));
-        expect(nodeId(tester, labelOf(after, androidName(after))), id);
-        // Orden nuevo: la entrada, primera en inglés y última en español.
-        final tops = [
-          for (final n in ['ant_00', 'ant_01', androidName(after)])
-            tester.getTopLeft(find.text(n)).dy,
-        ];
-        expect(tops[0] < tops[1], isTrue);
-        expect(
-          to == 'en' ? tops[2] < tops[0] : tops[2] > tops[1],
-          isTrue,
-          reason: 'la entrada va en su sitio alfabético nuevo',
-        );
-        semantics.dispose();
-      });
-
-      testWidgets('lista de 60: la entrada se mueve más de una ventana; el '
-          'foco de teclado sigue en su fila, a la vista y avisada al lector', (
-        tester,
-      ) async {
-        final semantics = tester.ensureSemantics();
-        final events = captureFocusEvents(tester);
-        await openLicenses(tester, 59);
-        await focusRow(tester, androidName(before));
-        events.clear();
-
-        await _switchTo(tester, [Locale(to)]);
-
-        expect(_focusedRow(), androidName(after));
-        expectInView(tester, androidName(after));
-        expect(
-          events,
-          contains(nodeId(tester, labelOf(after, androidName(after)))),
-        );
-        semantics.dispose();
-      });
-
-      testWidgets('nivel 3 abierto: el título cambia, el desplazamiento se '
-          'conserva y al volver el foco va a la fila, en su sitio nuevo', (
-        tester,
-      ) async {
-        final semantics = tester.ensureSemantics();
-        final events = captureFocusEvents(tester);
-        await openLicenses(tester, 59);
-        await tester.scrollUntilVisible(
-          find.text(androidName(before)),
-          300,
-          scrollable: listScrollable.first,
-        );
-        await tester.tap(find.text(androidName(before)));
-        await tester.pumpAndSettle();
-        final detail = find.byType(LicenseDetailScreen);
-        expect(detail, findsOneWidget);
-        final detailScrollable = find.descendant(
-          of: detail,
-          matching: find.byType(Scrollable),
-        );
-        await tester.drag(detailScrollable, const Offset(0, -400));
-        await tester.pumpAndSettle();
-        double offset() => tester
-            .state<ScrollableState>(detailScrollable.first)
-            .position
-            .pixels;
-        final scrolled = offset();
-        expect(scrolled, greaterThan(0));
-
-        await _switchTo(tester, [Locale(to)]);
-
-        expect(
-          find.descendant(of: detail, matching: find.text(androidName(after))),
-          findsOneWidget,
-        );
-        expect(offset(), scrolled);
-
-        events.clear();
-        await tester.binding.handlePopRoute();
-        await tester.pumpAndSettle();
-
-        expect(detail, findsNothing);
-        expect(_focusedRow(), androidName(after));
-        expectInView(tester, androidName(after));
-        expect(
-          events,
-          contains(nodeId(tester, labelOf(after, androidName(after)))),
-        );
-        semantics.dispose();
-      });
-
-      // F-2 (T-013-08c): la fila sube y queda justo por encima de la ventana,
-      // todavía construida (dentro del margen de construcción). Solo aplica a
-      // es → en: es la dirección en que la entrada sube (de última a primera).
-      if (from == 'es') {
-        testWidgets('la fila sube y queda justo sobre la ventana, aún '
-            'construida: se lleva a la vista', (tester) async {
-          final semantics = tester.ensureSemantics();
-          await openLicenses(tester, 11);
-          await tester.scrollUntilVisible(
-            find.text(androidName(before)),
-            300,
-            scrollable: listScrollable.first,
-          );
-          await tester.drag(list, const Offset(0, -2000));
-          await tester.pumpAndSettle();
-          Focus.of(tester.element(find.text(androidName(before))))
-              .requestFocus();
-          await tester.pump();
-          expect(_focusedRow(), androidName(before));
-          final position = tester
-              .state<ScrollableState>(listScrollable.first)
-              .position;
-          expect(
-            position.pixels,
-            greaterThan(0),
-            reason: 'la lista está desplazada',
-          );
-
-          await _switchTo(tester, [Locale(to)]);
-
-          expect(_focusedRow(), androidName(after));
-          expectInView(tester, androidName(after));
-          semantics.dispose();
-        });
-
-        testWidgets('al volver del nivel 3 la fila, que subió y quedó sobre '
-            'la ventana, se lleva a la vista', (tester) async {
-          final semantics = tester.ensureSemantics();
-          await openLicenses(tester, 11);
-          await tester.scrollUntilVisible(
-            find.text(androidName(before)),
-            300,
-            scrollable: listScrollable.first,
-          );
-          await tester.drag(list, const Offset(0, -2000));
-          await tester.pumpAndSettle();
-          await tester.tap(find.text(androidName(before)));
-          await tester.pumpAndSettle();
-          expect(find.byType(LicenseDetailScreen), findsOneWidget);
-
-          await _switchTo(tester, [Locale(to)]);
-          await tester.binding.handlePopRoute();
-          await tester.pumpAndSettle();
-
-          expect(find.byType(LicenseDetailScreen), findsNothing);
-          expect(_focusedRow(), androidName(after));
-          expectInView(tester, androidName(after));
-          semantics.dispose();
-        });
-      }
-
-      testWidgets('un giro de pantalla no mueve el desplazamiento ni el '
-          'foco', (tester) async {
-        final semantics = tester.ensureSemantics();
-        await openLicenses(tester, 59);
-        await tester.drag(list, const Offset(0, -900));
-        await tester.pumpAndSettle();
-        final name = tester
-            .widget<Text>(
-              find
-                  .descendant(of: list, matching: find.textContaining('ant_'))
-                  .first,
-            )
-            .data!;
-        Focus.of(tester.element(find.text(name))).requestFocus();
-        await tester.pump();
-        double offset() =>
-            tester.state<ScrollableState>(listScrollable.first).position.pixels;
-        final scrolled = offset();
-
-        tester.view.physicalSize = const Size(844, 390);
-        await tester.pumpAndSettle();
-
-        expect(offset(), scrolled);
-        expect(_focusedRow(), name);
-        semantics.dispose();
-      });
-    });
-  }
-}
-
-/// Fuente de licencias para la lista larga (CA-013-02): la entrada de las
-/// bibliotecas de Android, con un texto largo, y [count] paquetes "ant_NN".
-/// "ant_" va entre "Android…" y "Bibliotecas…" en el orden alfabético.
-class _ManySource implements LicenseSource {
-  _ManySource(this.count);
-
-  final int count;
-
-  @override
-  Future<List<LicensePackage>> load() async => [
-    LicensePackage(
-      name: androidLibrariesLicenseKey,
-      texts: [
-        LicenseText([
-          for (var i = 0; i < 60; i++)
-            (text: 'Zxq android licence paragraph $i.', indent: 0),
-        ]),
-      ],
-    ),
-    for (var i = 0; i < count; i++)
-      LicensePackage(
-        name: 'ant_${i.toString().padLeft(2, '0')}',
-        texts: const [
-          LicenseText([(text: 'Zxq licence text.', indent: 0)]),
-        ],
-      ),
-  ];
-}
-
-/// El nombre de la fila de la lista de licencias que tiene el foco de teclado,
-/// o null si el foco está en otra cosa.
-String? _focusedRow() {
-  final context = FocusManager.instance.primaryFocus?.context;
-  if (context == null) return null;
-  final texts = find.descendant(
-    of: find.byElementPredicate((e) => identical(e, context)),
-    matching: find.byType(Text),
-  );
-  final found = texts.evaluate();
-  return found.isEmpty ? null : (found.first.widget as Text).data;
 }

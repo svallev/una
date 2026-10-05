@@ -564,7 +564,7 @@ class UndoController extends Notifier<UndoState> {
 
 /// Ir a otra pantalla hace definitiva la eliminación (CA-014-07, CA-014-11):
 /// cualquier `push`, `pop`, `remove` o `replace` de una [PageRoute] (listado,
-/// editor, "Configuración y perfil" y la vuelta desde el listado). Las hojas
+/// editor, "Ajustes" y la vuelta desde el listado). Las hojas
 /// (`PopupRoute`: el menú, "Mover", la confirmación de un enlace) no cuentan.
 /// Así no hay que acordarse de llamar a `commit` en cada pantalla nueva.
 class UndoNavigationObserver extends NavigatorObserver {

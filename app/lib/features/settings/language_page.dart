@@ -11,6 +11,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../ui/live_notice.dart';
 import '../../ui/radio_row.dart';
 import '../../ui/request_focus.dart';
+import 'language_label.dart';
 import 'settings_controller.dart';
 import 'settings_page.dart';
 import 'settings_route.dart';
@@ -192,21 +193,6 @@ class _LanguageContent extends ConsumerWidget {
     ],
   );
 
-  /// "Como el sistema, Español": el nombre, en el idioma de la app, y el idioma
-  /// que resulta, en el suyo (CA-015-11, camino A del plan §3).
-  AttributedString _systemLabel(String name, String resulting, Locale locale) {
-    final text = '$name, $resulting';
-    return AttributedString(
-      text,
-      attributes: [
-        LocaleStringAttribute(
-          range: TextRange(start: name.length + 2, end: text.length),
-          locale: locale,
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
@@ -237,7 +223,7 @@ class _LanguageContent extends ConsumerWidget {
                   UnaRadioRow(
                     label: l10n.settingsLanguageSystem,
                     subtitle: systemName,
-                    attributedLabel: _systemLabel(
+                    attributedLabel: labelWithOwnLanguage(
                       l10n.settingsLanguageSystem,
                       systemName,
                       system,

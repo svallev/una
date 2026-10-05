@@ -374,10 +374,10 @@ abstract class AppLocalizations {
   /// **'Nueva tarea'**
   String get menuNewTask;
 
-  /// Botón del menú que abre la pantalla de Configuración y perfil (nivel 1, spec 012) y título de esa pantalla. Antes solo texto (CA-005-09, CL-010-7). CA-012-01
+  /// Botón del menú que abre la pantalla de Ajustes (nivel 1, spec 015). Antes "Configuración y perfil" (spec 012). CA-015-01a
   ///
   /// In es, this message translates to:
-  /// **'Configuración y perfil'**
+  /// **'Ajustes'**
   String get menuSettings;
 
   /// Botón X y fondo del menú. CA-005-02
@@ -1004,10 +1004,10 @@ abstract class AppLocalizations {
   /// **'Abrir página →'**
   String get urlOpenPageWeb;
 
-  /// Icono del nivel 1 de Configuración y perfil. Propia, distinta de attachSheetClose y menuClose (cada una con su contexto). CA-012-01/11
+  /// Icono de cerrar del nivel 1 de Ajustes. Propia, distinta de attachSheetClose y menuClose (cada una con su contexto). Antes "Cerrar" (spec 012). CA-015-01b/20b
   ///
   /// In es, this message translates to:
-  /// **'Cerrar'**
+  /// **'Cerrar ajustes'**
   String get settingsClose;
 
   /// Opción del nivel 1 que abre la lista de licencias. CA-012-01/03

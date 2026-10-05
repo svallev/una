@@ -75,6 +75,8 @@ class _UnaSwitchRowState extends State<UnaSwitchRow> {
     return Semantics(
       key: widget.semanticsKey,
       toggled: widget.value,
+      focusable: true,
+      focused: _focused,
       // Nombre y subtítulo se leen juntos.
       label: subtitle == null ? widget.label : '${widget.label}, $subtitle',
       excludeSemantics: true,

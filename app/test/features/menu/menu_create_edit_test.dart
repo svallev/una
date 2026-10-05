@@ -77,7 +77,7 @@ void main() {
         'Eliminar',
         'Todas mis tareas',
         'Nueva tarea',
-        'Configuración y perfil',
+        'Ajustes',
       ]) {
         expect(find.text(text), findsOneWidget, reason: text);
       }
@@ -157,11 +157,11 @@ void main() {
     });
 
     for (final (languageCode, menuButton, newTask, settings) in [
-      ('es', 'Menú de la tarea', 'Nueva tarea', 'Configuración y perfil'),
-      ('en', 'Task menu', 'New task', 'Settings and profile'),
+      ('es', 'Menú de la tarea', 'Nueva tarea', 'Ajustes'),
+      ('en', 'Task menu', 'New task', 'Settings'),
     ]) {
       testWidgets(
-        'CA-005-09 / CL-010-7 / CA-012-01 ($languageCode): "$settings" es un botón (enmienda de la spec 012): se lee tras "$newTask", tiene acción de toque y abre la pantalla de Configuración',
+        'CA-005-09 / CL-010-7 / CA-015-01a ($languageCode): "$settings" es un botón (enmienda de la spec 015): se lee tras "$newTask", tiene acción de toque y abre la pantalla de Ajustes',
         (tester) async {
           final handle = tester.ensureSemantics();
           await pumpUnaApp(

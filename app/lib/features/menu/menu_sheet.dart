@@ -31,7 +31,7 @@ Future<MenuAction?> showMenuSheet(
 
 /// Menú de la tarea (spec 005, prototipo "HOJA: menú de la nota"): bloque
 /// "Esta tarea" (Editar, Eliminar) y bloque general (Todas mis tareas, Nueva
-/// tarea, Configuración).
+/// tarea, Ajustes).
 class MenuSheet extends StatelessWidget {
   const MenuSheet({
     super.key,
@@ -143,9 +143,11 @@ class MenuSheet extends StatelessWidget {
   }
 }
 
-/// "Configuración y perfil": abre el nivel 1 de la Configuración (spec 012,
-/// CA-012-01; enmienda de CA-005-09 y CL-010-7). Un solo toque abre una sola
-/// pantalla (CL-012-2) y, al volver, el foco es de este botón (CA-012-02).
+/// "Ajustes": abre el nivel 1 de Ajustes (spec 015, CA-015-01a; antes
+/// "Configuración y perfil", spec 012). Un solo toque abre una sola pantalla
+/// (CL-015-1) y, al volver, el foco es de este botón. **[Pendiente T-015-10]**
+/// El menú aún queda debajo; la acción propia del menú (`MenuAction.settings`)
+/// lo cierra al abrir Ajustes.
 class _SettingsButton extends StatefulWidget {
   const _SettingsButton({required this.label});
 

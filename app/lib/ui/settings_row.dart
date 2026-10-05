@@ -99,6 +99,10 @@ class _SettingsRowState extends State<SettingsRow> {
     return Semantics(
       key: widget.semanticsKey,
       button: true,
+      // TalkBack solo sigue el aviso de foco si el nodo refleja el foco de
+      // entrada (T-015-09, comprobado en el emulador).
+      focusable: true,
+      focused: _focused,
       label: attributed == null ? _semanticLabel : null,
       attributedLabel: attributed,
       excludeSemantics: true,

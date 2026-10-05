@@ -9,10 +9,10 @@ Map<String, dynamic> _arb(String l) =>
     jsonDecode(File('lib/l10n/app_$l.arb').readAsStringSync())
         as Map<String, dynamic>;
 
-/// Tabla "Textos (ES / EN)" de la spec 012 (§7), copiada tal cual.
+/// Tabla "Textos (ES / EN)" de la spec 012 (§7), copiada tal cual. La spec 015
+/// cambió `menuSettings` y `settingsClose` (ver `spec_015_strings_test.dart`).
 /// `licensesCount` (plural ICU) se comprueba aparte.
 const _spec012 = <String, (String, String)>{
-  'settingsClose': ('Cerrar', 'Close'),
   'settingsLicenses': ('Licencias de código abierto', 'Open-source licenses'),
   'settingsPrivacy': ('Política de privacidad', 'Privacy policy'),
   'settingsPrivacyHint': (
@@ -81,10 +81,5 @@ void main() {
     expect(meta['placeholders'], allOf(contains('n'), contains('total')));
     expect(AppLocalizationsEs().licensesTextOf(2, 3), 'Licencia 2 de 3');
     expect(AppLocalizationsEn().licensesTextOf(2, 3), 'License 2 of 3');
-  });
-
-  test('CA-012-01: menuSettings sigue siendo el texto del menú', () {
-    expect(es['menuSettings'], 'Configuración y perfil');
-    expect(en['menuSettings'], 'Settings and profile');
   });
 }

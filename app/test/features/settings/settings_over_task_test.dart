@@ -5,19 +5,16 @@ import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
-import 'package:app/domain/entities/license_package.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/attachment_store.dart';
-import 'package:app/domain/ports/license_source.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
 import 'package:app/features/menu/menu_sheet.dart';
-import 'package:app/features/settings/license_detail_screen.dart';
-import 'package:app/features/settings/licenses_screen.dart';
+import 'package:app/features/settings/language_page.dart';
 import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/features/web/web_bar.dart';
 import 'package:app/ui/wordmark.dart';
@@ -39,13 +36,14 @@ import '../../support/pdfrx.dart';
 import '../../support/pump_app.dart' show sampleTask;
 import '../task_list/list_harness.dart' show FakeClock, background;
 
-/// La Configuración (spec 012) abierta sobre una tarea con web, PDF o imagen:
-/// la tarea de debajo no cambia (CA-012-14), no pide girar (CL-012-3) y se abre
-/// desde el menú de cualquier tarea (CA-012-01, CL-012-1).
+/// Ajustes (spec 015) abierto sobre una tarea con web, PDF o imagen: la tarea
+/// de debajo no cambia (CA-015-15), no pide girar (CL-015-2) y se abre desde el
+/// menú de cualquier tarea (CA-015-01a). Mientras no llega T-015-10, el menú
+/// sigue debajo y al cerrar Ajustes se vuelve a él.
 ///
 /// Texto de las tareas neutro (ni ES ni EN).
 
-const _menuLabel = 'Configuración y perfil';
+const _menuLabel = 'Ajustes';
 const _webAddress = 'https://www.zxq.example/qz';
 
 class _Opener implements LinkOpener {
@@ -59,20 +57,6 @@ class _Opener implements LinkOpener {
     opened.add(target);
     return true;
   }
-}
-
-/// Fuente de licencias sin registro: dos elementos, uno con dos textos.
-class _Source implements LicenseSource {
-  @override
-  Future<List<LicensePackage>> load() async => const [
-    LicensePackage(
-      name: 'zxq_pkg',
-      texts: [
-        LicenseText([(text: 'Zxq licence text one.', indent: 0)]),
-        LicenseText([(text: 'Zxq licence text two.', indent: 0)]),
-      ],
-    ),
-  ];
 }
 
 Task _webTask() {
@@ -202,7 +186,6 @@ void main() {
       if (!realPdf) ...fakePdfViews,
       ...web.overrides,
       linkOpenerProvider.overrideWithValue(opener),
-      licenseSourceProvider.overrideWithValue(_Source()),
     ];
     await pumpUnaApp(tester, repo: repo, clock: clock, overrides: overrides);
     if (realPdf) {
@@ -237,7 +220,7 @@ void main() {
   }
 
   Future<void> closeSettings(WidgetTester tester, {bool pdf = false}) async {
-    await tester.tap(find.bySemanticsLabel('Cerrar'));
+    await tester.tap(find.bySemanticsLabel('Cerrar ajustes'));
     await settle(tester, pdf: pdf);
     expect(find.byType(SettingsScreen), findsNothing);
     expect(find.byType(MenuSheet), findsOneWidget);
@@ -261,7 +244,7 @@ void main() {
     expect(opener.opened, hasLength(1));
   }
 
-  group('CA-012-01, CL-012-1: se abre desde el menú de cualquier tarea', () {
+  group('CA-015-01a, CL-015-1: se abre desde el menú de cualquier tarea', () {
     final kinds = <(String, Future<Task> Function())>[
       ('solo texto', () async => sampleTask(text: 'Zxq texto')),
       ('con imagen', () => _imageTask(store)),
@@ -281,7 +264,7 @@ void main() {
     }
   });
 
-  group('CA-012-14: la tarea de debajo no cambia', () {
+  group('CA-015-15: la tarea de debajo no cambia', () {
     testWidgets('web: se vuelve a cargar al volver, con la misma WebView '
         '(la ruta a pantalla completa cuenta como salir de la página)', (
       tester,
@@ -310,7 +293,7 @@ void main() {
     });
 
     testWidgets('web: abrir la política en el navegador y volver en menos de '
-        '10 minutos deja la Configuración abierta; la página se carga al '
+        '10 minutos deja Ajustes abierto; la página se carga al '
         'cerrarla', (tester) async {
       final clock = await pumpWith(tester, _webTask());
       final page = web.last;
@@ -357,7 +340,7 @@ void main() {
     });
 
     testWidgets('PDF: conserva su página y su zoom (mismo visor, mismo '
-        'controlador) tras abrir los tres niveles y la política', (
+        'controlador) tras abrir los dos niveles y la política', (
       tester,
     ) async {
       final semantics = tester.ensureSemantics();
@@ -393,16 +376,11 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(SettingsScreen),
-          matching: find.text('Licencias de código abierto'),
+          matching: find.text('Idioma'),
         ),
       );
       await settle(tester, pdf: true);
-      expect(find.byType(LicensesScreen), findsOneWidget);
-      await tester.tap(find.text('zxq_pkg'));
-      await settle(tester, pdf: true);
-      expect(find.byType(LicenseDetailScreen), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await settle(tester, pdf: true);
+      expect(find.byType(LanguagePage), findsOneWidget);
       await tester.binding.handlePopRoute();
       await settle(tester, pdf: true);
       expect(find.byType(SettingsScreen), findsOneWidget);
@@ -432,7 +410,7 @@ void main() {
     });
 
     testWidgets('imagen: es la misma (mismo estado, sin volver a cargarse) '
-        'tras abrir y cerrar la Configuración', (tester) async {
+        'tras abrir y cerrar Ajustes', (tester) async {
       await pumpWith(tester, await _imageTask(store));
       expect(find.byType(TaskImage), findsOneWidget);
       final image = tester.state(find.byType(TaskImage));
@@ -451,14 +429,14 @@ void main() {
     });
   });
 
-  group('CL-012-3: la Configuración no pide girar', () {
+  group('CL-015-2: Ajustes no pide girar', () {
     final kinds = <(String, Future<Task> Function())>[
       ('imagen', () => _imageTask(store)),
       ('PDF', () => _pdfTask(store)),
       ('web', () async => _webTask()),
     ];
     for (final (name, build) in kinds) {
-      testWidgets('$name: gira con la tarea a la vista; con el menú, los tres '
+      testWidgets('$name: gira con la tarea a la vista; con el menú, los dos '
           'niveles y la confirmación de la política, no', (tester) async {
         await pumpWith(tester, await build());
         expect(rotating(), isTrue);
@@ -474,21 +452,16 @@ void main() {
         expect(rotating(), isFalse);
         expect(orientations.last, ['DeviceOrientation.portraitUp']);
 
-        // Nivel 2 y 3.
+        // Nivel 2.
         await tester.tap(
           find.descendant(
             of: find.byType(SettingsScreen),
-            matching: find.text('Licencias de código abierto'),
+            matching: find.text('Idioma'),
           ),
         );
         await settle(tester);
+        expect(find.byType(LanguagePage), findsOneWidget);
         expect(rotating(), isFalse);
-        await tester.tap(find.text('zxq_pkg'));
-        await settle(tester);
-        expect(find.byType(LicenseDetailScreen), findsOneWidget);
-        expect(rotating(), isFalse);
-        await tester.binding.handlePopRoute();
-        await settle(tester);
         await tester.binding.handlePopRoute();
         await settle(tester);
 
@@ -531,8 +504,8 @@ void main() {
     });
 
     testWidgets('si se vuelve en horizontal (p. ej. del navegador) vale lo que '
-        'ya hace la app: con menos de 10 minutos, la Configuración; con 10 o '
-        'más, la tarea sin menú (CA-012-06)', (tester) async {
+        'ya hace la app: con menos de 10 minutos, Ajustes; con 10 o '
+        'más, la tarea sin menú (CA-015-16)', (tester) async {
       final clock = await pumpWith(tester, await _imageTask(store));
       addTearDown(tester.view.reset);
       await openSettings(tester);

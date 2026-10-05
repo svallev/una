@@ -80,11 +80,14 @@ void main() {
     expect(l10nEn.settingsSaveError, "Couldn't save the setting.");
   });
 
-  test('CA-015-27: lo que cambia o se retira lo hace T-015-09 / T-015-11, '
-      'no esta tarea (siguen todas las claves de la 012)', () {
+  test('CA-015-01a, CA-015-27: menuSettings y settingsClose cambian de texto '
+      '(T-015-09); las claves de las licencias de la 012 se retiran en '
+      'T-015-11, no antes', () {
+    expect(es['menuSettings'], 'Ajustes');
+    expect(en['menuSettings'], 'Settings');
+    expect(es['settingsClose'], 'Cerrar ajustes');
+    expect(en['settingsClose'], 'Close settings');
     for (final k in [
-      'menuSettings',
-      'settingsClose',
       'settingsLicenses',
       'settingsPrivacy',
       'settingsPrivacyHint',
@@ -94,8 +97,6 @@ void main() {
       expect(es.containsKey(k), isTrue, reason: k);
       expect(en.containsKey(k), isTrue, reason: k);
     }
-    expect(es['menuSettings'], 'Configuración y perfil');
-    expect(es['settingsClose'], 'Cerrar');
   });
 
   test('CA-015-03, CA-015-19: los tokens nuevos del interruptor y de las filas '

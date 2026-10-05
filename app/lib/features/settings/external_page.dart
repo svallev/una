@@ -43,8 +43,17 @@ class SettingsLinks {
 ///   Quien lo posee lo quita con [clearNotice] en la siguiente acción con éxito
 ///   sobre cualquier control, o al salir del nivel.
 ///
+/// [onActionSucceeded] avisa a la pantalla de que una acción con éxito (abrir la
+/// confirmación, abrir la página) quita también los avisos que no son de este
+/// objeto (el de guardado, CA-015-12 "Los avisos").
+///
 /// Lo posee el `State` de la pantalla, que lo libera con [dispose].
 class ExternalPageSession extends ChangeNotifier {
+  ExternalPageSession({this.onActionSucceeded});
+
+  /// Se llama en cada acción con éxito, haya o no aviso de enlace que quitar.
+  final VoidCallback? onActionSucceeded;
+
   bool _busy = false;
   bool _noApp = false;
   int _attempt = 0;
@@ -61,9 +70,12 @@ class ExternalPageSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Quita el aviso si se ve.
+  /// La siguiente acción con éxito sobre cualquier control: quita el aviso de
+  /// enlace si se ve y avisa a la pantalla para que quite los suyos.
   void clearNotice() {
-    if (_disposed || !_noApp) return;
+    if (_disposed) return;
+    onActionSucceeded?.call();
+    if (!_noApp) return;
     _noApp = false;
     notifyListeners();
   }
@@ -74,6 +86,9 @@ class ExternalPageSession extends ChangeNotifier {
     super.dispose();
   }
 }
+
+/// Margen tras el cierre de la confirmación antes de devolver el foco a la fila.
+const _afterSheetMargin = Duration(milliseconds: 120);
 
 /// Abre una de las tres webs de Ajustes en el navegador del sistema, tras
 /// preguntar (CA-015-12a, patrón de CA-012-04 y CA-008-12).
@@ -102,8 +117,11 @@ Future<void> openExternalPage(
   if (session.busy) return;
   session._busy = true;
   final opener = ref.read(linkOpenerProvider);
+  // La confirmación termina de irse tras `sheetOut` y entonces el sistema de
+  // foco devuelve el foco al último control de la pantalla; la petición tiene
+  // que llegar después (comprobado con TalkBack en el emulador, T-015-09).
   void refocus() => requestFocusAfter(
-    after: UnaMotion.sheetOut,
+    after: UnaMotion.sheetOut + _afterSheetMargin,
     isMounted: () => context.mounted,
     node: focus,
     semantics: semantics,
