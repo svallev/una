@@ -101,7 +101,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - Respeta el bloqueo de rotación del sistema. El resto de la app (y la tarea sin imagen) queda solo en vertical.
   - En tablets y plegables, en horizontal usa todo el ancho de la pantalla aunque el resto de la app esté limitado a 600 px (CL-001-7).
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar en horizontal, además se ve la card de deshacer (CL-014-7).
-- **CA-007-12 Pantalla encendida, ~~con límite~~ sin límite (D10 enmendada)** *(**Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: ver abajo)*
+- **CA-007-12 Pantalla encendida, ~~con límite~~ sin límite (D10 enmendada)** *(**Enmienda 2026-10-05 (spec 015, implementada; en vigor)**: ver abajo)*
   - **Dado** que el ajuste ~~"Mantener la pantalla encendida con adjuntos"~~ **"Pantalla siempre activa"** está activo (~~por defecto sí; su pantalla llega con la spec futura de Configuración y perfil; en la beta está siempre activo, enmienda 2026-09-29~~ **por defecto apagado**; se enciende en Ajustes, spec 015)
   - **Cuando** se ve la tarea actual con imagen
   - **Entonces** la pantalla no se apaga por inactividad ~~**mientras se use**: tras **10 minutos sin tocarla** vuelven el apagado y el bloqueo normales del teléfono~~ **sin límite de tiempo** (CA-015-04a): ya no hay los 10 minutos sin tocar ni cuentan los toques.

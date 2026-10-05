@@ -145,7 +145,7 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
 - **CA-009-16 Pantalla encendida**
   - **Dado** el ajuste ~~"Mantener la pantalla encendida con adjuntos"~~ "Pantalla siempre activa" activo
   - **Cuando** se ve la tarea actual web, en vertical o en horizontal
-  - **Entonces** la pantalla no se apaga, ~~con el límite de 10 minutos sin tocar y~~ **sin límite de tiempo** y con las condiciones de CA-007-12 (propietario, 2026-09-28). **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: también con el aviso "Necesitas conexión para ver esta página." a la vista **[Suposición]** (CA-015-04a).
+  - **Entonces** la pantalla no se apaga, ~~con el límite de 10 minutos sin tocar y~~ **sin límite de tiempo** y con las condiciones de CA-007-12 (propietario, 2026-09-28). **Enmienda 2026-10-05 (spec 015, implementada; en vigor)**: también con el aviso "Necesitas conexión para ver esta página." a la vista **[Suposición]** (CA-015-04a).
 
 **Donde aparece la tarea web**
 
