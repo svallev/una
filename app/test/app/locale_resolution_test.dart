@@ -1,4 +1,5 @@
 import 'package:app/app/locale_resolution.dart';
+import 'package:app/domain/entities/locale_choice.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -112,5 +113,12 @@ void main() {
       resolveAppLocale(const [Locale('ar'), Locale('es', 'ES')]),
       const Locale('es'),
     );
+  });
+
+  test('CA-015-09: el idioma elegido se convierte en un Locale fijo; '
+      '"Como el sistema" no fija ninguno', () {
+    expect(localeOfChoice(LocaleChoice.system), isNull);
+    expect(localeOfChoice(LocaleChoice.es), const Locale('es'));
+    expect(localeOfChoice(LocaleChoice.en), const Locale('en'));
   });
 }

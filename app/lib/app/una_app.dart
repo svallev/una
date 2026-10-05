@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/entities/locale_choice.dart';
 import '../features/all_done/all_done_screen.dart';
 import '../features/app_error/storage_error_screen.dart';
 import '../features/attachments/keep_screen_on_controller.dart';
@@ -17,6 +18,7 @@ import '../features/delete/undo_card_host.dart';
 import '../features/delete/undo_controller.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
+import '../features/settings/settings_controller.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../ui/full_width.dart';
 import '../ui/semantics_action_order.dart';
@@ -105,6 +107,7 @@ class _UnaAppState extends ConsumerState<UnaApp> {
 
   @override
   Widget build(BuildContext context) {
+    final choice = ref.watch(settingsProvider.select((s) => s.locale));
     return MaterialApp(
       navigatorKey: _navigatorKey,
       navigatorObservers: [_undoObserver],
@@ -113,7 +116,14 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       theme: UnaTheme.light(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
+      // Idioma elegido en Ajustes (ADR-0023): con "Español" o "English" Flutter
+      // usa ese `Locale` sin mirar el sistema; con "Como el sistema" no hay
+      // `locale` y decide la regla de la 010. `BootState.locale` lo trae ya
+      // leído: el primer fotograma sale en ese idioma (CA-015-10).
+      locale: localeOfChoice(choice),
+      localeListResolutionCallback: choice == LocaleChoice.system
+          ? (locales, _) => resolveAppLocale(locales)
+          : null,
       // Cada toque cuenta como uso para la pantalla encendida (CA-007-12),
       // también explorar tocando con TalkBack (llega como *hover* táctil).
       builder: (context, child) => Listener(

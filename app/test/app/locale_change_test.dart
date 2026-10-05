@@ -7,6 +7,7 @@ import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/license_package.dart';
 import 'package:app/domain/entities/link_target.dart';
+import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/attachment_store.dart';
@@ -20,6 +21,7 @@ import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/menu/menu_sheet.dart';
 import 'package:app/features/settings/license_detail_screen.dart';
 import 'package:app/features/settings/licenses_screen.dart';
+import 'package:app/features/settings/settings_controller.dart';
 import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/features/web/web_bar.dart';
@@ -27,6 +29,7 @@ import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart' show PdfViewer;
@@ -44,6 +47,7 @@ import '../support/l10n_leaks.dart'
     show expectNoL10nLeaks, findL10nLeaks, semanticsTexts;
 import '../support/pdfrx.dart';
 import '../support/pump_app.dart' show sampleTask;
+import '../support/undo.dart' show TesterClock;
 
 /// Cambio de idioma del sistema con la app abierta, sin adjuntos (spec 010,
 /// T-010-07). La actividad no se recrea (`configChanges` con `locale`): la app
@@ -293,6 +297,144 @@ class _LicenseSource implements LicenseSource {
 void main() {
   // El visor de PDF de verdad (PDFium) de las pruebas con adjuntos.
   setUpAll(initPdfrxForTests);
+
+  group('CA-015-09: idioma elegido en Ajustes', () {
+    /// Idioma con el que se ha construido la pantalla actual.
+    String shown(WidgetTester tester) =>
+        Localizations.localeOf(tester.element(find.byType(Scaffold).first))
+            .languageCode;
+
+    SettingsController controller(WidgetTester tester) =>
+        ProviderScope.containerOf(tester.element(find.byType(UnaApp)))
+            .read(settingsProvider.notifier);
+
+    // La app no mira el sistema: ni al abrirse ni al cambiar.
+    for (final (choice, system, expected) in [
+      (LocaleChoice.es, const Locale('fr'), 'es'),
+      (LocaleChoice.es, const Locale('en'), 'es'),
+      (LocaleChoice.en, const Locale('fr'), 'en'),
+      (LocaleChoice.en, const Locale('es'), 'en'),
+      (LocaleChoice.en, const Locale('ca', 'ES'), 'en'),
+    ]) {
+      testWidgets(
+        'CA-015-09: con "${choice.code}" y el sistema en '
+        '"${system.toLanguageTag()}" se ve "$expected" y el sistema no cuenta',
+        (tester) async {
+          final repo = InMemoryTaskRepository();
+          await repo.setLocale(choice);
+          await pumpUnaApp(tester, repo: repo, locale: system, tasks: _tasks);
+          expect(shown(tester), expected);
+          expect(
+            find.bySemanticsLabel(_l10n(expected).menuButton),
+            findsOneWidget,
+          );
+
+          // El sistema cambia a otro idioma: la app se queda como estaba.
+          final other = expected == 'es'
+              ? const Locale('en')
+              : const Locale('es');
+          await _switchTo(tester, [other]);
+          expect(shown(tester), expected);
+          await _switchTo(tester, [const Locale('fr')]);
+          expect(shown(tester), expected);
+          expect(
+            find.bySemanticsLabel(_l10n(expected).menuButton),
+            findsOneWidget,
+          );
+        },
+      );
+    }
+
+    // "Como el sistema": la regla de la 010 sin cambios.
+    for (final (system, expected) in [
+      (const Locale('ca', 'ES'), 'es'),
+      (const Locale('es', 'MX'), 'es'),
+      (const Locale('fr'), 'en'),
+      (const Locale('gl', 'ES'), 'en'),
+    ]) {
+      testWidgets('CA-015-09: "Como el sistema" con el sistema en '
+          '"${system.toLanguageTag()}" → "$expected" (regla de la 010)', (
+        tester,
+      ) async {
+        final repo = InMemoryTaskRepository();
+        await repo.setLocale(LocaleChoice.system);
+        await pumpUnaApp(tester, repo: repo, locale: system, tasks: _tasks);
+        expect(shown(tester), expected);
+      });
+    }
+
+    testWidgets('CA-015-09: "Como el sistema" sigue los cambios del sistema '
+        'en su sitio', (tester) async {
+      await pumpUnaApp(
+        tester,
+        repo: InMemoryTaskRepository(),
+        locale: const Locale('es'),
+        tasks: _tasks,
+      );
+      expect(shown(tester), 'es');
+      await _switchTo(tester, [const Locale('fr'), const Locale('en')]);
+      expect(shown(tester), 'en');
+      expect(find.text(_tasks.first), findsOneWidget);
+      await _switchTo(tester, [const Locale('ca', 'ES')]);
+      expect(shown(tester), 'es');
+    });
+
+    testWidgets('CA-015-09: cambiar el idioma por el controlador cambia los '
+        'textos en su sitio, sin tocar la tarea', (tester) async {
+      await pumpUnaApp(
+        tester,
+        repo: InMemoryTaskRepository(),
+        locale: const Locale('fr'),
+        tasks: _tasks,
+      );
+      expect(shown(tester), 'en');
+      controller(tester).applyLocale(LocaleChoice.es);
+      await tester.pumpAndSettle();
+      expect(shown(tester), 'es');
+      expect(find.byType(CurrentTaskScreen), findsOneWidget);
+      expect(find.text(_tasks.first), findsOneWidget);
+      expect(find.bySemanticsLabel(_l10n('es').menuButton), findsOneWidget);
+
+      // Y de vuelta a "Como el sistema": vuelve a mandar el sistema.
+      controller(tester).applyLocale(LocaleChoice.system);
+      await tester.pumpAndSettle();
+      expect(shown(tester), 'en');
+      await _switchTo(tester, [const Locale('es')]);
+      expect(shown(tester), 'es');
+    });
+
+    testWidgets('CA-015-10: con un idioma guardado, la primera pintura ya '
+        'está en ese idioma', (tester) async {
+      final repo = InMemoryTaskRepository();
+      tester.platformDispatcher.localesTestValue = const [Locale('es')];
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            taskRepositoryProvider.overrideWithValue(repo),
+            settingsRepositoryProvider.overrideWithValue(repo),
+            bootStateProvider.overrideWithValue(
+              BootState(
+                currentTask: sampleTask(text: _tasks.first),
+                firstRunDone: true,
+                locale: LocaleChoice.en,
+              ),
+            ),
+            clockProvider.overrideWithValue(TesterClock(tester)),
+          ],
+          child: const UnaApp(),
+        ),
+      );
+      // Solo el primer fotograma, sin asentar nada.
+      final element = tester.element(find.byType(CurrentTaskScreen));
+      expect(Localizations.localeOf(element).languageCode, 'en');
+      expect(AppLocalizations.of(element).menuButton, _l10n('en').menuButton);
+    });
+  });
 
   // Los dos sentidos: ES → EN y EN → ES.
   for (final (from, to) in [('es', 'en'), ('en', 'es')]) {
