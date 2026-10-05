@@ -210,7 +210,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       order: SettingsFocusOrder.content,
                       child: Semantics(
                         sortKey: const OrdinalSortKey(SettingsOrder.content),
-                        child: widget.child,
+                        // La zona que se desplaza termina sobre la barra de
+                        // navegación del sistema: así `ensureVisible` (avisos,
+                        // foco del teclado) nunca deja un elemento bajo ella.
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            bottom: MediaQuery.paddingOf(context).bottom,
+                          ),
+                          child: widget.child,
+                        ),
                       ),
                     ),
                   ),

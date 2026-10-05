@@ -206,12 +206,12 @@ class _LanguageContent extends ConsumerWidget {
       title: l10n.settingsLanguage,
       root: false,
       child: SingleChildScrollView(
-        // `SettingsPage` no reserva el borde inferior: lo suma el contenido.
-        padding: EdgeInsets.fromLTRB(
+        // `SettingsPage` reserva el borde inferior del sistema.
+        padding: const EdgeInsets.fromLTRB(
           UnaSpace.l,
           UnaSpace.m,
           UnaSpace.l,
-          UnaSpace.l + MediaQuery.paddingOf(context).bottom,
+          UnaSpace.l,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

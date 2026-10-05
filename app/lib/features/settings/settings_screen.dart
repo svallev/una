@@ -8,6 +8,7 @@ import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/locale_choice.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/live_notice.dart';
+import '../../ui/request_focus.dart';
 import '../../ui/settings_row.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_switch_row.dart';
@@ -54,7 +55,8 @@ class _RowFocus {
   final key = GlobalKey();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
+    with WidgetsBindingObserver {
   late final ExternalPageSession _session = ExternalPageSession(
     onActionSucceeded: _clearSaveNotice,
   );
@@ -72,8 +74,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   /// La página de Idioma se está abriendo: otro toque no hace nada (CL-015-1).
   bool _openingLanguage = false;
 
+  /// La fila cuya web se está abriendo o se abrió, y si la app ya pasó a
+  /// segundo plano por ello: al volver, el foco vuelve a esa fila (CA-015-20h).
+  _RowFocus? _returnTo;
+  bool _away = false;
+
+  /// Margen tras volver al primer plano: TalkBack mueve el foco al título cuando
+  /// la ventana recupera el foco; hay que pedirlo **después**. **[Pendiente]**
+  /// En el emulador de API 37 TalkBack **ignora** este aviso al volver del
+  /// navegador (el foco de entrada sí vuelve a la fila; el del lector se queda
+  /// en el título): `specs/015-ajustes/dispositivo.md`, T-015-14.
+  static const _returnFocusDelay = Duration(milliseconds: 600);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final row = _returnTo;
+    if (row == null) return;
+    switch (state) {
+      case AppLifecycleState.paused || AppLifecycleState.hidden:
+        _away = true;
+      case AppLifecycleState.resumed when _away:
+        _returnTo = null;
+        _away = false;
+        requestFocusAfter(
+          after: _returnFocusDelay,
+          isMounted: () => mounted,
+          node: row.node,
+          semantics: row.key,
+        );
+      default:
+        break;
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _session.dispose();
     _language.node.dispose();
     _privacy.node.dispose();
@@ -125,15 +167,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _openWeb(ExternalLink kind) => unawaited(
-    openExternalPage(
+  Future<void> _openWeb(ExternalLink kind, _RowFocus row) async {
+    // Antes de abrir: el aviso de segundo plano puede llegar antes que la
+    // respuesta de `open`.
+    _returnTo = row;
+    _away = false;
+    final opened = await openExternalPage(
       context,
       ref,
       kind,
       session: _session,
       links: widget.links,
-    ),
-  );
+    );
+    if (!opened && mounted && !_away) _returnTo = null;
+  }
 
   /// El valor de la fila "Idioma" y, con "Español" o "English", su etiqueta del
   /// lector con el idioma propio de ese nombre (CA-015-11).
@@ -214,7 +261,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // Bloque 3: información y ayuda (abren la web).
             _Block(
               bottom: UnaSpace.l + UnaSpace.s,
-              last: true,
               children: [
                 _InfoHeader(label: l10n.settingsInfo),
                 SettingsRow(
@@ -225,7 +271,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   divider: true,
                   focusNode: _privacy.node,
                   semanticsKey: _privacy.key,
-                  onTap: () => _openWeb(ExternalLink.privacy),
+                  onTap: () =>
+                      unawaited(_openWeb(ExternalLink.privacy, _privacy)),
                 ),
                 SettingsRow(
                   icon: UnaIcons.licenseFile,
@@ -235,7 +282,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   divider: true,
                   focusNode: _licenses.node,
                   semanticsKey: _licenses.key,
-                  onTap: () => _openWeb(ExternalLink.licenses),
+                  onTap: () =>
+                      unawaited(_openWeb(ExternalLink.licenses, _licenses)),
                 ),
                 SettingsRow(
                   icon: UnaIcons.help,
@@ -244,7 +292,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   divider: true,
                   focusNode: _help.node,
                   semanticsKey: _help.key,
-                  onTap: () => _openWeb(ExternalLink.help),
+                  onTap: () => unawaited(_openWeb(ExternalLink.help, _help)),
                 ),
                 // Tras Ayuda; el lector lo lee ahí por geometría.
                 ListenableBuilder(
@@ -267,31 +315,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 /// Un bloque de filas con la sangría lateral del prototipo (24); los
-/// separadores entre bloques van a sangre, fuera de él. El último ([last])
-/// suma el borde inferior del sistema (`SettingsPage` no lo reserva).
+/// separadores entre bloques van a sangre, fuera de él. `SettingsPage` reserva
+/// el borde inferior del sistema.
 class _Block extends StatelessWidget {
   const _Block({
     required this.children,
     this.top = UnaSpace.sm + UnaSpace.xxs,
     this.bottom = UnaSpace.sm + UnaSpace.xxs,
-    this.last = false,
   });
 
   final List<Widget> children;
   final double top;
   final double bottom;
 
-  /// El último bloque: suma el borde inferior del sistema.
-  final bool last;
-
   @override
   Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.fromLTRB(
-      UnaSpace.l,
-      top,
-      UnaSpace.l,
-      bottom + (last ? MediaQuery.paddingOf(context).bottom : 0),
-    ),
+    padding: EdgeInsets.fromLTRB(UnaSpace.l, top, UnaSpace.l, bottom),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: children,

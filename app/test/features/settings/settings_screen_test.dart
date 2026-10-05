@@ -35,6 +35,51 @@ const _links = SettingsLinks(
   help: 'https://help.zxq-tres.com/h',
 );
 
+/// Ids de los nodos que han recibido el aviso de foco del lector.
+List<int> _recordFocusEvents(WidgetTester tester) {
+  final ids = <int>[];
+  tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+    SystemChannels.accessibility,
+    (message) async {
+      final map = message! as Map<Object?, Object?>;
+      if (map['type'] == 'focus') ids.add(map['nodeId']! as int);
+      return null;
+    },
+  );
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger
+        .setMockDecodedMessageHandler<Object?>(
+          SystemChannels.accessibility,
+          null,
+        ),
+  );
+  return ids;
+}
+
+/// La app pasa a segundo plano (el navegador se abre delante).
+Future<void> _goAwayAndBack(WidgetTester tester) async {
+  for (final s in [
+    AppLifecycleState.inactive,
+    AppLifecycleState.hidden,
+    AppLifecycleState.paused,
+  ]) {
+    tester.binding.handleAppLifecycleStateChanged(s);
+  }
+  await tester.pump();
+}
+
+/// Y vuelve al primer plano.
+Future<void> _comeBack(WidgetTester tester) async {
+  for (final s in [
+    AppLifecycleState.hidden,
+    AppLifecycleState.inactive,
+    AppLifecycleState.resumed,
+  ]) {
+    tester.binding.handleAppLifecycleStateChanged(s);
+  }
+  await tester.pump();
+}
+
 String _addressOf(LinkTarget target) => (target as WebLink).uri.toString();
 
 bool _focusIsInMenu() =>
@@ -627,6 +672,39 @@ void main() {
       );
 
       testWidgets(
+        'CA-015-20h ($name): al volver del navegador, el foco (teclado y lector) '
+        'vuelve a la fila tocada',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          final opener = await openSettingsScreen(
+            tester,
+            keyboard: true,
+            screenReader: true,
+          );
+          final ids = _recordFocusEvents(tester);
+          await tester.tap(inSettings(find.text(name)));
+          await settleSettings(tester);
+          expect(opener.opened, hasLength(1));
+          // Al volver, el lector se lleva el foco a otro sitio (a la primera
+          // fila, como hace TalkBack): la app se lo devuelve a la fila tocada.
+          await _goAwayAndBack(tester);
+          Focus.of(tester.element(inSettings(find.text('Idioma')).first))
+              .requestFocus();
+          await tester.pump();
+          expect(focusedLabel(tester), 'Idioma');
+          ids.clear();
+          await _comeBack(tester);
+          await tester.pump(const Duration(seconds: 1));
+          expect(focusedLabel(tester), name);
+          final row = tester.getSemantics(
+            find.bySemanticsLabel('$name, Abre una página web en el navegador'),
+          );
+          expect(ids, [row.id], reason: 'aviso de foco a la fila');
+          handle.dispose();
+        },
+      );
+
+      testWidgets(
         'CA-015-20e ($name): es un botón cuyo nombre incluye que abre una página web en el navegador',
         (tester) async {
           final handle = tester.ensureSemantics();
@@ -640,6 +718,51 @@ void main() {
         },
       );
     }
+
+    testWidgets(
+      'CA-015-20h: sin abrir ninguna web, volver a la app no mueve el foco; '
+      'tampoco si open da false ni una segunda vez',
+      (tester) async {
+        final opener = await openSettingsScreen(tester, keyboard: true);
+        Focus.of(tester.element(inSettings(find.text('Idioma')).first))
+            .requestFocus();
+        await tester.pump();
+        // Sin abrir nada.
+        await _goAwayAndBack(tester);
+        await _comeBack(tester);
+        await tester.pump(const Duration(seconds: 1));
+        expect(focusedLabel(tester), 'Idioma');
+        // open da false: no hay navegador, no hay vuelta.
+        opener.openResult = false;
+        await tester.tap(inSettings(find.text('Ayuda')));
+        await settleSettings(tester);
+        Focus.of(tester.element(inSettings(find.text('Idioma')).first))
+            .requestFocus();
+        await tester.pump();
+        await _goAwayAndBack(tester);
+        await _comeBack(tester);
+        await tester.pump(const Duration(seconds: 1));
+        expect(focusedLabel(tester), 'Idioma');
+        // Una apertura que sí abre devuelve el foco una sola vez.
+        opener.openResult = true;
+        await tester.tap(inSettings(find.text('Ayuda')));
+        await settleSettings(tester);
+        await _goAwayAndBack(tester);
+        Focus.of(tester.element(inSettings(find.text('Idioma')).first))
+            .requestFocus();
+        await tester.pump();
+        await _comeBack(tester);
+        await tester.pump(const Duration(seconds: 1));
+        expect(focusedLabel(tester), 'Ayuda');
+        Focus.of(tester.element(inSettings(find.text('Idioma')).first))
+            .requestFocus();
+        await tester.pump();
+        await _goAwayAndBack(tester);
+        await _comeBack(tester);
+        await tester.pump(const Duration(seconds: 1));
+        expect(focusedLabel(tester), 'Idioma', reason: 'una sola vez');
+      },
+    );
 
     testWidgets(
       'CA-015-13a: sin direcciones propias, las tres filas usan las marcadores de la identidad (https)',
@@ -953,6 +1076,40 @@ void main() {
                 .bottom,
             lessThanOrEqualTo(height - inset),
             reason: 'el último elemento queda por encima de la barra',
+          );
+        },
+      );
+    }
+
+    for (final height in [640.0, 480.0]) {
+      testWidgets(
+        'CA-015-12b/21f: con la barra del sistema (48 dp abajo) al 200 % a 360x${height.toInt()}, el aviso que aparece se desplaza a la vista por encima de ella (sin arrastrar)',
+        (tester) async {
+          const inset = 48.0;
+          final opener = FakeOpener()..available = false;
+          await openSettingsScreen(
+            tester,
+            textScale: 2,
+            size: const Size(360, 640),
+            bottomInset: inset,
+            opener: opener,
+          );
+          tester.view.physicalSize = Size(360, height);
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(inSettings(find.text('Ayuda')));
+          await tester.pumpAndSettle();
+          await tester.tap(inSettings(find.text('Ayuda')));
+          await settleSettings(tester);
+          expect(
+            tester
+                .getRect(
+                  inSettings(
+                    find.text('No hay ninguna app para abrir este enlace.'),
+                  ),
+                )
+                .bottom,
+            lessThanOrEqualTo(height - inset),
+            reason: 'el aviso no queda bajo la barra de navegación',
           );
         },
       );
