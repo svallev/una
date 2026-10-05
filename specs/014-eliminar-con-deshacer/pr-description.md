@@ -39,7 +39,7 @@ Detalle: `specs/014-eliminar-con-deshacer/dispositivo.md`.
 ## Definition of Done (`specs/constitution.md`)
 
 - [x] Criterios de aceptación cumplidos y con tests en verde (los de dispositivo, en la 022)
-- [ ] CI en verde: pendiente de abrir la PR
+- [ ] CI en verde: el job `CI` falló solo por los 10 *goldens* sin subir; se vuelve a lanzar con ellos
 - [x] Textos nuevos en ES y EN; ninguno incrustado en el código
 - [x] Sin valores visuales sueltos (todo sale de los tokens)
 - [x] Accesibilidad: semántica, alternativas a gestos, contraste, texto grande, reducir movimiento
@@ -53,7 +53,7 @@ Detalle: `specs/014-eliminar-con-deshacer/dispositivo.md`.
 
 ## Pendiente antes o después de fusionar
 
-- **[Pendiente]** Generar con CI (`actualizar-goldens`) los *goldens* nuevos: la card sola ×1,0 y ×2,0, con foco y en dos filas; la card en la tarea ×1,0 y ×2,0, en "Todo hecho.", en horizontal y en el listado (los del Mac no valen).
+- **[Hecho]** *Goldens* nuevos (10) generados en CI con `actualizar-goldens`, revisados a ojo y subidos.
 - **[Pendiente, propietario]** Hallazgo 1 de `dispositivo.md` ("Tarea recuperada" no sale en el panel de voz de API 37) y M2 (tope de espera al primer foco del lector).
 - **[Pendiente, 022]** Casillas de dispositivo (`docs/PLAN.md`, «Casillas de la 014»): TalkBack real, Voice Access, API 26 y 28, PD-10 con la card.
 
