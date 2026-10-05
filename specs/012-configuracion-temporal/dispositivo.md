@@ -103,8 +103,10 @@ Base = `main` (`c576d3f`), sacada con `git archive` a un directorio temporal; nu
 
 > **Spec 013 (aprobada 2026-10-01):** estas casillas pasan a la auditoría en dispositivo (spec 016). Las de "TalkBack con el foco real al volver", "Nivel 3 de Bibliotecas de Android", "Switch Access real" y "Reducir movimiento" se hacen **con el comportamiento de la 013**: nombre traducido (CA-013-01), aviso leído después de las opciones y sin nodos sin nombre (CA-013-04/05) y hundido instantáneo (CA-013-03). La de los idiomas `ca`/`gl`/`eu` solo anota la voz: los anuncios con la voz del sistema están aceptados (ADR-0020). Las casillas nuevas de la 013 (F-1 y F-2 ya corregidos y vistos en el emulador; lo que queda a mano) están en `specs/013-deuda-accesibilidad/dispositivo.md` §6.
 
+> **Spec 015 (aprobada 2026-10-05; se aplica al implementarla):** sustituye a esta pantalla. **Se anulan** (la pantalla ya no existe, ADR-0026): "Cargando licencias…" y "Reintentar", y el nivel 3 de "Bibliotecas de Android". **Pasan a la auditoría en dispositivo (spec 022), sobre Ajustes y la página de Idioma:** foco de TalkBack al volver, anillo de foco con teclado real, Switch Access, reducir movimiento, 200 % con navegación de tres botones, sistema en inglés, los idiomas `ca`, `gl` y `eu` y el aviso obsoleto (M2). Casillas nuevas en `specs/015-ajustes/` (`dispositivo.md`).
+
 - [ ] Foco de TalkBack al volver en los tres saltos, tras Cancelar y tras el navegador (hace falta mover el foco de TalkBack a la fila antes de activarla; `adb` no puede).
-- [ ] TalkBack: anuncio de "Cargando licencias…" y foco en "Reintentar" (error) y su pista; recuento leído en voz (se comprobó en el árbol, no a oído).
+- ~~[ ] TalkBack: anuncio de "Cargando licencias…" y foco en "Reintentar" (error) y su pista; recuento leído en voz~~ **Anulada** (spec 015: sin pantallas de licencias).
 - [ ] Anillo de foco visible con un teclado real (Xiaomi con teclado, o emulador con el teclado del ordenador).
 - [ ] Switch Access: recorrer, activar y desplazar (el servicio se activó y se asignaron teclas, pero no apareció resaltado).
 - [x] p90 de fotogramas (rasterizado) y arranque en frío en el Xiaomi (2026-09-30, §6 y §7).
@@ -116,7 +118,7 @@ Base = `main` (`c576d3f`), sacada con `git archive` a un directorio temporal; nu
 Salen de la revisión de accesibilidad del cierre (2026-09-30). Todas **[Pendiente]**; las que piden el Xiaomi necesitan el permiso del propietario. Los hallazgos que las motivan están en `docs/PLAN.md` ("Hallazgos de la 012 para la auditoría de F5").
 
 - [ ] **TalkBack con el foco real al volver:** mover el foco de TalkBack a la fila (con el dedo, no con `adb`) y activarla; al volver (3 → 2 → 1 → menú, tras Cancelar y tras el navegador) el foco debe ir a la fila de la tabla de niveles. Con él, comprobar también el orden de lectura de "Volver" (012-A-B3, el `Focus` sin etiqueta de `license_detail_screen.dart`).
-- [ ] **Nivel 3 de "Bibliotecas de Android":** con TalkBack, cómo se lee el nombre (fijo en español, 012-A-M3) y el texto (inglés) con la app en español y en inglés.
+- ~~[ ] **Nivel 3 de "Bibliotecas de Android":** con TalkBack, cómo se lee el nombre (fijo en español, 012-A-M3) y el texto (inglés) con la app en español y en inglés.~~ **Anulada** (spec 015).
 - [ ] **Sistema en inglés:** el recorrido completo de los tres niveles y del aviso con TalkBack y la app en inglés.
 - [ ] **Idiomas `ca`, `gl` y `eu`:** qué voz dice los anuncios (carga, aviso "No hay ninguna app…") y la pantalla (012-A-B2). `ca` abre en español y `gl`/`eu` en inglés (spec 010).
 - [ ] **200 % con navegación de 3 botones:** los tres niveles y el aviso a 360 dp, sin que la barra del sistema tape nada (corregido el margen inferior en `7448f4e`; solo se vio con gestos).

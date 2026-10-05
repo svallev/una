@@ -143,9 +143,9 @@ Es una función **que necesita conexión** y de **uso ocasional**: para tener al
   - El resto es como CA-008-11: vuelve a vertical al poner el móvil en vertical, respeta el bloqueo de rotación, sigue pudiendo completar o eliminar con las acciones del lector, y si se completa o se elimina en horizontal y la siguiente tarea no tiene adjunto, vuelve a vertical. Si gira con una confirmación abierta, la confirmación sigue abierta.
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar en horizontal, además se ve la card de deshacer (CL-014-7); la confirmación de eliminar ya no existe.
 - **CA-009-16 Pantalla encendida**
-  - **Dado** el ajuste "Mantener la pantalla encendida con adjuntos" activo
+  - **Dado** el ajuste ~~"Mantener la pantalla encendida con adjuntos"~~ "Pantalla siempre activa" activo
   - **Cuando** se ve la tarea actual web, en vertical o en horizontal
-  - **Entonces** la pantalla no se apaga, con el límite de 10 minutos sin tocar y las condiciones de CA-007-12 (propietario, 2026-09-28).
+  - **Entonces** la pantalla no se apaga, ~~con el límite de 10 minutos sin tocar y~~ **sin límite de tiempo** y con las condiciones de CA-007-12 (propietario, 2026-09-28). **Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)**: también con el aviso "Necesitas conexión para ver esta página." a la vista **[Suposición]** (CA-015-04a).
 
 **Donde aparece la tarea web**
 

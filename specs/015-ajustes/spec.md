@@ -411,7 +411,7 @@ Se reutilizan `openInBrowserConfirm`, `linkConfirmOpen`, `linkConfirmCancel` y `
 
 ## 10. Enmiendas a otras specs y documentos
 
-Cada punto lleva su estado: **✅ hecho**, **🔧 en la PR de la corrección de la spec** (`docs/015-spec-fixes`, solo documentación), **⏳ al aprobar la spec**, **📋 en la PR de implementación** (se anota en el plan y en las tareas) o **🕒 más adelante**, sin PR propia.
+Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la corrección de la spec** (#33) o **en la de las enmiendas** (`docs/015-amendments`, solo documentación), **📋 en la PR de implementación** (se anota en el plan y en las tareas) o **🕒 más adelante**, sin PR propia.
 
 **Ya hecho**
 
@@ -423,14 +423,14 @@ Cada punto lleva su estado: **✅ hecho**, **🔧 en la PR de la corrección de 
 - ✅ **`docs/design/screen-map.md`:** tablero 16 y la entrada del menú → 015.
 - ✅ **Spec 014:** la mención de CA-014-11 («Configuración y perfil (Ajustes desde la spec 015)») ya remite a esta spec.
 
-**🔧 En la PR de la corrección de la spec**
+**✅ Hecho en la PR de la corrección de la spec (#33)**
 
 - **`docs/security/threat-model.md`:** T-15 y §7 recogen el riesgo residual aceptado de "Pantalla siempre activa" **sin límite**: apagada por defecto, solo con imagen, PDF o web a la vista y en primer plano; el sistema retira la petición al pasar a segundo plano (CA-015-04d). Anotar también que **no bloquea la pantalla** mientras se ve contenido (D10, P-6).
 - **`docs/glossary.md`:** el identificador `Settings` estaba en dos filas ("Configuración" y "Ajustes"); queda solo en "Ajustes". Se añade **"Confirmación de enlace"**.
 - **`docs/design/prototype-deviations.md`, DEV-52:** el separador de 1 px (`rgba(17,17,17,.18)`, que no es un token; la DEV-38 usó el token `disabled`); **reducir movimiento** (el prototipo no lo contempla); el **orden de lectura** con Cerrar al final (decisión de la 013 frente al prototipo); el fundido entre niveles.
 - **Esta spec:** §10 con su estado, §9 y los criterios.
 
-**⏳ Al aprobar la spec**
+**✅ Aplicadas tras aprobar la spec** (PR `docs/015-amendments`, 2026-10-05). Cada enmienda lleva la etiqueta «Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)»: hasta entonces, la app sigue haciendo lo que dice la spec original.
 
 - **005:** CA-005-09 (el enlace pasa a llamarse "Ajustes" y abre la pantalla de la 015, **cerrando el menú**; antes, sin cerrarlo, la de la 012), CA-005-01 (el enlace subrayado), CA-005-12 ("como Configuración y perfil" como referencia de estilo) y la tabla de textos (`menuSettings`).
 - **001:** su mención de "Configuración (spec futura de Configuración y perfil)" pasa a Ajustes (spec 015).
