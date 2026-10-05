@@ -193,10 +193,10 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | R12 estado vacío ("Todo hecho.") | 003, 004 | CA-003-05, CA-004-07/08 |
 | R13 reordenar, editar y eliminar en el listado | 006, 004, 005 | CA-006-04 a 16 |
 | R14 histórico | 003 | CA-003-06 — **retirada por el ADR-0012 (2026-09-26)** |
-| R15 idioma | 010 (y P7 en todas); 013; **015** (elegido en la app, D23; spec Borrador 2026-10-05) | CA-010-01, 02, 04–07 y 10–12; CA-013-01 y 02; CA-015-06 a 11 |
+| R15 idioma | 010 (y P7 en todas); 013; **015** (elegido en la app, D23; spec Aprobada 2026-10-05) | CA-010-01, 02, 04–07 y 10–12; CA-013-01 y 02; CA-015-06 a 11 y 26 |
 | R16 deshacer al eliminar (D20) | 014 | CA-014-03 a 18 (Aprobada; ADR-0021 aceptado) |
 | R17 varias imágenes con carrusel (D21) | 016 | — |
-| R18 Ajustes: pantalla siempre activa, bloquear zoom e información (D22, D24, D26) | 015, 017 | CA-015-01 a 05 y 12 a 14 (015, Borrador); 017: — |
+| R18 Ajustes: pantalla siempre activa, bloquear zoom e información (D22, D24, D26) | 015, 017 | CA-015-01a a 05, 12a a 14b y 26 (015, Aprobada); 017: — |
 | R19 notificaciones (D25) | 019 | — |
 | R20 icono (D29) | 018 | — |
 
@@ -251,4 +251,4 @@ Además: recibir texto, URL y archivos desde "Compartir" del sistema (*share ext
 
 ## 9. Siguiente paso concreto
 
-**F4b (2026-10-04):** ~~`/spec-new 014` con su ADR, revisiones y aprobación~~ ✅ (spec 014 Aprobada y ADR-0021 Aceptado, rama `feat/014-eliminar-con-deshacer`) → ~~plan y tareas de la 014~~ ✅ → ~~implementación T-014-01 a 11~~ ✅ → ~~cierre de la 014 (T-014-12)~~ ✅ (014 fusionada, PR svallev/una#29) → **spec 015 Ajustes en Borrador (2026-10-05, `specs/015-ajustes/spec.md`)**: Q-015-1 a 5 resueltas por el propietario (2026-10-05; «Todo hecho.» se queda sin menú); **ADR-0023 (idioma elegido; amplía la excepción del ADR-0020) y ADR-0026 (licencias en la web) Aceptados por el propietario el 2026-10-05; constitución 1.7**; siguiente, revisar y aprobar la spec (`spec-reviewer`, `a11y-reviewer`, `security-reviewer`); después plan y tareas. Después, la 016, y así hasta la 019 (con el spike S7 antes).
+**F4b (2026-10-04):** ~~`/spec-new 014` con su ADR, revisiones y aprobación~~ ✅ (spec 014 Aprobada y ADR-0021 Aceptado, rama `feat/014-eliminar-con-deshacer`) → ~~plan y tareas de la 014~~ ✅ → ~~implementación T-014-01 a 11~~ ✅ → ~~cierre de la 014 (T-014-12)~~ ✅ (014 fusionada, PR svallev/una#29) → **spec 015 Ajustes Aprobada (2026-10-05, `specs/015-ajustes/spec.md`)**: Q-015-1 a 5 resueltas por el propietario (2026-10-05; «Todo hecho.» se queda sin menú); **ADR-0023 (idioma elegido; amplía la excepción del ADR-0020) y ADR-0026 (licencias en la web) Aceptados por el propietario el 2026-10-05; constitución 1.7**; revisada con `spec-reviewer`, `a11y-reviewer` y `security-reviewer` (revisión 1 y 2, sin bloqueantes) y aprobada por el propietario; siguiente, plan y tareas, cada uno en una sesión nueva. Después, la 016, y así hasta la 019 (con el spike S7 antes).
