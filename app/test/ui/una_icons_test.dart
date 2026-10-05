@@ -20,6 +20,13 @@ void main() {
     'document': UnaIcons.document,
     'link': UnaIcons.link,
     'lock': UnaIcons.lock,
+    'globe': UnaIcons.globe,
+    'phone': UnaIcons.phone,
+    'info': UnaIcons.info,
+    'help': UnaIcons.help,
+    'licenseFile': UnaIcons.licenseFile,
+    'openWeb': UnaIcons.openWeb,
+    'chevronRight': UnaIcons.chevronRight,
   };
 
   test('P12: los iconos del prototipo se dibujan dentro de su caja de 24', () {
@@ -50,7 +57,19 @@ void main() {
     expect(lock.top, closeTo(3, 0.01));
   });
 
+  test('CA-015-19: la curva cúbica (C y c) del globo y de "Ayuda"', () {
+    // Absoluta y relativa dan el mismo trazado.
+    final abs = parseSvgPath('M12 3C15 6 15 18 12 21').getBounds();
+    final rel = parseSvgPath('M12 3c3 3 3 15 0 18').getBounds();
+    expect(rel, abs);
+    expect(rel.bottom, 21);
+    // Tras la curva, la posición actual es su punto final: `V14` sale de él.
+    final help = parseSvgPath('M0 0c1 1 2 2 3 3V10').getBounds();
+    expect(help.bottom, 10);
+    expect(help.right, closeTo(3, 0.01));
+  });
+
   test('un comando no admitido falla de forma explícita', () {
-    expect(() => parseSvgPath('M0 0C1 1 2 2 3 3'), throwsFormatException);
+    expect(() => parseSvgPath('M0 0Q1 1 3 3'), throwsFormatException);
   });
 }

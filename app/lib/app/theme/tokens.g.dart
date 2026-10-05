@@ -443,6 +443,12 @@ abstract final class UnaMotion {
 
   /// Entrada de la card de deshacer: sube undoEnterOffset y se funde, con la curva sheet (prototipo: undoIn .22s). CA-014-03
   static const Duration undoEnter = Duration(milliseconds: 220);
+
+  /// El pomo del interruptor de Ajustes cambia de lado, con la curva sheet (prototipo: transform .14s). Con reducir movimiento, 0 ms. CA-015-01d, CA-015-03
+  static const Duration switchKnob = Duration(milliseconds: 140);
+
+  /// La pista del interruptor de Ajustes cambia de color (prototipo: background .12s). Con reducir movimiento, 0 ms. CA-015-01d, CA-015-03
+  static const Duration switchTrack = Duration(milliseconds: 120);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);

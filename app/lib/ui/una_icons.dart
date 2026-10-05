@@ -65,6 +65,52 @@ abstract final class UnaIcons {
     'M5 11h14v10H5z',
     'M8 11V7a4 4 0 0 1 8 0v4',
   ]);
+
+  // Iconos de Ajustes (spec 015, tablero 16; `Main.dc.html`, pantalla de
+  // Ajustes). Los círculos del prototipo son arcos de un path, no `<circle>`.
+
+  /// Globo: "Idioma".
+  static const globe = UnaIconData([
+    'M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0',
+    'M3 12h18',
+    'M12 3c3 3 3 15 0 18',
+    'M12 3c-3 3 -3 15 0 18',
+  ]);
+
+  /// Móvil: "Pantalla siempre activa".
+  static const phone = UnaIconData(['M7 2h10v20H7z', 'M11 18h2']);
+
+  /// Círculo con una "i": encabezado "Información".
+  static const info = UnaIconData([
+    'M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0',
+    'M12 11v6',
+    'M12 7v1',
+  ]);
+
+  /// Círculo con una interrogación: "Ayuda".
+  static const help = UnaIconData([
+    'M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0',
+    'M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14',
+    'M12 17v1',
+  ]);
+
+  /// Hoja con renglones: "Licencias de terceros".
+  static const licenseFile = UnaIconData([
+    'M6 2h9l4 4v16H6z',
+    'M14 2v5h5',
+    'M9 12h7',
+    'M9 16h7',
+  ]);
+
+  /// Flecha que sale de un cuadro: "abre una web" (derecha de las filas).
+  static const openWeb = UnaIconData([
+    'M14 4h6v6',
+    'M20 4l-9 9',
+    'M18 14v6H4V6h6',
+  ]);
+
+  /// Chevron: la fila abre otro nivel ("Idioma").
+  static const chevronRight = UnaIconData(['M9 5l7 7-7 7']);
 }
 
 /// Dibuja un [UnaIconData]. Es decorativo: el nombre accesible lo pone el botón.
@@ -129,7 +175,7 @@ class _UnaIconPainter extends CustomPainter {
 }
 
 /// Convierte el atributo `d` de un `<path>` SVG en un [Path]. Admite los
-/// comandos que usan los iconos del prototipo: M, L, H, V, Z y A.
+/// comandos que usan los iconos del prototipo: M, L, H, V, C, Z y A.
 Path parseSvgPath(String d) {
   final tokens = RegExp(r'[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)')
       .allMatches(d)
@@ -165,6 +211,19 @@ Path parseSvgPath(String d) {
         final ny = next();
         y = rel ? y + ny : ny;
         path.lineTo(x, y);
+      case 'C':
+        final x1 = next(), y1 = next(), x2 = next(), y2 = next();
+        final nx = next(), ny = next();
+        path.cubicTo(
+          rel ? x + x1 : x1,
+          rel ? y + y1 : y1,
+          rel ? x + x2 : x2,
+          rel ? y + y2 : y2,
+          rel ? x + nx : nx,
+          rel ? y + ny : ny,
+        );
+        x = rel ? x + nx : nx;
+        y = rel ? y + ny : ny;
       case 'A':
         final rx = next(), ry = next(), rotation = next();
         final largeArc = next() != 0, sweep = next() != 0;
