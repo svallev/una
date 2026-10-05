@@ -49,12 +49,12 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 
 Aplica si la PR toca `LinkOpener.kt`, `link_confirm_sheet.dart`, `privacyLink`, `privacyPolicyUrl`, `assets/licenses/`, `bundled_licenses.dart` o `features/settings/`.
 
-- [ ] Solo se abren direcciones `https` (`privacyLink`: sin `usuario@`, espacios ni controles), siempre tras la confirmación con el dominio real; nada de esta pantalla pasa por la vista web de la tarea (ADR-0018 no aplica). La app no abre conexiones: lo hace el navegador (P4).
+- [ ] Solo se abren direcciones `https` (`privacyLink`: sin `usuario@`, espacios ni controles), sin confirmación previa (la dirección es una constante de compilación vigilada por `tools/check-release-config.sh`, no la escribe el usuario; CA-015-12a, enmienda del 2026-10-05); nada de esta pantalla pasa por la vista web de la tarea (ADR-0018 no aplica). La app no abre conexiones: lo hace el navegador (P4).
 - [ ] `LinkOpener.canOpen` solo comprueba (`resolveActivity`): sin `startActivity`, sin registrar ni guardar la dirección, y se pregunta en cada toque; `<queries>` y permisos sin cambios (`tools/check-android-permissions.sh release`: solo `INTERNET`).
 - [ ] Los textos de licencia son `Text` plano: sin enlaces activos (CA-012-03, CL-012-12).
 - [ ] `tools/check-licenses.sh` pasa sobre el APK *release* de cada ABI (paquetes Dart, cada `.so`, artefactos de Android, OFL de las fuentes). Un artefacto nuevo en `android.txt` tiene su licencia comprobada en el POM contra `threat-model.md §5` y anotada en la PR; al actualizar PDFium se regenera `pdfium.txt` (su línea de origen debe coincidir con `pdfium.lock`).
 - [ ] **Antes de publicar** (F6): `tools/check-release-config.sh` pasa (dirección `https` propia, sin dominios reservados, sin huecos ES/EN en `docs/legal/privacy-policy.md`) y coincide con la de la ficha de la tienda. **[Pendiente, PD-2]** la dirección real: hoy es el marcador `example.com`.
-- [ ] Toda pantalla o hoja nueva entra en la matriz de "Recientes" (CA-011-02; la 012 añadió los tres niveles y la confirmación de enlace).
+- [ ] Toda pantalla o hoja nueva entra en la matriz de "Recientes" (CA-011-02; la 012 añadió los tres niveles; la 015 los sustituye por Ajustes y la página de Idioma).
 
 ## "Recientes": lo que el sistema enseña de la app (T-2, spec 011, ADR-0019)
 
