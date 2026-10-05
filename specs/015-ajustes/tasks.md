@@ -1,6 +1,6 @@
 # Tareas — Spec 015: Ajustes
 
-**Siguiente:** T-015-01 (plan **Aprobado** el 2026-10-05; P-015-1 respondida como se recomienda; rama `feat/015-ajustes` desde `main` actualizado, tras fusionar el plan) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-015-02 (plan **Aprobado** el 2026-10-05; P-015-1 respondida como se recomienda; rama `feat/015-ajustes` desde `main` actualizado, tras fusionar el plan) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden** (nada en paralelo). Cada tarea termina con `dart format lib test integration_test`, `flutter analyze --fatal-infos` y `flutter test` en verde y un commit `feat(015): …` (o `test`/`docs`/`chore`). FVM no está instalado: `flutter` y `dart` del sistema. Emulador de API 37; nunca el Xiaomi sin permiso del propietario. Los tests que miden empiezan con `setUpAll(loadAppFonts)`. Con TalkBack en el emulador no valen los toques de `adb`: `integration_test` temporal + `screencap` y atajos de teclado de TalkBack (`docs/testing.md`, método de la 014). Cortes de sesión previstos: tras T-015-04, tras T-015-10 y antes del cierre. **Mientras la pantalla de la 012 siga en pie (hasta T-015-09), sus tests siguen en verde**: T-015-09 sustituye la pantalla y retira sus tests y los de las pantallas de licencias; las claves que se renombran o se retiran lo hacen en T-015-09 y T-015-11.
 
@@ -35,3 +35,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-015-01 | **Hecha.** 13 claves nuevas de §7 en ES+EN (`settingsBack` = Volver/Back; sin tocar ni retirar claves) y tokens del plan §2 (`color.switchOn`, interruptor, filas, `separatorBlock/Row`, radios `switchTrack/Knob`); `validate-tokens.mjs` con los pares de CA-015-03/19 y `--tokens <archivo>`. Verificado: `spec_015_strings_test` (4 tests, falló antes), suite 1741 en verde, format/analyze limpios, `gen_tokens --check`; el validador falla con copias (`switchOn` `#555555` = 2,53; `ink` `#999999`) sin tocar el repo. **[Suposición]** los tokens de duración del pomo (140/120 ms) los añade T-015-05. | (ver `git log`) |

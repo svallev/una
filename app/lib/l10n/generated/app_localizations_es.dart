@@ -596,4 +596,43 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get licensesAndroidLibraries =>
       'Bibliotecas de Android (AndroidX, Kotlin)';
+
+  @override
+  String get settingsTitle => 'Ajustes';
+
+  @override
+  String get settingsLanguage => 'Idioma';
+
+  @override
+  String get settingsLanguageSystem => 'Como el sistema';
+
+  @override
+  String get languageSpanish => 'Español';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get settingsKeepAwake => 'Pantalla siempre activa';
+
+  @override
+  String get settingsKeepAwakeHint => 'Imágenes, documentos y web';
+
+  @override
+  String get settingsInfo => 'Información';
+
+  @override
+  String get settingsThirdPartyLicenses => 'Licencias de terceros';
+
+  @override
+  String get settingsHelp => 'Ayuda';
+
+  @override
+  String get settingsOpensWebHint => 'Abre una página web en el navegador';
+
+  @override
+  String get settingsSaveError => 'No se pudo guardar el ajuste.';
+
+  @override
+  String get settingsBack => 'Volver';
 }

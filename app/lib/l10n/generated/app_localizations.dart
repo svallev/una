@@ -1069,6 +1069,84 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Bibliotecas de Android (AndroidX, Kotlin)'**
   String get licensesAndroidLibraries;
+
+  /// Encabezado de la pantalla de Ajustes (nivel 1), foco inicial del lector. CA-015-01b/20
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes'**
+  String get settingsTitle;
+
+  /// Fila de Ajustes que abre la página de idioma y título de esa página (nivel 2). CA-015-06/07
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma'**
+  String get settingsLanguage;
+
+  /// Primera opción de la página de idioma y valor por defecto; debajo muestra el idioma que resulta. CA-015-06/07/10
+  ///
+  /// In es, this message translates to:
+  /// **'Como el sistema'**
+  String get settingsLanguageSystem;
+
+  /// Nombre del español, igual en los dos idiomas y marcado con su idioma (es) para el lector. Opción y valor de la fila. CA-015-06/11
+  ///
+  /// In es, this message translates to:
+  /// **'Español'**
+  String get languageSpanish;
+
+  /// Nombre del inglés, igual en los dos idiomas y marcado con su idioma (en) para el lector. Opción y valor de la fila. CA-015-06/11
+  ///
+  /// In es, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// Nombre del interruptor que mantiene la pantalla encendida con imagen, PDF o web. CA-015-03
+  ///
+  /// In es, this message translates to:
+  /// **'Pantalla siempre activa'**
+  String get settingsKeepAwake;
+
+  /// Subtítulo del interruptor de pantalla siempre activa; se lee junto al nombre. CA-015-03
+  ///
+  /// In es, this message translates to:
+  /// **'Imágenes, documentos y web'**
+  String get settingsKeepAwakeHint;
+
+  /// Encabezado del bloque 3 de Ajustes (no se puede pulsar). CA-015-01b
+  ///
+  /// In es, this message translates to:
+  /// **'Información'**
+  String get settingsInfo;
+
+  /// Fila de Ajustes que abre en el navegador la web con las licencias de terceros, tras confirmarlo. Sustituye a settingsLicenses. CA-015-12/14
+  ///
+  /// In es, this message translates to:
+  /// **'Licencias de terceros'**
+  String get settingsThirdPartyLicenses;
+
+  /// Fila de Ajustes que abre en el navegador la web de ayuda, tras confirmarlo. CA-015-12
+  ///
+  /// In es, this message translates to:
+  /// **'Ayuda'**
+  String get settingsHelp;
+
+  /// Se une al nombre de las tres filas de web de Ajustes (no es una pista aparte). Sustituirá a settingsPrivacyHint. CA-015-20
+  ///
+  /// In es, this message translates to:
+  /// **'Abre una página web en el navegador'**
+  String get settingsOpensWebHint;
+
+  /// Aviso (región viva) cuando falla el guardado de un ajuste; no muestra el error. CA-015-25
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el ajuste.'**
+  String get settingsSaveError;
+
+  /// Botón de volver del nivel 2 (página de idioma) de Ajustes. CA-015-02
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get settingsBack;
 }
 
 class _AppLocalizationsDelegate

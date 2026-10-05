@@ -55,6 +55,9 @@ abstract final class UnaColors {
 
   /// Fondo de una fila de menú pulsada
   static const Color pressed = Color(0x0F111111);
+
+  /// Pista del interruptor de Ajustes encendido y pomo apagado (prototipo, SW.on / SW.kOff; D22, P-13). Contra el papel mide ≈ 1,2:1: no distingue nada ni se le exige contraste; el estado lo da la posición del pomo y contrasta el borde ink (CA-015-03, CA-015-19)
+  static const Color switchOn = Color(0xFFFFDC58);
 }
 
 abstract final class UnaPalettes {
@@ -257,6 +260,18 @@ abstract final class UnaSizes {
   static const double undoButtonPress = 2.0;
   static const double undoIcon = 18.0;
   static const double undoIconStroke = 2.8;
+  static const double switchWidth = 54.0;
+  static const double switchHeight = 32.0;
+  static const double switchKnob = 22.0;
+  static const double switchKnobInset = 2.0;
+  static const double switchKnobTravel = 22.0;
+  static const double settingsRow = 60.0;
+  static const double settingsRowSwitch = 64.0;
+  static const double settingsRowSwitchHint = 76.0;
+  static const double settingsRowSub = 52.0;
+  static const double settingsRowSubIndent = 38.0;
+  static const double separatorBlock = 4.0;
+  static const double separatorRow = 1.0;
 }
 
 abstract final class UnaBorders {
@@ -265,7 +280,11 @@ abstract final class UnaBorders {
   static const double sectionWidth = 4.0;
   static const double hairlineWidth = 1.0;
   static const double undoButtonWidth = 2.0;
+  static const double switchTrackWidth = 3.0;
+  static const double switchKnobWidth = 2.0;
   static const double noneRadius = 0.0;
+  static const double switchTrackRadius = 8.0;
+  static const double switchKnobRadius = 4.0;
 }
 
 abstract final class UnaShadows {
