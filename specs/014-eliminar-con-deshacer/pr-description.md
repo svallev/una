@@ -54,7 +54,7 @@ Detalle: `specs/014-eliminar-con-deshacer/dispositivo.md`.
 ## Pendiente antes o después de fusionar
 
 - **[Hecho]** *Goldens* nuevos (10) generados en CI con `actualizar-goldens`, revisados a ojo y subidos.
-- **[Pendiente, propietario]** Hallazgo 1 de `dispositivo.md` ("Tarea recuperada" no sale en el panel de voz de API 37) y M2 (tope de espera al primer foco del lector).
+- **[Cerrado, propietario 2026-10-05]** Hallazgo 1 de `dispositivo.md` ("Tarea recuperada" se oye en el Xiaomi; solo faltaba en el panel de voz del emulador), M2, M3 y B5 (descartados o aceptados como están).
 - **[Pendiente, 022]** Casillas de dispositivo (`docs/PLAN.md`, «Casillas de la 014»): TalkBack real, Voice Access, API 26 y 28, PD-10 con la card.
 
 ## Nueva dependencia
