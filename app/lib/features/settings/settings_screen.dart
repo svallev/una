@@ -45,7 +45,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-/// Una fila a la que se le devuelve el foco (teclado y lector).
+/// El foco y la clave de una fila: el nodo accesible de la fila los refleja
+/// (`focusable`/`focused`) y, en "Idioma", se le devuelve el foco al volver. Las
+/// filas de web no lo necesitan para volver (se abren sin ruta nueva, CA-015-12a).
 class _RowFocus {
   _RowFocus(String name) : node = FocusNode(debugLabel: 'settings $name');
   final FocusNode node;
@@ -123,14 +125,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _openWeb(ExternalLink kind, _RowFocus row) => unawaited(
+  void _openWeb(ExternalLink kind) => unawaited(
     openExternalPage(
       context,
       ref,
       kind,
       session: _session,
-      focus: row.node,
-      semantics: row.key,
       links: widget.links,
     ),
   );
@@ -225,7 +225,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   divider: true,
                   focusNode: _privacy.node,
                   semanticsKey: _privacy.key,
-                  onTap: () => _openWeb(ExternalLink.privacy, _privacy),
+                  onTap: () => _openWeb(ExternalLink.privacy),
                 ),
                 SettingsRow(
                   icon: UnaIcons.licenseFile,
@@ -235,7 +235,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   divider: true,
                   focusNode: _licenses.node,
                   semanticsKey: _licenses.key,
-                  onTap: () => _openWeb(ExternalLink.licenses, _licenses),
+                  onTap: () => _openWeb(ExternalLink.licenses),
                 ),
                 SettingsRow(
                   icon: UnaIcons.help,
@@ -244,7 +244,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   divider: true,
                   focusNode: _help.node,
                   semanticsKey: _help.key,
-                  onTap: () => _openWeb(ExternalLink.help, _help),
+                  onTap: () => _openWeb(ExternalLink.help),
                 ),
                 // Tras Ayuda; el lector lo lee ahí por geometría.
                 ListenableBuilder(

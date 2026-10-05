@@ -88,7 +88,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   /// Sube un nivel (el botón y Escape). Una sola vez, y nunca con otra ruta
-  /// (la confirmación del enlace) por encima.
+  /// (p. ej. la página de Idioma subiendo) por encima.
   void _leave() {
     if (_leaving || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
     _leaving = true;

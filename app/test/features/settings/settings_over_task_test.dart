@@ -229,7 +229,8 @@ void main() {
     expect(find.byType(MenuSheet), findsNothing);
   }
 
-  /// Abre la política, confirma y comprueba que se pidió al navegador.
+  /// Abre la política (directamente, sin confirmación) y comprueba que se pidió
+  /// al navegador.
   Future<void> openPolicyInBrowser(
     WidgetTester tester, {
     bool pdf = false,
@@ -241,9 +242,7 @@ void main() {
       ),
     );
     await settle(tester, pdf: pdf);
-    expect(find.byType(LinkConfirmSheet), findsOneWidget);
-    await tester.tap(find.text('Abrir'));
-    await settle(tester, pdf: pdf);
+    expect(find.byType(LinkConfirmSheet), findsNothing);
     expect(opener.opened, hasLength(1));
   }
 
@@ -484,7 +483,7 @@ void main() {
     ];
     for (final (name, build) in kinds) {
       testWidgets('$name: gira con la tarea a la vista; con el menú, los dos '
-          'niveles y la confirmación de la política, no', (tester) async {
+          'niveles y la política abierta, no', (tester) async {
         await pumpWith(tester, await build());
         expect(rotating(), isTrue);
         expect(orientations.last, contains('DeviceOrientation.landscapeLeft'));
@@ -512,21 +511,19 @@ void main() {
         await tester.binding.handlePopRoute();
         await settle(tester);
 
-        // La confirmación de la política: solo aquí la app dejaría girar la
-        // tarea de debajo si no se hubiera pedido lo contrario.
+        // La política se abre directamente (CA-015-12a): Ajustes sigue encima
+        // y la tarea no gira.
         await tester.tap(
           find.descendant(
             of: find.byType(SettingsScreen),
             matching: find.text('Política de privacidad'),
           ),
         );
-        await tester.pumpAndSettle();
-        expect(find.byType(LinkConfirmSheet), findsOneWidget);
-        expect(linkConfirmOpen.value, isFalse);
+        await settle(tester);
+        expect(find.byType(LinkConfirmSheet), findsNothing);
+        expect(find.byType(SettingsScreen), findsOneWidget);
         expect(rotating(), isFalse);
         expect(orientations.last, ['DeviceOrientation.portraitUp']);
-        await tester.tap(find.text('Cancelar'));
-        await settle(tester);
 
         // De vuelta: cerrado todo, gira otra vez.
         await closeSettings(tester);

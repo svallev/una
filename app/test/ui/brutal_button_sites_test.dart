@@ -1,12 +1,9 @@
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
-import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/link_target.dart';
-import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
-import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/una_icons.dart';
@@ -17,7 +14,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../features/task_list/list_harness.dart';
-import '../support/app_harness.dart';
 import '../support/fake_image_importer.dart';
 import '../support/fake_pdf_importer.dart';
 import '../support/fonts.dart';
@@ -106,14 +102,6 @@ Future<void> _sendFocusEventFromKey(WidgetTester tester, String label) async {
   await tester.pump();
 }
 
-class _Opener implements LinkOpener {
-  @override
-  Future<bool> canOpen(LinkTarget target) async => true;
-
-  @override
-  Future<bool> open(LinkTarget target) async => true;
-}
-
 Future<void> _settle(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.pump(UnaMotion.sheetOut);
@@ -176,27 +164,23 @@ void main() {
 
   group('Sitios sensibles (CA-013-04, CA-004-10)', () {
     testWidgets(
-      'CA-013-04 / CA-008-21 / CA-015-12a: confirmación de un enlace (política de privacidad): "Cancelar" y "Abrir" son un nodo cada uno y el aviso de foco llega a "Cancelar"',
+      'CA-013-04 / CA-008-21: confirmación de un enlace del PDF: "Cancelar" y "Abrir" son un nodo cada uno y el aviso de foco llega a "Cancelar"',
       (tester) async {
         final handle = tester.ensureSemantics();
         final events = _recordFocusEvents(tester);
-        await pumpUnaApp(
+        await pumpWithApp(
           tester,
-          repo: InMemoryTaskRepository(),
-          tasks: ['Primera'],
-          screenReader: true,
-          overrides: [linkOpenerProvider.overrideWithValue(_Opener())],
-        );
-        await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Ajustes'));
-        await _settle(tester);
-        await tester.tap(
-          find.descendant(
-            of: find.byType(SettingsScreen),
-            matching: find.text('Política de privacidad'),
+          Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showLinkConfirmSheet(
+                context,
+                WebLink(Uri.parse('https://zxq.example/'), 'zxq.example'),
+              ),
+              child: const Text('Abrir hoja'),
+            ),
           ),
         );
+        await tester.tap(find.text('Abrir hoja'));
         await _settle(tester);
         expect(find.byType(LinkConfirmSheet), findsOneWidget);
         final cancel = _expectSingleButtonNode(tester, 'Cancelar');

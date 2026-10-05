@@ -130,17 +130,15 @@ void main() {
     );
 
     testWidgets(
-      'CA-015-12: se quita con la siguiente acción con éxito sobre otro control (abrir una confirmación)',
+      'CA-015-12: se quita con la siguiente acción con éxito sobre otro control (abrir una web)',
       (tester) async {
         final repo = SettingsRepo()..error = Exception('x');
-        await openSettingsScreen(tester, repo: repo);
+        final opener = await openSettingsScreen(tester, repo: repo);
         await _tapKeepAwake(tester);
         expect(_saveNotice, findsOneWidget);
         await tester.tap(inSettings(find.text('Política de privacidad')));
         await settleSettings(tester);
-        expect(find.text('Cancelar'), findsOneWidget);
-        await tester.tap(find.text('Cancelar'));
-        await settleSettings(tester);
+        expect(opener.opened, hasLength(1));
         expect(_saveNotice, findsNothing);
       },
     );
@@ -259,14 +257,12 @@ void main() {
         // Un guardado con éxito sobre otro control lo quita.
         await _tapKeepAwake(tester);
         expect(_noAppNotice, findsNothing);
-        // De nuevo, y ahora hay app: se quita al abrir la confirmación.
+        // De nuevo, y ahora hay app: se quita al abrir la web.
         await _tapHelp(tester);
         expect(_noAppNotice, findsOneWidget);
         opener.available = true;
         await _tapHelp(tester);
-        expect(find.text('Cancelar'), findsOneWidget);
-        await tester.tap(find.text('Cancelar'));
-        await settleSettings(tester);
+        expect(opener.opened, hasLength(1));
         expect(_noAppNotice, findsNothing);
       },
     );
@@ -291,12 +287,11 @@ void main() {
       (tester) async {
         final opener = FakeOpener()..openResult = false;
         await openSettingsScreen(tester, opener: opener);
+        final before = focusedLabel(tester);
         await _tapHelp(tester);
-        await tester.tap(find.text('Abrir'));
-        await settleSettings(tester);
         expect(opener.opened, hasLength(1));
         expect(_noAppNotice, findsOneWidget);
-        expect(focusedLabel(tester), 'Ayuda');
+        expect(focusedLabel(tester), before);
       },
     );
   });

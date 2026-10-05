@@ -593,7 +593,7 @@ void main() {
       ),
     ]) {
       testWidgets(
-        'CA-015-12a ($name): canOpen, la confirmación con su dominio y open solo al confirmar, con su dirección',
+        'CA-015-12a ($name): canOpen y open directamente, con su dirección y sin confirmación',
         (tester) async {
           final opener = FakeOpener();
           await pumpWithApp(
@@ -605,27 +605,24 @@ void main() {
           await tester.tap(find.text(name));
           await tester.pumpAndSettle();
           expect(opener.canOpenCalls, 1);
-          expect(find.text('¿Abrir $host en el navegador?'), findsOneWidget);
-          expect(opener.opened, isEmpty, reason: 'antes de confirmar, nada');
-          await tester.tap(find.text('Abrir'));
-          await tester.pumpAndSettle();
+          expect(find.byType(LinkConfirmSheet), findsNothing);
+          expect(find.textContaining(host), findsNothing);
           expect(opener.opened.map(_addressOf), [address]);
           expect(kind, isNotNull);
         },
       );
 
       testWidgets(
-        'CA-015-12a ($name): Cancelar no abre nada y el foco vuelve a su fila',
+        'CA-015-12a ($name): abre directamente, sin hoja, y el foco no se mueve',
         (tester) async {
-          final opener = await openSettingsScreen(tester);
+          final opener = await openSettingsScreen(tester, keyboard: true);
+          final before = focusedLabel(tester);
           await tester.tap(inSettings(find.text(name)));
           await settleSettings(tester);
-          expect(find.byType(LinkConfirmSheet), findsOneWidget);
-          await tester.tap(find.text('Cancelar'));
-          await settleSettings(tester);
-          expect(opener.opened, isEmpty);
+          expect(find.byType(LinkConfirmSheet), findsNothing);
+          expect(opener.opened, hasLength(1));
           expect(find.byType(SettingsScreen), findsOneWidget);
-          expect(focusedLabel(tester), name);
+          expect(focusedLabel(tester), before);
         },
       );
 
@@ -661,25 +658,22 @@ void main() {
         ]) {
           await tester.tap(find.text(name));
           await tester.pumpAndSettle();
-          expect(
-            find.text('¿Abrir example.com en el navegador?'),
-            findsOneWidget,
-            reason: name,
-          );
-          await tester.tap(find.text('Cancelar'));
-          await tester.pumpAndSettle();
         }
-      },
-    );
-
-    testWidgets(
-      'CA-015-12a / CL-015-3: la confirmación desde Ajustes no pide girar la tarea de debajo',
-      (tester) async {
-        await openSettingsScreen(tester);
-        await tester.tap(inSettings(find.text('Ayuda')));
-        await tester.pumpAndSettle();
-        expect(find.byType(LinkConfirmSheet), findsOneWidget);
-        expect(linkConfirmOpen.value, isFalse);
+        expect(opener.opened.map((t) => Uri.parse(_addressOf(t)).scheme), [
+          'https',
+          'https',
+          'https',
+        ]);
+        expect(opener.opened.map((t) => Uri.parse(_addressOf(t)).host), [
+          'example.com',
+          'example.com',
+          'example.com',
+        ]);
+        expect(
+          opener.opened.map(_addressOf).toSet(),
+          hasLength(3),
+          reason: 'las tres direcciones son distintas',
+        );
       },
     );
   });
@@ -788,18 +782,16 @@ void main() {
     );
 
     testWidgets(
-      'CA-015-21b: Intro activa la fila enfocada (la confirmación de un enlace) y Escape la cierra antes que subir',
+      'CA-015-21b: Intro activa la fila enfocada (abre la web directamente) y el foco se queda en ella',
       (tester) async {
-        await openSettingsScreen(tester, keyboard: true);
+        final opener = await openSettingsScreen(tester, keyboard: true);
         for (var i = 0; i < 5; i++) {
           await _tab(tester);
         }
         expect(focusedLabel(tester), 'Ayuda');
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await settleSettings(tester);
-        expect(find.byType(LinkConfirmSheet), findsOneWidget);
-        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-        await settleSettings(tester);
+        expect(opener.opened, hasLength(1));
         expect(find.byType(LinkConfirmSheet), findsNothing);
         expect(find.byType(SettingsScreen), findsOneWidget);
         expect(focusedLabel(tester), 'Ayuda');

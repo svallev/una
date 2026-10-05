@@ -8,7 +8,6 @@ import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/settings/external_page.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
-import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/live_notice.dart';
 import 'package:app/ui/settings_row.dart';
 import 'package:app/ui/una_icons.dart';
@@ -88,8 +87,6 @@ class _HostState extends ConsumerState<_Host> {
                   ref,
                   kind,
                   session: session,
-                  focus: focus[kind]!,
-                  semantics: keys[kind]!,
                   links: widget.links,
                 ),
               ),
@@ -121,6 +118,8 @@ class _Channel {
         if (gate != null) await gate.future;
         return canOpen;
       }
+      final gate = openGate;
+      if (gate != null) await gate.future;
       return open;
     });
   }
@@ -132,6 +131,9 @@ class _Channel {
 
   /// Si no es null, `canOpen` espera a que se complete.
   Completer<void>? canOpenGate;
+
+  /// Si no es null, `open` espera a que se complete.
+  Completer<void>? openGate;
 
   List<String> get methods => [for (final c in calls) c.method];
   Iterable<MethodCall> named(String m) => calls.where((c) => c.method == m);
@@ -177,82 +179,38 @@ Future<void> _tap(WidgetTester tester, ExternalLink kind) async {
   await _settle(tester);
 }
 
-/// Etiqueta del botón que tiene el foco de teclado.
-String? _focusedButton() => FocusManager.instance.primaryFocus?.context
-    ?.findAncestorWidgetOfExactType<BrutalButton>()
-    ?.label;
-
-FocusNode _rowFocus(GlobalKey<_HostState> host, ExternalLink kind) =>
-    host.currentState!.focus[kind]!;
-
 void main() {
   setUpAll(loadAppFonts);
 
   for (final kind in ExternalLink.values) {
     final uri = _links.of(kind);
-    final host = Uri.parse(uri).host;
 
     testWidgets(
-      'CA-015-12a (${kind.name}): canOpen → confirmación con el host real → '
-      'open solo al confirmar, con la misma dirección',
-      (tester) async {
-        final ch = _channel(tester);
-        await _pump(tester);
-        await _tap(tester, kind);
-        expect(ch.methods, ['canOpen'], reason: 'antes de confirmar, nada');
-        expect(ch.calls.single.arguments, {'kind': 'web', 'uri': uri});
-        expect(find.text('¿Abrir $host en el navegador?'), findsOneWidget);
-        expect(
-          _focusedButton(),
-          'Cancelar',
-          reason: 'el foco entra en Cancelar',
-        );
-        await tester.tap(find.text('Abrir'));
-        await _settle(tester);
-        // La misma secuencia con su dirección; el host de la pregunta es
-        // exactamente el de la dirección que recibe `open`.
-        expect(ch.methods, ['canOpen', 'open']);
-        final opened = ch.named('open').single.arguments as Map;
-        expect(opened, {'kind': 'web', 'uri': uri});
-        expect(Uri.parse(opened['uri'] as String).host, host);
-        expect(find.byType(LiveNotice), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'CA-015-12a (${kind.name}): Cancelar no abre nada y el foco vuelve a '
-      'la fila',
+      'CA-015-12a (${kind.name}): canOpen → open, una vez y con la dirección de '
+      'la fila, sin ninguna ruta nueva entre el toque y open',
       (tester) async {
         final ch = _channel(tester);
         final h = await _pump(tester);
-        await _tap(tester, kind);
-        await tester.tap(find.text('Cancelar'));
+        final route = ModalRoute.of(h.currentContext!)!;
+        final before = FocusManager.instance.primaryFocus;
+        await tester.tap(find.text(_labels[kind]!));
+        // Mientras se pregunta y se abre, no hay ruta ni hoja nueva.
+        for (var i = 0; i < 3; i++) {
+          await tester.pump();
+          expect(route.isCurrent, isTrue);
+          expect(find.byType(LinkConfirmSheet), findsNothing);
+        }
         await _settle(tester);
-        expect(ch.methods, ['canOpen']);
-        expect(find.byType(LinkConfirmSheet), findsNothing);
-        expect(_rowFocus(h, kind).hasPrimaryFocus, isTrue);
+        expect(route.isCurrent, isTrue);
+        expect(ch.methods, ['canOpen', 'open']);
+        expect(ch.calls.first.arguments, {'kind': 'web', 'uri': uri});
+        expect(ch.calls.last.arguments, {'kind': 'web', 'uri': uri});
+        expect(find.byType(LiveNotice), findsNothing);
+        // No hay diálogo, así que el foco se queda donde estaba.
+        expect(FocusManager.instance.primaryFocus, same(before));
       },
     );
   }
-
-  testWidgets('CA-015-12a: atrás y Escape también cancelan sin abrir y '
-      'devuelven el foco a la fila', (tester) async {
-    final ch = _channel(tester);
-    final h = await _pump(tester);
-    for (final close in <Future<void> Function()>[
-      () => tester.binding.handlePopRoute(),
-      () => tester.sendKeyEvent(LogicalKeyboardKey.escape),
-    ]) {
-      await _tap(tester, ExternalLink.help);
-      expect(find.byType(LinkConfirmSheet), findsOneWidget);
-      await close();
-      await _settle(tester);
-      expect(find.byType(LinkConfirmSheet), findsNothing);
-      expect(_rowFocus(h, ExternalLink.help).hasPrimaryFocus, isTrue);
-      FocusManager.instance.primaryFocus?.unfocus();
-    }
-    expect(ch.named('open'), isEmpty);
-  });
 
   testWidgets('CA-015-12a: canOpen se pregunta en cada toque, sin guardar la '
       'respuesta', (tester) async {
@@ -260,25 +218,12 @@ void main() {
     await _pump(tester);
     await _tap(tester, ExternalLink.privacy);
     expect(find.text(_noApp), findsOneWidget);
+    expect(ch.named('open'), isEmpty);
     ch.canOpen = true;
     await _tap(tester, ExternalLink.privacy);
-    expect(find.byType(LinkConfirmSheet), findsOneWidget);
-    await tester.tap(find.text('Cancelar'));
-    await _settle(tester);
     await _tap(tester, ExternalLink.privacy);
-    expect(find.byType(LinkConfirmSheet), findsOneWidget);
     expect(ch.named('canOpen'), hasLength(3));
-    expect(ch.named('open'), isEmpty);
-  });
-
-  testWidgets('CL-015-12: la confirmación de Ajustes no pide girar la tarea de '
-      'debajo (allowRotation: false)', (tester) async {
-    _channel(tester);
-    await _pump(tester);
-    await tester.tap(find.text(_labels[ExternalLink.help]!));
-    await tester.pumpAndSettle();
-    expect(find.byType(LinkConfirmSheet), findsOneWidget);
-    expect(linkConfirmOpen.value, isFalse);
+    expect(ch.named('open'), hasLength(2));
   });
 
   for (final url in [
@@ -303,7 +248,6 @@ void main() {
           await _pump(tester, links: links);
           await _tap(tester, kind);
           expect(ch.calls, isEmpty);
-          expect(find.byType(LinkConfirmSheet), findsNothing);
           expect(find.text(_noApp), findsOneWidget);
         },
       );
@@ -317,7 +261,6 @@ void main() {
     await _pump(tester);
     final before = FocusManager.instance.primaryFocus;
     await _tap(tester, ExternalLink.licenses);
-    expect(find.byType(LinkConfirmSheet), findsNothing);
     expect(ch.named('open'), isEmpty);
     expect(find.text(_noApp), findsOneWidget);
     expect(
@@ -356,47 +299,47 @@ void main() {
   });
 
   testWidgets('CA-015-12b: con app pero que falla al abrir (open false), '
-      'aviso y el foco vuelve a la fila', (tester) async {
+      'aviso y el foco no se mueve', (tester) async {
     final ch = _channel(tester)..open = false;
-    final h = await _pump(tester);
-    await _tap(tester, ExternalLink.licenses);
-    await tester.tap(find.text('Abrir'));
+    await _pump(tester);
+    await tester.tap(find.text(_labels[ExternalLink.licenses]!));
+    await tester.pump();
+    final before = FocusManager.instance.primaryFocus;
     await _settle(tester);
     expect(ch.methods, ['canOpen', 'open']);
     expect(find.text(_noApp), findsOneWidget);
-    expect(_rowFocus(h, ExternalLink.licenses).hasPrimaryFocus, isTrue);
+    expect(FocusManager.instance.primaryFocus, same(before));
   });
 
   testWidgets(
-    'CA-015-12b: el aviso se quita en cuanto hay app otra vez (aunque '
-    'se cancele) y tras abrir con éxito',
+    'CA-015-12b: el aviso se quita al abrir con éxito y se renueva en cada '
+    'fallo',
     (tester) async {
       final ch = _channel(tester)..canOpen = false;
       await _pump(tester);
       await _tap(tester, ExternalLink.help);
       expect(find.text(_noApp), findsOneWidget);
-      ch.canOpen = true;
+      // Hay app pero `open` falla: sigue el aviso (nuevo intento).
+      ch
+        ..canOpen = true
+        ..open = false;
       await _tap(tester, ExternalLink.help);
-      expect(find.text(_noApp), findsNothing);
-      await tester.tap(find.text('Cancelar'));
-      await _settle(tester);
-      expect(find.text(_noApp), findsNothing);
-      ch.open = false;
-      await _tap(tester, ExternalLink.help);
-      await tester.tap(find.text('Abrir'));
-      await _settle(tester);
       expect(find.text(_noApp), findsOneWidget);
+      // Abre con éxito: el aviso se va.
       ch.open = true;
       await _tap(tester, ExternalLink.help);
-      await tester.tap(find.text('Abrir'));
-      await _settle(tester);
       expect(find.text(_noApp), findsNothing);
+      expect(ch.named('open'), hasLength(2));
     },
   );
 
-  testWidgets('CL-015-1: dos filas seguidas no apilan dos confirmaciones (un '
-      'solo estado ocupado para las tres)', (tester) async {
-    final ch = _channel(tester)..canOpenGate = Completer<void>();
+  testWidgets('CL-015-1: dos toques seguidos (también en filas distintas) '
+      'abren una sola vez, mientras se comprueba canOpen y mientras se abre', (
+    tester,
+  ) async {
+    final ch = _channel(tester)
+      ..canOpenGate = Completer<void>()
+      ..openGate = Completer<void>();
     await _pump(tester);
     await tester.tap(find.text(_labels[ExternalLink.privacy]!));
     await tester.pump();
@@ -404,19 +347,19 @@ void main() {
     await tester.tap(find.text(_labels[ExternalLink.privacy]!));
     await tester.pump();
     ch.canOpenGate!.complete();
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.tap(find.text(_labels[ExternalLink.licenses]!));
+    await tester.pump();
+    ch.openGate!.complete();
     await _settle(tester);
-    expect(ch.named('canOpen'), hasLength(1));
-    expect(find.byType(LinkConfirmSheet), findsOneWidget);
-    expect(
-      find.text('¿Abrir ${Uri.parse(_links.privacy).host} en el navegador?'),
-      findsOneWidget,
-    );
-    // Cancelar libera el estado: otra fila ya se puede abrir.
-    ch.canOpenGate = null;
-    await tester.tap(find.text('Cancelar'));
-    await _settle(tester);
+    expect(ch.methods, ['canOpen', 'open']);
+    expect((ch.named('open').single.arguments as Map)['uri'], _links.privacy);
+    // Terminado, el estado se libera: otra fila ya se puede abrir.
+    ch
+      ..canOpenGate = null
+      ..openGate = null;
     await _tap(tester, ExternalLink.help);
-    expect(find.byType(LinkConfirmSheet), findsOneWidget);
+    expect(ch.methods, ['canOpen', 'open', 'canOpen', 'open']);
   });
 
   testWidgets('CA-015-13a: la dirección es la misma con la app en es y en en, '
@@ -427,10 +370,6 @@ void main() {
       await _pump(tester, locale: locale, links: const SettingsLinks());
       await tester.tap(
         find.text(locale.languageCode == 'es' ? 'Ayuda' : 'Help'),
-      );
-      await _settle(tester);
-      await tester.tap(
-        find.text(locale.languageCode == 'es' ? 'Abrir' : 'Open'),
       );
       await _settle(tester);
       seen.add((ch.named('open').single.arguments as Map)['uri'] as String);
@@ -463,8 +402,6 @@ void main() {
         failing.throwOnOpen = true;
         failing.throwOnCanOpen = false;
         await _tap(tester, ExternalLink.help);
-        await tester.tap(find.text('Abrir'));
-        await _settle(tester);
         expect(find.text(_noApp), findsOneWidget);
       },
       zoneSpecification: ZoneSpecification(

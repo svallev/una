@@ -854,7 +854,7 @@ abstract class AppLocalizations {
   /// **'No hemos podido leer este PDF.'**
   String get errPdfUnreadable;
 
-  /// Enlace sin navegador ni app que lo abra: en un PDF (CA-008-12) y en la Política de privacidad de la Configuración (CA-012-04)
+  /// Enlace sin navegador ni app que lo abra: en un PDF (CA-008-12) y en las tres webs de Ajustes (CA-015-12b)
   ///
   /// In es, this message translates to:
   /// **'No hay ninguna app para abrir este enlace.'**
@@ -1016,7 +1016,7 @@ abstract class AppLocalizations {
   /// **'Licencias de código abierto'**
   String get settingsLicenses;
 
-  /// Opción del nivel 1 que abre la política en el navegador, tras confirmar. CA-012-01/04
+  /// Opción del nivel 1 que abre la política en el navegador, directamente. CA-012-01, CA-015-12a
   ///
   /// In es, this message translates to:
   /// **'Política de privacidad'**
@@ -1118,13 +1118,13 @@ abstract class AppLocalizations {
   /// **'Información'**
   String get settingsInfo;
 
-  /// Fila de Ajustes que abre en el navegador la web con las licencias de terceros, tras confirmarlo. Sustituye a settingsLicenses. CA-015-12/14
+  /// Fila de Ajustes que abre en el navegador la web con las licencias de terceros, directamente. Sustituye a settingsLicenses. CA-015-12/14
   ///
   /// In es, this message translates to:
   /// **'Licencias de terceros'**
   String get settingsThirdPartyLicenses;
 
-  /// Fila de Ajustes que abre en el navegador la web de ayuda, tras confirmarlo. CA-015-12
+  /// Fila de Ajustes que abre en el navegador la web de ayuda, directamente. CA-015-12a
   ///
   /// In es, this message translates to:
   /// **'Ayuda'**

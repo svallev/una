@@ -8,7 +8,6 @@ import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
-import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
@@ -420,36 +419,6 @@ void main() {
       },
     );
   }
-
-  testWidgets(
-    'CA-015-16: con la confirmación de la política abierta, a 10:00 se cierra todo y se ve la tarea actual',
-    (tester) async {
-      final clock = FakeClock();
-      await _pumpApp(
-        tester,
-        firstRunDone: true,
-        withTask: true,
-        clock: clock,
-        overrides: _settingsOverrides,
-      );
-      await _openSettingsLevel(tester, (_) async {});
-      await tester.tap(find.text('Privacy policy'));
-      await tester.pumpAndSettle();
-      expect(find.byType(LinkConfirmSheet), findsOneWidget);
-
-      background(tester, clock, const Duration(minutes: 9, seconds: 59));
-      await tester.pumpAndSettle();
-      expect(find.byType(LinkConfirmSheet), findsOneWidget);
-      expect(find.byType(SettingsScreen), findsOneWidget);
-
-      background(tester, clock, UnaApp.resetAfter);
-      await tester.pumpAndSettle();
-      expect(find.byType(LinkConfirmSheet), findsNothing);
-      expect(find.byType(SettingsScreen), findsNothing);
-      expect(find.byType(MenuSheet), findsNothing);
-      expect(find.byType(CurrentTaskScreen), findsOneWidget);
-    },
-  );
 
   for (final (name, level, goTo) in _settingsLevels) {
     testWidgets(
