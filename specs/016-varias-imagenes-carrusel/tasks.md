@@ -49,3 +49,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-016-01 | **Hecha.** 12 claves nuevas y el cambio de `attachPickImage`/`Hint` en las ARB ES y EN (plurales `one`/`other` con `{count}`, porque `gen-l10n` no entiende `#`), tokens (`photoSwipe`, puntos con halo, pila, etiqueta) y `validate-tokens.mjs` (etiqueta, puntos contra papel y superficie, peor gris 4,35:1). Verificado: `spec_016_strings_test` y la suite entera (2009 tests), `gen-l10n`, `analyze` y el validador, que falla con la tinta del punto o el halo aclarados, sin halo o con la etiqueta aclarada (copias, deshechas). **[Suposición]** «halo blanco ≥ 3 contra el papel» no es posible (1,12): se exige tinta/papel, tinta/superficie, tinta/halo y el barrido de grises. | (este commit) |

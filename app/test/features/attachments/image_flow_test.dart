@@ -33,7 +33,7 @@ void main() {
   Future<void> addImage(WidgetTester tester) async {
     await tester.tap(_plus);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Subir imagen'));
+    await tester.tap(find.text('Subir imágenes'));
     await tester.pumpAndSettle();
   }
 

@@ -98,6 +98,30 @@ nonTextChecks.push(["switch/borde del pomo (ink) / pista encendida (switchOn)", 
 // Marca de selección de la página de Idioma (CA-015-07): ink sobre el papel.
 nonTextChecks.push(["marca de selección (ink) / papel", ink, paper]);
 
+// 4c. Varias imágenes (spec 016, CA-016-06 y CA-016-22; WCAG 1.4.1, 1.4.3 y 1.4.11).
+//     (a) Etiqueta "{n} fotos" de la pila: blanco sobre tinta, texto, ≥ 4,5:1 sea cual sea la foto.
+//     (b) Puntos del carrusel (borde de tinta, relleno de tinta o blanco, halo blanco por fuera):
+//         el borde contra el papel y la superficie (≥ 3:1) y contra el halo (se distinguen entre
+//         sí), y el halo debe existir. Sobre una foto cualquiera, la tinta o el halo llegan a
+//         ≥ 3:1 contra **cualquier gris** (el peor caso, ≈ 4,3:1, es un gris medio de luminancia
+//         ≈ 0,19): se recorren los 256 grises.
+const dotInk = hex(C.photoDotInk.$value);
+const dotLight = hex(C.photoDotLight.$value);
+const dotHalo = hex(C.photoDotHalo.$value);
+checks.push(["etiqueta de la pila (photoCountText/photoCountFill)", hex(C.photoCountText.$value), hex(C.photoCountFill.$value)]);
+nonTextChecks.push(["punto/borde de tinta / papel", dotInk, paper]);
+nonTextChecks.push(["punto/borde de tinta / superficie", dotInk, hex(C.surface.$value)]);
+nonTextChecks.push(["punto/borde de tinta / halo", dotInk, dotHalo]);
+nonTextChecks.push(["punto/relleno de tinta / relleno claro", dotInk, dotLight]);
+if (!((tokens.border?.width?.photoDotHalo?.$value?.value ?? 0) > 0)) {
+  errors.push("Falta el halo de los puntos (border.width.photoDotHalo > 0): sin él, el punto no se ve sobre una foto negra");
+}
+let worstGray = Infinity;
+for (let g = 0; g <= 255; g++) {
+  worstGray = Math.min(worstGray, Math.max(ratio(dotInk, [g, g, g]), ratio(dotHalo, [g, g, g])));
+}
+if (worstGray < 3) errors.push(`Contraste no textual insuficiente de los puntos sobre un gris: ${worstGray.toFixed(2)} (< 3)`);
+
 for (const [name, fg, bg] of checks) {
   const r = ratio(fg, bg);
   if (r < 4.5) errors.push(`Contraste insuficiente ${name}: ${r.toFixed(2)} (< 4.5)`);

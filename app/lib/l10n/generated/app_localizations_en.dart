@@ -280,10 +280,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attachTakePhotoHint => 'With the camera · goes on top';
 
   @override
-  String get attachPickImage => 'Upload image';
+  String get attachPickImage => 'Upload images';
 
   @override
-  String get attachPickImageHint => 'From your gallery · goes on top';
+  String get attachPickImageHint => 'One or more · go on top';
 
   @override
   String get attachPickFile => 'Upload file';
@@ -598,4 +598,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsBack => 'Back';
+
+  @override
+  String imagePreparingOf(int current, int total) {
+    return 'Preparing photo $current of $total…';
+  }
+
+  @override
+  String photoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String a11yWithPhotos(String text, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return '$text. $_temp0';
+  }
+
+  @override
+  String a11yPhotoStack(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return 'Preview: $_temp0';
+  }
+
+  @override
+  String a11yPhotoOf(int index, int total) {
+    return 'Photo $index of $total';
+  }
+
+  @override
+  String get a11yPhotoNext => 'Next photo';
+
+  @override
+  String get a11yPhotoPrevious => 'Previous photo';
+
+  @override
+  String a11yPhotosAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos added',
+      one: '$count photo added',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String imagesLimitNotice(int max) {
+    return 'Only the first $max will be used.';
+  }
+
+  @override
+  String imagesSomeFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos couldn\'t be added.',
+      one: '$count photo couldn\'t be added.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get photoMissing => 'Photo unavailable';
+
+  @override
+  String a11yPhotoMissing(int index, int total) {
+    return 'Photo $index of $total. Photo unavailable';
+  }
 }

@@ -75,7 +75,7 @@ void main() {
       expect(find.bySemanticsLabel('Añadir a la tarea'), findsWidgets);
       for (final (title, hint) in [
         ('Hacer foto', 'Con la cámara · va arriba del todo'),
-        ('Subir imagen', 'Desde tu galería · va arriba del todo'),
+        ('Subir imágenes', 'Una o varias · van arriba del todo'),
         ('Subir archivo', 'PDF · va arriba del todo'),
         ('Cargar URL', 'Una página web · va arriba del todo'),
       ]) {
@@ -102,7 +102,7 @@ void main() {
       await openSheet(tester);
 
       expect(find.byType(SheetRow), findsNWidgets(3));
-      for (final title in ['Hacer foto', 'Subir imagen', 'Subir archivo']) {
+      for (final title in ['Hacer foto', 'Subir imágenes', 'Subir archivo']) {
         expect(find.text(title), findsOneWidget);
       }
       expect(find.text('Cargar URL'), findsNothing);
@@ -124,7 +124,7 @@ void main() {
 
     for (final label in [
       'Hacer foto. Con la cámara, va arriba del todo',
-      'Subir imagen. Desde tu galería, va arriba del todo',
+      'Subir imágenes. Una o varias, van arriba del todo',
       'Subir archivo. PDF, va arriba del todo',
       'Cargar URL. Una página web, va arriba del todo',
     ]) {
@@ -150,8 +150,8 @@ void main() {
     for (final text in [
       'Take photo',
       'With the camera · goes on top',
-      'Upload image',
-      'From your gallery · goes on top',
+      'Upload images',
+      'One or more · go on top',
       'Upload file',
       'Load URL',
     ]) {
@@ -236,7 +236,7 @@ void main() {
 
   for (final (row, origin) in [
     ('Hacer foto', AttachmentOrigin.camera),
-    ('Subir imagen', AttachmentOrigin.gallery),
+    ('Subir imágenes', AttachmentOrigin.gallery),
   ]) {
     testWidgets(
       'CA-007-02/03: "$row" cierra la hoja y abre ${origin.name} del sistema',
@@ -263,7 +263,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Algo');
       importer.sanitizeDelay = const Duration(seconds: 5);
       await openSheet(tester);
-      await tester.tap(find.text('Subir imagen'));
+      await tester.tap(find.text('Subir imágenes'));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 300));
       expect(

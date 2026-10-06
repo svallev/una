@@ -188,7 +188,7 @@ void main() {
     importer.sanitizeDelay = const Duration(seconds: 5);
     await tester.tap(find.bySemanticsLabel('Añadir foto, imagen o archivo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Subir imagen'));
+    await tester.tap(find.text('Subir imágenes'));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 300));
