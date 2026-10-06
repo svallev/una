@@ -83,7 +83,7 @@ void main() {
       url: _url,
     );
     final watch = Stopwatch()..start();
-    await container.read(createTaskProvider).call('', attachment: web);
+    await container.read(createTaskProvider).call('', attachments: [web]);
     await _wait(tester, const Duration(milliseconds: 500));
     expect(find.byType(TaskWeb), findsOneWidget);
     // Espera a la página (el aviso de sin conexión también acaba el bucle).

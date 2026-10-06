@@ -245,7 +245,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     if (await _write(
       () => ref
           .read(createTaskProvider)
-          .call('', colorKey: _colorKey, attachment: web),
+          .call('', colorKey: _colorKey, attachments: [web]),
       retry: () => _createWeb(url),
     )) {
       _created();
@@ -351,7 +351,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         if (await _write(
           () => ref
               .read(createTaskProvider)
-              .call(_controller.text, colorKey: _colorKey, attachment: image),
+              .call(
+                _controller.text,
+                colorKey: _colorKey,
+                attachments: [?image],
+              ),
         )) {
           _created();
         }
@@ -361,7 +365,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         if (await _write(
           () => ref
               .read(createTaskProvider)
-              .call(_controller.text, colorKey: _colorKey, attachment: image),
+              .call(
+                _controller.text,
+                colorKey: _colorKey,
+                attachments: [image],
+              ),
         )) {
           _created();
         }
@@ -395,7 +403,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       case EditorMode.edit:
         final task = widget.task!;
         final AttachmentEdit edit = image != null
-            ? ReplaceAttachment(image)
+            ? ReplaceAttachment.one(image)
             : _removedExisting && task.attachment != null
             ? const RemoveAttachment()
             : const KeepAttachment();

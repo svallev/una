@@ -53,7 +53,7 @@ Future<void> _save(
   try {
     await ref
         .read(editTaskProvider)
-        .call(task, '', attachment: ReplaceAttachment(web));
+        .call(task, '', attachment: ReplaceAttachment.one(web));
   } on Object catch (e) {
     if (!context.mounted) return;
     messenger?.showSnackBar(

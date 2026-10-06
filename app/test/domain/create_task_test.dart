@@ -11,6 +11,7 @@ import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/clock.dart';
 import 'package:app/domain/ports/id_generator.dart';
 import 'package:app/domain/services/attachment_janitor.dart';
+import 'package:app/domain/services/commit_group.dart';
 import 'package:app/domain/usecases/create_task.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -126,7 +127,7 @@ void main() {
         final t = await create(
           '   ',
           position: QueuePosition.end,
-          attachment: staged,
+          attachments: [staged],
         );
         expect(t.text, isNull);
         expect(t.attachment!.id, 'img');
@@ -141,7 +142,9 @@ void main() {
     test('CA-007-04: con imagen, el texto se guarda recortado', () async {
       final t = await create(
         '  Horario  ',
-        attachment: stageImage(store, 'img', origin: AttachmentOrigin.gallery),
+        attachments: [
+          stageImage(store, 'img', origin: AttachmentOrigin.gallery),
+        ],
       );
       expect(t.text, 'Horario');
       expect(
@@ -165,7 +168,7 @@ void main() {
         registry.add('img');
         final staged = stageImage(store, 'img');
         await expectLater(
-          c('x', attachment: staged),
+          c('x', attachments: [staged]),
           throwsA(isA<StateError>()),
         );
         expect(await store.storedIds(), isEmpty);
@@ -174,6 +177,110 @@ void main() {
         await failing.dispose();
       },
     );
+  });
+
+  group('Grupo de fotos (spec 016)', () {
+    List<StagedImage> stageGroup(int n) => [
+      for (var i = 0; i < n; i++) stageImage(store, 'g$i'),
+    ];
+
+    test('CA-016-07: un grupo de 3 va arriba, en orden, con texto opcional y '
+        'sin dejar preparaciones', () async {
+      await create('Primera');
+      final group = stageGroup(3);
+      ['g0', 'g1', 'g2'].forEach(registry.add);
+      final t = await create(
+        '  ',
+        position: QueuePosition.end,
+        attachments: group,
+      );
+      expect(t.text, isNull);
+      expect([for (final a in t.attachments) a.id], ['g0', 'g1', 'g2']);
+      final stored = (await repo.currentTask())!;
+      expect(stored.id, t.id);
+      expect([for (final a in stored.attachments) a.id], ['g0', 'g1', 'g2']);
+      expect(await store.stagingIds(), isEmpty);
+      expect(await store.storedIds(), {'g0', 'g1', 'g2'});
+      expect(registry.active, isEmpty);
+    });
+
+    test('CA-016-16 / CL-016-6b: si falla la transacción, las 10 fotos '
+        'vuelven a la preparación y siguen protegidas', () async {
+      final failing = _FailingInsertRepository();
+      final c = CreateTask(
+        repository: failing,
+        store: store,
+        janitor: janitorFor(failing, store, registry),
+        clock: _FixedClock(),
+        ids: _SeqIds(),
+      );
+      final group = stageGroup(10);
+      [for (final g in group) g.id].forEach(registry.add);
+      await expectLater(c('x', attachments: group), throwsA(isA<StateError>()));
+      expect(await store.storedIds(), isEmpty);
+      expect(await store.stagingIds(), {for (final g in group) g.id});
+      expect(registry.active, {for (final g in group) g.id});
+      await failing.dispose();
+    });
+
+    test('CL-016-6b: si falta una preparación (el sistema vació la zona '
+        'temporal), no se mueve nada ni se crea la tarea', () async {
+      final group = stageGroup(3);
+      await store.deleteStaging('g1');
+      ['g0', 'g1', 'g2'].forEach(registry.add);
+      await expectLater(
+        create('x', attachments: group),
+        throwsA(isA<StagedPhotosLost>()),
+      );
+      expect(await store.storedIds(), isEmpty);
+      expect(await store.stagingIds(), {'g0', 'g2'});
+      expect(await repo.countPending(), 0);
+    });
+
+    test('CL-016-8: dos llamadas a la vez con el mismo grupo crean una sola '
+        'tarea', () async {
+      final group = stageGroup(3);
+      final results = await Future.wait([
+        create(
+          'x',
+          attachments: group,
+        ).then<Object?>((t) => t).onError((e, _) => e),
+        create(
+          'x',
+          attachments: group,
+        ).then<Object?>((t) => t).onError((e, _) => e),
+      ]);
+      expect(results.whereType<Task>(), hasLength(1));
+      expect(await repo.countPending(), 1);
+      expect(await store.storedIds(), {'g0', 'g1', 'g2'});
+      expect(await store.stagingIds(), isEmpty);
+    });
+
+    test('CA-016-14: un grupo no válido (11 fotos, o una foto con un PDF) '
+        'se rechaza sin tocar nada', () async {
+      final eleven = stageGroup(11);
+      await expectLater(
+        create('x', attachments: eleven),
+        throwsA(isA<ArgumentError>()),
+      );
+      final mixed = [
+        stageImage(store, 'm0'),
+        const StagedPdf(
+          id: 'm1',
+          byteSize: 1,
+          pageCount: 1,
+          width: 10,
+          height: 10,
+          originalName: null,
+        ),
+      ];
+      await expectLater(
+        create('x', attachments: mixed),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(await store.storedIds(), isEmpty);
+      expect(await repo.countPending(), 0);
+    });
   });
 
   group('Web (spec 009)', () {
@@ -186,7 +293,7 @@ void main() {
       final t = await create(
         '  Texto del editor  ',
         position: QueuePosition.end,
-        attachment: const StagedWeb(id: 'web', url: url),
+        attachments: [const StagedWeb(id: 'web', url: url)],
       );
       expect(t.text, isNull);
       expect((t.attachment!.id, t.attachment!.url), ('web', url));
@@ -213,7 +320,7 @@ void main() {
       await expectLater(
         c(
           '',
-          attachment: const StagedWeb(id: 'web', url: url),
+          attachments: [const StagedWeb(id: 'web', url: url)],
         ),
         throwsA(isA<StateError>()),
       );

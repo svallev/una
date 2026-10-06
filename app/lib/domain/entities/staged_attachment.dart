@@ -1,12 +1,23 @@
 import 'attachment.dart';
+import 'image_type.dart';
 
 /// Adjunto ya preparado en la zona de preparación `<id>`, listo para guardarse
-/// con la tarea (`AttachmentStore.commit`). Una tarea tiene uno como mucho.
+/// con la tarea (`AttachmentStore.commit`). Una tarea tiene uno (de cualquier
+/// tipo) o, si son imágenes, de 2 a [ImageLimits.maxGroup] (spec 016).
 sealed class StagedAttachment {
   const StagedAttachment({required this.id, required this.byteSize});
 
   final String id;
   final int byteSize;
+}
+
+/// Lo que se puede guardar con una tarea (spec 016, ADR-0024): uno de
+/// cualquier tipo, o de 2 a [ImageLimits.maxGroup] imágenes. Lo comprueban
+/// `CreateTask` y `EditTask` antes de tocar ningún archivo.
+extension StagedGroup on List<StagedAttachment> {
+  bool get isValidStagedGroup =>
+      length <= 1 ||
+      (length <= ImageLimits.maxGroup && every((s) => s is StagedImage));
 }
 
 /// Imagen ya limpia: versión completa en teselas, versión de pantalla y
