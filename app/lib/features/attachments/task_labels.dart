@@ -1,24 +1,34 @@
+import '../../domain/entities/attachment.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/services/host_display.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'pdf_labels.dart';
 
-/// Tipo del adjunto para la insignia del listado: "Foto" (de la cámara),
-/// "Imagen" (de la galería), "PDF" (CA-008-19) o "WEB" (CA-009-17), o null sin
-/// adjunto.
-String? attachmentKindLabel(AppLocalizations l10n, Task task) =>
-    switch (task.attachment) {
-      null => null,
+/// Tipo del adjunto: "Foto" (de la cámara), "Imagen" (de la galería), "PDF"
+/// (CA-008-19) o "WEB" (CA-009-17), o null sin adjunto. Con un grupo de fotos
+/// (2 a 10 imágenes válidas), "{n} fotos" (CA-016-19).
+String? attachmentKindLabel(AppLocalizations l10n, Task task) {
+  if (task.attachments.isPhotoGroup) {
+    return l10n.photoCount(task.attachments.length);
+  }
+  final attachment = task.attachment;
+  return attachment == null ? null : singleKindLabel(l10n, attachment);
+}
+
+/// "Foto", "Imagen", "PDF" o "WEB" de **un** adjunto: también la insignia de
+/// la miniatura de un grupo, que nunca lleva número (CA-016-19).
+String singleKindLabel(AppLocalizations l10n, Attachment attachment) =>
+    switch (attachment) {
       final a when a.isPdf => l10n.attachmentPdf,
       final a when a.isWeb => l10n.attachmentWeb,
       final a => a.isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage,
     };
 
 /// Cómo se nombra la tarea en el listado, la card de deshacer y los
-/// anuncios: su texto o, sin texto, "Foto"/"Imagen" (CA-007-20, CL-003-8) o
-/// el nombre del PDF ("PDF" si no tiene, CA-008-19). Una tarea web (sin
-/// texto) se nombra por su dominio, sin `www.` (CA-009-17), o "WEB" si la
-/// dirección no se puede leer.
+/// anuncios: su texto o, sin texto, "Foto"/"Imagen" (CA-007-20, CL-003-8),
+/// "{n} fotos" con un grupo (CA-016-19) o el nombre del PDF ("PDF" si no
+/// tiene, CA-008-19). Una tarea web (sin texto) se nombra por su dominio, sin
+/// `www.` (CA-009-17), o "WEB" si la dirección no se puede leer.
 String taskLabel(AppLocalizations l10n, Task task) {
   final attachment = task.attachment;
   if (attachment != null && attachment.isWeb) {
@@ -35,11 +45,18 @@ String taskLabel(AppLocalizations l10n, Task task) {
 /// Lectura para el lector de pantalla (CA-007-21, CA-008-20): "{texto}. Con
 /// foto" / "Con imagen" / "Con PDF", o "Foto"/"Imagen" sin texto. Con PDF y
 /// sin texto, "{nombre}. PDF" (`a11yRowPdfOnly`). Web: "{dominio}. Página web"
-/// (CA-009-18).
+/// (CA-009-18). Con un grupo, "{texto}. {n} fotos" o "{n} fotos" (CA-016-20):
+/// nunca "imagen" además de "fotos".
 String taskReading(AppLocalizations l10n, Task task) {
   final text = task.text ?? '';
   final attachment = task.attachment;
   if (attachment == null) return text;
+  if (task.attachments.isPhotoGroup) {
+    final count = task.attachments.length;
+    return text.isEmpty
+        ? l10n.photoCount(count)
+        : l10n.a11yWithPhotos(readingText(text), count);
+  }
   if (attachment.isWeb) return l10n.a11yRowWeb(taskLabel(l10n, task));
   if (attachment.isPdf) {
     return text.isEmpty
