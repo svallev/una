@@ -52,6 +52,41 @@ String taskReading(AppLocalizations l10n, Task task) {
       : l10n.a11yWithImage(readingText(text));
 }
 
+/// Estado de la foto [position] (de 1 a [total]) de un grupo: la parte final de
+/// la etiqueta de la tarea **y** del anuncio al cambiar de foto, una sola
+/// función para las dos (CA-016-20, CA-016-21). Una foto que falta se lee
+/// "Foto 3 de 5. Foto no disponible", no solo "Foto 3 de 5".
+String photoState(
+  AppLocalizations l10n,
+  int position,
+  int total, {
+  required bool missing,
+}) => missing
+    ? l10n.a11yPhotoMissing(position, total)
+    : l10n.a11yPhotoOf(position, total);
+
+/// Lectura de la tarea actual con un grupo de fotos (CA-016-20): "Tarea
+/// actual: {texto}. {n} fotos. Foto {i} de {n}" (o sin texto, "Tarea actual:
+/// {n} fotos. Foto {i} de {n}"). En horizontal no hay pie ni puntos a la
+/// vista y no se dice cuántas fotos son: "Tarea actual: {texto}. Foto {i} de
+/// {n}" (CA-016-12).
+String photoGroupReading(
+  AppLocalizations l10n, {
+  required String text,
+  required int count,
+  required int position,
+  required bool missing,
+  required bool landscape,
+}) {
+  final state = photoState(l10n, position, count, missing: missing);
+  final head = text.isEmpty
+      ? (landscape ? null : l10n.photoCount(count))
+      : (landscape
+            ? readingText(text)
+            : l10n.a11yWithPhotos(readingText(text), count));
+  return l10n.currentTaskSemantics(head == null ? state : '$head. $state');
+}
+
 /// [text] para ponerlo delante de ". Con PDF", ". Página 1…" y similares:
 /// sin los puntos del final, para que el lector no diga "congreso.. Con PDF"
 /// (T-008-23). Si solo tiene puntos, tal cual.

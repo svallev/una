@@ -17,8 +17,12 @@ class ImageScroll {
   ScrollController controller;
   final bool Function() _reduced;
 
+  /// La posición de la foto que se ve, si ya se ha medido (con un grupo, la
+  /// de una foto recién montada aún no tiene dimensiones).
   ScrollPosition? get _position =>
-      controller.hasClients ? controller.position : null;
+      controller.hasClients && controller.position.hasContentDimensions
+      ? controller.position
+      : null;
 
   bool get canForward {
     final p = _position;

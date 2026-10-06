@@ -31,6 +31,8 @@ import '../attachments/missing_attachment_card.dart';
 import '../attachments/pdf_labels.dart';
 import '../attachments/pdf_position_controller.dart';
 import '../attachments/pdf_strip.dart';
+import '../attachments/photo_announcer.dart';
+import '../attachments/photo_carousel.dart';
 import '../attachments/task_image.dart';
 import '../attachments/task_labels.dart';
 import '../attachments/task_pdf.dart';
@@ -279,6 +281,72 @@ class _TaskView extends ConsumerWidget {
     final bleed = (showPdf || showWeb) && landscape;
 
     final kind = isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage;
+
+    // Fotos del grupo cuyo archivo falta: su lectura y su anuncio dicen "Foto no
+    // disponible" (CA-016-18a, CA-016-20).
+    final missingPhotos = photoGroup == null
+        ? const <String>{}
+        : ref.watch(
+            groupHealthProvider(AttachmentGroupKey(task.attachments))
+                .select((state) => state.missingIds),
+          );
+    String photoStateOf(PhotoGroupHost host) {
+      final index = host.carousel.index.clamp(0, task.attachments.length - 1);
+      return photoState(
+        l10n,
+        index + 1,
+        task.attachments.length,
+        missing: missingPhotos.contains(task.attachments[index].id),
+      );
+    }
+
+    /// El elemento de la tarea con un grupo de fotos (spec 016, CA-016-20): un
+    /// solo nodo para fotos y pie, con la etiqueta al día ("Foto 2 de 5") y
+    /// **sin recrearse** al cambiar de foto, las acciones de foto antes que
+    /// Completar y Eliminar, las de desplazamiento de la foto que se ve y las
+    /// estándar de desplazar a izquierda y derecha (control por voz y Switch
+    /// Access). Es un punto de foco del teclado con anillo y flechas.
+    Widget photoNode(Widget child, {required ImageScroll scroll}) {
+      final host = photoGroup!;
+      final carousel = host.carousel;
+      return FocusOnSignal(
+        signal: focusSignal,
+        suspended: undoCard.visible,
+        traversable: true,
+        autofocus: true,
+        ring: mq.padding,
+        onKeyEvent: (_, event) => carousel.handleKey(event),
+        child: ListenableBuilder(
+          listenable: carousel,
+          builder: (context, _) {
+            final index = carousel.index.clamp(0, task.attachments.length - 1);
+            return Semantics(
+              onScrollUp: scroll.canForward ? scroll.forward : null,
+              onScrollDown: scroll.canBack ? scroll.back : null,
+              onScrollLeft: carousel.next,
+              onScrollRight: carousel.previous,
+              label: photoGroupReading(
+                l10n,
+                text: text,
+                count: task.attachments.length,
+                position: index + 1,
+                missing: missingPhotos.contains(task.attachments[index].id),
+                landscape: landscape,
+              ),
+              customSemanticsActions: {
+                CustomSemanticsAction(label: l10n.a11yPhotoNext): carousel.next,
+                CustomSemanticsAction(label: l10n.a11yPhotoPrevious):
+                    carousel.previous,
+                CustomSemanticsAction(label: l10n.completeA11yAction): complete,
+                CustomSemanticsAction(label: l10n.deleteA11yAction): delete,
+              },
+              excludeSemantics: true,
+              child: child,
+            );
+          },
+        ),
+      );
+    }
 
     /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
     /// y sin decir "imagen" dos veces (CA-007-21).
@@ -639,23 +707,39 @@ class _TaskView extends ConsumerWidget {
                             child: _RotatesWithAttachment(
                               enabled: canRotate,
                               fullWidth: landscape,
-                              builder: (scroll) => taskNode(
-                                photoGroup != null
-                                    ? PhotoGroupLayer(
+                              carousel: photoGroup?.carousel,
+                              builder: (scroll) => photoGroup != null
+                                  ? photoNode(
+                                      PhotoGroupLayer(
                                         host: photoGroup,
                                         photos: task.attachments,
                                         landscape: landscape,
-                                      )
-                                    : TaskImage(
+                                      ),
+                                      scroll: scroll,
+                                    )
+                                  : taskNode(
+                                      TaskImage(
                                         attachment: attachment,
                                         caption: landscape ? null : text,
                                         scroll: scroll.controller,
                                       ),
-                                scroll: scroll,
-                              ),
+                                      scroll: scroll,
+                                    ),
                             ),
                           ),
                           content,
+                          // "Foto {i} de {n}" al cambiar de foto: su región
+                          // viva (o el anuncio del sistema), fuera del recorrido
+                          // (CA-016-20).
+                          if (photoGroup != null)
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              child: PhotoAnnouncements(
+                                carousel: photoGroup.carousel,
+                                message: () => photoStateOf(photoGroup),
+                              ),
+                            ),
                         ],
                       ),
               ),
@@ -995,11 +1079,16 @@ class _RotatesWithAttachment extends StatefulWidget {
     required this.enabled,
     required this.fullWidth,
     required this.builder,
+    this.carousel,
   });
 
   final bool enabled;
   final bool fullWidth;
   final Widget Function(ImageScroll scroll) builder;
+
+  /// Con un grupo de fotos, el desplazamiento es el de la foto que se ve y
+  /// cambia con ella (CA-016-20).
+  final PhotoCarouselController? carousel;
 
   @override
   State<_RotatesWithAttachment> createState() => _RotatesWithAttachmentState();
@@ -1015,8 +1104,34 @@ class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
   );
   (bool, bool)? _can;
 
+  /// El controlador cuyos cambios se vigilan: el propio o, con un grupo, el de
+  /// la foto que se ve.
+  late ScrollController _watched = _controller;
+
+  void _watch(ScrollController controller) {
+    if (controller == _watched) return;
+    _watched.removeListener(_onScroll);
+    _watched = controller;
+    controller.addListener(_onScroll);
+    _scroll.controller = controller;
+  }
+
+  /// Cambió la foto que se ve: su desplazamiento pasa a ser el de las acciones
+  /// y de Av Pág / Re Pág, y cuánto se puede desplazar se mide tras el
+  /// fotograma.
+  void _onPhoto() {
+    final carousel = widget.carousel;
+    if (carousel == null) return;
+    _watch(carousel.scroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+  }
+
   /// Las acciones del lector cambian al llegar arriba o abajo del todo.
   void _onScroll() {
+    // Con un grupo, el carrusel solo conoce sus fotos tras montarse: la
+    // primera vez que se mide ya está.
+    final carousel = widget.carousel;
+    if (carousel != null) _watch(carousel.scroll);
     final can = (_scroll.canForward, _scroll.canBack);
     if (can != _can && mounted) setState(() => _can = can);
   }
@@ -1038,6 +1153,7 @@ class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
   void initState() {
     super.initState();
     _controller.addListener(_onScroll);
+    widget.carousel?.addListener(_onPhoto);
     HardwareKeyboard.instance.addHandler(_onKey);
     linkConfirmOpen.addListener(_update);
     // Cuánto se puede desplazar solo se sabe tras la primera medida.
@@ -1071,12 +1187,20 @@ class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
   @override
   void didUpdateWidget(_RotatesWithAttachment oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.carousel != widget.carousel) {
+      oldWidget.carousel?.removeListener(_onPhoto);
+      widget.carousel?.addListener(_onPhoto);
+      _watch(widget.carousel?.scroll ?? _controller);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+    }
     _update();
   }
 
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKey);
+    widget.carousel?.removeListener(_onPhoto);
+    _watched.removeListener(_onScroll);
     _controller.dispose();
     linkConfirmOpen.removeListener(_update);
     if (_rotating ?? false) AttachmentRotation.request(on: false);

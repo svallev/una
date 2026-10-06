@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -72,6 +73,42 @@ class PhotoCarouselController extends ChangeNotifier {
 
   /// La foto anterior (con la primera, la última).
   void previous() => _state?._go(-1);
+
+  /// Una foto se está moviendo: arrastre o transición en curso.
+  bool get isMoving => _state?._isMoving ?? false;
+
+  /// Cuántas fotos tiene el grupo que se ve.
+  int get count => _photos.length;
+
+  /// Flechas del teclado con el foco en el elemento de la tarea (CA-016-20):
+  /// derecha = siguiente e izquierda = anterior, como el swipe a la izquierda
+  /// y a la derecha. Con una sola foto no hacen nada (el recorrido direccional
+  /// del foco sigue como antes) y con Alt, Ctrl o Meta tampoco (Alt+izquierda
+  /// es «atrás»). Una tecla mantenida se **consume sin repetir**: así no pasa
+  /// el foco a otro control en mitad de la pulsación.
+  KeyEventResult handleKey(KeyEvent event) {
+    if (count < 2) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key != LogicalKeyboardKey.arrowLeft &&
+        key != LogicalKeyboardKey.arrowRight) {
+      return KeyEventResult.ignored;
+    }
+    final keyboard = HardwareKeyboard.instance;
+    if (keyboard.isAltPressed ||
+        keyboard.isControlPressed ||
+        keyboard.isMetaPressed) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) {
+      if (key == LogicalKeyboardKey.arrowRight) {
+        next();
+      } else {
+        previous();
+      }
+    }
+    return KeyEventResult.handled;
+  }
 
   void _attach(_PhotoCarouselState state) => _state = state;
 
@@ -241,6 +278,8 @@ class _PhotoCarouselState extends ConsumerState<PhotoCarousel>
   }
 
   // --- Gesto y transición ---------------------------------------------------
+
+  bool get _isMoving => _dragging || _anim.isAnimating;
 
   void _setSide(int side) {
     if (_side != side) setState(() => _side = side);
