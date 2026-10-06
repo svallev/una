@@ -205,6 +205,7 @@ class _PhotoAnnouncementsState extends ConsumerState<PhotoAnnouncements> {
       builder: (context, message, _) => Semantics(
         liveRegion: true,
         container: true,
+        accessibilityFocusBlockType: AccessibilityFocusBlockType.blockNode,
         label: message,
         child: const SizedBox.square(dimension: 1),
       ),

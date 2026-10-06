@@ -591,6 +591,9 @@ void main() {
       expect(data.hasAction(SemanticsAction.focus), isFalse);
       expect(data.hasAction(SemanticsAction.tap), isFalse);
       expect(data.flagsCollection.isButton, isFalse);
+      // TalkBack no debe poder pararse en él (emulador API 37, T-016-17: sin el
+      // bloqueo, el nodo con texto salía como enfocable).
+      expect(data.flagsCollection.isAccessibilityFocusBlocked, isTrue);
       // Rectángulo no vacío y dentro de la pantalla.
       expect(nodes.single.rect.isEmpty, isFalse);
       expect(
