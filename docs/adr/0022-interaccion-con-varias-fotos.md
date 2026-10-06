@@ -1,6 +1,6 @@
 # ADR-0022: Interacción con varias fotos: swipe para cambiar, desplazamiento vertical y pellizco como la imagen única, y puntos solo informativos
 
-- **Estado:** Propuesto (2026-10-06, con la spec 016); a aceptar por el propietario al aprobar la spec. Incluye una **excepción a P6** (constitución 1.9)
+- **Estado:** Aceptado (propietario, 2026-10-06, con la spec 016). Incluye una **excepción a P6** (constitución 1.9)
 - **Fecha:** 2026-10-06
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
 - **Relacionado:** spec 016 (CA-016-09 a 12, 20 a 22; Q-016-3), D21, P-17 del plan F4b; **enmienda** al ADR-0013 (sin visor, pellizco de vistazo y horizontal) y al ADR-0015; constitución P6; DEV-41, DEV-42, DEV-43 y DEV-53; spec 017 (Bloquear zoom)

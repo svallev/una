@@ -1,6 +1,6 @@
 # ADR-0024: Adjuntos de 1 a N con orden: una fila por foto, con su posición, y esquema v3
 
-- **Estado:** Propuesto (2026-10-06, con la spec 016); a aceptar por el propietario al aprobar la spec
+- **Estado:** Aceptado (propietario, 2026-10-06, con la spec 016)
 - **Fecha:** 2026-10-06
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
 - **Relacionado:** spec 016 (CA-016-03, 14 a 16, 18a, 18b, 23), D21, P-8 y P-18 del plan F4b, R-24; **enmienda** al ADR-0002 (modelo 0..1 adjunto) y al ADR-0012 (borrado sin histórico, ahora de todo el grupo); ADR-0011 (ningún archivo huérfano), ADR-0021 (deshacer); `docs/architecture.md` §3
