@@ -2,7 +2,7 @@
 
 > Principios que **no se negocian**. Toda spec, plan, tarea y PR se revisa contra este documento.
 > Para cambiarlo hace falta un ADR que lo justifique y la aprobación explícita del propietario del producto.
-> Versión 1.7 · 2026-10-05 (excepción a P6 ampliada: voz del sistema también con el idioma elegido en Ajustes, ADR-0023; nota en P3: la política de privacidad, las licencias de terceros y la ayuda necesitan conexión, ADR-0026). Versión 1.6 · 2026-10-04 (excepción a P6: 10 s para deshacer en Android 8 y 9 con un servicio de accesibilidad, ADR-0021). Versión 1.5 · 2026-10-01 (excepción a P6: voz del sistema en anuncios, acciones y títulos de hojas, ADR-0020). Versión 1.4 · 2026-09-28 (excepción a P3: la tarea web necesita conexión, ADR-0016). Versión 1.3 · 2026-09-28 (sin "Volver a vertical" en el horizontal, ADR-0015). Versión 1.2 · 2026-09-27 (excepción del horizontal ampliada al PDF, ADR-0014). Versión 1.1 · 2026-09-27 (nota de excepciones bajo P6, ADR-0013). Versión 1.0 · 2026-09-24
+> Versión 1.8 · 2026-10-06 (nota de P3: la web se abre sin confirmación previa, CA-015-12a; corrige la 1.7). Versión 1.7 · 2026-10-05 (excepción a P6 ampliada: voz del sistema también con el idioma elegido en Ajustes, ADR-0023; nota en P3: la política de privacidad, las licencias de terceros y la ayuda necesitan conexión, ADR-0026). Versión 1.6 · 2026-10-04 (excepción a P6: 10 s para deshacer en Android 8 y 9 con un servicio de accesibilidad, ADR-0021). Versión 1.5 · 2026-10-01 (excepción a P6: voz del sistema en anuncios, acciones y títulos de hojas, ADR-0020). Versión 1.4 · 2026-09-28 (excepción a P3: la tarea web necesita conexión, ADR-0016). Versión 1.3 · 2026-09-28 (sin "Volver a vertical" en el horizontal, ADR-0015). Versión 1.2 · 2026-09-27 (excepción del horizontal ampliada al PDF, ADR-0014). Versión 1.1 · 2026-09-27 (nota de excepciones bajo P6, ADR-0013). Versión 1.0 · 2026-09-24
 
 ## Principios
 
@@ -17,7 +17,7 @@ Sin servidor, sin cuentas y sin login. Todo funciona en modo avión. Los adjunto
 
 > **Excepción aprobada por el propietario:** [ADR-0016](../docs/adr/0016-web-sin-copia-local.md) (2026-09-28): la tarea web guarda solo la dirección y **necesita conexión** para verse; no se guarda nada de la página. Es una función de uso ocasional; sin conexión, la tarea lo dice, y para tener algo a mano sin cobertura están la imagen y el PDF. El resto de la app sigue funcionando en modo avión, también la tarea web (se crea, se edita, se completa y se elimina sin red).
 
-> **Nota (ADR-0026, 2026-10-05):** la política de privacidad, las licencias de terceros y la ayuda necesitan conexión: viven en una web que abre el navegador del sistema, tras confirmarlo, y la app no se conecta por sí misma. Los textos de licencia siguen dentro del paquete, aunque no se muestren.
+> **Nota (ADR-0026, 2026-10-05):** la política de privacidad, las licencias de terceros y la ayuda necesitan conexión: viven en una web que abre el navegador del sistema, directamente al tocar la fila, sin confirmación previa (CA-015-12a), y la app no se conecta por sí misma. Los textos de licencia siguen dentro del paquete, aunque no se muestren.
 
 ### P4. Privacidad por defecto
 Cero red por defecto: sin analítica, sin informes de errores y sin SDK de terceros que envíen datos. La única conexión permitida es la carga de una URL que el usuario ha pedido ver. Objetivo: declarar **"Data Not Collected"** en ambas tiendas. Cualquier excepción futura será opcional, con consentimiento explícito y con su ADR.

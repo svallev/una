@@ -331,7 +331,7 @@ Los criterios están en CA-015-20 a 22. Además:
 |---|---|
 | P1 Una tarea a la vez | CA-015-01a, 02, 24, CL-015-3 (Ajustes solo se abre desde el menú de la tarea y vuelve a ella) |
 | P2 Instantáneo al abrir | CA-015-10, 23 |
-| P3 Local y sin conexión | CA-015-14a, 14b (y la nota de la constitución 1.7) |
+| P3 Local y sin conexión | CA-015-14a, 14b (y la nota de P3 de la constitución, 1.7 y 1.8) |
 | P4 Privacidad por defecto | CA-015-12a, 13a, 17 |
 | P5 Seguridad desde el diseño | CA-015-12a, 13a, 13b, 17, 25, 26 |
 | P6 Accesible siempre | CA-015-01d, 03, 11, 12, 20, 21, 22, 25 |
@@ -416,6 +416,7 @@ Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la correcció
 
 **Ya hecho**
 
+- ✅ **Constitución 1.8** (2026-10-06): la nota de P3 dice que la web se abre sin confirmación previa (CA-015-12a; I1 del cierre).
 - ✅ **Constitución 1.7** (2026-10-05): la excepción de P6 del ADR-0020 se amplía al idioma elegido (ADR-0023); P3: nota de que la política, las licencias de terceros y la ayuda necesitan conexión (ADR-0026).
 - ✅ **ADR-0020:** marcado "sustituido en parte por ADR-0023".
 - ✅ **Spec 010:** CA-010-10 y CL-010-2 enmendados.
@@ -527,4 +528,4 @@ Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la correcció
 | 24, 25, 26, 27 | `features/delete/undo_commit_test.dart`; `settings_controller_test.dart`; `domain/settings_codec_test.dart`; `data/repository_contract_test.dart`; `l10n/l10n_leaks_test.dart` y `l10n_consistency_test.dart` |
 | CL-1 a 10, 12 a 14, 16, 18 | Los de sus CA (CL-6 y 7 con CA-09; CL-13 con `language_page_test.dart` y `locale_change_test.dart`); CL-10: ver CA-17 |
 
-**Revisiones de cierre (2026-10-06, `git diff main...HEAD`):** `security-reviewer` sin hallazgos altos (1 medio, M-1: la puerta de publicación no corre en CI, va a la 020; 6 bajos); `a11y-reviewer` sin hallazgos altos (2 medios: M1 corregido en `ef0ab0d`, M2 en `docs/PLAN.md`; 2 bajos); `spec-reviewer` sin bloqueantes (5 importantes y 10 menores; I2 a I5 corregidos o registrados, I1 queda para el propietario). Detalle y lo que sigue abierto: `docs/PLAN.md`, «Hallazgos del cierre de la 015».
+**Revisiones de cierre (2026-10-06, `git diff main...HEAD`):** `security-reviewer` sin hallazgos altos (1 medio, M-1: la puerta de publicación no corre en CI, va a la 020; 6 bajos); `a11y-reviewer` sin hallazgos altos (2 medios: M1 corregido en `ef0ab0d`, M2 en `docs/PLAN.md`; 2 bajos); `spec-reviewer` sin bloqueantes (5 importantes y 10 menores; I2 a I5 corregidos o registrados, I1 resuelto por el propietario con la constitución 1.8, 2026-10-06). Detalle y lo que sigue abierto: `docs/PLAN.md`, «Hallazgos del cierre de la 015».

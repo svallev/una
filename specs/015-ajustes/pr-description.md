@@ -11,7 +11,7 @@ La pantalla temporal de «Configuración y perfil» (spec 012) se sustituye por 
 - **Spec:** `specs/015-ajustes/spec.md` (estado: **Implementada parcialmente**; tabla CA → prueba en §11)
 - **Tareas:** T-015-01 a T-015-16 (con T-015-07b)
 - **Criterios de aceptación cubiertos:** CA-015-01 a CA-015-27 y CL-015-1 a 18
-- **ADR nuevos o afectados:** **ADR-0023** (idioma elegido; amplía la excepción a P6 de ADR-0020) y **ADR-0026** (licencias de terceros solo en una web; sustituye a la parte de licencias de la 012); constitución 1.7
+- **ADR nuevos o afectados:** **ADR-0023** (idioma elegido; amplía la excepción a P6 de ADR-0020) y **ADR-0026** (licencias de terceros solo en una web; sustituye a la parte de licencias de la 012); constitución 1.7 y 1.8 (I1)
 - **Enmiendas a otras specs:** 005, 007–011, 013; la **012 queda Sustituida**; DEV-52 (nueva, sustituye a DEV-49 y DEV-05)
 
 ## Qué cambia
@@ -38,7 +38,7 @@ Detalle: `specs/015-ajustes/dispositivo.md`.
 | `tools/check-release-config.sh` | **Falla a propósito** con los marcadores (PD-2); es la puerta de publicación, no un fallo de la PR | Local |
 | `security-reviewer` | 0 altos, 1 medio (M-1: la puerta no corre en CI, **va a la 020**), 6 bajos; B-1 corregido en `ef0ab0d`, el resto en `PLAN.md` | `git diff main...HEAD` |
 | `a11y-reviewer` | 0 altos, 2 medios (M1 corregido en `ef0ab0d`, M2 en `PLAN.md`), 2 bajos | `git diff main...HEAD` |
-| `spec-reviewer` | 0 bloqueantes; I2 a I5 corregidos o registrados; **I1 pendiente del propietario** (ver abajo) | `git diff main...HEAD` |
+| `spec-reviewer` | 0 bloqueantes; I2 a I5 corregidos o registrados; I1 resuelto por el propietario (constitución 1.8) | `git diff main...HEAD` |
 | TalkBack, teclado real, 200 % con tres botones, reducir movimiento, `check-recents.sh` (Ajustes, aviso, Idioma) | Resultados en `dispositivo.md`; dos fallos corregidos con test | Emulador API 37 |
 | TalkBack a oído (voz de «Idioma, Español», orden, interruptor) | «Todo ok» | **Xiaomi** (propietario) |
 | Arranque en frío | p50 418-421 ms en el emulador; 217 ms la base y 223 ms la nueva en el Xiaomi (CA-015-23) | `docs/perf/baseline.md` |
@@ -60,7 +60,7 @@ Detalle: `specs/015-ajustes/dispositivo.md`.
 
 ## Pendiente antes o después de fusionar
 
-- **[Pendiente, propietario] I1:** la nota de P3 de la constitución 1.7 dice «tras confirmarlo» y contradice CA-015-12a (sin confirmación). Propuesta: constitución 1.8 con la frase corregida.
+- **[Hecho] I1:** la nota de P3 de la constitución 1.7 decía «tras confirmarlo» y contradecía CA-015-12a (sin confirmación). El propietario aceptó la constitución 1.8 con la frase corregida (2026-10-06).
 - **[Pendiente, 022]** Switch Access, repetir a oído la voz de «Idioma, Español» y de «Como el sistema» y la de los avisos con la versión final, anillo con teclado real, Android 8 y 12L (PD-10), aviso con texto al 200 % (M2).
 - **[Pendiente, 020]** Que la puerta `check-release-config.sh` corra en CI al publicar (M-1) y endurecerla (ruta, dominios reservados).
 - **[Pendiente, antes de F6]** Revisión legal de ADR-0026 y el referente `android-app://<paquete>` en la política y en Data Safety.
