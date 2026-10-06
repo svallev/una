@@ -1,6 +1,6 @@
 # ADR-0002: SQLite (drift) detrás de un repositorio, con migraciones comprobadas y archivos en el sandbox
 
-- **Estado:** Aceptado (la implementación concreta depende de ADR-0001)
+- **Estado:** Aceptado (la implementación concreta depende de ADR-0001). Ampliado por el ADR-0024 (adjuntos de 1 a N, 2026-10-06)
 - **Fecha:** 2026-09-24
 - **Relacionado:** `docs/architecture.md` (esquema completo), ADR-0004, 0005, 0006; riesgo R-06
 
