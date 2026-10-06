@@ -117,7 +117,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   int _cancelSignal = 0;
 
   /// El adjunto recién elegido (imagen o PDF), aún en la preparación.
-  StagedAttachment? get _staged => ref.read(attachmentImportProvider).staged;
+  StagedAttachment? get _staged =>
+      ref.read(attachmentImportProvider).staged.firstOrNull;
 
   /// El adjunto que ya tenía la tarea y sigue en ella.
   Attachment? get _existing =>
@@ -500,7 +501,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final import = ref.watch(attachmentImportProvider);
     ref.listen(attachmentImportProvider, _onImportChanged);
     final images = ref.watch(attachmentImagesProvider);
-    final staged = import.staged;
+    final staged = import.staged.firstOrNull;
     final existing = staged == null ? _existing : null;
     // Una imagen (la nueva o la que ya tenía la tarea): su versión de pantalla.
     final ImageProvider? previewImage = switch (staged) {
