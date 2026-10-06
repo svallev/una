@@ -183,16 +183,37 @@ class FakeImageImporter implements ImageImporter {
   /// Si no es null, regenerar falla con este error.
   Object? regenerateError;
 
+  /// Lo que tarda cada regeneración (para probar que van de una en una).
+  Duration regenerateDelay = Duration.zero;
+
+  /// Regeneraciones en curso a la vez (el máximo visto: CA-016-23, nunca > 1).
+  var _regenerating = 0;
+  var maxRegenerating = 0;
+
+  /// Fallo solo para estos adjuntos (por id).
+  final regenerateErrorsById = <String, Object>{};
+
   @override
   Future<void> regenerateDerived(Attachment attachment) async {
     regenerated.add(attachment.id);
-    if (regenerateError case final e?) throw e;
-    if (await store.check(attachment) == AttachmentFiles.missing) {
-      throw const ImageImportFailure(ImageImportError.unreadable);
+    maxRegenerating = ++_regenerating > maxRegenerating
+        ? _regenerating
+        : maxRegenerating;
+    try {
+      if (regenerateDelay > Duration.zero) {
+        await Future<void>.delayed(regenerateDelay);
+      }
+      if (regenerateError case final e?) throw e;
+      if (regenerateErrorsById[attachment.id] case final e?) throw e;
+      if (await store.check(attachment) == AttachmentFiles.missing) {
+        throw const ImageImportFailure(ImageImportError.unreadable);
+      }
+      store
+        ..putStored(attachment.id, 'screen.jpg', tinyImage)
+        ..putStored(attachment.id, 'thumb.jpg', tinyImage);
+    } finally {
+      _regenerating--;
     }
-    store
-      ..putStored(attachment.id, 'screen.jpg', tinyImage)
-      ..putStored(attachment.id, 'thumb.jpg', tinyImage);
   }
 
   /// Simula un proveedor colgado: cancelar no responde nunca (M1 de la

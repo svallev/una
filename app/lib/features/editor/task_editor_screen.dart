@@ -24,6 +24,7 @@ import '../../ui/wordmark.dart';
 import '../attachments/attach_sheet.dart';
 import '../attachments/attachment_import_controller.dart';
 import '../attachments/attachment_preview.dart';
+import '../attachments/group_health.dart';
 import '../attachments/import_error_text.dart';
 import '../attachments/import_notice_banner.dart';
 import '../attachments/pdf_labels.dart';
@@ -586,6 +587,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final staged = all.length == 1 ? all.first : null;
     final existingAll = all.isEmpty ? _existing : const <Attachment>[];
     final existing = existingAll.isPhotoGroup ? null : existingAll.firstOrNull;
+    final groupMissing = existingAll.isPhotoGroup
+        ? ref
+              .watch(groupHealthProvider(AttachmentGroupKey(existingAll)))
+              .missingIds
+        : const <String>{};
     final stackPhotos = all.length >= 2
         ? [
             for (final s in all.whereType<StagedImage>().take(
@@ -600,7 +606,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         ? [
             for (final a in existingAll.take(PhotoStack.maxVisible))
               StackPhoto(
-                image: images.stored(a.screenPath),
+                // Si falta su archivo: "Foto no disponible" en su sitio y las
+                // demás se ven (CA-016-18a).
+                image: groupMissing.contains(a.id)
+                    ? null
+                    : images.stored(a.screenPath),
                 aspectRatio: _ratio(a.width, a.height),
               ),
           ]

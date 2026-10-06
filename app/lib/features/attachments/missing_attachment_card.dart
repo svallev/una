@@ -9,7 +9,9 @@ import '../../ui/una_icons.dart';
 /// "Adjunto no disponible" (CA-007-19, DEV-40): recuadro blanco con el texto
 /// de la tarea (si lo tiene), el aviso y una sola acción: "Quitar adjunto"
 /// (con texto) o "Eliminar tarea" (sin texto). Nunca cierra la app. Con PDF,
-/// el icono de documento (CA-008-18).
+/// el icono de documento (CA-008-18). Con un grupo de fotos (spec 016) sale
+/// cuando faltan **todas** o el grupo no es válido (CA-016-18b, CA-016-25), y
+/// "Quitar adjunto" quita el grupo entero.
 class MissingAttachmentCard extends StatelessWidget {
   const MissingAttachmentCard({
     super.key,

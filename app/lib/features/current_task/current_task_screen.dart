@@ -10,6 +10,7 @@ import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../data/platform/attachment_rotation.dart';
+import '../../domain/entities/attachment.dart';
 import '../../domain/entities/link_target.dart';
 import '../../domain/entities/pdf_position.dart';
 import '../../domain/entities/task.dart';
@@ -23,6 +24,7 @@ import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../attachments/attachment_health.dart';
+import '../attachments/group_health.dart';
 import '../attachments/keep_screen_on_controller.dart';
 import '../attachments/link_confirm_sheet.dart';
 import '../attachments/missing_attachment_card.dart';
@@ -129,6 +131,10 @@ class CurrentTaskScreen extends ConsumerWidget {
     }
 
     final attachment = task.attachment;
+    // Un grupo no válido (tipo desconocido, mezcla, medidas raras: CA-016-25)
+    // es "Adjunto no disponible" desde el primer fotograma, antes de dibujar
+    // nada ni mirar el disco.
+    final invalidGroup = !task.attachments.isValidGroup;
     final isPhoto = attachment?.isPhoto ?? false;
     // Falta la versión completa: "Adjunto no disponible" (CA-007-19).
     // La tarea que se completa o se elimina no comprueba: sus archivos ya se
@@ -137,17 +143,25 @@ class CurrentTaskScreen extends ConsumerWidget {
     final leaving = ref.watch(
       completionProvider.select((c) => c.busy && c.task?.id == task.id),
     );
-    final isWeb = attachment?.isWeb ?? false;
-    // La web no tiene archivos que comprobar (ADR-0016).
+    final isWeb = !invalidGroup && (attachment?.isWeb ?? false);
+    // La web no tiene archivos que comprobar (ADR-0016). Con varias fotos, la
+    // salud del grupo: solo faltan todas = tarjeta (CA-016-18b).
     final health =
-        attachment != null && !isWeb && !faceOnly && !chromeOnly && !leaving
-        ? ref.watch(attachmentHealthProvider(attachment)).health
+        attachment != null &&
+            !isWeb &&
+            !invalidGroup &&
+            !faceOnly &&
+            !chromeOnly &&
+            !leaving
+        ? ref
+              .watch(groupHealthProvider(AttachmentGroupKey(task.attachments)))
+              .health
         : null;
-    final missing = health == AttachmentHealth.missing;
+    final missing = invalidGroup || health == AttachmentHealth.missing;
     // No gira hasta saber que el adjunto está: con "Adjunto no disponible" no
     // gira nunca, ni un momento (CA-008-18, CA-007-19).
     final canRotate = !faceOnly && health != AttachmentHealth.checking;
-    final isPdf = attachment?.isPdf ?? false;
+    final isPdf = !invalidGroup && (attachment?.isPdf ?? false);
     final showImage = attachment != null && !isPdf && !isWeb && !missing;
     // Con PDF: franja, banda del texto y páginas entre la cabecera y el botón
     // (CA-008-08).
@@ -803,7 +817,7 @@ class _MissingAttachment extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MissingAttachmentCard(
       text: task.text ?? '',
-      isPdf: task.attachment?.isPdf ?? false,
+      isPdf: task.attachments.isValidGroup && (task.attachment?.isPdf ?? false),
       header: header,
       onRemove: interactive ? () => _remove(context, ref) : () {},
       onDelete: interactive ? () => deleteTask(context, ref, task) : () {},

@@ -30,6 +30,25 @@ class AttachmentHealthState {
   final int generation;
 }
 
+/// Cola de reparaciones: regenerar derivadas (o dibujar la página de un PDF)
+/// **de una en una**, nunca en paralelo (CA-016-23): con un grupo de 10 fotos
+/// de 24 MP, tres decodificaciones a la vez serían el pico de memoria que el
+/// grupo no se puede permitir. Un fallo de un trabajo no detiene a los demás.
+class RepairQueue {
+  Future<void> _tail = Future<void>.value();
+
+  /// Ejecuta [job] cuando terminen los que ya esperaban.
+  Future<T> run<T>(Future<T> Function() job) {
+    final result = _tail.then((_) => job());
+    _tail = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+}
+
+final attachmentRepairQueueProvider = Provider<RepairQueue>(
+  (ref) => RepairQueue(),
+);
+
 /// Comprueba los archivos del adjunto al mostrarlo; si solo faltan (o están
 /// estropeadas) la versión de pantalla o la miniatura, las regenera en
 /// segundo plano desde la completa, sin avisar. Con PDF, la versión de
@@ -86,14 +105,24 @@ class AttachmentHealthController extends Notifier<AttachmentHealthState> {
 
   Future<void> _repair() async {
     _repairing = true;
+    final queue = ref.read(attachmentRepairQueueProvider);
     final images = ref.read(attachmentImagesProvider);
     try {
-      if (attachment.isPdf) {
-        await _renderPdfScreen();
-      } else {
-        await ref.read(imageImporterProvider).regenerateDerived(attachment);
-      }
-      if (!ref.mounted) return;
+      // Antes de esperar el turno: después la foto puede haber salido de la
+      // vista y su `ref` ya no valdría.
+      final importer = ref.read(imageImporterProvider);
+      final done = await queue.run<bool>(() async {
+        // Si la foto salió de la vista mientras esperaba su turno, no se
+        // regenera: solo se repara lo que se ve o está a punto de verse.
+        if (!ref.mounted) return false;
+        if (attachment.isPdf) {
+          await _renderPdfScreen();
+        } else {
+          await importer.regenerateDerived(attachment);
+        }
+        return true;
+      });
+      if (!done || !ref.mounted) return;
       _repaired = true;
       // Que se vuelvan a leer del disco, no de la caché.
       await images.stored(attachment.screenPath).evict();
@@ -105,6 +134,8 @@ class AttachmentHealthController extends Notifier<AttachmentHealthState> {
         generation: state.generation + 1,
       );
     } on Object {
+      // Un fallo al decodificar o regenerar nunca cierra la app: la foto (o
+      // el adjunto) pasa a "no disponible" (CA-016-23).
       _set(AttachmentHealth.missing);
     } finally {
       _repairing = false;
