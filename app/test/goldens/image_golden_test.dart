@@ -74,7 +74,9 @@ void main() {
 
   setUp(() {
     store = MemoryAttachmentStore();
-    importer = FakeImageImporter(store);
+    importer = FakeImageImporter(store)
+      // "Subir imágenes" con una sola elegida es la 007 (CA-016-03).
+      ..manyTotal = 1;
     repo = InMemoryTaskRepository();
   });
 

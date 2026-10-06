@@ -30,7 +30,9 @@ void main() {
 
   setUp(() {
     store = MemoryAttachmentStore();
-    importer = FakeImageImporter(store);
+    importer = FakeImageImporter(store)
+      // "Subir imágenes" con una sola elegida es la 007 (CA-016-03).
+      ..manyTotal = 1;
     repo = InMemoryTaskRepository();
   });
 
@@ -290,7 +292,7 @@ void main() {
       await tester.tap(find.text('Guardar cambios'));
       await tester.pumpAndSettle();
       final saved = (await repo.currentTask())!;
-      expect(saved.attachment!.id, importer.picks.last);
+      expect(saved.attachment!.id, importer.copiedIds.last);
       expect(saved.rank, task.rank);
     });
 

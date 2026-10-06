@@ -23,7 +23,9 @@ void main() {
 
   setUp(() {
     store = MemoryAttachmentStore();
-    importer = FakeImageImporter(store);
+    importer = FakeImageImporter(store)
+      // "Subir imágenes" con una sola elegida es la 007 (CA-016-03).
+      ..manyTotal = 1;
     overrides = [
       attachmentStoreProvider.overrideWithValue(store),
       imageImporterProvider.overrideWithValue(importer),
@@ -65,7 +67,7 @@ void main() {
       expect(find.byType(TaskEditorScreen), findsNothing);
       final current = (await repo.currentTask())!;
       expect(current.text, 'Horario');
-      expect(current.attachment!.id, importer.picks.single);
+      expect(current.attachment!.id, importer.copiedIds.single);
       expect(await order(repo), ['Horario', 'Primera', 'Segunda']);
       expect(await store.stagingIds(), isEmpty);
     },
@@ -122,7 +124,7 @@ void main() {
 
     expect(await order(repo), ['Primera', 'Segunda', 'Tercera']);
     final third = (await repo.pendingTasks()).last;
-    expect(third.attachment!.id, importer.picks.single);
+    expect(third.attachment!.id, importer.copiedIds.single);
   });
 
   testWidgets('CL-007-8: doble toque rápido en "Continuar" crea una sola '

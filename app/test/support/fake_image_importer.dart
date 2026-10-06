@@ -55,6 +55,10 @@ class FakeImageImporter implements ImageImporter {
   /// `token` de cada copia empezada, en orden.
   final copiedTokens = <String>[];
 
+  /// Id de preparación de cada copia empezada, en orden (también con el
+  /// selector múltiple, que no pasa por `picks`).
+  final copiedIds = <String>[];
+
   /// Llamadas de copia o limpieza en curso a la vez (el máximo visto) y
   /// originales en la preparación a la vez (CA-016-04: nunca más de uno).
   var _active = 0;
@@ -124,6 +128,7 @@ class FakeImageImporter implements ImageImporter {
   }) async {
     limits.add(maxBytes);
     copiedTokens.add(picked.token);
+    copiedIds.add(id);
     _enter();
     var ok = false;
     try {

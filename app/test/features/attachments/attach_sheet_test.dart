@@ -2,6 +2,7 @@ import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/domain/entities/attachment.dart';
+import 'package:app/domain/entities/image_type.dart';
 import 'package:app/features/attachments/attach_sheet.dart';
 import 'package:app/features/attachments/attachment_import_controller.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
@@ -28,7 +29,9 @@ void main() {
 
   setUp(() {
     store = MemoryAttachmentStore();
-    importer = FakeImageImporter(store);
+    importer = FakeImageImporter(store)
+      // "Subir imágenes" con una sola elegida es la 007 (CA-016-03).
+      ..manyTotal = 1;
     pdfs = FakePdfImporter(store);
   });
 
@@ -247,7 +250,13 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(AttachSheet), findsNothing);
-        expect(importer.origins, [origin]);
+        // "Subir imágenes" abre el selector múltiple (CA-016-02); la cámara, el
+        // de una sola.
+        if (origin == AttachmentOrigin.gallery) {
+          expect(importer.pickManyMax, [ImageLimits.maxGroup]);
+        } else {
+          expect(importer.origins, [origin]);
+        }
         expect(
           containerOf(tester).read(attachmentImportProvider).image,
           isNotNull,
