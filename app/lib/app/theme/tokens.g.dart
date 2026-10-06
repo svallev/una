@@ -506,4 +506,5 @@ abstract final class UnaMotion {
   static const double photoStackTiltMiddle = 4.0;
   static const double photoStackTiltBack = -5.0;
   static const double photoStackWidthFactor = 0.86;
+  static const double photoStackMaxHeightFactor = 0.84;
 }
