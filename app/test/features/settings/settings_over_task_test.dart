@@ -13,6 +13,7 @@ import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
+import 'package:app/features/attachments/zoomable_photo.dart';
 import 'package:app/features/menu/menu_sheet.dart';
 import 'package:app/features/settings/language_page.dart';
 import 'package:app/features/settings/settings_screen.dart';
@@ -459,18 +460,18 @@ void main() {
         'tras abrir y cerrar Ajustes', (tester) async {
       await pumpWith(tester, await _imageTask(store));
       expect(find.byType(TaskImage), findsOneWidget);
-      final image = tester.state(find.byType(TaskImage));
+      final image = tester.state(find.byType(ZoomablePhoto));
 
       await openSettings(tester);
       expect(
-        tester.state(find.byType(TaskImage, skipOffstage: false)),
+        tester.state(find.byType(ZoomablePhoto, skipOffstage: false)),
         same(image),
         reason: 'la tarea sigue montada debajo',
       );
       await closeSettings(tester);
 
       expect(find.byType(TaskImage), findsOneWidget);
-      expect(tester.state(find.byType(TaskImage)), same(image));
+      expect(tester.state(find.byType(ZoomablePhoto)), same(image));
       expect(tester.takeException(), isNull);
     });
   });

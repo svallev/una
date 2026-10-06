@@ -48,6 +48,7 @@ import '../settings/settings_screen.dart';
 import '../task_list/task_list_screen.dart';
 import '../web/edit_web_task.dart';
 import '../web/task_web.dart';
+import 'image_scroll.dart';
 import 'pdf_face_snapshot.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
@@ -199,7 +200,7 @@ class CurrentTaskScreen extends ConsumerWidget {
     /// y sin decir "imagen" dos veces (CA-007-21).
     Widget taskNode(
       Widget child, {
-      _ImageScroll? scroll,
+      ImageScroll? scroll,
       String? webHost,
     }) => FocusOnSignal(
       signal: focusSignal,
@@ -878,52 +879,6 @@ class _MissingAttachment extends ConsumerWidget {
   }
 }
 
-/// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
-/// pantalla y teclado), aunque el menú esté arriba en pantalla.
-/// Desplazamiento de la imagen de la tarea actual: por pasos del 80 % de la
-/// pantalla, sin animar con reducir movimiento.
-class _ImageScroll {
-  _ImageScroll(this.controller, this._reduced);
-
-  final ScrollController controller;
-  final bool Function() _reduced;
-
-  ScrollPosition? get _position =>
-      controller.hasClients ? controller.position : null;
-  bool get canForward {
-    final p = _position;
-    return p != null && p.pixels < p.maxScrollExtent - 0.5;
-  }
-
-  bool get canBack {
-    final p = _position;
-    return p != null && p.pixels > p.minScrollExtent + 0.5;
-  }
-
-  void forward() => _by(1);
-  void back() => _by(-1);
-
-  void _by(int direction) {
-    final p = _position;
-    if (p == null) return;
-    final to = (p.pixels + direction * p.viewportDimension * 0.8).clamp(
-      p.minScrollExtent,
-      p.maxScrollExtent,
-    );
-    if (_reduced()) {
-      p.jumpTo(to);
-    } else {
-      unawaited(
-        p.animateTo(
-          to,
-          duration: UnaMotion.imageZoomBack,
-          curve: UnaMotion.standardCurve,
-        ),
-      );
-    }
-  }
-}
-
 /// Mientras se ve la tarea actual con imagen, PDF o web (y es la pantalla de
 /// arriba, no bajo el menú, el editor o el listado; la confirmación de un
 /// enlace sí la deja girar), la app gira con el móvil (CA-008-11,
@@ -941,7 +896,7 @@ class _RotatesWithAttachment extends StatefulWidget {
 
   final bool enabled;
   final bool fullWidth;
-  final Widget Function(_ImageScroll scroll) builder;
+  final Widget Function(ImageScroll scroll) builder;
 
   @override
   State<_RotatesWithAttachment> createState() => _RotatesWithAttachmentState();
@@ -951,7 +906,7 @@ class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
   bool? _rotating;
   bool _fullWidth = false;
   final _controller = ScrollController();
-  late final _scroll = _ImageScroll(
+  late final _scroll = ImageScroll(
     _controller,
     () => mounted && MediaQuery.disableAnimationsOf(context),
   );
@@ -1067,6 +1022,8 @@ class _UndoCardSpace extends StatelessWidget {
   }
 }
 
+/// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
+/// pantalla y teclado), aunque el menú esté arriba en pantalla.
 class _Order extends StatelessWidget {
   const _Order(this.order, {required this.child});
   final double order;

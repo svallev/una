@@ -13,6 +13,7 @@ import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
+import 'package:app/features/attachments/zoomable_photo.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/delete/undo_card.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
@@ -811,7 +812,7 @@ void main() {
         await pumpWith(tester, [await _imageTask(store)], from);
         await tester.pumpAndSettle();
         expect(find.byType(TaskImage), findsOneWidget);
-        final image = tester.state(find.byType(TaskImage));
+        final image = tester.state(find.byType(ZoomablePhoto));
         _expectTaskActions(tester, before, _taskActions);
         expect(find.bySemanticsLabel(_photoLabel(before)), findsOneWidget);
         tester.takeAnnouncements();
@@ -820,7 +821,7 @@ void main() {
 
         expect(find.byType(TaskImage), findsOneWidget);
         // La misma pantalla, no una nueva: la imagen no se vuelve a cargar.
-        expect(tester.state(find.byType(TaskImage)), same(image));
+        expect(tester.state(find.byType(ZoomablePhoto)), same(image));
         expect(find.text(_tasks.first), findsOneWidget);
         expect(find.bySemanticsLabel(_photoLabel(after)), findsOneWidget);
         expect(find.bySemanticsLabel(_photoLabel(before)), findsNothing);
