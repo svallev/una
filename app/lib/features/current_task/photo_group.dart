@@ -94,30 +94,76 @@ class _PhotoGroupFooterState extends State<PhotoGroupFooter> {
         return false;
       },
       child: SizeChangedLayoutNotifier(
-        child: Column(
+        child: PhotoFooterColumn(
           key: _box,
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (caption != null && caption.isNotEmpty) ...[
-              // Decorativo: el nodo de la tarea ya lo lee.
-              ExcludeSemantics(child: ImageCaption(caption)),
-              const SizedBox(height: UnaSpace.sm),
-            ],
-            Center(
-              child: ListenableBuilder(
-                listenable: widget.host.carousel,
-                builder: (context, _) => PhotoDots(
-                  count: widget.count,
-                  index: widget.host.carousel.index,
-                ),
-              ),
+          caption: caption,
+          dots: ListenableBuilder(
+            listenable: widget.host.carousel,
+            builder: (context, _) => PhotoDots(
+              count: widget.count,
+              index: widget.host.carousel.index,
             ),
-            // Entre los puntos y el botón de completar (prototipo: ~12).
-            const SizedBox(height: UnaSpace.sm),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// El pie y, bajo él, los puntos, con el hueco de arriba del botón: lo que
+/// comparten el pie de la pantalla ([PhotoGroupFooter]) y el de la cara de la
+/// rotura y el arrugado ([PhotoFaceFooter]), para que ocupen el mismo sitio.
+class PhotoFooterColumn extends StatelessWidget {
+  const PhotoFooterColumn({super.key, this.caption, required this.dots});
+
+  /// El texto de la tarea; sin él (o vacío) solo van los puntos.
+  final String? caption;
+  final Widget dots;
+
+  @override
+  Widget build(BuildContext context) {
+    final caption = this.caption;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (caption != null && caption.isNotEmpty) ...[
+          // Decorativo: el nodo de la tarea ya lo lee.
+          ExcludeSemantics(child: ImageCaption(caption)),
+          const SizedBox(height: UnaSpace.sm),
+        ],
+        Center(child: dots),
+        // Entre los puntos y el botón de completar (prototipo: ~12).
+        const SizedBox(height: UnaSpace.sm),
+      ],
+    );
+  }
+}
+
+/// El pie de la cara de la rotura y del arrugado (spec 016, CA-016-13): el
+/// texto y los puntos con la foto que se veía ([index]), sin medir nada ni
+/// escuchar al carrusel. Sin captura ([index] nulo), solo el pie, sin puntos:
+/// no se sabe qué foto se veía.
+class PhotoFaceFooter extends StatelessWidget {
+  const PhotoFaceFooter({
+    super.key,
+    required this.count,
+    required this.index,
+    this.caption,
+  });
+
+  final int count;
+  final int? index;
+  final String? caption;
+
+  @override
+  Widget build(BuildContext context) {
+    final index = this.index;
+    return PhotoFooterColumn(
+      caption: caption,
+      dots: index == null
+          ? const SizedBox.shrink()
+          : PhotoDots(count: count, index: index),
     );
   }
 }

@@ -2,11 +2,13 @@ import 'package:app/app/providers.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/data/platform/screen_awake.dart';
+import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/entities/web_load_failure.dart';
 import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/features/attachments/keep_screen_on_controller.dart';
+import 'package:app/features/attachments/photo_carousel.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/settings/settings_controller.dart';
 import 'package:flutter/gestures.dart';
@@ -53,6 +55,19 @@ void main() {
     );
     final base = sampleTask(id: id, text: 'Horario', rank: rank);
     return base.withContent('Horario', attachment, base.updatedAt);
+  }
+
+  Future<Task> groupTask({String id = 't-grp', String rank = 'M'}) async {
+    final all = <Attachment>[];
+    for (var i = 0; i < 3; i++) {
+      final aid = 'g-$id-$i';
+      all.add(
+        await store.commit(stageImage(store, aid), DateTime.utc(2026, 10, 6)),
+      );
+      store.putStored(aid, 'screen.jpg', Uint8List.fromList(tinyImage));
+    }
+    final base = sampleTask(id: id, text: 'Horario', rank: rank);
+    return base.withContent('Horario', null, base.updatedAt, attachments: all);
   }
 
   Future<Task> pdfTask({String id = 't-pdf', String rank = 'M'}) async {
@@ -119,6 +134,44 @@ void main() {
     await tester.pump(const Duration(minutes: 50, seconds: 1));
     // Sin límite: ni se retira ni se vuelve a pedir.
     expect(awake.calls, [true]);
+  });
+
+  testWidgets('CA-016-13: con la tarea actual con un grupo de fotos, la '
+      'pantalla no se apaga: en vertical, en horizontal y sin límite de '
+      'tiempo', (tester) async {
+    await repo.insert(await groupTask());
+    await pump(tester);
+    expect(find.byType(PhotoCarousel), findsOneWidget);
+    expect(awake.calls, [true]);
+
+    await tester.pump(const Duration(minutes: 60));
+    await turn(tester, landscape: true);
+    expect(find.byType(PhotoCarousel), findsOneWidget);
+    expect(awake.on, isTrue);
+    await turn(tester, landscape: false);
+    expect(awake.on, isTrue);
+    // Sin límite, y nunca se retira y se vuelve a pedir por girar.
+    expect(awake.calls, [true]);
+  });
+
+  testWidgets('CA-016-13: con el grupo y el ajuste apagado, nunca; con la app '
+      'en segundo plano se retira', (tester) async {
+    await repo.insert(await groupTask());
+    await pump(tester);
+    expect(awake.on, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(awake.on, isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(awake.on, isTrue);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(PhotoCarousel)),
+    );
+    await container.read(settingsProvider.notifier).setKeepScreenOn(false);
+    await tester.pump();
+    expect(awake.on, isFalse);
   });
 
   testWidgets('CA-015-04a: los toques ya no cuentan: no hay temporizador que '

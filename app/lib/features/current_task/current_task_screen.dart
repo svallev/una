@@ -52,6 +52,7 @@ import '../web/edit_web_task.dart';
 import '../web/task_web.dart';
 import 'image_scroll.dart';
 import 'pdf_face_snapshot.dart';
+import 'photo_face_snapshot.dart';
 import 'photo_group.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
@@ -256,6 +257,17 @@ class _TaskView extends ConsumerWidget {
     // Con un grupo de fotos a la vista: el carrusel en lugar de la imagen, y el
     // pie con los puntos en su sitio (spec 016).
     final photoGroup = showImage ? host : null;
+    // La cara de la rotura y del arrugado de un grupo: la foto que se veía,
+    // capturada en memoria (sus archivos ya no están), y el pie; sin captura,
+    // solo el color de la nota y el pie. Nunca lee el disco (CA-016-13).
+    final groupFace = faceOnly && showImage && task.attachments.length >= 2;
+    final faceSnapshot = groupFace
+        ? ref.watch(
+            photoFaceSnapshotProvider.select(
+              (s) => s?.taskId == task.id ? s : null,
+            ),
+          )
+        : null;
     // Con un aviso en lugar de la página, la web no gira (CA-009-15).
     final webNotice =
         showWeb &&
@@ -531,6 +543,17 @@ class _TaskView extends ConsumerWidget {
                               ),
                             ),
                           )
+                        : groupFace && !(faceSnapshot?.landscape ?? false)
+                        ? Align(
+                            alignment: Alignment.bottomCenter,
+                            child: side(
+                              PhotoFaceFooter(
+                                count: task.attachments.length,
+                                index: faceSnapshot?.index,
+                                caption: text,
+                              ),
+                            ),
+                          )
                         : const SizedBox.shrink())
                   : showWeb
                   // La tarea (la barra), la página o su aviso, antes que el
@@ -704,28 +727,35 @@ class _TaskView extends ConsumerWidget {
                         children: [
                           _Order(
                             0,
-                            child: _RotatesWithAttachment(
-                              enabled: canRotate,
-                              fullWidth: landscape,
-                              carousel: photoGroup?.carousel,
-                              builder: (scroll) => photoGroup != null
-                                  ? photoNode(
-                                      PhotoGroupLayer(
-                                        host: photoGroup,
-                                        photos: task.attachments,
-                                        landscape: landscape,
-                                      ),
-                                      scroll: scroll,
-                                    )
-                                  : taskNode(
-                                      TaskImage(
-                                        attachment: attachment,
-                                        caption: landscape ? null : text,
-                                        scroll: scroll.controller,
-                                      ),
-                                      scroll: scroll,
-                                    ),
-                            ),
+                            child: groupFace
+                                ? PhotoFaceLayer(snapshot: faceSnapshot)
+                                : _RotatesWithAttachment(
+                                    enabled: canRotate,
+                                    fullWidth: landscape,
+                                    carousel: photoGroup?.carousel,
+                                    builder: (scroll) => photoGroup != null
+                                        ? photoNode(
+                                            PhotoFaceCapture(
+                                              taskId: task.id,
+                                              host: photoGroup,
+                                              landscape: landscape,
+                                              child: PhotoGroupLayer(
+                                                host: photoGroup,
+                                                photos: task.attachments,
+                                                landscape: landscape,
+                                              ),
+                                            ),
+                                            scroll: scroll,
+                                          )
+                                        : taskNode(
+                                            TaskImage(
+                                              attachment: attachment,
+                                              caption: landscape ? null : text,
+                                              scroll: scroll.controller,
+                                            ),
+                                            scroll: scroll,
+                                          ),
+                                  ),
                           ),
                           content,
                           // "Foto {i} de {n}" al cambiar de foto: su región
