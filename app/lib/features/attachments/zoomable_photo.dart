@@ -16,13 +16,23 @@ import 'attachment_health.dart';
 /// dedos no se desplaza. No lleva pie ni semántica: la pantalla principal
 /// pone la foto y el pie en un único nodo (CA-007-21).
 class ZoomablePhoto extends ConsumerStatefulWidget {
-  const ZoomablePhoto({super.key, required this.attachment, this.scroll});
+  const ZoomablePhoto({
+    super.key,
+    required this.attachment,
+    this.scroll,
+    this.bottomInset = 0,
+  });
 
   final Attachment attachment;
 
   /// Desplazamiento de la foto alta, para moverla también con las acciones
   /// del lector y con el teclado (CA-007-09, WCAG 2.1.1).
   final ScrollController? scroll;
+
+  /// Margen inferior que el desplazamiento vertical deja libre tras el final de
+  /// la foto (el pie y los puntos del carrusel, CA-016-11). Con 0, como la
+  /// imagen suelta.
+  final double bottomInset;
 
   @override
   ConsumerState<ZoomablePhoto> createState() => _ZoomablePhotoState();
@@ -112,6 +122,7 @@ class _ZoomablePhotoState extends ConsumerState<ZoomablePhoto>
   @override
   Widget build(BuildContext context) {
     final attachment = widget.attachment;
+    final bottomInset = widget.bottomInset;
     final images = ref.watch(attachmentImagesProvider);
     final health = ref.watch(attachmentHealthProvider(attachment));
     final mq = MediaQuery.of(context);
@@ -135,48 +146,58 @@ class _ZoomablePhotoState extends ConsumerState<ZoomablePhoto>
                   : const ClampingScrollPhysics(),
               child: SizedBox(
                 width: width,
-                height: math.max(height, constraints.maxHeight),
-                child: Center(
-                  child: SizedBox(
-                    width: width,
-                    height: height,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        // La versión de pantalla sale en el primer
-                        // fotograma (CA-007-08); encima, las teselas.
-                        Image(
-                          // Tras regenerarla, se vuelve a leer (CA-007-19).
-                          key: ValueKey(health.generation),
-                          image: images.stored(attachment.screenPath),
-                          fit: BoxFit.fitWidth,
-                          alignment: Alignment.topCenter,
-                          gaplessPlayback: true,
-                          // No se puede decodificar: se regenera desde la
-                          // completa y, si tampoco sirve, se ve "Adjunto no
-                          // disponible". Mientras, el color de la nota.
-                          errorBuilder: (context, _, _) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (context.mounted) {
-                                ref
-                                    .read(
-                                      attachmentHealthProvider(attachment)
-                                          .notifier,
-                                    )
-                                    .reportBroken();
-                              }
-                            });
-                            return const SizedBox.expand();
-                          },
-                        ),
-                        AttachmentTiles(
-                          attachment: attachment,
-                          width: width,
-                          height: height,
-                          decodeScale: mq.devicePixelRatio,
-                          image: images.stored,
-                        ),
-                      ],
+                // Con margen inferior (el pie y los puntos del carrusel), el
+                // final de una foto alta se puede desplazar hasta quedar
+                // encima de ellos (CA-016-11).
+                height: math.max(height + bottomInset, constraints.maxHeight),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    // Centrada si es más baja que la pantalla.
+                    padding: EdgeInsets.only(
+                      top: math.max(0, (constraints.maxHeight - height) / 2),
+                    ),
+                    child: SizedBox(
+                      width: width,
+                      height: height,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // La versión de pantalla sale en el primer
+                          // fotograma (CA-007-08); encima, las teselas.
+                          Image(
+                            // Tras regenerarla, se vuelve a leer (CA-007-19).
+                            key: ValueKey(health.generation),
+                            image: images.stored(attachment.screenPath),
+                            fit: BoxFit.fitWidth,
+                            alignment: Alignment.topCenter,
+                            gaplessPlayback: true,
+                            // No se puede decodificar: se regenera desde la
+                            // completa y, si tampoco sirve, se ve "Adjunto no
+                            // disponible". Mientras, el color de la nota.
+                            errorBuilder: (context, _, _) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (context.mounted) {
+                                  ref
+                                      .read(
+                                        attachmentHealthProvider(attachment)
+                                            .notifier,
+                                      )
+                                      .reportBroken();
+                                }
+                              });
+                              return const SizedBox.expand();
+                            },
+                          ),
+                          AttachmentTiles(
+                            attachment: attachment,
+                            width: width,
+                            height: height,
+                            decodeScale: mq.devicePixelRatio,
+                            image: images.stored,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

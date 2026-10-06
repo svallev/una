@@ -113,13 +113,23 @@ class PhotoCarouselController extends ChangeNotifier {
 /// Es solo la zona de las fotos: el pie, los puntos y la lectura los pone la
 /// pantalla principal. Con una sola foto no hay swipe ni vecina.
 class PhotoCarousel extends ConsumerStatefulWidget {
-  const PhotoCarousel({super.key, required this.photos, this.controller});
+  const PhotoCarousel({
+    super.key,
+    required this.photos,
+    this.controller,
+    this.bottomInset = 0,
+  });
 
   /// Las fotos, en su orden (1 a 10).
   final List<Attachment> photos;
 
   /// Si no se da, el carrusel lleva el suyo.
   final PhotoCarouselController? controller;
+
+  /// Margen inferior que deja el desplazamiento vertical de cada foto: lo que
+  /// ocupan el pie y los puntos, para poder ver el final de una foto alta
+  /// (CA-016-11).
+  final double bottomInset;
 
   @override
   ConsumerState<PhotoCarousel> createState() => _PhotoCarouselState();
@@ -405,6 +415,7 @@ class _PhotoCarouselState extends ConsumerState<PhotoCarousel>
                     child: _PhotoPage(
                       attachment: photos[i],
                       scroll: _ctl.scrollOf(photos[i].id),
+                      bottomInset: widget.bottomInset,
                       missing: missing.contains(photos[i].id),
                     ),
                   ),
@@ -460,11 +471,13 @@ class _PhotoPage extends ConsumerWidget {
     required this.attachment,
     required this.scroll,
     required this.missing,
+    required this.bottomInset,
   });
 
   final Attachment attachment;
   final ScrollController scroll;
   final bool missing;
+  final double bottomInset;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -472,7 +485,11 @@ class _PhotoPage extends ConsumerWidget {
         ref.watch(attachmentHealthProvider(attachment)).health ==
         AttachmentHealth.missing;
     if (!missing && !broken) {
-      return ZoomablePhoto(attachment: attachment, scroll: scroll);
+      return ZoomablePhoto(
+        attachment: attachment,
+        scroll: scroll,
+        bottomInset: bottomInset,
+      );
     }
     return LayoutBuilder(
       builder: (context, constraints) {

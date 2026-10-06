@@ -6,6 +6,7 @@ import 'package:app/domain/entities/task.dart';
 import 'package:app/features/attachments/attachment_health.dart';
 import 'package:app/features/attachments/group_health.dart';
 import 'package:app/features/attachments/missing_attachment_card.dart';
+import 'package:app/features/attachments/photo_carousel.dart';
 import 'package:app/features/attachments/photo_missing_box.dart';
 import 'package:app/features/attachments/photo_stack.dart';
 import 'package:app/features/attachments/task_image.dart';
@@ -321,7 +322,10 @@ void main() {
       await pumpUnaApp(tester, repo: repo, overrides: overrides());
       await tester.pumpAndSettle();
       expect(find.byType(MissingAttachmentCard), findsNothing);
-      expect(find.byType(TaskImage), findsOneWidget);
+      // El carrusel (T-016-16b): la foto que falta tiene su recuadro en su
+      // sitio y las demás se ven normales.
+      expect(find.byType(PhotoCarousel), findsOneWidget);
+      expect(find.byType(TaskImage), findsNothing);
     });
   });
 

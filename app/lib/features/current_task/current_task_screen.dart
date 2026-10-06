@@ -50,9 +50,15 @@ import '../web/edit_web_task.dart';
 import '../web/task_web.dart';
 import 'image_scroll.dart';
 import 'pdf_face_snapshot.dart';
+import 'photo_group.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
-class CurrentTaskScreen extends ConsumerWidget {
+///
+/// Con un grupo de fotos (spec 016) lleva el estado del carrusel: qué foto se
+/// ve y el margen que el pie y los puntos dejan a las fotos ([PhotoGroupHost]).
+/// Nace con la tarea y muere con ella: con otra tarea, o al volver tras 10
+/// minutos (la pantalla se recrea), vuelve a la primera foto (CA-016-08).
+class CurrentTaskScreen extends StatefulWidget {
   const CurrentTaskScreen({
     super.key,
     required this.task,
@@ -85,6 +91,81 @@ class CurrentTaskScreen extends ConsumerWidget {
 
   /// Límite de escala de texto para la nota (docs/design/tokens.md).
   static const maxNoteTextScale = 1.6;
+
+  @override
+  State<CurrentTaskScreen> createState() => _CurrentTaskScreenState();
+}
+
+class _CurrentTaskScreenState extends State<CurrentTaskScreen> {
+  PhotoGroupHost? _host;
+
+  /// Las copias de la rotura y el arrugado (`faceOnly`, `chromeOnly`) no llevan
+  /// carrusel.
+  bool _hasGroup(CurrentTaskScreen w) =>
+      !w.faceOnly &&
+      !w.chromeOnly &&
+      w.task.attachments.length >= 2 &&
+      w.task.attachments.isValidGroup;
+
+  @override
+  void didUpdateWidget(CurrentTaskScreen old) {
+    super.didUpdateWidget(old);
+    // Otra tarea o ya sin grupo: el estado se suelta (tras este fotograma, que
+    // aún lo usa el carrusel que se va).
+    if (old.task.id != widget.task.id || !_hasGroup(widget)) _dropHost();
+  }
+
+  void _dropHost() {
+    final host = _host;
+    if (host == null) return;
+    _host = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) => host.dispose());
+  }
+
+  @override
+  void dispose() {
+    _host?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final host = _hasGroup(widget) ? (_host ??= PhotoGroupHost()) : null;
+    return _TaskView(
+      task: widget.task,
+      faceOnly: widget.faceOnly,
+      chromeOnly: widget.chromeOnly,
+      showLogoAndMenu: widget.showLogoAndMenu,
+      ctaHide: widget.ctaHide,
+      focusSignal: widget.focusSignal,
+      host: host,
+    );
+  }
+}
+
+/// La pantalla principal propiamente dicha (la que dibuja [CurrentTaskScreen]).
+class _TaskView extends ConsumerWidget {
+  const _TaskView({
+    required this.task,
+    required this.faceOnly,
+    required this.chromeOnly,
+    required this.showLogoAndMenu,
+    required this.ctaHide,
+    required this.focusSignal,
+    required this.host,
+  });
+
+  final Task task;
+  final bool faceOnly;
+  final bool chromeOnly;
+  final bool showLogoAndMenu;
+  final Animation<double>? ctaHide;
+  final int focusSignal;
+
+  /// El estado del carrusel, si la tarea tiene un grupo de fotos.
+  final PhotoGroupHost? host;
+
+  static const maxNoteTextScale = CurrentTaskScreen.maxNoteTextScale;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -170,6 +251,9 @@ class CurrentTaskScreen extends ConsumerWidget {
     // Web: barra y página en vivo entre la cabecera y el botón (CA-009-06).
     final showWeb = isWeb;
     final withAttachment = showImage || showPdf || showWeb;
+    // Con un grupo de fotos a la vista: el carrusel en lugar de la imagen, y el
+    // pie con los puntos en su sitio (spec 016).
+    final photoGroup = showImage ? host : null;
     // Con un aviso en lugar de la página, la web no gira (CA-009-15).
     final webNotice =
         showWeb &&
@@ -366,7 +450,20 @@ class CurrentTaskScreen extends ConsumerWidget {
               key: const ValueKey('task-body'),
               // Con imagen, la tarea está detrás, a sangre.
               child: showImage
-                  ? const SizedBox.shrink()
+                  ? (photoGroup != null && !landscape
+                        // El pie y, bajo él, los puntos, justo encima del botón
+                        // de completar (CA-016-09 y 11).
+                        ? Align(
+                            alignment: Alignment.bottomCenter,
+                            child: side(
+                              PhotoGroupFooter(
+                                host: photoGroup,
+                                count: task.attachments.length,
+                                caption: text,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink())
                   : showWeb
                   // La tarea (la barra), la página o su aviso, antes que el
                   // menú: TalkBack empieza por el primero (CA-009-18).
@@ -543,11 +640,17 @@ class CurrentTaskScreen extends ConsumerWidget {
                               enabled: canRotate,
                               fullWidth: landscape,
                               builder: (scroll) => taskNode(
-                                TaskImage(
-                                  attachment: attachment,
-                                  caption: landscape ? null : text,
-                                  scroll: scroll.controller,
-                                ),
+                                photoGroup != null
+                                    ? PhotoGroupLayer(
+                                        host: photoGroup,
+                                        photos: task.attachments,
+                                        landscape: landscape,
+                                      )
+                                    : TaskImage(
+                                        attachment: attachment,
+                                        caption: landscape ? null : text,
+                                        scroll: scroll.controller,
+                                      ),
                                 scroll: scroll,
                               ),
                             ),
