@@ -230,6 +230,24 @@ void main() {
     expect(awake.on, isFalse);
   });
 
+  testWidgets('CA-015-04c: al abrir Ajustes vuelve el apagado normal; al '
+      'cerrarlos, la pantalla se mantiene encendida', (tester) async {
+    await repo.insert(await imageTask());
+    await pump(tester);
+    expect(awake.on, isTrue);
+
+    await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Cerrar ajustes'), findsOneWidget);
+    expect(awake.on, isFalse);
+
+    await tester.tap(find.bySemanticsLabel('Cerrar ajustes'));
+    await tester.pumpAndSettle();
+    expect(awake.on, isTrue);
+  });
+
   testWidgets('CA-015-04d: en segundo plano, apagado normal; al volver, '
       'encendida de nuevo', (tester) async {
     await repo.insert(await imageTask());

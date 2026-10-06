@@ -1,6 +1,6 @@
 # Spec 015: Ajustes
 
-- **Estado:** **Aprobada** (propietario, 2026-10-05), tras ser **corregida según la revisión 1** (`revision-1.md`, 2026-10-05; bloqueantes B1 y B2, importantes I-A a I-J y menores) **y la revisión 2** (`spec-reviewer`, `a11y-reviewer` y `security-reviewer`, 2026-10-05: sin bloqueantes; hallazgos aplicados salvo menores que se dejan al plan). Respondidas por el propietario todas las preguntas de §9 (Q-015-1 a 5) y las tres decisiones de la revisión (§9). Los ADR-0023 y ADR-0026 están **Aceptados** por el propietario (2026-10-05; constitución 1.7). El plan (`plan.md`) y las tareas (`tasks.md`) están **Aprobados** (2026-10-05); el siguiente paso es la implementación, en una sesión nueva (`/spec-implement 015`).
+- **Estado:** **Implementada parcialmente** (cierre T-015-16, 2026-10-06; pendientes: las casillas de dispositivo de la 022 y el primer paso de CI de `check-licenses.sh`, `docs/PLAN.md` «Casillas de la 015»). Historial: **Aprobada** (propietario, 2026-10-05), tras ser **corregida según la revisión 1** (`revision-1.md`, 2026-10-05; bloqueantes B1 y B2, importantes I-A a I-J y menores) **y la revisión 2** (`spec-reviewer`, `a11y-reviewer` y `security-reviewer`, 2026-10-05: sin bloqueantes; hallazgos aplicados salvo menores que se dejan al plan). Respondidas por el propietario todas las preguntas de §9 (Q-015-1 a 5) y las tres decisiones de la revisión (§9). Los ADR-0023 y ADR-0026 están **Aceptados** por el propietario (2026-10-05; constitución 1.7). El plan (`plan.md`) y las tareas (`tasks.md`) están **Aprobados** (2026-10-05); la implementación está en la rama `feat/015-ajustes` (tareas T-015-01 a T-015-16, `tasks.md`; PR sin abrir hasta que lo confirme el propietario).
 - **Fase:** F4b Nuevas funcionalidades (plan aprobado por el propietario el 2026-10-04). Es la segunda de las specs 014–019.
 - **Reglas de producto:** R15 (idioma, ahora elegible), R18 (Ajustes: pantalla siempre activa e información)
 - **Pantallas del prototipo:** 16 "Ajustes" (`Ajustes.dc.html`) y 2 "Menú" (el enlace pasa a llamarse "Ajustes"). **Sin diseño:** la página de Idioma (se hace con los componentes existentes, P-16 del plan F4b). Ver `docs/design/screen-map.md`.
@@ -163,7 +163,7 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
 
 ### Información y ayuda
 
-- **CA-015-12a Abrir una web: directamente, sin confirmación** *(enmienda del propietario, 2026-10-05, tras probarlo en el móvil: sustituye a la confirmación de enlace de CA-012-04 y CA-008-12; la dirección es una constante de compilación vigilada por la puerta de CA-015-13b, no algo que escribe el usuario)*
+- **CA-015-12a Abrir una web: directamente, sin confirmación** *(enmienda del propietario, 2026-10-05, tras probarlo en el móvil: sustituye a la confirmación de enlace de CA-012-04 (la de CA-008-12, la de los enlaces del PDF, sigue en vigor); la dirección es una constante de compilación vigilada por la puerta de CA-015-13b, no algo que escribe el usuario)*
   - **Dado** Ajustes
   - **Cuando** el usuario elige **Política de privacidad**, **Licencias de terceros** o **Ayuda**
   - **Entonces** se comprueba que hay una app que pueda abrir la dirección y, si la hay, se abre **directamente** la página en el **navegador del sistema**: **sin confirmación, sin tarjeta y sin aviso previo**. No hay diálogo, así que no hay foco que mover: la fila conserva el foco. Si no hay ninguna app (o `open` da `false`), se ve el aviso de CA-015-12b.
@@ -253,7 +253,7 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
   - **Dado** teclado físico o Switch Access
   - **Cuando** se recorre y se activa
   - **Entonces**:
-    - **(a)** el foco del teclado empieza en **Cerrar ajustes** (o **Volver**) y sigue por las filas; el título no entra en ese orden (solo es foco del lector, tabla); Switch Access sigue el orden del lector (CA-015-20g);
+    - **(a)** el foco del teclado empieza en **Cerrar ajustes** (o **Volver**) y sigue por las filas (**con teclado físico**, `showsFocusHighlight`; si Ajustes se abre con el dedo o con TalkBack, el primer Tab va a la primera fila y Cerrar queda al final del ciclo: decisión del plan §3, observación menor de `dispositivo.md`); el título no entra en ese orden (solo es foco del lector, tabla); Switch Access sigue el orden del lector (CA-015-20g);
     - **(b)** se ve el anillo de foco; Intro y la barra espaciadora activan (también el interruptor);
     - **(c)** Escape sube un nivel;
     - **(d)** todo se puede hacer sin arrastrar ni pellizcar;
@@ -301,7 +301,7 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
 | CL-015-10 | Ajustes del sistema › Idiomas de la app (Android 13+) | La app **no aparece** en esa lista: el idioma se elige solo en Ajustes (CL-010-6; fuera de alcance, §8) |
 | CL-015-11 | Sin conexión al abrir una web | La app no lo nota: el navegador enseña su propio error (CL-012-7). Las licencias no se ven (CA-015-14b) |
 | CL-015-12 | La dirección configurada de una web no es `https` | No se abre nada y se ve "No hay ninguna app…" (CA-015-12c). La puerta lo impide al publicar |
-| CL-015-13 | Se cambia el idioma del sistema con Ajustes abierto y "Como el sistema" | Los textos cambian sin cerrar la pantalla (CA-010-06), **también en la página de Idioma, si está abierta**: la línea inferior de "Como el sistema" muestra el idioma nuevo que resulta. El valor de la fila "Idioma" sigue siendo "Como el sistema". Con un idioma elegido, no cambia nada |
+| CL-015-13 | Se cambia el idioma del sistema con Ajustes abierto y "Como el sistema" | Los textos cambian sin cerrar la pantalla (CA-010-06), **también en la página de Idioma, si está abierta**: la línea inferior de "Como el sistema" muestra el idioma nuevo que resulta. El valor de la fila "Idioma" sigue siendo "Como el sistema". Con un idioma elegido, los textos no cambian, pero la línea inferior de «Como el sistema» sí muestra el idioma nuevo del sistema (CA-015-07) |
 | CL-015-14 | El idioma guardado no es ninguno de los tres (dato corrupto) | Se toma "Como el sistema" y la app no falla (CA-015-26) |
 | CL-015-15 | Una instalación anterior con la pantalla encendida "por defecto" | Pasa a apagada (CA-015-05); no se avisa **[Suposición]**: la beta aún no se ha repartido |
 | CL-015-16 | No se puede **leer** el ajuste de idioma al arrancar | Una fila ilegible o no válida: se usa "Como el sistema" (CA-015-26) y no se ve ningún error. Una **base de datos inaccesible** (otra causa, no este ajuste): sale la pantalla de error de almacenamiento, en el idioma del sistema |
@@ -364,7 +364,7 @@ Claves nuevas (camelCase; se añaden con `/strings-add`). Los nombres de los idi
 | `settingsOpensWebHint` | Abre una página web en el navegador | Opens a web page in the browser | Se **incluye en el nombre** de las tres filas de web (CA-015-20e); es `settingsPrivacyHint` **renombrada** |
 | `settingsSaveError` | No se pudo guardar el ajuste. | Couldn't save the setting. | CA-015-25 |
 
-Se reutilizan `openInBrowserConfirm`, `linkConfirmOpen`, `linkConfirmCancel` y `errNoAppForLink`; bajo "Como el sistema" se reutilizan `languageSpanish` y `languageEnglish`, con su marca de idioma. **"Volver" del nivel 2** es "Volver" / "Back" (la clave la decide el plan: la `licensesBack` renombrada o una propia). Se **retiran**, si nada más los usa (lo comprueba el plan): `settingsLicenses`, `licensesTitle`, `licensesLoading`, `licensesCount`, `licensesError`, `licensesTextOf` y `licensesAndroidLibraries`.
+Se reutiliza `errNoAppForLink` (`openInBrowserConfirm`, `linkConfirmOpen` y `linkConfirmCancel` ya no los usa Ajustes tras la enmienda de CA-015-12a; los sigue usando la 008); bajo "Como el sistema" se reutilizan `languageSpanish` y `languageEnglish`, con su marca de idioma. **"Volver" del nivel 2** es "Volver" / "Back" (la clave la decide el plan: la `licensesBack` renombrada o una propia). Se **retiran**, si nada más los usa (lo comprueba el plan): `settingsLicenses`, `licensesTitle`, `licensesLoading`, `licensesCount`, `licensesError`, `licensesTextOf` y `licensesAndroidLibraries`.
 
 ## 8. Fuera de alcance
 
@@ -497,3 +497,34 @@ Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la correcció
 - **Referente:** el navegador puede mostrar al destino el referente `android-app://<paquete>`; se refleja en la política y en Data Safety (§10).
 - **Recientes:** ya hay `tools/check-recents.sh`; hay que añadir las filas nuevas a su matriz y a la de CA-011-02, y el plan dice cómo se visita cada pantalla (CA-015-18).
 - **Una sola sesión de spec, otra de plan:** los ADR-0023 y ADR-0026 ya están aceptados (2026-10-05); el plan los desarrolla (como el ADR-0021 en la 014).
+
+## 11. Cierre: tabla CA → prueba y revisiones (2026-10-06)
+
+**Estado:** **Implementada parcialmente.** Todos los CA tienen test en verde salvo los de dispositivo, que quedan como casillas de la 022 (`docs/PLAN.md`, «Casillas de la 015»). Rutas relativas a `app/test/`; los *goldens* están en `test/goldens/goldens/` (12 PNG, subidos en `201d97c`).
+
+| CA / CL | Prueba |
+|---|---|
+| 01a | `features/settings/settings_screen_test.dart` (botón ≥ 44), `settings_transitions_test.dart` (el menú se cierra y Ajustes sube; 48 dp), `features/menu/menu_bottom_inset_test.dart`, `settings_over_task_test.dart` (4 tipos de tarea) |
+| 01b, 01c | `settings_screen_test.dart` (orden, separadores 4/1 px, medidas, «Información» como encabezado, 600 dp, sin Notificaciones ni Bloquear zoom); `ui/settings_row_test.dart`; `goldens/settings_golden_test.dart` |
+| 01d, 02 | `settings_transitions_test.dart` (200/160 ms, fundido, reducir movimiento); `settings_screen_test.dart` (Cerrar, atrás, Escape); `settings_a11y_test.dart` |
+| 03 | `ui/switch_row_test.dart`; `settings_screen_test.dart`; `settings_controller_test.dart`; `tools/validate-tokens.mjs`; `l10n/spec_015_strings_test.dart` |
+| 04a–04d | `features/attachments/keep_screen_on_test.dart` (imagen, PDF, web, 60 min, menú, **Ajustes**, ciclo de vida, `dispose`) |
+| 05 | `app/boot_state_test.dart`; `data/repository_contract_test.dart`; `settings_controller_test.dart`; `integration_test/settings_flow_test.dart` (rearranque) |
+| 06, 07 | `ui/settings_row_test.dart`; `ui/radio_row_test.dart`; `language_page_test.dart`; `settings_large_text_test.dart`; *goldens* |
+| 08 | `settings_controller_test.dart`; `language_page_test.dart` (orden, error, misma opción, doble toque); `settings_screen_test.dart` (foco una vez) |
+| 09, 10 | `app/locale_change_test.dart`; `app/locale_resolution_test.dart`; `app/boot_state_test.dart` |
+| 11 | `l10n/semantics_language_test.dart`; `support/semantics_locales.dart`. Voz a oído: **[Hecho]** en el Xiaomi (propietario); repetir con la versión final en la 022 |
+| 12a–12c y avisos | `external_page_test.dart`; `settings_notices_test.dart`; `ui/live_notice_test.dart`; `settings_over_task_test.dart` |
+| 13a, 13b | `app/app_identity_test.dart`; `tool/check_release_config_test.dart` (29 casos) |
+| 14a | `l10n/spec_015_strings_test.dart` (claves y archivos retirados). 14b: `tools/check-licenses.sh` y `--negative` (14 mutaciones) en CI; **[Pendiente]** primera ejecución en GitHub |
+| 15, 16 | `settings_over_task_test.dart` (9:59 y 10:00); `app/home_router_test.dart`; `features/task_list/task_list_screen_test.dart` |
+| 17 | `data/settings_keys_test.dart`; diff `main...HEAD` de T-015-16: `pubspec.*`, manifiesto, `res/xml` y Kotlin **sin cambios**, `schemaVersion` 2, `check-android-permissions.sh release` solo `INTERNET` |
+| 18 | `dispositivo.md` (`check-recents.sh`: Ajustes, aviso, Idioma); Android 8 y 12L con la PD-10 de la 011 |
+| 19 | `tools/validate-tokens.mjs`; `ui/una_icons_test.dart` |
+| 20a–i, 21a–c, 21e–g | `settings_a11y_test.dart`; `settings_screen_test.dart`; `ui/switch_row_test.dart`; `ui/radio_row_test.dart` (incluido el foco en el nodo); `ui/link_button_focus_test.dart`; `settings_notices_test.dart`; `ui/square_icon_button_test.dart`. TalkBack en el emulador (`dispositivo.md`); Switch Access y anillo con teclado real: 022 |
+| 21d, CL-11, 15 y 17 | **No aplica a un test**: declarativos o comportamiento del sistema o del navegador (CL-15: valor por defecto, cubierto por CA-05) |
+| 22, 23 | `settings_large_text_test.dart`; *goldens*; `docs/perf/baseline.md` (emulador 418-421 ms, Xiaomi 217/223 ms) |
+| 24, 25, 26, 27 | `features/delete/undo_commit_test.dart`; `settings_controller_test.dart`; `domain/settings_codec_test.dart`; `data/repository_contract_test.dart`; `l10n/l10n_leaks_test.dart` y `l10n_consistency_test.dart` |
+| CL-1 a 10, 12 a 14, 16, 18 | Los de sus CA (CL-6 y 7 con CA-09; CL-13 con `language_page_test.dart` y `locale_change_test.dart`); CL-10: ver CA-17 |
+
+**Revisiones de cierre (2026-10-06, `git diff main...HEAD`):** `security-reviewer` sin hallazgos altos (1 medio, M-1: la puerta de publicación no corre en CI, va a la 020; 6 bajos); `a11y-reviewer` sin hallazgos altos (2 medios: M1 corregido en `ef0ab0d`, M2 en `docs/PLAN.md`; 2 bajos); `spec-reviewer` sin bloqueantes (5 importantes y 10 menores; I2 a I5 corregidos o registrados, I1 queda para el propietario). Detalle y lo que sigue abierto: `docs/PLAN.md`, «Hallazgos del cierre de la 015».
