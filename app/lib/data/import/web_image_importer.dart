@@ -40,6 +40,13 @@ class WebImageImporter implements ImageImporter {
   @override
   bool get heicSupported => false;
 
+  /// **[Pendiente]** T-016-09: hasta entonces elegir varias es como cancelar.
+  @override
+  Future<PickedImages?> pickMany({required int max}) async => null;
+
+  @override
+  Future<int?> freeSpace() async => null;
+
   @override
   Future<PickedImage?> pick(AttachmentOrigin origin, String id) async {
     final input = _document.createElement('input') as _Input

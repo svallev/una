@@ -33,6 +33,15 @@ class FakeImageImporter implements ImageImporter {
   Duration copyDelay = Duration.zero;
   Duration sanitizeDelay = Duration.zero;
 
+  /// Lo que devuelve el selector múltiple: [manyTotal] elegidas (el falso
+  /// entrega como mucho `max`, como el sistema tras el tope).
+  int manyTotal = 3;
+  final pickManyMax = <int>[];
+
+  /// Bytes libres; null = desconocido.
+  int? freeSpaceBytes;
+  Object? freeSpaceError;
+
   final picks = <String>[];
   final origins = <AttachmentOrigin>[];
   final limits = <int>[];
@@ -63,6 +72,28 @@ class FakeImageImporter implements ImageImporter {
     if (pickError case final e?) throw e;
     if (userCancelsPicker) return null;
     return (token: 'content://$id', origin: origin);
+  }
+
+  @override
+  Future<PickedImages?> pickMany({required int max}) async {
+    pickManyMax.add(max);
+    if (pickDelay > Duration.zero) await Future<void>.delayed(pickDelay);
+    if (pickError case final e?) throw e;
+    if (userCancelsPicker) return null;
+    final count = manyTotal < max ? manyTotal : max;
+    return (
+      items: [
+        for (var i = 0; i < count; i++)
+          (token: 'content://many-$i', origin: AttachmentOrigin.gallery),
+      ],
+      total: manyTotal,
+    );
+  }
+
+  @override
+  Future<int?> freeSpace() async {
+    if (freeSpaceError case final e?) throw e;
+    return freeSpaceBytes;
   }
 
   @override

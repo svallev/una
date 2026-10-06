@@ -38,6 +38,13 @@ class NativeImageImporter implements ImageImporter {
     },
   );
 
+  /// **[Pendiente]** T-016-08: hasta entonces elegir varias es como cancelar.
+  @override
+  Future<PickedImages?> pickMany({required int max}) async => null;
+
+  @override
+  Future<int?> freeSpace() async => null;
+
   @override
   Future<CopiedImage> copy(
     PickedImage picked,
