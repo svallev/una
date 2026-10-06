@@ -121,6 +121,27 @@ class FileAttachmentStore implements AttachmentStore {
     };
   }
 
+  /// Tope de entradas que [sizeOf] recorre: una preparación tiene unas
+  /// decenas de archivos (teselas, pantalla y miniatura); una carpeta con
+  /// muchas más no es nuestra y no se recorre entera (T-3).
+  static const int sizeOfMaxEntries = 4096;
+
+  @override
+  Future<int> sizeOf(String id) async {
+    final dir = _staging(id);
+    if (!dir.existsSync()) return 0;
+    var total = 0;
+    var entries = 0;
+    // Sin seguir enlaces: un `Link` no es un `File` y no se cuenta.
+    await for (final e in dir.list(followLinks: false)) {
+      if (++entries > sizeOfMaxEntries) {
+        throw StateError('Demasiadas entradas en la preparación');
+      }
+      if (e is File) total += await e.length();
+    }
+    return total;
+  }
+
   @override
   Future<AttachmentFiles> check(Attachment attachment) async {
     // Sin archivos, no puede faltar nada: nunca "Adjunto no disponible".

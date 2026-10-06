@@ -64,6 +64,53 @@ class AttachmentJanitor {
     await discard(id);
   }
 
+  /// Lotes de un grupo de fotos (spec 016, plan §4): una tarea tiene hasta 10
+  /// adjuntos y todos los caminos (eliminar, completar, deshacer, editar,
+  /// cancelar, barrido) pasan por estas operaciones. Ninguna lanza y todas
+  /// hacen la protección primero y la BD después, como el barrido.
+
+  /// Retiene los archivos de [ids] (antes de quitar sus filas). Devuelve los
+  /// que ha añadido **esta llamada**: solo esos los suelta quien retiene, así
+  /// dos eliminaciones a la vez de la misma tarea no se quitan la protección.
+  Set<String> holdAll(Iterable<String> ids) => {
+    for (final id in ids)
+      if (hold(id)) id,
+  };
+
+  /// Deja de retener [ids] sin borrar nada: sus filas han vuelto a la BD
+  /// (deshacer) o no se llegaron a quitar (fallo al eliminar).
+  void releaseHeldAll(Iterable<String> ids) => _held.removeAll(ids);
+
+  /// La eliminación de los adjuntos retenidos [ids] es definitiva: deja de
+  /// retenerlos y borra los archivos de los que **no** tienen fila (una sola
+  /// consulta por lote; CA-014-15, CA-016-16).
+  Future<void> discardHeldAll(Iterable<String> ids) async {
+    final all = ids.toList();
+    _held.removeAll(all);
+    final inDatabase = await _existing(all);
+    await discardAll(all.where((id) => !inDatabase.contains(id)));
+  }
+
+  /// Borra los archivos de los adjuntos guardados [ids], que ya no tienen
+  /// tarea. Un fallo con uno no impide borrar los demás.
+  Future<void> discardAll(Iterable<String> ids) async {
+    for (final id in ids.toList()) {
+      await discard(id);
+    }
+  }
+
+  /// Devuelve a la preparación los adjuntos [ids] que no se pudieron guardar
+  /// en la BD, para reintentar. Los que no se puedan devolver, se borran.
+  Future<void> restageAll(Iterable<String> ids) async {
+    for (final id in ids.toList()) {
+      await restage(id);
+    }
+  }
+
+  /// Las importaciones [ids] han terminado (guardadas o descartadas).
+  void releaseAll(Iterable<String> ids) =>
+      ids.toList().forEach(registry.remove);
+
   /// Borra los archivos del adjunto guardado [id], que ya no tiene tarea.
   Future<void> discard(String id) async {
     try {
@@ -132,6 +179,17 @@ class AttachmentJanitor {
           // Ídem.
         }
       }
+    }
+  }
+
+  /// De [ids], los que tienen fila: **una** consulta por lote. Si no se puede
+  /// leer, se consideran todos con fila (se dejan para otro barrido).
+  Future<Set<String>> _existing(List<String> ids) async {
+    if (ids.isEmpty) return {};
+    try {
+      return await repository.existingAttachmentIds(ids);
+    } on Object {
+      return ids.toSet();
     }
   }
 
