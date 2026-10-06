@@ -1,6 +1,6 @@
 # Spec 016: Tareas con varias imágenes (carrusel)
 
-- **Estado:** **Aprobada** (propietario, 2026-10-06). Revisada ese día por `spec-reviewer`, `a11y-reviewer` y `security-reviewer` (sin hallazgos altos; todo aplicado). Q-016-1 a 3 resueltas por el propietario. Con la aprobación quedan **Aceptados el ADR-0022 y el ADR-0024** y en vigor la **constitución 1.9**. El propietario descartó que la hoja "Añadir a la tarea" avise de que lo nuevo sustituye al grupo. **[Pendiente]** comprobar en el dispositivo si el control por voz expone "Foto siguiente" por su nombre (§6)
+- **Estado:** **Aprobada** (propietario, 2026-10-06; enmendada el mismo día al aprobar el plan: los puntos van bajo el pie, P-016-1). Revisada ese día por `spec-reviewer`, `a11y-reviewer` y `security-reviewer` (sin hallazgos altos; todo aplicado). Q-016-1 a 3 resueltas por el propietario. Con la aprobación quedan **Aceptados el ADR-0022 y el ADR-0024** y en vigor la **constitución 1.9**. El propietario descartó que la hoja "Añadir a la tarea" avise de que lo nuevo sustituye al grupo. **[Pendiente]** comprobar en el dispositivo si el control por voz expone "Foto siguiente" por su nombre (§6)
 - **Fase:** F4b Nuevas funcionalidades (plan aprobado por el propietario el 2026-10-04). Tercera de las specs 014–019 (después de la 014 y la 015, fusionadas)
 - **Reglas de producto:** R17 (varias imágenes con carrusel), R3 (imágenes de la galería), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido), **propuesta de valor 2**
 - **Pantallas del prototipo:** 9 "Añadir (+)" (fila "Subir imágenes"), 14 "Varias imágenes: preselección" (`FotosSel.dc.html`), 15 "Tarea con varias fotos: carrusel" (`Fotos.dc.html`); 3 "Nueva tarea", 1 "Tarea actual" y 5 "Todas las tareas" (miniatura). El prototipo recorta las fotos altas, no tiene pellizco, admite 30 y no tiene los errores ni el giro: eso se decide aquí (P-17, P-18 y D21) y se registra en `docs/design/prototype-deviations.md` como **DEV-53, al aprobar la spec** (como hicieron la 014 y la 015). Ver `docs/design/screen-map.md`
@@ -98,7 +98,7 @@ Que un horario, un mapa o unos pasos fotografiados en **varias fotos** (hasta 10
     - cambia a la foto siguiente o anterior si el gesto pasa del **18 % del ancho** o es un gesto rápido (**[Suposición]** ≥ 700 dp/s), con una transición de **0,28 s** (los dos valores salen del prototipo salvo la velocidad); si no, la foto vuelve a su sitio;
     - es **infinito**: tras la última viene la primera, y antes de la primera, la última (también con 2 fotos);
     - con "reducir movimiento", la foto cambia al instante, sin transición;
-    - hay **un punto indicador por foto** (cuadrado, con borde, **lleno la actual** y vacío las demás), decorativo para el lector y **transparente a los toques** (un swipe o un pellizco que empiece sobre ellos funciona), encima del pie de la tarea; no se muestra con una sola foto. **Se distinguen sobre cualquier foto (WCAG 1.4.11, ≥ 3:1 el punto y su estado)**: si el dibujo del prototipo (borde y relleno sin fondo) no lo consigue sobre fotos muy blancas o muy negras, el plan le da un fondo propio y se registra en DEV-53;
+    - hay **un punto indicador por foto** (cuadrado, con borde, **lleno la actual** y vacío las demás), decorativo para el lector y **transparente a los toques** (un swipe o un pellizco que empiece sobre ellos funciona), **bajo el pie de la tarea y encima del botón de completar, como en el prototipo (propietario, 2026-10-06, P-016-1)**; no se muestra con una sola foto. **Se distinguen sobre cualquier foto (WCAG 1.4.11, ≥ 3:1 el punto y su estado)**: si el dibujo del prototipo (borde y relleno sin fondo) no lo consigue sobre fotos muy blancas o muy negras, el plan le da un fondo propio y se registra en DEV-53;
     - cambiar de foto por cualquier vía (swipe, acción del lector, teclado o control por voz, CA-016-20) da el mismo resultado visible y el mismo anuncio único; **a la izquierda es la siguiente** (swipe hacia la izquierda, flecha derecha, "desplazar a la izquierda") y a la derecha la anterior.
 - **CA-016-10 Cada foto, como la imagen única (P-17; amplía CA-007-09 y 10)**
   - **Dado** la tarea actual con un grupo
@@ -111,7 +111,7 @@ Que un horario, un mapa o unos pasos fotografiados en **varias fotos** (hasta 10
   - Cada foto **conserva su desplazamiento mientras la tarea siga a la vista**; una foto que no se ha visto empieza **arriba** y al 100 % (el zoom nunca se conserva). **[Suposición]** Fotos de distinta proporción: cada una se ve a su ancho, con su propia altura (CL-016-5).
 - **CA-016-11 Controles y pie (amplía CA-007-08)**
   - **Dado** la tarea actual con un grupo
-  - **Entonces** el logotipo, el menú, el botón de completar y el pie de la tarea (recuadro negro con texto blanco) son los de CA-007-08, **encima de las fotos y fijos al cambiar de foto**; los puntos van encima del pie, y **el desplazamiento vertical deja un margen inferior igual al alto del pie más los puntos** para que el final de una foto alta pueda verse (también con el texto al 200 %). Completar con "Mantener pulsado" y el menú funcionan igual con cualquier foto a la vista.
+  - **Entonces** el logotipo, el menú, el botón de completar y el pie de la tarea (recuadro negro con texto blanco) son los de CA-007-08, **encima de las fotos y fijos al cambiar de foto**; los puntos van **bajo el pie y encima del botón de completar** (prototipo), y **el desplazamiento vertical deja un margen inferior igual al alto del pie más los puntos** para que el final de una foto alta pueda verse (también con el texto al 200 %). Completar con "Mantener pulsado" y el menú funcionan igual con cualquier foto a la vista.
 - **CA-016-12 Giro (P-17; amplía CA-007-11)**
   - **Dado** la tarea actual con un grupo a la vista (sin el menú, el editor ni el listado encima)
   - **Cuando** gira el móvil a horizontal
@@ -217,7 +217,7 @@ Que un horario, un mapa o unos pasos fotografiados en **varias fotos** (hasta 10
   - **Dado** "reducir movimiento" o el texto al 200 % en un móvil de 360 dp
   - **Entonces**:
     - sin animación al cambiar de foto, al soltar el pellizco ni en la pila del editor (las giradas se ven fijas), y la barra de progreso de "Preparando foto {i} de {n}…" no se anima (DEV-39);
-    - la etiqueta "{n} fotos", el pie (hasta 3 líneas, con los puntos encima sin tapar el texto), los avisos y "Foto no disponible" se ven **enteros**; nada se corta; **todo lo que no es la nota escala hasta ×2,0 sin límite** (el límite de ×1,6 es solo del pie); todos los botones miden ≥ 48 dp;
+    - la etiqueta "{n} fotos", el pie (hasta 3 líneas, con los puntos bajo él sin tapar el texto ni el botón de completar), los avisos y "Foto no disponible" se ven **enteros**; nada se corta; **todo lo que no es la nota escala hasta ×2,0 sin límite** (el límite de ×1,6 es solo del pie); todos los botones miden ≥ 48 dp;
     - la foto actual **no se distingue solo por el color**: los puntos cambian de **relleno** (lleno / vacío), con borde de 2 px, y el anillo de foco del teclado lleva borde blanco y negro para verse sobre cualquier foto (CA-007, §6).
 
 ## 4. Casos límite
@@ -287,7 +287,7 @@ Claves en camelCase. Las de la 007 que cambian se marcan; las demás se reutiliz
 | `a11yPhotoPrevious` | Foto anterior | Previous photo | Acción del lector |
 | `a11yPhotosAdded` | {count, plural, one{# foto añadida} other{# fotos añadidas}} | {count, plural, one{# photo added} other{# photos added}} | Anuncio al volver del selector (CA-016-21) |
 | `imagesLimitNotice` | Solo se usarán las {max} primeras. | Only the first {max} will be used. | Aviso (CA-016-02) |
-| `imagesSomeFailed` | {count, plural, one{No se pudo añadir # foto.} other{No se pudieron añadir # fotos.}} | {count, plural, one{# photo couldn't be added.} other{# photos couldn't be added.}} | Aviso (CA-016-05); el anuncio compuesto de CA-016-21 une `imagesLimitNotice`, `a11yPhotosAdded` e `imagesSomeFailed` con un espacio, sin clave propia |
+| `imagesSomeFailed` | {count, plural, one{No se pudo añadir # foto.} other{No se pudieron añadir # fotos.}} | {count, plural, one{# photo couldn't be added.} other{# photos couldn't be added.}} | Aviso (CA-016-05); el anuncio compuesto de CA-016-21 une (cada parte acaba en punto: si `a11yPhotosAdded` no lo lleva, se le añade al componer, en ES y EN) `imagesLimitNotice`, `a11yPhotosAdded` e `imagesSomeFailed` con un espacio, sin clave propia |
 | `photoMissing` | Foto no disponible | Photo unavailable | Recuadro en el sitio de la foto (CA-016-18) |
 | `a11yPhotoMissing` | Foto {index} de {total}. Foto no disponible | Photo {index} of {total}. Photo unavailable | Lectura de la foto que falta |
 
