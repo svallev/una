@@ -22,9 +22,9 @@ class _FailingUpdateRepository extends InMemoryTaskRepository {
   Future<bool> updateContent(
     String id,
     String? text,
-    Attachment? attachment,
-    DateTime at,
-  ) async => throw StateError('disco lleno');
+    DateTime at, {
+    List<Attachment>? attachments,
+  }) async => throw StateError('disco lleno');
 }
 
 void main() {

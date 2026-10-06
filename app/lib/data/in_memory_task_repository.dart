@@ -132,30 +132,56 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<void> insert(Task task) async {
+    // Como una transacción de la BD: una clave repetida (de la tarea o de un
+    // adjunto) lanza **antes** de cambiar nada.
+    if (_tasks.containsKey(task.id)) {
+      throw StateError('UNIQUE constraint failed: tasks.id');
+    }
+    _checkNewIds(task.attachments, replacing: null);
     _tasks[task.id] = task.withContent(
       task.text,
       null,
       task.updatedAt,
       attachments: const [],
     );
-    _rows[task.id] = [
-      for (final (i, a) in task.attachments.indexed) _Row(i, a),
-    ];
+    _rows[task.id] = _rowsFor(task.attachments);
     _settings[SettingKeys.hasEverHadTasks] = encodeFlag(true);
     _changes.add(null);
+  }
+
+  static List<_Row> _rowsFor(List<Attachment> list) => [
+    for (final (i, a) in list.indexed) _Row(i, a),
+  ];
+
+  /// Lanza (sin haber cambiado nada) si [list] repite un id o choca con el de
+  /// una fila de otra tarea que no sea [replacing]: la BD lo rechazaría por su
+  /// clave primaria y desharía la transacción entera.
+  void _checkNewIds(List<Attachment> list, {required String? replacing}) {
+    final seen = <String>{
+      for (final e in _rows.entries)
+        if (e.key != replacing)
+          for (final r in e.value) r.attachment.id,
+    };
+    for (final a in list) {
+      if (!seen.add(a.id)) {
+        throw StateError('UNIQUE constraint failed: attachments.id');
+      }
+    }
   }
 
   @override
   Future<bool> updateContent(
     String id,
     String? text,
-    Attachment? attachment,
-    DateTime at,
-  ) async {
+    DateTime at, {
+    List<Attachment>? attachments,
+  }) async {
     final task = _tasks[id];
     if (task == null) return false;
+    if (attachments != null) _checkNewIds(attachments, replacing: id);
     _tasks[id] = task.withContent(text, null, at, attachments: const []);
-    _rows[id] = [if (attachment != null) _Row(0, attachment)];
+    // null = no tocar las filas (ver el puerto).
+    if (attachments != null) _rows[id] = _rowsFor(attachments);
     _changes.add(null);
     return true;
   }

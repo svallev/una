@@ -86,7 +86,17 @@ class EditTask {
     final isNew = attachment is ReplaceAttachment;
     final bool saved;
     try {
-      saved = await repository.updateContent(task.id, text, next, at);
+      saved = await repository.updateContent(
+        task.id,
+        text,
+        at,
+        // Conservar = no tocar las filas (null); quitar = lista vacía.
+        attachments: switch (attachment) {
+          KeepAttachment() => null,
+          RemoveAttachment() => const [],
+          ReplaceAttachment() => [next!],
+        },
+      );
     } on Object {
       // Una web no tiene preparación: no queda nada que devolver.
       if (isNew && !next!.isWeb) await janitor.restage(next.id);

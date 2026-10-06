@@ -38,21 +38,26 @@ abstract interface class TaskRepository {
   /// ADR-0012).
   Future<Task?> findById(String id);
 
-  /// Guarda la tarea y su adjunto, si lo tiene, en una transacción, y en la
-  /// misma activa `hasEverHadTasks` (CA-001-05, ADR-0012): si fuera aparte y
-  /// la app muriera entre medias, alguien con tareas vería el editor de la
-  /// primera tarea en lugar de "Todo hecho.".
+  /// Guarda la tarea y sus adjuntos (una fila por adjunto, con `position` = su
+  /// índice) en una transacción, y en la misma activa `hasEverHadTasks`
+  /// (CA-001-05, ADR-0012): si fuera aparte y la app muriera entre medias,
+  /// alguien con tareas vería el editor de la primera tarea en lugar de
+  /// "Todo hecho.". Si falla algo a mitad, no queda ninguna fila.
   Future<void> insert(Task task);
 
-  /// Cambia el texto y el adjunto de la tarea [id] sin tocar su posición ni su
-  /// color (specs 005 y 007), en una transacción. [attachment] null = sin
-  /// adjunto. Devuelve false (y no cambia nada) si no existe o está eliminada.
+  /// Cambia el texto y los adjuntos de la tarea [id] sin tocar su posición ni
+  /// su color (specs 005, 007 y 016), en una transacción. [attachments]:
+  /// `null` = **no tocar las filas** (solo el texto: así editar una tarea con
+  /// 11 filas restauradas o con una mezcla rara no borra nada que el usuario
+  /// no haya tocado, CA-016-25); lista vacía = quitarlas todas; lista =
+  /// reemplazar las actuales por estas, en ese orden. Devuelve false (y no
+  /// cambia nada) si no existe o está eliminada.
   Future<bool> updateContent(
     String id,
     String? text,
-    Attachment? attachment,
-    DateTime at,
-  );
+    DateTime at, {
+    List<Attachment>? attachments,
+  });
 
   /// Ids de todos los adjuntos guardados en la BD (todos son de tareas
   /// pendientes), para el barrido de archivos huérfanos (CA-007-16). **Sin

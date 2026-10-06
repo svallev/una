@@ -187,20 +187,28 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   @override
   Future<void> insert(Task task) => db.transaction(() async {
     await db.into(db.tasks).insert(_toRow(task));
-    final a = task.attachment;
-    if (a != null) {
-      await db.into(db.attachments).insert(_toAttachmentRow(task.id, a));
-    }
+    await _insertAttachments(task.id, task.attachments);
     await _setFlag(SettingKeys.hasEverHadTasks, true);
   });
+
+  /// Una fila por adjunto, con `position` = su índice en la lista (ADR-0024).
+  /// Va dentro de la transacción de quien la llama: si una falla, no queda
+  /// ninguna.
+  Future<void> _insertAttachments(String taskId, List<Attachment> list) async {
+    for (final (position, a) in list.indexed) {
+      await db
+          .into(db.attachments)
+          .insert(_toAttachmentRow(taskId, a, position));
+    }
+  }
 
   @override
   Future<bool> updateContent(
     String id,
     String? text,
-    Attachment? attachment,
-    DateTime at,
-  ) => db.transaction(() async {
+    DateTime at, {
+    List<Attachment>? attachments,
+  }) => db.transaction(() async {
     final rows =
         await (db.update(
           db.tasks,
@@ -211,14 +219,12 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
           ),
         );
     if (rows == 0) return false;
-    final old = await (db.select(
-      db.attachments,
-    )..where((a) => a.taskId.equals(id))).get();
-    if (old.length == 1 && old.single.id == attachment?.id) return true;
+    // null = no tocar las filas: editar solo el texto de una tarea con filas
+    // que esta versión no muestra (11 restauradas, una mezcla rara) no borra
+    // nada que el usuario no haya tocado (CA-016-25).
+    if (attachments == null) return true;
     await (db.delete(db.attachments)..where((a) => a.taskId.equals(id))).go();
-    if (attachment != null) {
-      await db.into(db.attachments).insert(_toAttachmentRow(id, attachment));
-    }
+    await _insertAttachments(id, attachments);
     return true;
   });
 
@@ -349,8 +355,11 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   /// Una página web no tiene archivos ni medidas: `relPath` vacío (es
   /// obligatorio) y solo la dirección en `sourceUrl`; `sourceHost` y la
   /// captura quedan nulos (plan §3, ADR-0016). Sin cambio de esquema.
-  static AttachmentsCompanion _toAttachmentRow(String taskId, Attachment a) =>
-      a.isWeb
+  static AttachmentsCompanion _toAttachmentRow(
+    String taskId,
+    Attachment a,
+    int position,
+  ) => a.isWeb
       ? AttachmentsCompanion.insert(
           id: a.id,
           taskId: taskId,
@@ -361,6 +370,7 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
           relPath: '',
           sourceUrl: Value(a.url),
           createdAt: a.createdAt.millisecondsSinceEpoch,
+          position: Value(position),
         )
       : AttachmentsCompanion.insert(
           id: a.id,
@@ -377,6 +387,7 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
           width: Value(a.width),
           height: Value(a.height),
           createdAt: a.createdAt.millisecondsSinceEpoch,
+          position: Value(position),
         );
 
   static TasksCompanion _toRow(Task t) => TasksCompanion.insert(
