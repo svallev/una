@@ -178,6 +178,29 @@ void main() {
     expect(picks, ['en', 'system', 'system']);
   });
 
+  testWidgets('CA-015-20f: el nodo de la opción refleja el foco de teclado', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final focus = FocusNode();
+    addTearDown(focus.dispose);
+    await pumpWithApp(tester, _page(focusNode: focus));
+    SemanticsData data() => tester
+        .getSemantics(
+          find.ancestor(
+            of: find.text('Como el sistema'),
+            matching: find.byType(UnaRadioRow),
+          ),
+        )
+        .getSemanticsData();
+    expect(data().flagsCollection.isFocused, Tristate.isFalse);
+
+    focus.requestFocus();
+    await tester.pump();
+    expect(data().flagsCollection.isFocused, Tristate.isTrue);
+    handle.dispose();
+  });
+
   testWidgets(
     'CA-015-22: androidTapTargetGuideline y labeledTapTargetGuideline',
     (tester) async {

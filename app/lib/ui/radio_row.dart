@@ -82,6 +82,8 @@ class _UnaRadioRowState extends State<UnaRadioRow> {
       key: widget.semanticsKey,
       checked: widget.selected,
       inMutuallyExclusiveGroup: true,
+      focusable: true,
+      focused: _focused,
       label: attributed == null
           ? (subtitle == null ? widget.label : '${widget.label}, $subtitle')
           : null,

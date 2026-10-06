@@ -85,6 +85,8 @@ class _UnaLinkButtonState extends State<UnaLinkButton> {
     return Semantics(
       key: widget.semanticsKey,
       button: true,
+      focusable: true,
+      focused: _focused,
       label: widget.label,
       excludeSemantics: true,
       onTap: widget.onPressed,

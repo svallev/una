@@ -107,8 +107,8 @@ Future<void> openExternalPage(
 }) async {
   if (session.busy) return;
   session._busy = true;
-  final opener = ref.read(linkOpenerProvider);
   try {
+    final opener = ref.read(linkOpenerProvider);
     final link = privacyLink(links.of(kind));
     // Se pregunta en cada toque, sin guardar la respuesta.
     if (link == null || !await opener.canOpen(link)) {
