@@ -42,6 +42,26 @@ class FakeImageImporter implements ImageImporter {
   int? freeSpaceBytes;
   Object? freeSpaceError;
 
+  /// Por foto del grupo (la clave es su `token`): fallo, tarde en copiar o
+  /// cabecera distinta, para probar que cada una falla por separado.
+  final copyErrorsByToken = <String, Object>{};
+  final copyDelaysByToken = <String, Duration>{};
+  final headsByToken = <String, List<int>>{};
+
+  /// Cuánto tarda en terminar una llamada en curso **después** de cancelarla
+  /// (el nativo no se puede interrumpir al instante).
+  Duration cancelSettleDelay = Duration.zero;
+
+  /// `token` de cada copia empezada, en orden.
+  final copiedTokens = <String>[];
+
+  /// Llamadas de copia o limpieza en curso a la vez (el máximo visto) y
+  /// originales en la preparación a la vez (CA-016-04: nunca más de uno).
+  var _active = 0;
+  var maxActive = 0;
+  final _originals = <String>{};
+  var maxOriginals = 0;
+
   final picks = <String>[];
   final origins = <AttachmentOrigin>[];
   final limits = <int>[];
@@ -103,11 +123,31 @@ class FakeImageImporter implements ImageImporter {
     required int maxBytes,
   }) async {
     limits.add(maxBytes);
-    store.putStaging(id, 'original', Uint8List.fromList(head));
-    await _wait(id, copyDelay);
-    if (copyError case final e?) throw e;
-    return (byteSize: head.length, head: head);
+    copiedTokens.add(picked.token);
+    _enter();
+    var ok = false;
+    try {
+      final photoHead = headsByToken[picked.token] ?? head;
+      store.putStaging(id, 'original', Uint8List.fromList(photoHead));
+      _originals.add(id);
+      if (_originals.length > maxOriginals) maxOriginals = _originals.length;
+      await _wait(id, copyDelaysByToken[picked.token] ?? copyDelay);
+      if (copyErrorsByToken[picked.token] case final e?) throw e;
+      if (copyError case final e?) throw e;
+      ok = true;
+      return (byteSize: photoHead.length, head: photoHead);
+    } finally {
+      if (!ok) _originals.remove(id);
+      _leave();
+    }
   }
+
+  void _enter() {
+    _active++;
+    if (_active > maxActive) maxActive = _active;
+  }
+
+  void _leave() => _active--;
 
   @override
   Future<StagedImage> sanitize(
@@ -121,9 +161,15 @@ class FakeImageImporter implements ImageImporter {
       ..add(maxPixels)
       ..add(storedMaxPixels);
     sniffedTypes.add(type);
-    await _wait(id, sanitizeDelay);
-    if (sanitizeError case final e?) throw e;
-    return stageImage(store, id, origin: origin);
+    _enter();
+    try {
+      await _wait(id, sanitizeDelay);
+      if (sanitizeError case final e?) throw e;
+      return stageImage(store, id, origin: origin);
+    } finally {
+      _originals.remove(id);
+      _leave();
+    }
   }
 
   /// Adjuntos cuyas derivadas se han regenerado.
@@ -154,7 +200,16 @@ class FakeImageImporter implements ImageImporter {
     if (cancelHangs) return Completer<void>().future;
     final c = _waits[id];
     if (c != null && !c.isCompleted) {
-      c.completeError(const ImageImportCancelled());
+      if (cancelSettleDelay == Duration.zero) {
+        c.completeError(const ImageImportCancelled());
+      } else {
+        Timer(cancelSettleDelay, () {
+          if (!c.isCompleted) c.completeError(const ImageImportCancelled());
+        });
+      }
+    } else {
+      // Sin llamada en curso no queda nada que escriba el original.
+      _originals.remove(id);
     }
     await store.deleteStaging(id);
   }
