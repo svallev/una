@@ -1,4 +1,7 @@
+import 'dart:math' show min;
+
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../domain/entities/attachment.dart';
 import '../domain/entities/locale_choice.dart';
@@ -7,6 +10,7 @@ import '../domain/entities/task.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/task_repository.dart';
 import '../domain/services/settings_codec.dart';
+import 'attachment_reader.dart';
 import 'db/app_database.dart';
 
 /// Repositorio sobre SQLite (drift). Mismo contrato que [InMemoryTaskRepository].
@@ -28,26 +32,66 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
           (t) => OrderingTerm.asc(t.id),
         ]);
 
-  /// Tareas con su adjunto (v1: 0..1), en una sola consulta (I-1).
-  JoinedSelectStatement<HasResultSet, dynamic> _withAttachment(
-    Expression<bool> where, {
-    bool ordered = false,
-    int? limit,
-  }) {
-    final q = db.select(db.tasks).join([
-      leftOuterJoin(
-        db.attachments,
-        db.attachments.taskId.equalsExp(db.tasks.id),
-      ),
-    ])..where(where);
-    if (ordered) {
-      q.orderBy([
-        OrderingTerm.asc(db.tasks.rank),
-        OrderingTerm.asc(db.tasks.id),
-      ]);
+  /// Columnas de [table] con el alias `<alias>.<columna>`, que es el prefijo
+  /// que espera `TableInfo.map(tablePrefix: alias)`.
+  static String _columns(String alias, List<GeneratedColumn> columns) =>
+      [for (final c in columns) '$alias."${c.$name}" AS "$alias.${c.$name}"']
+          .join(', ');
+
+  /// Tareas con sus adjuntos (spec 016, plan §3), **en una sola consulta** y
+  /// acotada **en SQL** a [maxReadAttachments] filas por tarea, ordenadas por
+  /// `(position, id)`: una BD restaurada con un millón de filas en una tarea no
+  /// se carga entera (CA-016-25). El `IN (… LIMIT 10)` deja que SQLite use
+  /// `idx_attachments_task_position` y busque cada fila por clave primaria.
+  /// [where] filtra las tareas; el flujo escucha las dos tablas.
+  String _selectSql(String where) =>
+      'SELECT ${_columns('t', db.tasks.$columns)}, '
+      '${_columns('a', db.attachments.$columns)} '
+      'FROM tasks t '
+      'LEFT JOIN attachments a ON a.id IN ('
+      'SELECT a2.id FROM attachments a2 WHERE a2.task_id = t.id '
+      'ORDER BY a2.position, a2.id LIMIT $maxReadAttachments) '
+      'WHERE $where '
+      'ORDER BY t.rank, t.id, a.position, a.id';
+
+  static const String _pendingSql =
+      "t.status = 'pending' AND t.deleted_at IS NULL";
+
+  /// La primera pendiente en la misma consulta, sin `LIMIT 1` sobre el `JOIN`
+  /// (cortaría el grupo): se elige en una subconsulta.
+  static const String _currentSql =
+      't.id = (SELECT t2.id FROM tasks t2 '
+      "WHERE t2.status = 'pending' AND t2.deleted_at IS NULL "
+      'ORDER BY t2.rank, t2.id LIMIT 1)';
+
+  /// Las consultas de lectura, para comprobar su plan en los tests.
+  @visibleForTesting
+  String get currentTaskSql => _selectSql(_currentSql);
+
+  Selectable<QueryRow> _query(
+    String where, [
+    List<Variable> variables = const [],
+  ]) => db.customSelect(
+    _selectSql(where),
+    variables: variables,
+    readsFrom: {db.tasks, db.attachments},
+  );
+
+  /// Agrupa las filas (una por foto, en orden) en tareas, en el mismo orden.
+  List<Task> _tasksFrom(List<QueryRow> rows) {
+    final tasks = <String, TaskRow>{};
+    final attachments = <String, List<Attachment>>{};
+    for (final row in rows) {
+      final task = db.tasks.map(row.data, tablePrefix: 't');
+      tasks.putIfAbsent(task.id, () => task);
+      final list = attachments.putIfAbsent(task.id, () => []);
+      if (row.data['a.id'] != null) {
+        list.add(_toAttachment(db.attachments.map(row.data, tablePrefix: 'a')));
+      }
     }
-    if (limit != null) q.limit(limit);
-    return q;
+    return [
+      for (final e in tasks.entries) _toTask(e.value, attachments[e.key]!),
+    ];
   }
 
   /// Pendiente: sin marca (tras la migración a v2 no queda ninguna, pero así
@@ -55,31 +99,13 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   static Expression<bool> _pendingWhere($TasksTable t) =>
       t.status.equals(TaskStatus.pending.name) & t.deletedAt.isNull();
 
-  Expression<bool> get _isPending =>
-      db.tasks.status.equals(TaskStatus.pending.name) &
-      db.tasks.deletedAt.isNull();
-
-  Task _fromJoin(TypedResult r) => _toTask(
-    r.readTable(db.tasks),
-    attachment: r.readTableOrNull(db.attachments),
-  );
+  @override
+  Future<Task?> currentTask() async =>
+      _tasksFrom(await _query(_currentSql).get()).firstOrNull;
 
   @override
-  Future<Task?> currentTask() async {
-    final row = await _withAttachment(
-      _isPending,
-      ordered: true,
-      limit: 1,
-    ).getSingleOrNull();
-    return row == null ? null : _fromJoin(row);
-  }
-
-  @override
-  Stream<Task?> watchCurrentTask() => _withAttachment(
-    _isPending,
-    ordered: true,
-    limit: 1,
-  ).watchSingleOrNull().map((r) => r == null ? null : _fromJoin(r));
+  Stream<Task?> watchCurrentTask() =>
+      _query(_currentSql).watch().map((rows) => _tasksFrom(rows).firstOrNull);
 
   @override
   Future<String?> firstPendingRank() async =>
@@ -112,16 +138,12 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   }
 
   @override
-  Future<List<Task>> pendingTasks() async => (await _withAttachment(
-    _isPending,
-    ordered: true,
-  ).get()).map(_fromJoin).toList();
+  Future<List<Task>> pendingTasks() async =>
+      _tasksFrom(await _query(_pendingSql).get());
 
   @override
-  Stream<List<Task>> watchPending() => _withAttachment(
-    _isPending,
-    ordered: true,
-  ).watch().map((rows) => rows.map(_fromJoin).toList());
+  Stream<List<Task>> watchPending() =>
+      _query(_pendingSql).watch().map(_tasksFrom);
 
   @override
   Future<bool> reorder(String id, String rank, DateTime at) async {
@@ -158,10 +180,9 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   });
 
   @override
-  Future<Task?> findById(String id) async {
-    final row = await _withAttachment(db.tasks.id.equals(id)).getSingleOrNull();
-    return row == null ? null : _fromJoin(row);
-  }
+  Future<Task?> findById(String id) async =>
+      _tasksFrom(await _query('t.id = ?', [Variable.withString(id)]).get())
+          .firstOrNull;
 
   @override
   Future<void> insert(Task task) => db.transaction(() async {
@@ -205,6 +226,26 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
   Future<Set<String>> attachmentIds() async {
     final rows = await db.select(db.attachments).get();
     return {for (final r in rows) r.id};
+  }
+
+  /// Trozos de [existingAttachmentIds]: bien por debajo del límite de
+  /// variables de SQLite.
+  static const int _idsPerQuery = 500;
+
+  @override
+  Future<Set<String>> existingAttachmentIds(Iterable<String> ids) async {
+    final all = ids.toSet().toList();
+    final found = <String>{};
+    for (var i = 0; i < all.length; i += _idsPerQuery) {
+      final chunk = all.sublist(i, min(i + _idsPerQuery, all.length));
+      final rows =
+          await (db.selectOnly(db.attachments)
+                ..addColumns([db.attachments.id])
+                ..where(db.attachments.id.isIn(chunk)))
+              .get();
+      found.addAll(rows.map((r) => r.read(db.attachments.id)!));
+    }
+    return found;
   }
 
   @override
@@ -273,7 +314,7 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
       DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
   static DateTime? _dateOrNull(int? ms) => ms == null ? null : _date(ms);
 
-  static Task _toTask(TaskRow r, {AttachmentRow? attachment}) => Task(
+  static Task _toTask(TaskRow r, List<Attachment> attachments) => Task(
     id: r.id,
     text: r.body,
     status: TaskStatus.values.byName(r.status),
@@ -287,17 +328,18 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
     parentId: r.parentId,
     source: r.source,
     externalId: r.externalId,
-    attachment: attachment == null ? null : _toAttachment(attachment),
+    attachments: attachments,
   );
 
-  static Attachment _toAttachment(AttachmentRow r) => Attachment(
+  /// Lectura tolerante (CA-016-25): nunca lanza, ver [readAttachment].
+  static Attachment _toAttachment(AttachmentRow r) => readAttachment(
     id: r.id,
-    kind: AttachmentKind.values.byName(r.kind),
-    origin: AttachmentOrigin.values.byName(r.origin),
+    kind: r.kind,
+    origin: r.origin,
     mime: r.mime,
     byteSize: r.byteSize,
-    width: r.width ?? 0,
-    height: r.height ?? 0,
+    width: r.width,
+    height: r.height,
     createdAt: _date(r.createdAt),
     originalName: r.originalName,
     pageCount: r.pageCount,
