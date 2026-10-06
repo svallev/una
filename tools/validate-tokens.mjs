@@ -2,10 +2,13 @@
 // Valida design/tokens.json: estructura mínima, formato de colores, contraste WCAG AA
 // de las combinaciones de texto (4,5:1) y de los elementos no textuales (3:1, WCAG 1.4.11)
 // documentadas en docs/design/tokens.md.
-// Uso: node tools/validate-tokens.mjs   (sin dependencias)
+// Uso: node tools/validate-tokens.mjs [--tokens <archivo>]   (sin dependencias)
+//   --tokens: valida otro archivo (para probar con una copia modificada que el validador falla).
 import { readFileSync } from "node:fs";
 
-const tokens = JSON.parse(readFileSync(new URL("../design/tokens.json", import.meta.url), "utf8"));
+const argTokens = process.argv.indexOf("--tokens");
+const tokensUrl = argTokens > 0 ? process.argv[argTokens + 1] : new URL("../design/tokens.json", import.meta.url);
+const tokens = JSON.parse(readFileSync(tokensUrl, "utf8"));
 const errors = [];
 
 const required = ["color", "palette", "font", "space", "size", "border", "shadow", "motion"];
@@ -62,6 +65,8 @@ const checks = [
   ["onInk/ink", hex(C.onInk.$value), ink],
   // Etiqueta de la tarea en la card de deshacer (spec 014, CA-014-03).
   ["onInkMuted/ink", hex(C.onInkMuted.$value), ink],
+  // Ajustes (spec 015, CA-015-19): subtítulo del interruptor y línea inferior de "Como el
+  // sistema" (textMuted/paper, ya arriba) y texto de los avisos de error (error/paper, ya arriba).
 ];
 // 4. Contraste no textual (3:1, WCAG 1.4.11): la barra de tiempo de la card de deshacer
 //    es del color de la nota eliminada y se vacía sobre su pista (spec 014, CA-014-03).
@@ -79,6 +84,19 @@ for (const [name, pal] of Object.entries(tokens.palette)) {
   }
 }
 checks.push(["placeholder/paper", blend(ph, hex(C.paper.$value)), hex(C.paper.$value)]);
+
+// 4b. Interruptor de Ajustes (spec 015, CA-015-03 y CA-015-19; WCAG 1.4.11, ≥ 3:1). El estado
+//     lo da la posición del pomo; el amarillo `switchOn` contra el papel (~1,2:1) no distingue
+//     nada ni se le exige contraste. Lo que contrasta es el borde de tinta, en los dos estados:
+//     (a) borde de la pista (ink) frente al papel de la pantalla;
+//     (b) borde del pomo (ink) frente al relleno de la pista: papel (apagado) y switchOn (encendido).
+const paper = hex(C.paper.$value);
+const switchOn = hex(C.switchOn.$value);
+nonTextChecks.push(["switch/borde de la pista (ink) / papel", ink, paper]);
+nonTextChecks.push(["switch/borde del pomo (ink) / pista apagada (papel)", ink, paper]);
+nonTextChecks.push(["switch/borde del pomo (ink) / pista encendida (switchOn)", ink, switchOn]);
+// Marca de selección de la página de Idioma (CA-015-07): ink sobre el papel.
+nonTextChecks.push(["marca de selección (ink) / papel", ink, paper]);
 
 for (const [name, fg, bg] of checks) {
   const r = ratio(fg, bg);

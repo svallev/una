@@ -167,7 +167,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuNewTask => 'New task';
 
   @override
-  String get menuSettings => 'Settings and profile';
+  String get menuSettings => 'Settings';
 
   @override
   String get menuClose => 'Close menu';
@@ -555,45 +555,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get urlOpenPageWeb => 'Open page →';
 
   @override
-  String get settingsClose => 'Close';
-
-  @override
-  String get settingsLicenses => 'Open-source licenses';
+  String get settingsClose => 'Close settings';
 
   @override
   String get settingsPrivacy => 'Privacy policy';
 
   @override
-  String get settingsPrivacyHint => 'Opens a web page in the browser';
+  String get settingsTitle => 'Settings';
 
   @override
-  String get licensesTitle => 'Open-source licenses';
+  String get settingsLanguage => 'Language';
 
   @override
-  String get licensesLoading => 'Loading licenses…';
+  String get settingsLanguageSystem => 'Same as system';
 
   @override
-  String licensesCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count licenses',
-      one: '1 license',
-    );
-    return '$_temp0';
-  }
+  String get languageSpanish => 'Español';
 
   @override
-  String get licensesBack => 'Back';
+  String get languageEnglish => 'English';
 
   @override
-  String get licensesError => 'Couldn\'t load the licenses.';
+  String get settingsKeepAwake => 'Keep screen on';
 
   @override
-  String licensesTextOf(int n, int total) {
-    return 'License $n of $total';
-  }
+  String get settingsKeepAwakeHint => 'Images, documents and web';
 
   @override
-  String get licensesAndroidLibraries => 'Android libraries (AndroidX, Kotlin)';
+  String get settingsInfo => 'Information';
+
+  @override
+  String get settingsThirdPartyLicenses => 'Third-party licenses';
+
+  @override
+  String get settingsHelp => 'Help';
+
+  @override
+  String get settingsOpensWebHint => 'Opens a web page in the browser';
+
+  @override
+  String get settingsSaveError => 'Couldn\'t save the setting.';
+
+  @override
+  String get settingsBack => 'Back';
 }

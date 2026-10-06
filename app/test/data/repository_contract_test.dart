@@ -6,6 +6,7 @@ import 'package:app/data/db/open_database_native.dart';
 import 'package:app/data/drift_task_repository.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
+import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/rank.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/task_repository.dart';
@@ -75,17 +76,24 @@ Attachment _web(String id, {String url = _webUrl}) => Attachment(
 );
 
 /// Misma batería para todas las implementaciones del puerto (docs/testing.md).
+/// Escribe un valor crudo en la tabla `settings` (en Drift, un `insert`
+/// directo; en memoria, `putRawSetting`): lo que dejaría un dato corrupto o
+/// una copia de seguridad restaurada (CA-015-26, CL-015-18).
+typedef _PutRaw = Future<void> Function(String key, String raw);
+
 void _contract(
   String name,
-  Future<(_Repo, SettingsRepository, Future<void> Function())> Function()
+  Future<(_Repo, SettingsRepository, Future<void> Function(), _PutRaw)>
+  Function()
   create,
 ) {
   group('Contrato TaskRepository · $name', () {
     late _Repo repo;
     late SettingsRepository settings;
     late Future<void> Function() dispose;
+    late _PutRaw putRaw;
 
-    setUp(() async => (repo, settings, dispose) = await create());
+    setUp(() async => (repo, settings, dispose, putRaw) = await create());
     tearDown(() => dispose());
 
     test('sin tareas: no hay tarea actual', () async {
@@ -408,12 +416,75 @@ void _contract(
       expect(await settings.firstRunDone(), isTrue);
     });
 
-    test('CA-007-12: "Mantener la pantalla encendida" está activo por '
-        'defecto y se guarda', () async {
+    test('CA-015-05: "Pantalla siempre activa" está apagada por defecto y '
+        'se guarda', () async {
+      expect(await settings.keepScreenOn(), isFalse);
+      await settings.setKeepScreenOn(true);
       expect(await settings.keepScreenOn(), isTrue);
       await settings.setKeepScreenOn(false);
       expect(await settings.keepScreenOn(), isFalse);
-      await settings.setKeepScreenOn(true);
+    });
+
+    test(
+      'CA-015-06: el idioma es "Como el sistema" por defecto y se guarda',
+      () async {
+        expect(await settings.locale(), LocaleChoice.system);
+        for (final choice in [
+          LocaleChoice.es,
+          LocaleChoice.en,
+          LocaleChoice.system,
+        ]) {
+          await settings.setLocale(choice);
+          expect(await settings.locale(), choice);
+        }
+      },
+    );
+
+    for (final raw in <String>[
+      'fr',
+      '"fr"',
+      '',
+      '"es-MX"',
+      '[[[[[[[[[[[[[[[[',
+      '{"a":',
+      '1',
+      '0',
+      '"true"',
+      'false',
+      'null',
+      '["es"]',
+      '"${'a' * 5000}"',
+    ]) {
+      final shown = raw.length > 20 ? '${raw.substring(0, 20)}…' : raw;
+      test('CA-015-26: el idioma guardado como `$shown` da "Como el '
+          'sistema" y no lanza', () async {
+        await putRaw('locale', raw);
+        expect(await settings.locale(), LocaleChoice.system);
+      });
+
+      test('CA-015-26: "Pantalla siempre activa" guardada como `$shown` '
+          'está apagada y no lanza', () async {
+        await putRaw('keepScreenOn', raw);
+        expect(await settings.keepScreenOn(), isFalse);
+      });
+
+      test('CL-015-18: las marcas guardadas como `$shown` fallan cerradas '
+          'a false y no lanzan', () async {
+        await putRaw('firstRunDone', raw);
+        await putRaw('hasEverHadTasks', raw);
+        expect(await settings.firstRunDone(), isFalse);
+        expect(await settings.hasEverHadTasks(), isFalse);
+      });
+    }
+
+    test('CA-015-26: los valores exactos válidos se leen', () async {
+      await putRaw('locale', '"es"');
+      expect(await settings.locale(), LocaleChoice.es);
+      await putRaw('locale', '"en"');
+      expect(await settings.locale(), LocaleChoice.en);
+      await putRaw('locale', '"system"');
+      expect(await settings.locale(), LocaleChoice.system);
+      await putRaw('keepScreenOn', 'true');
       expect(await settings.keepScreenOn(), isTrue);
     });
   });
@@ -422,13 +493,27 @@ void _contract(
 void main() {
   _contract('memoria', () async {
     final r = InMemoryTaskRepository();
-    return (r as _Repo, r as SettingsRepository, r.dispose);
+    return (
+      r as _Repo,
+      r as SettingsRepository,
+      r.dispose,
+      (String key, String raw) async => r.putRawSetting(key, raw),
+    );
   });
 
   _contract('drift (SQLite en memoria)', () async {
     final db = openInMemoryDatabase();
     final r = DriftTaskRepository(db);
-    return (r as _Repo, r as SettingsRepository, db.close);
+    return (
+      r as _Repo,
+      r as SettingsRepository,
+      db.close,
+      (String key, String raw) async => db
+          .into(db.settingEntries)
+          .insertOnConflictUpdate(
+            SettingEntriesCompanion.insert(key: key, value: raw, updatedAt: 0),
+          ),
+    );
   });
 
   test(

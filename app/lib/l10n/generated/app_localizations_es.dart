@@ -167,7 +167,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuNewTask => 'Nueva tarea';
 
   @override
-  String get menuSettings => 'Configuración y perfil';
+  String get menuSettings => 'Ajustes';
 
   @override
   String get menuClose => 'Cerrar menú';
@@ -554,46 +554,47 @@ class AppLocalizationsEs extends AppLocalizations {
   String get urlOpenPageWeb => 'Abrir página →';
 
   @override
-  String get settingsClose => 'Cerrar';
-
-  @override
-  String get settingsLicenses => 'Licencias de código abierto';
+  String get settingsClose => 'Cerrar ajustes';
 
   @override
   String get settingsPrivacy => 'Política de privacidad';
 
   @override
-  String get settingsPrivacyHint => 'Abre una página web en el navegador';
+  String get settingsTitle => 'Ajustes';
 
   @override
-  String get licensesTitle => 'Licencias de código abierto';
+  String get settingsLanguage => 'Idioma';
 
   @override
-  String get licensesLoading => 'Cargando licencias…';
+  String get settingsLanguageSystem => 'Como el sistema';
 
   @override
-  String licensesCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count licencias',
-      one: '1 licencia',
-    );
-    return '$_temp0';
-  }
+  String get languageSpanish => 'Español';
 
   @override
-  String get licensesBack => 'Volver';
+  String get languageEnglish => 'English';
 
   @override
-  String get licensesError => 'No se pudieron cargar las licencias.';
+  String get settingsKeepAwake => 'Pantalla siempre activa';
 
   @override
-  String licensesTextOf(int n, int total) {
-    return 'Licencia $n de $total';
-  }
+  String get settingsKeepAwakeHint => 'Imágenes, documentos y web';
 
   @override
-  String get licensesAndroidLibraries =>
-      'Bibliotecas de Android (AndroidX, Kotlin)';
+  String get settingsInfo => 'Información';
+
+  @override
+  String get settingsThirdPartyLicenses => 'Licencias de terceros';
+
+  @override
+  String get settingsHelp => 'Ayuda';
+
+  @override
+  String get settingsOpensWebHint => 'Abre una página web en el navegador';
+
+  @override
+  String get settingsSaveError => 'No se pudo guardar el ajuste.';
+
+  @override
+  String get settingsBack => 'Volver';
 }

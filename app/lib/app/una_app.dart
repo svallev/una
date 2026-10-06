@@ -1,13 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/entities/locale_choice.dart';
 import '../features/all_done/all_done_screen.dart';
 import '../features/app_error/storage_error_screen.dart';
-import '../features/attachments/keep_screen_on_controller.dart';
 import '../features/complete/celebration_overlay.dart';
 import '../features/complete/completion_controller.dart';
 import '../features/current_task/current_task_screen.dart';
@@ -17,6 +16,7 @@ import '../features/delete/undo_card_host.dart';
 import '../features/delete/undo_controller.dart';
 import '../features/editor/task_editor_screen.dart';
 import '../features/first_run/welcome_intro.dart';
+import '../features/settings/settings_controller.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../ui/full_width.dart';
 import '../ui/semantics_action_order.dart';
@@ -89,6 +89,16 @@ class _UnaAppState extends ConsumerState<UnaApp> {
     if (hiddenAt == null) return;
     if (ref.read(clockProvider).now().difference(hiddenAt) >=
         UnaApp.resetAfter) {
+      // Con alguna pantalla encima (Ajustes, el editor, el listado), la tarea
+      // vuelve con el foco en el botón de menú (CA-015-16). Quien se monte con
+      // la petición pendiente la toma; si no hay botón, se retira tras el
+      // fotograma.
+      if (_navigatorKey.currentState?.canPop() ?? false) {
+        ref.read(menuFocusProvider.notifier).request();
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => ref.read(menuFocusProvider.notifier).clear(),
+        );
+      }
       _navigatorKey.currentState?.popUntil((r) => r.isFirst);
       setState(
         () => _resetGeneration++,
@@ -105,6 +115,7 @@ class _UnaAppState extends ConsumerState<UnaApp> {
 
   @override
   Widget build(BuildContext context) {
+    final choice = ref.watch(settingsProvider.select((s) => s.locale));
     return MaterialApp(
       navigatorKey: _navigatorKey,
       navigatorObservers: [_undoObserver],
@@ -113,19 +124,15 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       theme: UnaTheme.light(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
-      // Cada toque cuenta como uso para la pantalla encendida (CA-007-12),
-      // también explorar tocando con TalkBack (llega como *hover* táctil).
-      builder: (context, child) => Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (_) => ref.read(keepScreenOnProvider.notifier).touched(),
-        onPointerHover: (e) {
-          if (e.kind == PointerDeviceKind.touch) {
-            ref.read(keepScreenOnProvider.notifier).touched();
-          }
-        },
-        child: appFrame(context, child),
-      ),
+      // Idioma elegido en Ajustes (ADR-0023): con "Español" o "English" Flutter
+      // usa ese `Locale` sin mirar el sistema; con "Como el sistema" no hay
+      // `locale` y decide la regla de la 010. `BootState.locale` lo trae ya
+      // leído: el primer fotograma sale en ese idioma (CA-015-10).
+      locale: localeOfChoice(choice),
+      localeListResolutionCallback: choice == LocaleChoice.system
+          ? (locales, _) => resolveAppLocale(locales)
+          : null,
+      builder: appFrame,
       home: HomeRouter(key: ValueKey(_resetGeneration)),
     );
   }

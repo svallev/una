@@ -1,4 +1,5 @@
 import '../entities/attachment.dart';
+import '../entities/locale_choice.dart';
 import '../entities/task.dart';
 
 /// Puerto de persistencia de tareas (ADR-0002). La UI y los casos de uso
@@ -71,8 +72,15 @@ abstract interface class SettingsRepository {
   /// CA-004-08, ADR-0012). Lo activa `TaskRepository.insert`.
   Future<bool> hasEverHadTasks();
 
-  /// "Mantener la pantalla encendida con adjuntos" (CA-007-12). Por defecto,
-  /// sí; su pantalla llega con la spec 010.
+  /// "Pantalla siempre activa" (CA-015-04, CA-015-05): **apagada por
+  /// defecto**. Solo es `true` si el valor guardado es exactamente `true`; un
+  /// valor ilegible da `false` sin lanzar (CA-015-26).
   Future<bool> keepScreenOn();
   Future<void> setKeepScreenOn(bool value);
+
+  /// Idioma elegido en Ajustes (CA-015-06, ADR-0023). Por defecto, "Como el
+  /// sistema"; un valor que no sea exactamente `system|es|en` también lo da
+  /// (CA-015-26).
+  Future<LocaleChoice> locale();
+  Future<void> setLocale(LocaleChoice choice);
 }

@@ -151,6 +151,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(TaskListScreen), findsNothing);
       expect(find.byType(CurrentTaskScreen), findsOneWidget);
+      // La tarea vuelve con el foco en el botón de menú (CA-015-16), que llega
+      // cuando termina de irse la pantalla de encima.
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'task menu');
     },
   );
 }

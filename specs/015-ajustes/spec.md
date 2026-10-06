@@ -1,6 +1,6 @@
 # Spec 015: Ajustes
 
-- **Estado:** **Aprobada** (propietario, 2026-10-05), tras ser **corregida según la revisión 1** (`revision-1.md`, 2026-10-05; bloqueantes B1 y B2, importantes I-A a I-J y menores) **y la revisión 2** (`spec-reviewer`, `a11y-reviewer` y `security-reviewer`, 2026-10-05: sin bloqueantes; hallazgos aplicados salvo menores que se dejan al plan). Respondidas por el propietario todas las preguntas de §9 (Q-015-1 a 5) y las tres decisiones de la revisión (§9). Los ADR-0023 y ADR-0026 están **Aceptados** por el propietario (2026-10-05; constitución 1.7). El plan (`plan.md`) y las tareas (`tasks.md`) están **Aprobados** (2026-10-05); el siguiente paso es la implementación, en una sesión nueva (`/spec-implement 015`).
+- **Estado:** **Implementada parcialmente** (cierre T-015-16, 2026-10-06; pendientes: las casillas de dispositivo de la 022 y el primer paso de CI de `check-licenses.sh`, `docs/PLAN.md` «Casillas de la 015»). Historial: **Aprobada** (propietario, 2026-10-05), tras ser **corregida según la revisión 1** (`revision-1.md`, 2026-10-05; bloqueantes B1 y B2, importantes I-A a I-J y menores) **y la revisión 2** (`spec-reviewer`, `a11y-reviewer` y `security-reviewer`, 2026-10-05: sin bloqueantes; hallazgos aplicados salvo menores que se dejan al plan). Respondidas por el propietario todas las preguntas de §9 (Q-015-1 a 5) y las tres decisiones de la revisión (§9). Los ADR-0023 y ADR-0026 están **Aceptados** por el propietario (2026-10-05; constitución 1.7). El plan (`plan.md`) y las tareas (`tasks.md`) están **Aprobados** (2026-10-05); la implementación está en la rama `feat/015-ajustes` (tareas T-015-01 a T-015-16, `tasks.md`; PR sin abrir hasta que lo confirme el propietario).
 - **Fase:** F4b Nuevas funcionalidades (plan aprobado por el propietario el 2026-10-04). Es la segunda de las specs 014–019.
 - **Reglas de producto:** R15 (idioma, ahora elegible), R18 (Ajustes: pantalla siempre activa e información)
 - **Pantallas del prototipo:** 16 "Ajustes" (`Ajustes.dc.html`) y 2 "Menú" (el enlace pasa a llamarse "Ajustes"). **Sin diseño:** la página de Idioma (se hace con los componentes existentes, P-16 del plan F4b). Ver `docs/design/screen-map.md`.
@@ -89,7 +89,7 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
   - **Dado** el interruptor **encendido**
   - **Cuando** se ve la tarea actual con **imagen, PDF o web** (en vertical o en horizontal) con la app en primer plano, **incluida la web con su aviso** "Necesitas conexión para ver esta página." (el usuario sigue mirando la tarea) **[Suposición]**
   - **Entonces** la pantalla **no se apaga ni se bloquea** por inactividad, **sin límite de tiempo**: ya no hay los 10 minutos sin tocar ni cuentan los toques.
-  - **Verificable:** con el canal falso `una/screen`, tras 60 minutos simulados sin ningún toque la petición de pantalla encendida sigue activa, y no existe ningún temporizador ni contador de toques (`touched()` se retira). Con el mismo canal falso: **la web en estado de error** ("Necesitas conexión…") pide `keepOn(true)`; la tarjeta "Adjunto no disponible" y la tarea de solo texto **no**; y abrir Ajustes, el menú o la confirmación de enlace deja `keepOn(false)`.
+  - **Verificable:** con el canal falso `una/screen`, tras 60 minutos simulados sin ningún toque la petición de pantalla encendida sigue activa, y no existe ningún temporizador ni contador de toques (`touched()` se retira). Con el mismo canal falso: **la web en estado de error** ("Necesitas conexión…") pide `keepOn(true)`; la tarjeta "Adjunto no disponible" y la tarea de solo texto **no**; y abrir Ajustes o el menú deja `keepOn(false)`.
 - **CA-015-04b Pantalla siempre activa: apagada**
   - **Dado** el interruptor **apagado** (por defecto)
   - **Cuando** se ve cualquier tarea
@@ -163,13 +163,13 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
 
 ### Información y ayuda
 
-- **CA-015-12a Abrir una web: la confirmación** *(patrón de CA-012-04; ahora con tres enlaces)*
+- **CA-015-12a Abrir una web: directamente, sin confirmación** *(enmienda del propietario, 2026-10-05, tras probarlo en el móvil: sustituye a la confirmación de enlace de CA-012-04 (la de CA-008-12, la de los enlaces del PDF, sigue en vigor); la dirección es una constante de compilación vigilada por la puerta de CA-015-13b, no algo que escribe el usuario)*
   - **Dado** Ajustes
   - **Cuando** el usuario elige **Política de privacidad**, **Licencias de terceros** o **Ayuda**
-  - **Entonces**, **antes** de preguntar, se comprueba que hay una app que pueda abrir la dirección; si la hay, aparece la **confirmación de enlace** de la spec 008 (CA-008-12), "¿Abrir {host} en el navegador?", con el dominio real. El foco entra en **"Cancelar"** **[Suposición]**. Solo si el usuario confirma se abre la página en el **navegador del sistema**; si cancela, no pasa nada y el foco vuelve a esa fila. Con el texto al 200 %, el dominio puede partirse (un dominio largo o en *punycode*) o el diálogo se desplaza: no se recorta.
+  - **Entonces** se comprueba que hay una app que pueda abrir la dirección y, si la hay, se abre **directamente** la página en el **navegador del sistema**: **sin confirmación, sin tarjeta y sin aviso previo**. No hay diálogo, así que no hay foco que mover: la fila conserva el foco. Si no hay ninguna app (o `open` da `false`), se ve el aviso de CA-015-12b.
   - **La app no se conecta a nada por sí misma** (P4): quien lo hace es el navegador, que se conecta con la conexión del usuario y puede mostrar al destino el referente de la app (anexo; `privacy-policy.md`, §10). Ninguna de las tres páginas se ve dentro de la app ni pasa por la vista web de la tarea (ADR-0018 no aplica).
   - Cada enlace tiene **una sola dirección**, la misma en español y en inglés (como P-012-2); la web elegirá el idioma. Las tres filas **usan la misma función**.
-  - **Verificable**, con el canal falso `una/links`: `open` **no** se llama sin confirmar ni al cancelar; `canOpen` se llama **en cada toque** y no registra la dirección; una dirección que no sea `https` **no** llama ni a `canOpen` ni a `open`; las tres filas producen la **misma secuencia** `canOpen` → confirmación → `open`, cada una con su dirección; el host de la confirmación es **exactamente** el de la dirección que recibe `open`; y para comprobar que no se registra la dirección, el test captura `debugPrint`, `print` y `FlutterError` y verifica que no aparece.
+  - **Verificable**, con el canal falso `una/links`: `canOpen` se llama **en cada toque** y no registra la dirección; con `canOpen` verdadero se llama a `open` **una sola vez** con exactamente la dirección de la fila, **sin ningún diálogo ni ruta nueva** entre el toque y `open`; una dirección que no sea `https` **no** llama ni a `canOpen` ni a `open`; las tres filas producen la **misma secuencia** `canOpen` → `open`, cada una con su dirección; dos toques seguidos no abren dos veces; y para comprobar que no se registra la dirección, el test captura `debugPrint`, `print` y `FlutterError` y verifica que no aparece.
 - **CA-015-12b Abrir una web: sin app que lo abra** *(avisos de error, decisión del propietario 2026-10-05)*
   - **Dado** Ajustes y que no hay ninguna app que abra la dirección
   - **Cuando** el usuario toca una de las tres filas
@@ -180,13 +180,13 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
   - **Entonces** no se abre nada y se ve el mismo aviso de CA-015-12b.
 - **Los avisos (CA-015-12b y CA-015-25): regiones vivas con la marca de idioma de la app**
   - Los dos avisos de error ("No hay ninguna app para abrir este enlace." y "No se pudo guardar el ajuste.") son **regiones vivas** (`Semantics(liveRegion: true)`) **con la marca de idioma de la app**, dentro del árbol y alcanzables en el orden de lectura. **No** se usan los anuncios del sistema (`sendAnnouncement`): así su texto se lee con la voz del idioma de la app y **no se amplía la excepción a P6** con texto nuevo (decisión del propietario, 2026-10-05).
-  - **Ciclo de vida, una sola regla:** cada aviso se **quita con la siguiente acción con éxito sobre cualquier control** (abrir una confirmación, o cambiar un ajuste que se guarda) **o al salir del nivel en que se ve**. **Pueden verse a la vez** (uno de cada tipo, como máximo): se leen en el orden de la pantalla, el de guardado bajo su fila y el de enlace bajo Información y Ayuda (tras Ayuda). Un **nuevo intento fallido** vuelve a anunciar el aviso (**una vez por intento**) sin duplicarlo: como una región viva con el mismo texto no se vuelve a anunciar, el aviso se **retira y se vuelve a insertar** en cada intento fallido (o lleva una clave nueva por intento; cómo, lo decide el plan). Cada aviso queda **a la vista** (la pantalla se desplaza hasta él, `ensureVisible`) porque el árbol semántico no incluye lo que está fuera del área visible; no depende solo del color (es texto).
+  - **Ciclo de vida, una sola regla:** cada aviso se **quita con la siguiente acción con éxito sobre cualquier control** (abrir una web, o cambiar un ajuste que se guarda) **o al salir del nivel en que se ve**. **Pueden verse a la vez** (uno de cada tipo, como máximo): se leen en el orden de la pantalla, el de guardado bajo su fila y el de enlace bajo Información y Ayuda (tras Ayuda). Un **nuevo intento fallido** vuelve a anunciar el aviso (**una vez por intento**) sin duplicarlo: como una región viva con el mismo texto no se vuelve a anunciar, el aviso se **retira y se vuelve a insertar** en cada intento fallido (o lleva una clave nueva por intento; cómo, lo decide el plan). Cada aviso queda **a la vista** (la pantalla se desplaza hasta él, `ensureVisible`) porque el árbol semántico no incluye lo que está fuera del área visible; no depende solo del color (es texto).
   - **[Suposición]** que TalkBack respete la marca de idioma en una región viva y la lea con la voz del idioma de la app: se comprueba a oído (casilla de la 022); si no fuera así, vuelve a plantearse la excepción de P6.
   - **Verificable:** el nodo existe, es `liveRegion` y lleva `es` o `en` (el idioma de la app); no hay llamadas a `sendAnnouncement`; **dos fallos seguidos producen dos anuncios sin duplicar el nodo**; y el aviso queda dentro del área visible tras `ensureVisible`, también al 200 %.
 - **CA-015-13a Direcciones: constantes de compilación y marcadores** *(amplía CA-012-05; D27; P7)*
   - **Dado** que las tres webs **aún no existen**
   - **Cuando** el usuario las elige en esta versión
-  - **Entonces** la confirmación y el navegador usan **direcciones marcador** (dominio reservado, como la política de hoy), una por enlace y **las tres distintas entre sí** (CA-015-13b).
+  - **Entonces** el navegador usa **direcciones marcador** (dominio reservado, como la política de hoy), una por enlace y **las tres distintas entre sí** (CA-015-13b).
   - Las tres direcciones son **constantes de compilación** que vienen **solo** de `identity.yaml` → `AppIdentity`, junto a la identidad de la app (P7): **no** salen de los ajustes, de la base de datos, de una configuración remota ni del idioma elegido. **No llevan consulta (`?`), fragmento (`#`), ni versión, idioma o identificador** de ninguna clase.
   - **Verificable:** cada dirección configurada pasa `privacyLink` y no tiene parámetros; y la **misma dirección** sale con la app en `es` y en `en`.
 - **CA-015-13b Puerta de publicación** *(amplía CA-012-05)*
@@ -212,7 +212,8 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
 - **CA-015-16 Volver desde el navegador** *(CA-012-06)*
   - **Dado** que el usuario abrió una web desde Ajustes
   - **Cuando** vuelve a la app **y la app sigue viva**
-  - **Entonces** aplica CA-001-12: con menos de 10 minutos ve la misma pantalla (Ajustes abierto); con 10 minutos o más, la tarea actual, con el foco del lector en el **botón de menú** **[Suposición]**. Si el sistema cerró la app entretanto, se ve la tarea actual (CL-015-5).
+  - **Entonces** aplica CA-001-12: con menos de 10 minutos ve la misma pantalla (Ajustes abierto); con 10 minutos o más, la tarea actual, con el foco de entrada en el **botón de menú**. Si el sistema cerró la app entretanto, se ve la tarea actual (CL-015-5).
+  - **Enmienda 2026-10-05 (decisión del propietario, tras T-015-14):** el **recuadro de TalkBack** al volver tras 10 minutos o más **puede quedar en el texto de la tarea** y no en el botón de menú (comprobado en el emulador de API 37: el foco de entrada de Flutter sí está en el botón, pero TalkBack lleva su recuadro al principio de la ventana y ignora el aviso de foco). Se **acepta**: empezar por el texto de la tarea no estorba. La **[Suposición]** original (recuadro en el botón de menú) queda **retirada** para este caso; el foco al **cerrar** Ajustes sigue en el botón de menú (CA-015-02, comprobado con TalkBack).
 
 ### Resto de criterios
 
@@ -227,7 +228,7 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
     - **ningún código nativo nuevo**, tampoco en `LinkOpener.kt` (lista exacta: ninguno; la pantalla encendida y los enlaces usan los canales `una/screen` y `una/links`, que ya existen);
     - **prohibido** `shared_preferences`, `wakelock_plus` y declarar `url_launcher` como dependencia directa (hoy es transitiva de `pdfrx`).
 - **CA-015-18 "Recientes" (spec 011)**
-  - **Dado** cada pantalla nueva: Ajustes, la página de Idioma y la confirmación de enlace
+  - **Dado** cada pantalla nueva: Ajustes y la página de Idioma
   - **Cuando** se aplica la prueba de CA-011-01 (con la matriz de CA-011-02: sustituyen a las filas de la 012)
   - **Entonces** "Recientes" no muestra nada de ellas. El **plan** dice **cómo** se visita cada una con `tools/check-recents.sh` y `docs/testing.md`. La eliminación pendiente se confirma (`commit()`, CA-015-24) **antes** de empujar la ruta de Ajustes.
 - **CA-015-19 Diseño: tokens y componentes**
@@ -245,24 +246,24 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
     - **(e)** "Información" es un encabezado; las tres filas de web son botones cuyo nombre **incluye** que **abren una página web en el navegador** (no solo una pista, que TalkBack puede omitir);
     - **(f)** en la página de Idioma, cada opción dice su nombre y si está **seleccionada**, y "Como el sistema" dice también el idioma que resulta; el nodo de cada opción **lleva su marca de idioma** (CA-015-11). **[Suposición]** que TalkBack lo lea con la voz de ese idioma se comprueba en el dispositivo (casilla de la 022);
     - **(g)** el orden de lectura es **título → filas en su orden visual, con cada aviso donde se ve** (el de guardado bajo su fila; el de enlace tras Ayuda) **→ Cerrar o Volver**, lo último (como CA-013-05); ningún nodo enfocable queda sin nombre. La prueba de semántica fija este orden con **los dos avisos a la vez**;
-    - **(h)** al elegir un idioma, el foco vuelve a "Idioma" y se lee su valor nuevo (CA-015-08); el foco al volver del navegador y de la confirmación es la fila que se tocó;
+    - **(h)** al elegir un idioma, el foco vuelve a "Idioma" y se lee su valor nuevo (CA-015-08); al volver del navegador, la fila que se tocó **no pierde el foco de entrada** (la app no lo mueve). **Enmienda 2026-10-05 (decisión del propietario, tras T-015-14):** el original pedía que el foco **del lector** siguiera en esa fila; TalkBack lleva su recuadro al **título «Ajustes»** al volver la ventana y ignora el aviso de foco a la fila (comprobado en el emulador de API 37 con la petición a los 0,4, 0,6 y 1,5 s y desenfocando antes), así que **no se puede arreglar desde Dart** y se **acepta**: empezar por el título no estorba. No hay código de la app para esto (el intento se retiró);
     - **(i)** Ajustes es **modal**: con él abierto, **ningún nodo de la tarea de debajo es alcanzable**, ni el nivel 2 deja alcanzable el nivel 1.
-  - **Verificable:** `tester.getSemantics` y las guías `meetsGuideline` (`textContrastGuideline`, `androidTapTargetGuideline`, `labeledTapTargetGuideline`) en Ajustes, la página de Idioma y la confirmación de enlace. `androidTapTargetGuideline` mide 48 dp: los **≥ 44 pt visibles** se comprueban además con un test de tamaño o con un *golden*. `textContrastGuideline` puede fallar en falso con las fuentes reales en texto pequeño (`CLAUDE.md`): el contraste lo garantiza `validate-tokens`. `iOSTapTargetGuideline` no se pide (iOS fuera de alcance, D17; casilla para cuando se retome). **Solo a mano** (casillas de la 015 y la 022): el foco real de TalkBack, el orden de lectura a oído, la voz del idioma elegido, el anuncio único de los avisos y su repetición en el segundo fallo, que al fallar el guardado del interruptor TalkBack no diga "activado" y luego "desactivado", el foco al volver del navegador y de la confirmación.
+  - **Verificable:** `tester.getSemantics` y las guías `meetsGuideline` (`textContrastGuideline`, `androidTapTargetGuideline`, `labeledTapTargetGuideline`) en Ajustes y la página de Idioma. `androidTapTargetGuideline` mide 48 dp: los **≥ 44 pt visibles** se comprueban además con un test de tamaño o con un *golden*. `textContrastGuideline` puede fallar en falso con las fuentes reales en texto pequeño (`CLAUDE.md`): el contraste lo garantiza `validate-tokens`. `iOSTapTargetGuideline` no se pide (iOS fuera de alcance, D17; casilla para cuando se retome). **Solo a mano** (casillas de la 015 y la 022): el foco real de TalkBack, el orden de lectura a oído, la voz del idioma elegido, el anuncio único de los avisos y su repetición en el segundo fallo, que al fallar el guardado del interruptor TalkBack no diga "activado" y luego "desactivado" (el foco al volver del navegador es el del sistema: CA-015-20h enmendada).
 - **CA-015-21 Teclado y conmutadores**
   - **Dado** teclado físico o Switch Access
   - **Cuando** se recorre y se activa
   - **Entonces**:
-    - **(a)** el foco del teclado empieza en **Cerrar ajustes** (o **Volver**) y sigue por las filas; el título no entra en ese orden (solo es foco del lector, tabla); Switch Access sigue el orden del lector (CA-015-20g);
+    - **(a)** el foco del teclado empieza en **Cerrar ajustes** (o **Volver**) y sigue por las filas (**con teclado físico**, `showsFocusHighlight`; si Ajustes se abre con el dedo o con TalkBack, el primer Tab va a la primera fila y Cerrar queda al final del ciclo: decisión del plan §3, observación menor de `dispositivo.md`); el título no entra en ese orden (solo es foco del lector, tabla); Switch Access sigue el orden del lector (CA-015-20g);
     - **(b)** se ve el anillo de foco; Intro y la barra espaciadora activan (también el interruptor);
     - **(c)** Escape sube un nivel;
     - **(d)** todo se puede hacer sin arrastrar ni pellizcar;
     - **(e)** con Ajustes abierto, el foco no puede salir a la tarea de debajo;
     - **(f)** cuando el foco llega a una fila, la pantalla **la desplaza a la vista** (`ensureVisible`; WCAG 2.4.11), también con el texto al 200 %, **y el aviso que aparece** (CA-015-12b y 25);
-    - **(g)** Tab y Mayús+Tab **circulan dentro de Ajustes** (desde la primera fila, Mayús+Tab va a Cerrar o Volver; desde este, a la última fila): el foco no sale (21e). El orden de Tab (Cerrar arriba) y el del lector (Cerrar al final) **difieren a propósito**: el primero sigue el orden visual y el segundo la decisión de la 013; Switch Access sigue el del lector. **Escape con la confirmación de enlace abierta la cierra** (como "Cancelar") en lugar de subir un nivel.
+    - **(g)** Tab y Mayús+Tab **circulan dentro de Ajustes** (desde la primera fila, Mayús+Tab va a Cerrar o Volver; desde este, a la última fila): el foco no sale (21e). El orden de Tab (Cerrar arriba) y el del lector (Cerrar al final) **difieren a propósito**: el primero sigue el orden visual y el segundo la decisión de la 013; Switch Access sigue el del lector.
   - **Verificable:** un test de widgets recorre con Tab y comprueba el orden, `ensureVisible` y que Escape sube un nivel. **Solo a mano:** el anillo de foco con un teclado real y Switch Access.
 - **CA-015-22 Texto grande y movimiento**
   - **Dado** el texto del sistema al 200 %, en móviles de 360 dp de ancho, **en español y en inglés** (CA-010-12), y "reducir movimiento" activo o no
-  - **Cuando** se muestran Ajustes (con todas sus filas y los avisos de error), la página de Idioma (con "Como el sistema" y su línea inferior) y la confirmación de enlace
+  - **Cuando** se muestran Ajustes (con todas sus filas y los avisos de error), la página de Idioma (con "Como el sistema" y su línea inferior)
   - **Entonces** no hay cortes, solapes ni desbordamientos (la pantalla se desplaza); la fila "Idioma" y la página de Idioma pasan el valor o la línea inferior a una segunda línea sin recortar (CA-015-06 y 07); los objetivos cumplen CA-015-01a; y la subida de Ajustes, los fundidos entre niveles y el movimiento del pomo son instantáneos con "reducir movimiento" (CA-015-01d).
   - **Verificable:** *goldens* y desbordamientos al 200 % en ES y EN con `setUpAll(loadAppFonts)` (`test/support/fonts.dart`), más `androidTapTargetGuideline`. **Solo a mano:** 200 % en el móvil con la navegación de tres botones.
 - **CA-015-23 El arranque no empeora (P2)**
@@ -300,7 +301,7 @@ El **título** es solo el foco inicial del lector: no se activa y no entra en el
 | CL-015-10 | Ajustes del sistema › Idiomas de la app (Android 13+) | La app **no aparece** en esa lista: el idioma se elige solo en Ajustes (CL-010-6; fuera de alcance, §8) |
 | CL-015-11 | Sin conexión al abrir una web | La app no lo nota: el navegador enseña su propio error (CL-012-7). Las licencias no se ven (CA-015-14b) |
 | CL-015-12 | La dirección configurada de una web no es `https` | No se abre nada y se ve "No hay ninguna app…" (CA-015-12c). La puerta lo impide al publicar |
-| CL-015-13 | Se cambia el idioma del sistema con Ajustes abierto y "Como el sistema" | Los textos cambian sin cerrar la pantalla (CA-010-06), **también en la página de Idioma, si está abierta**: la línea inferior de "Como el sistema" muestra el idioma nuevo que resulta. El valor de la fila "Idioma" sigue siendo "Como el sistema". Con un idioma elegido, no cambia nada |
+| CL-015-13 | Se cambia el idioma del sistema con Ajustes abierto y "Como el sistema" | Los textos cambian sin cerrar la pantalla (CA-010-06), **también en la página de Idioma, si está abierta**: la línea inferior de "Como el sistema" muestra el idioma nuevo que resulta. El valor de la fila "Idioma" sigue siendo "Como el sistema". Con un idioma elegido, los textos no cambian, pero la línea inferior de «Como el sistema» sí muestra el idioma nuevo del sistema (CA-015-07) |
 | CL-015-14 | El idioma guardado no es ninguno de los tres (dato corrupto) | Se toma "Como el sistema" y la app no falla (CA-015-26) |
 | CL-015-15 | Una instalación anterior con la pantalla encendida "por defecto" | Pasa a apagada (CA-015-05); no se avisa **[Suposición]**: la beta aún no se ha repartido |
 | CL-015-16 | No se puede **leer** el ajuste de idioma al arrancar | Una fila ilegible o no válida: se usa "Como el sistema" (CA-015-26) y no se ve ningún error. Una **base de datos inaccesible** (otra causa, no este ajuste): sale la pantalla de error de almacenamiento, en el idioma del sistema |
@@ -330,7 +331,7 @@ Los criterios están en CA-015-20 a 22. Además:
 |---|---|
 | P1 Una tarea a la vez | CA-015-01a, 02, 24, CL-015-3 (Ajustes solo se abre desde el menú de la tarea y vuelve a ella) |
 | P2 Instantáneo al abrir | CA-015-10, 23 |
-| P3 Local y sin conexión | CA-015-14a, 14b (y la nota de la constitución 1.7) |
+| P3 Local y sin conexión | CA-015-14a, 14b (y la nota de P3 de la constitución, 1.7 y 1.8) |
 | P4 Privacidad por defecto | CA-015-12a, 13a, 17 |
 | P5 Seguridad desde el diseño | CA-015-12a, 13a, 13b, 17, 25, 26 |
 | P6 Accesible siempre | CA-015-01d, 03, 11, 12, 20, 21, 22, 25 |
@@ -363,7 +364,7 @@ Claves nuevas (camelCase; se añaden con `/strings-add`). Los nombres de los idi
 | `settingsOpensWebHint` | Abre una página web en el navegador | Opens a web page in the browser | Se **incluye en el nombre** de las tres filas de web (CA-015-20e); es `settingsPrivacyHint` **renombrada** |
 | `settingsSaveError` | No se pudo guardar el ajuste. | Couldn't save the setting. | CA-015-25 |
 
-Se reutilizan `openInBrowserConfirm`, `linkConfirmOpen`, `linkConfirmCancel` y `errNoAppForLink`; bajo "Como el sistema" se reutilizan `languageSpanish` y `languageEnglish`, con su marca de idioma. **"Volver" del nivel 2** es "Volver" / "Back" (la clave la decide el plan: la `licensesBack` renombrada o una propia). Se **retiran**, si nada más los usa (lo comprueba el plan): `settingsLicenses`, `licensesTitle`, `licensesLoading`, `licensesCount`, `licensesError`, `licensesTextOf` y `licensesAndroidLibraries`.
+Se reutiliza `errNoAppForLink` (`openInBrowserConfirm`, `linkConfirmOpen` y `linkConfirmCancel` ya no los usa Ajustes tras la enmienda de CA-015-12a; los sigue usando la 008); bajo "Como el sistema" se reutilizan `languageSpanish` y `languageEnglish`, con su marca de idioma. **"Volver" del nivel 2** es "Volver" / "Back" (la clave la decide el plan: la `licensesBack` renombrada o una propia). Se **retiran**, si nada más los usa (lo comprueba el plan): `settingsLicenses`, `licensesTitle`, `licensesLoading`, `licensesCount`, `licensesError`, `licensesTextOf` y `licensesAndroidLibraries`.
 
 ## 8. Fuera de alcance
 
@@ -394,7 +395,7 @@ Se reutilizan `openInBrowserConfirm`, `linkConfirmOpen`, `linkConfirmCancel` y `
 - **Q-015-4** El aviso de "No hay ninguna app…" (CA-015-12b): se acepta la recomendación. Sale cuando se toca Política de privacidad, Licencias de terceros o Ayuda y el móvil no tiene ninguna app (navegador) que abra la dirección; **una sola vez, debajo de las tres filas de web** (no debajo de la fila tocada).
 - **Q-015-5** Sin tareas no se llega a Ajustes: se acepta (recomendación): "Todo hecho." y la bienvenida **se quedan como están, sin menú**. Quien deje la app sin tareas no puede cambiar el idioma ni leer la política hasta crear una (CL-015-4).
 
-**[Suposición] sin pregunta** (se corrigen en la revisión si no gustan): dónde queda el foco al cerrar Ajustes (el botón de menú de la tarea) y al volver del navegador tras ≥ 10 minutos; que el foco entra en "Cancelar" al abrirse la confirmación de enlace; el comportamiento del error al guardar (CA-015-25); que no se avisa del cambio de valor por defecto de la pantalla (CL-015-15); que la web de "Ayuda" tiene también una sola dirección para los dos idiomas; que la pantalla sigue encendida con el aviso "Necesitas conexión…" de la web (CA-015-04a); que la puerta de publicación se ejecuta antes de cada entrega a testers y solo bloquea la publicación (CA-015-13b); y la comparación normalizada de direcciones idénticas. **Añadidas en la revisión 2** (recomendación en cada una; ninguna necesita pregunta nueva): que el nodo "Idioma, Español" lleve dos marcas o se separe el valor (**lo decide el plan**, CA-015-11); que el aviso "no mueve el foco y queda a la vista" (**se queda como está**, CA-015-12b); lo que TalkBack hace con `toggled` y con la marca de idioma de las opciones (**casilla de la 022**, CA-015-20d y 20f); que los ajustes de una copia de seguridad con un idioma no válido se traten como CA-015-26 (**se queda como está**, CL-015-18); que el `NOTICES` de Flutter vaya siempre en el paquete (ADR-0026, **lo confirma el plan**); que la 012-S1 no se endurezca en Kotlin (**se queda como está**, anexo y T-5).
+**[Suposición] sin pregunta** (se corrigen en la revisión si no gustan): dónde queda el foco al cerrar Ajustes (el botón de menú de la tarea) y al volver del navegador tras ≥ 10 minutos (**aceptado el comportamiento de TalkBack**, CA-015-16 y 20h enmendadas el 2026-10-05); el comportamiento del error al guardar (CA-015-25); que no se avisa del cambio de valor por defecto de la pantalla (CL-015-15); que la web de "Ayuda" tiene también una sola dirección para los dos idiomas; que la pantalla sigue encendida con el aviso "Necesitas conexión…" de la web (CA-015-04a); que la puerta de publicación se ejecuta antes de cada entrega a testers y solo bloquea la publicación (CA-015-13b); y la comparación normalizada de direcciones idénticas. **Añadidas en la revisión 2** (recomendación en cada una; ninguna necesita pregunta nueva): que el nodo "Idioma, Español" lleve dos marcas o se separe el valor (**lo decide el plan**, CA-015-11); que el aviso "no mueve el foco y queda a la vista" (**se queda como está**, CA-015-12b); lo que TalkBack hace con `toggled` y con la marca de idioma de las opciones (**casilla de la 022**, CA-015-20d y 20f); que los ajustes de una copia de seguridad con un idioma no válido se traten como CA-015-26 (**se queda como está**, CL-015-18); que el `NOTICES` de Flutter vaya siempre en el paquete (ADR-0026, **lo confirma el plan**); que la 012-S1 no se endurezca en Kotlin (**se queda como está**, anexo y T-5).
 
 **[Pendiente]:**
 
@@ -415,6 +416,7 @@ Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la correcció
 
 **Ya hecho**
 
+- ✅ **Constitución 1.8** (2026-10-06): la nota de P3 dice que la web se abre sin confirmación previa (CA-015-12a; I1 del cierre).
 - ✅ **Constitución 1.7** (2026-10-05): la excepción de P6 del ADR-0020 se amplía al idioma elegido (ADR-0023); P3: nota de que la política, las licencias de terceros y la ayuda necesitan conexión (ADR-0026).
 - ✅ **ADR-0020:** marcado "sustituido en parte por ADR-0023".
 - ✅ **Spec 010:** CA-010-10 y CL-010-2 enmendados.
@@ -426,11 +428,11 @@ Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la correcció
 **✅ Hecho en la PR de la corrección de la spec (#33)**
 
 - **`docs/security/threat-model.md`:** T-15 y §7 recogen el riesgo residual aceptado de "Pantalla siempre activa" **sin límite**: apagada por defecto, solo con imagen, PDF o web a la vista y en primer plano; el sistema retira la petición al pasar a segundo plano (CA-015-04d). Anotar también que **no bloquea la pantalla** mientras se ve contenido (D10, P-6).
-- **`docs/glossary.md`:** el identificador `Settings` estaba en dos filas ("Configuración" y "Ajustes"); queda solo en "Ajustes". Se añade **"Confirmación de enlace"**.
+- **`docs/glossary.md`:** el identificador `Settings` estaba en dos filas ("Configuración" y "Ajustes"); queda solo en "Ajustes". Se añade **"Confirmación de enlace"** (enmienda 2026-10-05: ya no se usa en Ajustes; sigue en la 008).
 - **`docs/design/prototype-deviations.md`, DEV-52:** el separador de 1 px (`rgba(17,17,17,.18)`, que no es un token; la DEV-38 usó el token `disabled`); **reducir movimiento** (el prototipo no lo contempla); el **orden de lectura** con Cerrar al final (decisión de la 013 frente al prototipo); el fundido entre niveles.
 - **Esta spec:** §10 con su estado, §9 y los criterios.
 
-**✅ Aplicadas tras aprobar la spec** (PR `docs/015-amendments`, 2026-10-05). Cada enmienda lleva la etiqueta «Enmienda 2026-10-05 (spec 015, aprobada; se aplica al implementarla)»: hasta entonces, la app sigue haciendo lo que dice la spec original.
+**✅ Aplicadas tras aprobar la spec** (PR `docs/015-amendments`, 2026-10-05). Cada enmienda lleva la etiqueta «Enmienda 2026-10-05 (spec 015, implementada; en vigor)» (hasta T-015-15 decía «aprobada; se aplica al implementarla»: ya está implementada y las enmiendas **rigen**).
 
 - **005:** CA-005-09 (el enlace pasa a llamarse "Ajustes" y abre la pantalla de la 015, **cerrando el menú**; antes, sin cerrarlo, la de la 012), CA-005-01 (el enlace subrayado), CA-005-12 ("como Configuración y perfil" como referencia de estilo) y la tabla de textos (`menuSettings`).
 - **001:** su mención de "Configuración (spec futura de Configuración y perfil)" pasa a Ajustes (spec 015).
@@ -468,7 +470,7 @@ Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la correcció
 - **Casillas y hallazgos de la 012** (§9): se anulan o pasan a la 022 en `specs/012-configuracion-temporal/dispositivo.md` y en `docs/PLAN.md` («Hallazgos de la 012 para la auditoría de F5»).
 - **`docs/PLAN.md`:** D10, D13 y D22–D27 ya reflejados; trazabilidad R15 y R18; fila de la 015 en F4b; §9 siguiente paso.
 
-**📋 En la PR de implementación** (se anota en el `plan.md` y en las tareas correspondientes)
+**✅ Hecho en la PR de implementación** (T-015-15, 2026-10-05; se anota en el `plan.md` y en las tareas correspondientes)
 
 - **`docs/security/checklist.md`:** la sección «Si abre enlaces externos o muestra licencias y política» se **reduce a solo el enlace** (ADR-0026): se retira «Los textos de licencia son `Text` plano» y se añaden los puntos de CA-015-12 y 13 (direcciones constantes de compilación, sin consulta ni fragmento, puerta con las tres) y de CA-015-26 (valores ilegibles).
 - **`tools/check-licenses.sh`:** actualizar los comentarios de las líneas 2-3 y 168, que aún dicen «pantalla de licencias»; ver también el anexo.
@@ -476,7 +478,7 @@ Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la correcció
 - **`docs/architecture.md`, `docs/testing.md` (cómo se visita Ajustes con `tools/check-recents.sh`, CA-015-18), `identity.yaml`, `tools/check-release-config.sh`** y `tool/check_release_config.dart`: los cambios que diga el plan.
 - **`docs/design/screen-map.md`:** cualquier ajuste que pida el plan.
 
-**🕒 Más adelante, sin PR propia**
+**🕒 Más adelante, sin PR propia** (T-015-15: la revisión legal está como punto bloqueante en `/release-checklist` ✅; la nota del referente y los ajustes en la copia siguen para F6/023 **[Pendiente]**; la memoria `una-project-context` ✅)
 
 - **`docs/legal/privacy-policy.md` y Data Safety (F6/023):** nota del referente: "al abrir la web, el navegador se conecta; la app no envía nada"; y los ajustes que viajan en la copia de seguridad.
 - **`/release-checklist`:** la **revisión legal** de ADR-0026 como punto bloqueante, antes de publicar.
@@ -496,3 +498,34 @@ Cada punto lleva su estado: **✅ hecho**, **✅ hecho en la PR de la correcció
 - **Referente:** el navegador puede mostrar al destino el referente `android-app://<paquete>`; se refleja en la política y en Data Safety (§10).
 - **Recientes:** ya hay `tools/check-recents.sh`; hay que añadir las filas nuevas a su matriz y a la de CA-011-02, y el plan dice cómo se visita cada pantalla (CA-015-18).
 - **Una sola sesión de spec, otra de plan:** los ADR-0023 y ADR-0026 ya están aceptados (2026-10-05); el plan los desarrolla (como el ADR-0021 en la 014).
+
+## 11. Cierre: tabla CA → prueba y revisiones (2026-10-06)
+
+**Estado:** **Implementada parcialmente.** Todos los CA tienen test en verde salvo los de dispositivo, que quedan como casillas de la 022 (`docs/PLAN.md`, «Casillas de la 015»). Rutas relativas a `app/test/`; los *goldens* están en `test/goldens/goldens/` (12 PNG, subidos en `201d97c`).
+
+| CA / CL | Prueba |
+|---|---|
+| 01a | `features/settings/settings_screen_test.dart` (botón ≥ 44), `settings_transitions_test.dart` (el menú se cierra y Ajustes sube; 48 dp), `features/menu/menu_bottom_inset_test.dart`, `settings_over_task_test.dart` (4 tipos de tarea) |
+| 01b, 01c | `settings_screen_test.dart` (orden, separadores 4/1 px, medidas, «Información» como encabezado, 600 dp, sin Notificaciones ni Bloquear zoom); `ui/settings_row_test.dart`; `goldens/settings_golden_test.dart` |
+| 01d, 02 | `settings_transitions_test.dart` (200/160 ms, fundido, reducir movimiento); `settings_screen_test.dart` (Cerrar, atrás, Escape); `settings_a11y_test.dart` |
+| 03 | `ui/switch_row_test.dart`; `settings_screen_test.dart`; `settings_controller_test.dart`; `tools/validate-tokens.mjs`; `l10n/spec_015_strings_test.dart` |
+| 04a–04d | `features/attachments/keep_screen_on_test.dart` (imagen, PDF, web, 60 min, menú, **Ajustes**, ciclo de vida, `dispose`) |
+| 05 | `app/boot_state_test.dart`; `data/repository_contract_test.dart`; `settings_controller_test.dart`; `integration_test/settings_flow_test.dart` (rearranque) |
+| 06, 07 | `ui/settings_row_test.dart`; `ui/radio_row_test.dart`; `language_page_test.dart`; `settings_large_text_test.dart`; *goldens* |
+| 08 | `settings_controller_test.dart`; `language_page_test.dart` (orden, error, misma opción, doble toque); `settings_screen_test.dart` (foco una vez) |
+| 09, 10 | `app/locale_change_test.dart`; `app/locale_resolution_test.dart`; `app/boot_state_test.dart` |
+| 11 | `l10n/semantics_language_test.dart`; `support/semantics_locales.dart`. Voz a oído: **[Hecho]** en el Xiaomi (propietario); repetir con la versión final en la 022 |
+| 12a–12c y avisos | `external_page_test.dart`; `settings_notices_test.dart`; `ui/live_notice_test.dart`; `settings_over_task_test.dart` |
+| 13a, 13b | `app/app_identity_test.dart`; `tool/check_release_config_test.dart` (29 casos) |
+| 14a | `l10n/spec_015_strings_test.dart` (claves y archivos retirados). 14b: `tools/check-licenses.sh` y `--negative` (14 mutaciones) en CI; **[Pendiente]** primera ejecución en GitHub |
+| 15, 16 | `settings_over_task_test.dart` (9:59 y 10:00); `app/home_router_test.dart`; `features/task_list/task_list_screen_test.dart` |
+| 17 | `data/settings_keys_test.dart`; diff `main...HEAD` de T-015-16: `pubspec.*`, manifiesto, `res/xml` y Kotlin **sin cambios**, `schemaVersion` 2, `check-android-permissions.sh release` solo `INTERNET` |
+| 18 | `dispositivo.md` (`check-recents.sh`: Ajustes, aviso, Idioma); Android 8 y 12L con la PD-10 de la 011 |
+| 19 | `tools/validate-tokens.mjs`; `ui/una_icons_test.dart` |
+| 20a–i, 21a–c, 21e–g | `settings_a11y_test.dart`; `settings_screen_test.dart`; `ui/switch_row_test.dart`; `ui/radio_row_test.dart` (incluido el foco en el nodo); `ui/link_button_focus_test.dart`; `settings_notices_test.dart`; `ui/square_icon_button_test.dart`. TalkBack en el emulador (`dispositivo.md`); Switch Access y anillo con teclado real: 022 |
+| 21d, CL-11, 15 y 17 | **No aplica a un test**: declarativos o comportamiento del sistema o del navegador (CL-15: valor por defecto, cubierto por CA-05) |
+| 22, 23 | `settings_large_text_test.dart`; *goldens*; `docs/perf/baseline.md` (emulador 418-421 ms, Xiaomi 217/223 ms) |
+| 24, 25, 26, 27 | `features/delete/undo_commit_test.dart`; `settings_controller_test.dart`; `domain/settings_codec_test.dart`; `data/repository_contract_test.dart`; `l10n/l10n_leaks_test.dart` y `l10n_consistency_test.dart` |
+| CL-1 a 10, 12 a 14, 16, 18 | Los de sus CA (CL-6 y 7 con CA-09; CL-13 con `language_page_test.dart` y `locale_change_test.dart`); CL-10: ver CA-17 |
+
+**Revisiones de cierre (2026-10-06, `git diff main...HEAD`):** `security-reviewer` sin hallazgos altos (1 medio, M-1: la puerta de publicación no corre en CI, va a la 020; 6 bajos); `a11y-reviewer` sin hallazgos altos (2 medios: M1 corregido en `ef0ab0d`, M2 en `docs/PLAN.md`; 2 bajos); `spec-reviewer` sin bloqueantes (5 importantes y 10 menores; I2 a I5 corregidos o registrados, I1 resuelto por el propietario con la constitución 1.8, 2026-10-06). Detalle y lo que sigue abierto: `docs/PLAN.md`, «Hallazgos del cierre de la 015».

@@ -34,8 +34,15 @@ Future<T?> showUnaSheet<T>(
           ),
     // La hoja sube sobre el teclado: la ruta no lo hace sola, y con Android 15+
     // (a pantalla completa) `adjustResize` tampoco redimensiona la ventana.
+    // Y deja libre la barra de navegación del sistema (`padding.bottom`; con el
+    // teclado a la vista vale 0): con la navegación de tres botones y el texto
+    // al 200 %, el último enlace quedaba a medias bajo ella (spec 015, T-015-14).
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.only(
+        bottom:
+            MediaQuery.viewInsetsOf(context).bottom +
+            MediaQuery.paddingOf(context).bottom,
+      ),
       child: SingleChildScrollView(child: builder(context)),
     ),
   );
@@ -78,6 +85,8 @@ class _UnaLinkButtonState extends State<UnaLinkButton> {
     return Semantics(
       key: widget.semanticsKey,
       button: true,
+      focusable: true,
+      focused: _focused,
       label: widget.label,
       excludeSemantics: true,
       onTap: widget.onPressed,

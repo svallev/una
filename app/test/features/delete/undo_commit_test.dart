@@ -39,12 +39,24 @@ ProviderContainer _container(WidgetTester tester) =>
 UndoPhase _phase(WidgetTester tester) =>
     _container(tester).read(undoProvider).phase;
 
+/// No puede volver a insertar (CA-014-23).
+class _FailingInsertRepo extends InMemoryTaskRepository {
+  bool failInsert = false;
+
+  @override
+  Future<void> insert(Task task) async {
+    if (failInsert) throw StateError('disk I/O error: ${task.text}');
+    return super.insert(task);
+  }
+}
+
 Future<InMemoryTaskRepository> _pump(
   WidgetTester tester, {
   List<String> tasks = const ['Primera', 'Segunda', 'Tercera'],
   List<Task> extra = const [],
+  InMemoryTaskRepository? repo0,
 }) async {
-  final repo = InMemoryTaskRepository();
+  final repo = repo0 ?? InMemoryTaskRepository();
   for (final t in extra) {
     await repo.insert(t);
   }
@@ -135,13 +147,38 @@ void main() {
     expect(_card, findsNothing);
   });
 
-  testWidgets('CA-014-11, CL-014-13: "Configuración y perfil" la hace '
+  testWidgets('CA-014-11, CL-014-13, CA-015-24: "Ajustes" la hace '
       'definitiva', (tester) async {
     await _pump(tester);
     await _deleteFromMenu(tester);
-    await _menu(tester, 'Configuración y perfil');
+    await _menu(tester, 'Ajustes');
     expect(_phase(tester), UndoPhase.none);
     expect(_card, findsNothing);
+  });
+
+  testWidgets('CA-014-11, CA-015-24, DEV-51: con el aviso de error de la '
+      'recuperación a la vista, "Ajustes" lo quita y lo hace definitivo', (
+    tester,
+  ) async {
+    final repo = _FailingInsertRepo();
+    await _pump(tester, repo0: repo);
+    await _deleteFromMenu(tester);
+    repo.failInsert = true;
+    // Pasada la guarda de 350 ms del botón (CL-014-2).
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(
+      find.descendant(of: _card, matching: find.byKey(UndoCard.buttonKey)),
+    );
+    await tester.pump(_frame);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(_phase(tester), UndoPhase.failed);
+    expect(find.text('No hemos podido recuperar la tarea'), findsOneWidget);
+
+    await _menu(tester, 'Ajustes');
+    expect(_phase(tester), UndoPhase.none);
+    expect(find.text('No hemos podido recuperar la tarea'), findsNothing);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(await repo.findById('t0'), isNull);
   });
 
   testWidgets('CA-014-12: abrir y cerrar el menú sin elegir nada no la hace '

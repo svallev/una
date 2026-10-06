@@ -10,6 +10,7 @@ import 'package:app/data/import/unavailable_pdf_importer.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/link_target.dart';
+import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/entities/web_load_failure.dart';
@@ -29,6 +30,7 @@ import 'package:app/features/editor/placement_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
 import 'package:app/features/menu/menu_sheet.dart';
+import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/features/task_list/move_sheet.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:app/features/web/url_sheet.dart';
@@ -51,6 +53,7 @@ import '../support/fake_web_page_driver.dart';
 import '../support/l10n_leaks.dart';
 import '../support/pdfrx.dart';
 import '../support/pump_app.dart';
+import '../support/semantics_locales.dart';
 
 /// Fugas de idioma en lo que expone la app al lector de pantalla (spec 010).
 ///
@@ -842,6 +845,78 @@ void main() {
         _expectNoForeignLocale(tester, lang);
       });
     });
+  }
+
+  // Ajustes (spec 015, CA-015-11): con el sistema en un idioma y la app en el
+  // otro, todo lo que recorre el lector lleva el idioma de la app salvo los
+  // nombres "Español" y "English", que llevan el suyo (también en la fila
+  // "Idioma").
+  for (final (app, system) in [('es', 'en'), ('en', 'es')]) {
+    final l10n = _l10n(app);
+    final choice = app == 'es' ? LocaleChoice.es : LocaleChoice.en;
+
+    testWidgets(
+      'CA-015-11 (app $app, sistema $system): Ajustes lleva "$app" en todos '
+      'los nodos y ninguno "$system", salvo los nombres de idioma',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final repo = InMemoryTaskRepository();
+        await repo.setLocale(choice);
+        await pumpUnaApp(
+          tester,
+          repo: repo,
+          locale: Locale(system),
+          tasks: _neutral,
+          screenReader: true,
+          overrides: [linkOpenerProvider.overrideWithValue(_Opener())],
+        );
+        await _openMenu(tester, l10n);
+        await tester.tap(find.text(l10n.menuSettings));
+        await tester.pumpAndSettle();
+        await tester.pump(UnaMotion.sheetOut);
+        expect(find.byType(SettingsScreen), findsOneWidget);
+        expect(localeMarksOutsideApp(tester, app), isEmpty);
+        expectNoL10nLeaks(tester, languageCode: app);
+
+        // La fila "Idioma" lleva dos marcas: el nombre, en el idioma de la
+        // app, y el valor ("Español"/"English"), en el suyo.
+        final value = app == 'es' ? 'Español' : 'English';
+        final row = semanticsLabelled(
+          tester,
+          '${l10n.settingsLanguage}, $value',
+        );
+        expect(localeOfName(row, l10n.settingsLanguage)?.languageCode, app);
+        expect(localeOfName(row, value)?.languageCode, app);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CA-015-11 (app $app): con "Como el sistema" el valor va en el idioma '
+      'de la app',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpUnaApp(
+          tester,
+          repo: InMemoryTaskRepository(),
+          locale: Locale(app),
+          tasks: _neutral,
+          screenReader: true,
+          overrides: [linkOpenerProvider.overrideWithValue(_Opener())],
+        );
+        await _openMenu(tester, l10n);
+        await tester.tap(find.text(l10n.menuSettings));
+        await tester.pumpAndSettle();
+        await tester.pump(UnaMotion.sheetOut);
+        expect(localeMarksOutsideApp(tester, app), isEmpty);
+        final row = semanticsLabelled(
+          tester,
+          '${l10n.settingsLanguage}, ${l10n.settingsLanguageSystem}',
+        );
+        expect(row.locale?.languageCode, app);
+        handle.dispose();
+      },
+    );
   }
 }
 

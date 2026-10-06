@@ -1,16 +1,18 @@
-// Goldens de la spec 012 (pantalla temporal de Configuración y perfil). Se
-// generan y comparan solo en Linux (CI); en el Mac, con `GOLDENS_ANY_OS=1`.
+// Goldens de Ajustes (spec 015, tablero 16 del prototipo): el nivel 1, los dos
+// estados del interruptor y la página de Idioma, en español e inglés, a ×1,0 y
+// ×2,0. Se generan y comparan solo en Linux (CI); en el Mac, con
+// `GOLDENS_ANY_OS=1` (para revisarlos a ojo, no se suben).
 @Tags(['golden'])
 library;
 
 import 'dart:io';
 
-import 'package:app/app/providers.dart';
-import 'package:app/domain/entities/license_package.dart';
-import 'package:app/domain/ports/license_source.dart';
-import 'package:app/features/settings/license_detail_screen.dart';
-import 'package:app/features/settings/licenses_screen.dart';
+import 'package:app/app/theme/tokens.g.dart';
+import 'package:app/features/settings/language_page.dart';
 import 'package:app/features/settings/settings_screen.dart';
+import 'package:app/l10n/generated/app_localizations.dart';
+import 'package:app/ui/una_icons.dart';
+import 'package:app/ui/una_switch_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,54 +22,24 @@ import '../support/pump_app.dart';
 final _skip =
     !Platform.isLinux && Platform.environment['GOLDENS_ANY_OS'] != '1';
 
-/// Los tres niveles se ven a 360 dp de ancho (el móvil más estrecho de
-/// CA-012-13).
+/// Se ven a 360 dp de ancho (el móvil más estrecho de CA-015-22).
 const _size = Size(360, 780);
 
-class _Source implements LicenseSource {
-  const _Source(this.packages);
+const _langs = ['es', 'en'];
+const _scales = [1.0, 2.0];
 
-  final List<LicensePackage> packages;
-
-  @override
-  Future<List<LicensePackage>> load() async => packages;
-}
-
-LicenseText _text(List<String> paragraphs) =>
-    LicenseText([for (final p in paragraphs) (text: p, indent: 0)]);
-
-const _mit = [
-  'MIT License',
-  'Copyright (c) 2019 Example Authors',
-  'Permission is hereby granted, free of charge, to any person obtaining a '
-      'copy of this software and associated documentation files (the '
-      '"Software"), to deal in the Software without restriction, including '
-      'without limitation the rights to use, copy, modify, merge, publish, '
-      'distribute, sublicense, and/or sell copies of the Software.',
-  'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS '
-      'OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF '
-      'MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND '
-      'NONINFRINGEMENT.',
-];
-
-final _packages = [
-  LicensePackage(name: 'Archivo', texts: [_text(_mit)]),
-  LicensePackage(name: androidLibrariesLicenseKey, texts: [_text(_mit)]),
-  LicensePackage(name: 'drift', texts: [_text(_mit)]),
-  LicensePackage(
-    name: 'PDFium',
-    texts: [_text(_mit), _text(_mit.reversed.toList())],
-  ),
-  LicensePackage(name: 'pdfrx', texts: [_text(_mit)]),
-  LicensePackage(name: 'Space Mono', texts: [_text(_mit)]),
-];
-
-Future<void> _pump(WidgetTester tester, Widget child) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Widget child, {
+  required String lang,
+  required double scale,
+}) async {
   await pumpWithApp(
     tester,
     child,
+    locale: Locale(lang),
+    textScale: scale,
     size: _size,
-    overrides: [licenseSourceProvider.overrideWithValue(_Source(_packages))],
   );
   await tester.pumpAndSettle();
 }
@@ -77,21 +49,66 @@ Future<void> _golden(WidgetTester tester, String name) => expectLater(
   matchesGoldenFile('goldens/$name.png'),
 );
 
+/// Los dos estados del interruptor, uno sobre otro, sobre el papel.
+class _SwitchStates extends StatelessWidget {
+  const _SwitchStates();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Material(
+      color: UnaColors.paper,
+      child: SafeArea(
+        child: Padding(
+          // El margen lateral de las filas de Ajustes.
+          padding: const EdgeInsets.symmetric(horizontal: UnaSpace.l),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final on in [false, true]) ...[
+                UnaSwitchRow(
+                  icon: UnaIcons.phone,
+                  label: l10n.settingsKeepAwake,
+                  subtitle: l10n.settingsKeepAwakeHint,
+                  value: on,
+                  onToggle: () {},
+                ),
+                const SizedBox(height: UnaSpace.l),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('CA-012-01: nivel 1 (Configuración y perfil)', (tester) async {
-    await _pump(tester, const SettingsScreen());
-    await _golden(tester, 'settings_level1_es');
-  }, skip: _skip);
+  for (final lang in _langs) {
+    for (final scale in _scales) {
+      final name = '${lang}_x${scale.toStringAsFixed(1)}';
 
-  testWidgets('CA-012-03: nivel 2 (lista de licencias)', (tester) async {
-    await _pump(tester, const LicensesScreen());
-    await _golden(tester, 'settings_level2_es');
-  }, skip: _skip);
+      testWidgets('CA-015-01b: Ajustes (nivel 1), $name', (tester) async {
+        await _pump(tester, const SettingsScreen(), lang: lang, scale: scale);
+        await _golden(tester, 'settings_$name');
+      }, skip: _skip);
 
-  testWidgets('CA-012-03: nivel 3 (texto de una licencia)', (tester) async {
-    await _pump(tester, LicenseDetailScreen(package: _packages[3]));
-    await _golden(tester, 'settings_level3_es');
-  }, skip: _skip);
+      testWidgets('CA-015-03: los dos estados del interruptor, $name', (
+        tester,
+      ) async {
+        await _pump(tester, const _SwitchStates(), lang: lang, scale: scale);
+        await _golden(tester, 'settings_switch_$name');
+      }, skip: _skip);
+
+      testWidgets('CA-015-07: página de Idioma (nivel 2), $name', (
+        tester,
+      ) async {
+        await _pump(tester, const LanguagePage(), lang: lang, scale: scale);
+        await _golden(tester, 'settings_language_$name');
+      }, skip: _skip);
+    }
+  }
 }

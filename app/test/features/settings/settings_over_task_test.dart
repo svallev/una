@@ -5,19 +5,16 @@ import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
-import 'package:app/domain/entities/license_package.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/attachment_store.dart';
-import 'package:app/domain/ports/license_source.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
 import 'package:app/features/menu/menu_sheet.dart';
-import 'package:app/features/settings/license_detail_screen.dart';
-import 'package:app/features/settings/licenses_screen.dart';
+import 'package:app/features/settings/language_page.dart';
 import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/features/web/web_bar.dart';
 import 'package:app/ui/wordmark.dart';
@@ -38,14 +35,17 @@ import '../../support/fake_web_page_driver.dart';
 import '../../support/pdfrx.dart';
 import '../../support/pump_app.dart' show sampleTask;
 import '../task_list/list_harness.dart' show FakeClock, background;
+import 'settings_harness.dart' show focusedLabel;
 
-/// La Configuración (spec 012) abierta sobre una tarea con web, PDF o imagen:
-/// la tarea de debajo no cambia (CA-012-14), no pide girar (CL-012-3) y se abre
-/// desde el menú de cualquier tarea (CA-012-01, CL-012-1).
+/// Ajustes (spec 015) abierto sobre una tarea con web, PDF o imagen: la tarea
+/// de debajo no cambia (CA-015-15), no pide girar (CL-015-2) y se abre desde el
+/// menú de cualquier tarea (CA-015-01a). El menú se cierra al abrirlo y al
+/// cerrar Ajustes se vuelve a la tarea (CA-015-02), con el foco en el botón de
+/// menú.
 ///
 /// Texto de las tareas neutro (ni ES ni EN).
 
-const _menuLabel = 'Configuración y perfil';
+const _menuLabel = 'Ajustes';
 const _webAddress = 'https://www.zxq.example/qz';
 
 class _Opener implements LinkOpener {
@@ -59,20 +59,6 @@ class _Opener implements LinkOpener {
     opened.add(target);
     return true;
   }
-}
-
-/// Fuente de licencias sin registro: dos elementos, uno con dos textos.
-class _Source implements LicenseSource {
-  @override
-  Future<List<LicensePackage>> load() async => const [
-    LicensePackage(
-      name: 'zxq_pkg',
-      texts: [
-        LicenseText([(text: 'Zxq licence text one.', indent: 0)]),
-        LicenseText([(text: 'Zxq licence text two.', indent: 0)]),
-      ],
-    ),
-  ];
 }
 
 Task _webTask() {
@@ -202,7 +188,6 @@ void main() {
       if (!realPdf) ...fakePdfViews,
       ...web.overrides,
       linkOpenerProvider.overrideWithValue(opener),
-      licenseSourceProvider.overrideWithValue(_Source()),
     ];
     await pumpUnaApp(tester, repo: repo, clock: clock, overrides: overrides);
     if (realPdf) {
@@ -234,16 +219,18 @@ void main() {
     await tester.tap(find.text(_menuLabel));
     await settle(tester, pdf: pdf);
     expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(find.byType(MenuSheet), findsNothing, reason: 'el menú se cerró');
   }
 
   Future<void> closeSettings(WidgetTester tester, {bool pdf = false}) async {
-    await tester.tap(find.bySemanticsLabel('Cerrar'));
+    await tester.tap(find.bySemanticsLabel('Cerrar ajustes'));
     await settle(tester, pdf: pdf);
     expect(find.byType(SettingsScreen), findsNothing);
-    expect(find.byType(MenuSheet), findsOneWidget);
+    expect(find.byType(MenuSheet), findsNothing);
   }
 
-  /// Abre la política, confirma y comprueba que se pidió al navegador.
+  /// Abre la política (directamente, sin confirmación) y comprueba que se pidió
+  /// al navegador.
   Future<void> openPolicyInBrowser(
     WidgetTester tester, {
     bool pdf = false,
@@ -255,13 +242,11 @@ void main() {
       ),
     );
     await settle(tester, pdf: pdf);
-    expect(find.byType(LinkConfirmSheet), findsOneWidget);
-    await tester.tap(find.text('Abrir'));
-    await settle(tester, pdf: pdf);
+    expect(find.byType(LinkConfirmSheet), findsNothing);
     expect(opener.opened, hasLength(1));
   }
 
-  group('CA-012-01, CL-012-1: se abre desde el menú de cualquier tarea', () {
+  group('CA-015-01a, CL-015-1: se abre desde el menú de cualquier tarea', () {
     final kinds = <(String, Future<Task> Function())>[
       ('solo texto', () async => sampleTask(text: 'Zxq texto')),
       ('con imagen', () => _imageTask(store)),
@@ -269,19 +254,20 @@ void main() {
       ('con web', () async => _webTask()),
     ];
     for (final (name, build) in kinds) {
-      testWidgets('$name: abre el nivel 1 y al cerrar vuelve al menú', (
+      testWidgets('$name: abre el nivel 1 y al cerrar vuelve a la tarea', (
         tester,
       ) async {
         await pumpWith(tester, await build());
         await openSettings(tester);
         expect(find.byType(SettingsScreen), findsOneWidget);
         await closeSettings(tester);
-        expect(find.text(_menuLabel), findsOneWidget);
+        expect(find.text(_menuLabel), findsNothing);
+        expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
       });
     }
   });
 
-  group('CA-012-14: la tarea de debajo no cambia', () {
+  group('CA-015-15: la tarea de debajo no cambia', () {
     testWidgets('web: se vuelve a cargar al volver, con la misma WebView '
         '(la ruta a pantalla completa cuenta como salir de la página)', (
       tester,
@@ -310,7 +296,7 @@ void main() {
     });
 
     testWidgets('web: abrir la política en el navegador y volver en menos de '
-        '10 minutos deja la Configuración abierta; la página se carga al '
+        '10 minutos deja Ajustes abierto; la página se carga al '
         'cerrarla', (tester) async {
       final clock = await pumpWith(tester, _webTask());
       final page = web.last;
@@ -354,10 +340,55 @@ void main() {
       expect(web.last.loads.last, Uri.parse(_webAddress));
       expect(web.drivers, hasLength(2), reason: 'una WebView nueva');
       expect(web.last, isNot(same(page)));
+      // CA-015-16: la tarea, con el foco en el botón de menú.
+      expect(focusedLabel(tester), 'Menú de la tarea');
+    });
+
+    testWidgets('CA-015-16: volver del navegador a 9:59 deja Ajustes y sin '
+        'petición de foco; a 10:00 la tarea tiene el foco de teclado y del '
+        'lector en el botón de menú (un solo aviso)', (tester) async {
+      final handle = tester.ensureSemantics();
+      final focusEvents = <int>[];
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(SystemChannels.accessibility, (
+            message,
+          ) async {
+            final map = message! as Map<Object?, Object?>;
+            if (map['type'] == 'focus') focusEvents.add(map['nodeId']! as int);
+            return null;
+          });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+      final clock = await pumpWith(tester, sampleTask(text: 'Zxq texto'));
+      await openSettings(tester);
+      await openPolicyInBrowser(tester);
+      focusEvents.clear();
+
+      background(tester, clock, const Duration(minutes: 9, seconds: 59));
+      await settle(tester);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(focusedLabel(tester), isNot('Menú de la tarea'));
+      expect(focusEvents, isEmpty);
+
+      background(tester, clock, UnaApp.resetAfter);
+      await settle(tester);
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.byType(MenuSheet), findsNothing);
+      expect(focusedLabel(tester), 'Menú de la tarea');
+      final node = tester.getSemantics(
+        find.bySemanticsLabel('Menú de la tarea'),
+      );
+      expect(focusEvents, [node.id]);
+      handle.dispose();
     });
 
     testWidgets('PDF: conserva su página y su zoom (mismo visor, mismo '
-        'controlador) tras abrir los tres niveles y la política', (
+        'controlador) tras abrir los dos niveles y la política', (
       tester,
     ) async {
       final semantics = tester.ensureSemantics();
@@ -393,16 +424,11 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(SettingsScreen),
-          matching: find.text('Licencias de código abierto'),
+          matching: find.text('Idioma'),
         ),
       );
       await settle(tester, pdf: true);
-      expect(find.byType(LicensesScreen), findsOneWidget);
-      await tester.tap(find.text('zxq_pkg'));
-      await settle(tester, pdf: true);
-      expect(find.byType(LicenseDetailScreen), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await settle(tester, pdf: true);
+      expect(find.byType(LanguagePage), findsOneWidget);
       await tester.binding.handlePopRoute();
       await settle(tester, pdf: true);
       expect(find.byType(SettingsScreen), findsOneWidget);
@@ -420,9 +446,7 @@ void main() {
       );
       expect(controller.currentZoom, closeTo(zoom, 0.0001));
       expect(controller.visibleRect.top, closeTo(top, 0.5));
-      // Con el menú cerrado, el lector vuelve a leer la misma página.
-      await tester.tapAt(const Offset(20, 60)); // Fuera de la hoja.
-      await settle(tester, pdf: true);
+      // Con el menú ya cerrado, el lector vuelve a leer la misma página.
       expect(find.byType(MenuSheet), findsNothing);
       expect(find.bySemanticsLabel(page2), findsOneWidget);
       // pdfrx deja temporizadores propios: se desmonta y se dejan correr.
@@ -432,7 +456,7 @@ void main() {
     });
 
     testWidgets('imagen: es la misma (mismo estado, sin volver a cargarse) '
-        'tras abrir y cerrar la Configuración', (tester) async {
+        'tras abrir y cerrar Ajustes', (tester) async {
       await pumpWith(tester, await _imageTask(store));
       expect(find.byType(TaskImage), findsOneWidget);
       final image = tester.state(find.byType(TaskImage));
@@ -451,15 +475,15 @@ void main() {
     });
   });
 
-  group('CL-012-3: la Configuración no pide girar', () {
+  group('CL-015-2: Ajustes no pide girar', () {
     final kinds = <(String, Future<Task> Function())>[
       ('imagen', () => _imageTask(store)),
       ('PDF', () => _pdfTask(store)),
       ('web', () async => _webTask()),
     ];
     for (final (name, build) in kinds) {
-      testWidgets('$name: gira con la tarea a la vista; con el menú, los tres '
-          'niveles y la confirmación de la política, no', (tester) async {
+      testWidgets('$name: gira con la tarea a la vista; con el menú, los dos '
+          'niveles y la política abierta, no', (tester) async {
         await pumpWith(tester, await build());
         expect(rotating(), isTrue);
         expect(orientations.last, contains('DeviceOrientation.landscapeLeft'));
@@ -474,45 +498,35 @@ void main() {
         expect(rotating(), isFalse);
         expect(orientations.last, ['DeviceOrientation.portraitUp']);
 
-        // Nivel 2 y 3.
+        // Nivel 2.
         await tester.tap(
           find.descendant(
             of: find.byType(SettingsScreen),
-            matching: find.text('Licencias de código abierto'),
+            matching: find.text('Idioma'),
           ),
         );
         await settle(tester);
+        expect(find.byType(LanguagePage), findsOneWidget);
         expect(rotating(), isFalse);
-        await tester.tap(find.text('zxq_pkg'));
-        await settle(tester);
-        expect(find.byType(LicenseDetailScreen), findsOneWidget);
-        expect(rotating(), isFalse);
-        await tester.binding.handlePopRoute();
-        await settle(tester);
         await tester.binding.handlePopRoute();
         await settle(tester);
 
-        // La confirmación de la política: solo aquí la app dejaría girar la
-        // tarea de debajo si no se hubiera pedido lo contrario.
+        // La política se abre directamente (CA-015-12a): Ajustes sigue encima
+        // y la tarea no gira.
         await tester.tap(
           find.descendant(
             of: find.byType(SettingsScreen),
             matching: find.text('Política de privacidad'),
           ),
         );
-        await tester.pumpAndSettle();
-        expect(find.byType(LinkConfirmSheet), findsOneWidget);
-        expect(linkConfirmOpen.value, isFalse);
+        await settle(tester);
+        expect(find.byType(LinkConfirmSheet), findsNothing);
+        expect(find.byType(SettingsScreen), findsOneWidget);
         expect(rotating(), isFalse);
         expect(orientations.last, ['DeviceOrientation.portraitUp']);
-        await tester.tap(find.text('Cancelar'));
-        await settle(tester);
 
         // De vuelta: cerrado todo, gira otra vez.
         await closeSettings(tester);
-        expect(rotating(), isFalse, reason: 'el menú sigue abierto');
-        await tester.tapAt(const Offset(20, 60)); // Fuera de la hoja.
-        await settle(tester);
         expect(find.byType(MenuSheet), findsNothing);
         expect(rotating(), isTrue);
       });
@@ -531,8 +545,8 @@ void main() {
     });
 
     testWidgets('si se vuelve en horizontal (p. ej. del navegador) vale lo que '
-        'ya hace la app: con menos de 10 minutos, la Configuración; con 10 o '
-        'más, la tarea sin menú (CA-012-06)', (tester) async {
+        'ya hace la app: con menos de 10 minutos, Ajustes; con 10 o '
+        'más, la tarea sin menú (CA-015-16)', (tester) async {
       final clock = await pumpWith(tester, await _imageTask(store));
       addTearDown(tester.view.reset);
       await openSettings(tester);
@@ -552,6 +566,13 @@ void main() {
       expect(find.byType(Wordmark), findsOneWidget);
       expect(find.bySemanticsLabel('Menú de la tarea'), findsNothing);
       expect(rotating(), isTrue);
+
+      // Sin botón no queda nada pendiente: al volver a vertical, el botón
+      // nuevo no se lleva el foco.
+      tester.view.physicalSize = const Size(390, 844);
+      await settle(tester);
+      expect(find.bySemanticsLabel('Menú de la tarea'), findsOneWidget);
+      expect(focusedLabel(tester), isNot('Menú de la tarea'));
     });
   });
 }

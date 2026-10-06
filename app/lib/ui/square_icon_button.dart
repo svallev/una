@@ -14,6 +14,9 @@ class SquareIconButton extends StatefulWidget {
     required this.label,
     required this.fill,
     required this.onPressed,
+    this.focusNode,
+    this.semanticsKey,
+    this.autofocus = false,
   });
   final UnaIconData icon;
   final String label;
@@ -22,6 +25,18 @@ class SquareIconButton extends StatefulWidget {
   /// un cuadrado negro (en el CSS del prototipo, la sombra solo va por fuera).
   final Color fill;
   final VoidCallback onPressed;
+
+  /// Foco de teclado del botón, para dárselo desde fuera (al volver de otra
+  /// pantalla).
+  final FocusNode? focusNode;
+
+  /// Clave del nodo accesible del botón, para enviar desde él el aviso de foco
+  /// del lector.
+  final GlobalKey? semanticsKey;
+
+  /// Si pide el foco de teclado al montarse (p. ej. Cerrar o Volver de
+  /// Ajustes con teclado físico, CA-015-21a).
+  final bool autofocus;
 
   @override
   State<SquareIconButton> createState() => _SquareIconButtonState();
@@ -35,6 +50,8 @@ class _SquareIconButtonState extends State<SquareIconButton> {
   Widget build(BuildContext context) {
     const sink = UnaShadows.iconButton;
     return FocusableActionDetector(
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
       mouseCursor: SystemMouseCursors.click,
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       actions: {
@@ -46,6 +63,7 @@ class _SquareIconButtonState extends State<SquareIconButton> {
         ),
       },
       child: Semantics(
+        key: widget.semanticsKey,
         button: true,
         label: widget.label,
         excludeSemantics: true,

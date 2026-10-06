@@ -219,6 +219,22 @@ adb -s $S install -r /tmp/app-profile.apk
 
 - **[Hecho]** nivel 2 en 48 ms (< 300 ms); construcción muy por debajo de 16,7 ms. **[Suposición]** el rasterizado de ~16-17 ms es del emulador (sin GPU, 60 Hz): el control da lo mismo y el listado ya está aprobado en el Xiaomi. **[Pendiente]** p90 real en el Xiaomi.
 
+## Arranque en frío con Ajustes (spec 015, T-015-13, CA-015-23)
+
+- **Fecha:** 2026-10-05 · **Rama:** `feat/015-ajustes` (con T-015-01 a 11 y 07b) · **Línea base:** `main` (`f055afd`, sin Ajustes), en un `git worktree` temporal. Las dos, `flutter build apk --release --split-per-abi --target-platform android-arm64` (base 28 928 372 B; nueva 28 862 836 B: **−66 KB** al salir las pantallas de licencias).
+- **Dispositivo:** emulador `Pixel_6a` (API 37, arm64, sin GPU), `emulator-5554`; **solo compara** las dos compilaciones entre sí (no es la medida real de P2; el Xiaomi no se ha usado). App real `invalid.pending.app` con una tarea de texto creada a mano; ajustes por defecto (el arranque lee `locale` y `keepScreenOn` antes del primer fotograma).
+- **Método:** cuatro pasadas **alternadas** (base, nueva, base, nueva) con `tools/measure-cold-start.sh emulator-5554 20`; antes de cada una, `adb install -r` y un arranque de calentamiento más 5 s de espera.
+
+| Pasada | Compilación | mín | **p50** | p90 | máx |
+|---|---|---|---|---|---|
+| 1 | base (sin 015) | 403 | **425** | 448 | 544 |
+| 2 | nueva (015) | 401 | **418** | 429 | 450 |
+| 3 | base (sin 015) | 403 | **422** | 439 | 466 |
+| 4 | nueva (015) | 403 | **421** | 447 | 459 |
+
+- **[Hecho]** CA-015-23: p50 de 418-421 ms (< 1 s) y la nueva no es más lenta que la base (media 423,5 ms la base y 419,5 ms la nueva: −4 ms; la diferencia entre las dos pasadas de la base es 3 ms). **[Pendiente]** ~~repetirlo en el Xiaomi~~ hecho el 2026-10-05, abajo.
+- **Xiaomi 15T Pro (2026-10-05, con permiso del propietario; app real, `adb install -r`, datos intactos):** las mismas dos compilaciones, ocho pasadas alternadas (base, nueva, …) de 20 arranques con `tools/measure-cold-start.sh`, calentamiento y 5 s de espera antes de cada una. p50 base **210, 213, 224, 222** ms (media 217) y nueva **208, 236, 228, 220** ms (media 223); p90 219-307 ms. **[Hecho]** CA-015-23: p50 < 1 s con un margen enorme (≈ 22 % del presupuesto) y **sin diferencia** entre las dos (+6 ms, dentro de la deriva: la base varía 14 ms entre pasadas; la pasada 4 de la nueva tuvo un p90 de 307 ms y un arranque sin dato). Queda instalada la compilación de la rama.
+
 ## Cómo repetir la medición
 
 ```bash

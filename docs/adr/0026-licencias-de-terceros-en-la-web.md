@@ -49,7 +49,7 @@ Criterios (peso): respeta la decisión del propietario D26/P-5 (3), cumplimiento
 
 - **Positivas:**
   - Se cumple D26: se retiran `LicensesScreen`, `LicenseDetailScreen`, `licensesProvider`, `FlutterLicenseSource`, `LicenseSource`, `LicensePackage`, `license_names.dart`, `registerBundledLicenses`/`bundled_licenses.dart`, sus *goldens*, sus tests y las cadenas `settingsLicenses`, `licensesTitle`, `licensesLoading`, `licensesCount`, `licensesError`, `licensesTextOf` y `licensesAndroidLibraries` (si nada más las usa, lo comprueba el plan). Deja de existir la deuda de accesibilidad de esas pantallas (CA-013-01/02).
-  - Sin dependencias, permisos ni esquema nuevos; sigue sin haber red hecha por la app: quien abre la web es el navegador, tras la confirmación de enlace (CA-015-12).
+  - Sin dependencias, permisos ni esquema nuevos; sigue sin haber red hecha por la app: quien abre la web es el navegador, directamente al tocar la fila, sin confirmación previa (CA-015-12a, enmienda del propietario del 2026-10-05).
   - Lo publicado en la web es lo comprobado, versión a versión.
 - **Negativas y su mitigación:**
   - **P3: sin conexión no se ven las licencias** (ni la política ni la ayuda). Aceptado por el propietario. Mitigación: los textos van dentro del paquete (opción 3), aunque no se muestren. Se anota en P3 (constitución 1.7).

@@ -374,10 +374,10 @@ abstract class AppLocalizations {
   /// **'Nueva tarea'**
   String get menuNewTask;
 
-  /// Botón del menú que abre la pantalla de Configuración y perfil (nivel 1, spec 012) y título de esa pantalla. Antes solo texto (CA-005-09, CL-010-7). CA-012-01
+  /// Botón del menú que abre la pantalla de Ajustes (nivel 1, spec 015). Antes "Configuración y perfil" (spec 012). CA-015-01a
   ///
   /// In es, this message translates to:
-  /// **'Configuración y perfil'**
+  /// **'Ajustes'**
   String get menuSettings;
 
   /// Botón X y fondo del menú. CA-005-02
@@ -854,7 +854,7 @@ abstract class AppLocalizations {
   /// **'No hemos podido leer este PDF.'**
   String get errPdfUnreadable;
 
-  /// Enlace sin navegador ni app que lo abra: en un PDF (CA-008-12) y en la Política de privacidad de la Configuración (CA-012-04)
+  /// Enlace sin navegador ni app que lo abra: en un PDF (CA-008-12) y en las tres webs de Ajustes (CA-015-12b)
   ///
   /// In es, this message translates to:
   /// **'No hay ninguna app para abrir este enlace.'**
@@ -1004,71 +1004,95 @@ abstract class AppLocalizations {
   /// **'Abrir página →'**
   String get urlOpenPageWeb;
 
-  /// Icono del nivel 1 de Configuración y perfil. Propia, distinta de attachSheetClose y menuClose (cada una con su contexto). CA-012-01/11
+  /// Icono de cerrar del nivel 1 de Ajustes. Propia, distinta de attachSheetClose y menuClose (cada una con su contexto). Antes "Cerrar" (spec 012). CA-015-01b/20b
   ///
   /// In es, this message translates to:
-  /// **'Cerrar'**
+  /// **'Cerrar ajustes'**
   String get settingsClose;
 
-  /// Opción del nivel 1 que abre la lista de licencias. CA-012-01/03
-  ///
-  /// In es, this message translates to:
-  /// **'Licencias de código abierto'**
-  String get settingsLicenses;
-
-  /// Opción del nivel 1 que abre la política en el navegador, tras confirmar. CA-012-01/04
+  /// Opción del nivel 1 que abre la política en el navegador, directamente. CA-012-01, CA-015-12a
   ///
   /// In es, this message translates to:
   /// **'Política de privacidad'**
   String get settingsPrivacy;
 
-  /// Pista del lector de pantalla de Política de privacidad. CA-012-11
+  /// Encabezado de la pantalla de Ajustes (nivel 1), foco inicial del lector. CA-015-01b/20
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes'**
+  String get settingsTitle;
+
+  /// Fila de Ajustes que abre la página de idioma y título de esa página (nivel 2). CA-015-06/07
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma'**
+  String get settingsLanguage;
+
+  /// Primera opción de la página de idioma y valor por defecto; debajo muestra el idioma que resulta. CA-015-06/07/10
+  ///
+  /// In es, this message translates to:
+  /// **'Como el sistema'**
+  String get settingsLanguageSystem;
+
+  /// Nombre del español, igual en los dos idiomas y marcado con su idioma (es) para el lector. Opción y valor de la fila. CA-015-06/11
+  ///
+  /// In es, this message translates to:
+  /// **'Español'**
+  String get languageSpanish;
+
+  /// Nombre del inglés, igual en los dos idiomas y marcado con su idioma (en) para el lector. Opción y valor de la fila. CA-015-06/11
+  ///
+  /// In es, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// Nombre del interruptor que mantiene la pantalla encendida con imagen, PDF o web. CA-015-03
+  ///
+  /// In es, this message translates to:
+  /// **'Pantalla siempre activa'**
+  String get settingsKeepAwake;
+
+  /// Subtítulo del interruptor de pantalla siempre activa; se lee junto al nombre. CA-015-03
+  ///
+  /// In es, this message translates to:
+  /// **'Imágenes, documentos y web'**
+  String get settingsKeepAwakeHint;
+
+  /// Encabezado del bloque 3 de Ajustes (no se puede pulsar). CA-015-01b
+  ///
+  /// In es, this message translates to:
+  /// **'Información'**
+  String get settingsInfo;
+
+  /// Fila de Ajustes que abre en el navegador la web con las licencias de terceros, directamente. CA-015-12/14
+  ///
+  /// In es, this message translates to:
+  /// **'Licencias de terceros'**
+  String get settingsThirdPartyLicenses;
+
+  /// Fila de Ajustes que abre en el navegador la web de ayuda, directamente. CA-015-12a
+  ///
+  /// In es, this message translates to:
+  /// **'Ayuda'**
+  String get settingsHelp;
+
+  /// Se une al nombre de las tres filas de web de Ajustes (no es una pista aparte). CA-015-20
   ///
   /// In es, this message translates to:
   /// **'Abre una página web en el navegador'**
-  String get settingsPrivacyHint;
+  String get settingsOpensWebHint;
 
-  /// Encabezado del nivel 2 (lista de licencias). CA-012-03/11
+  /// Aviso (región viva) cuando falla el guardado de un ajuste; no muestra el error. CA-015-25
   ///
   /// In es, this message translates to:
-  /// **'Licencias de código abierto'**
-  String get licensesTitle;
+  /// **'No se pudo guardar el ajuste.'**
+  String get settingsSaveError;
 
-  /// Estado de carga del nivel 2; se anuncia al lector. CA-012-15
-  ///
-  /// In es, this message translates to:
-  /// **'Cargando licencias…'**
-  String get licensesLoading;
-
-  /// Bajo el nombre de cada elemento de la lista de licencias; el lector dice "nombre, N licencias". CA-012-03/11
-  ///
-  /// In es, this message translates to:
-  /// **'{count, plural, one{1 licencia} other{{count} licencias}}'**
-  String licensesCount(int count);
-
-  /// Botón de volver de los niveles 2 y 3. CA-012-02/11
+  /// Botón de volver del nivel 2 (página de idioma) de Ajustes. CA-015-02
   ///
   /// In es, this message translates to:
   /// **'Volver'**
-  String get licensesBack;
-
-  /// Error de lectura de las licencias, con Reintentar. CA-012-15
-  ///
-  /// In es, this message translates to:
-  /// **'No se pudieron cargar las licencias.'**
-  String get licensesError;
-
-  /// Encabezado de cada texto de licencia en el nivel 3 cuando un elemento tiene varias (el título del nivel es el nombre del elemento). CA-012-03/11
-  ///
-  /// In es, this message translates to:
-  /// **'Licencia {n} de {total}'**
-  String licensesTextOf(int n, int total);
-
-  /// Nombre de la entrada propia de las bibliotecas de Android en la lista de licencias y título de su nivel 3; texto de la app, no de terceros. CA-013-01
-  ///
-  /// In es, this message translates to:
-  /// **'Bibliotecas de Android (AndroidX, Kotlin)'**
-  String get licensesAndroidLibraries;
+  String get settingsBack;
 }
 
 class _AppLocalizationsDelegate

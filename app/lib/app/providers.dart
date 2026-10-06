@@ -7,21 +7,19 @@ import 'package:uuid/uuid.dart';
 
 import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
-import '../data/licenses/flutter_license_source.dart';
 import '../data/links/native_link_opener.dart';
 import '../data/links/new_tab.dart';
 import '../data/platform/accessibility_timeouts.dart';
 import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
-import '../domain/entities/license_package.dart';
+import '../domain/entities/locale_choice.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/accessibility_timeouts.dart';
 import '../domain/ports/attachment_store.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
 import '../domain/ports/image_importer.dart';
-import '../domain/ports/license_source.dart';
 import '../domain/ports/link_opener.dart';
 import '../domain/ports/pdf_importer.dart';
 import '../domain/ports/task_repository.dart';
@@ -107,24 +105,6 @@ final importPdfProvider = Provider<ImportPdf>(
 final linkOpenerProvider = Provider<LinkOpener>(
   (ref) => const NativeLinkOpener(),
 );
-
-/// De dónde salen las licencias (spec 012): el registro de Flutter; en los
-/// tests, una fuente falsa. No lee nada hasta que se pide [licensesProvider].
-final licenseSourceProvider = Provider<LicenseSource>(
-  (ref) => FlutterLicenseSource(),
-);
-
-/// Las licencias de lo de terceros (CA-012-03). Se leen solo al abrir el nivel 2
-/// (CA-012-16) y se sueltan al salir. Una lista vacía es un error (spec 012 §5).
-/// Sin reintento automático (el de Riverpod 3 taparía el error): "Reintentar"
-/// invalida el proveedor (CA-012-15).
-final licensesProvider = FutureProvider.autoDispose<List<LicensePackage>>((
-  ref,
-) async {
-  final packages = await ref.watch(licenseSourceProvider).load();
-  if (packages.isEmpty) throw const LicensesUnavailable();
-  return packages;
-}, retry: (_, _) => null);
 
 /// Web de pruebas (ADR-0010): la tarea web no tiene WebView; se ve como la
 /// tarjeta del prototipo, con "Abrir página →" (CL-009-5).
@@ -262,6 +242,27 @@ class ScreenFocus extends Notifier<int> {
   void signal() => state++;
 }
 
+/// El botón de menú de la tarea debe recuperar el foco (teclado y lector de
+/// pantalla): al cerrar Ajustes (spec 015, CA-015-02) y al volver a la tarea
+/// tras 10 minutos o más en segundo plano con alguna pantalla encima
+/// (CA-015-16). Es una petición pendiente, no un contador: si el botón existe
+/// la toma en cuanto se pide; si se monta después (la tarea se vuelve a crear
+/// al volver de los 10 minutos), la toma al crearse; y quien la pide la retira
+/// en cuanto ha pasado el fotograma (sin botón, p. ej. la tarea con imagen en
+/// horizontal, no queda nada pendiente que se lleve el foco más tarde).
+final menuFocusProvider = NotifierProvider<MenuFocus, bool>(MenuFocus.new);
+
+class MenuFocus extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void request() => state = true;
+
+  void clear() {
+    if (state) state = false;
+  }
+}
+
 /// Tarea actual: arranca con la leída en el arranque y sigue los cambios de la BD.
 final currentTaskProvider = NotifierProvider<CurrentTaskController, Task?>(
   CurrentTaskController.new,
@@ -313,6 +314,12 @@ class FirstRunController extends Notifier<bool> {
 /// Lee lo que decide la primera pantalla (CA-001-09). Con una tarea actual,
 /// es que ya se guardó alguna; si no, lo dice el ajuste: "Todo hecho." o el
 /// editor de la primera tarea (CA-003-11, CA-004-08, ADR-0012).
+///
+/// La tarea actual se lee **primero**: una base de datos inaccesible
+/// falla ahí y sale la pantalla de error de almacenamiento (CL-015-16). Los
+/// dos ajustes de Ajustes (idioma y pantalla siempre activa) se leen después,
+/// cada uno en su propio `try/catch`: si no se puede leer, vale su valor por
+/// defecto y el arranque sigue (CA-015-26).
 Future<BootState> readBootState(
   TaskRepository tasks,
   SettingsRepository settings,
@@ -322,8 +329,19 @@ Future<BootState> readBootState(
     currentTask: current,
     firstRunDone: await settings.firstRunDone(),
     hasEverHadTasks: current != null || await settings.hasEverHadTasks(),
-    keepScreenOn: await settings.keepScreenOn(),
+    keepScreenOn: await _orDefault(settings.keepScreenOn, false),
+    locale: await _orDefault(settings.locale, LocaleChoice.system),
   );
+}
+
+/// El valor de [read], o [fallback] ante **cualquier** fallo. No se registra
+/// el error (MASVS-STORAGE: el de SQLite puede llevar datos del usuario).
+Future<T> _orDefault<T>(Future<T> Function() read, T fallback) async {
+  try {
+    return await read();
+  } on Object {
+    return fallback;
+  }
 }
 
 /// Resultado del arranque.
@@ -332,14 +350,19 @@ class BootState {
     required this.currentTask,
     required this.firstRunDone,
     this.hasEverHadTasks = false,
-    this.keepScreenOn = true,
+    this.keepScreenOn = false,
+    this.locale = LocaleChoice.system,
   });
   final Task? currentTask;
   final bool firstRunDone;
   final bool hasEverHadTasks;
 
-  /// Ajuste "Mantener la pantalla encendida con adjuntos" (CA-007-12).
+  /// Ajuste "Pantalla siempre activa" (CA-015-04): apagado por defecto.
   final bool keepScreenOn;
+
+  /// Idioma elegido en Ajustes (CA-015-10): ya leído para que el primer
+  /// fotograma salga en ese idioma.
+  final LocaleChoice locale;
 }
 
 class UuidV7Ids implements IdGenerator {

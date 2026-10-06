@@ -3,16 +3,13 @@ import 'package:flutter/material.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
-import '../../ui/request_focus.dart';
 import '../../ui/sheet_row.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
-import '../settings/settings_route.dart';
-import '../settings/settings_screen.dart';
 
 /// Lo que se eligió en el menú (las demás opciones no cierran nada o solo
 /// cierran el menú).
-enum MenuAction { edit, delete, allTasks, newTask }
+enum MenuAction { edit, delete, allTasks, newTask, settings }
 
 /// Abre el menú de la tarea actual (spec 005). Devuelve la acción elegida, o null.
 Future<MenuAction?> showMenuSheet(
@@ -26,12 +23,13 @@ Future<MenuAction?> showMenuSheet(
     onDelete: () => Navigator.of(sheet).pop(MenuAction.delete),
     onAllTasks: () => Navigator.of(sheet).pop(MenuAction.allTasks),
     onNewTask: () => Navigator.of(sheet).pop(MenuAction.newTask),
+    onSettings: () => Navigator.of(sheet).pop(MenuAction.settings),
   ),
 );
 
 /// Menú de la tarea (spec 005, prototipo "HOJA: menú de la nota"): bloque
 /// "Esta tarea" (Editar, Eliminar) y bloque general (Todas mis tareas, Nueva
-/// tarea, Configuración).
+/// tarea, Ajustes).
 class MenuSheet extends StatelessWidget {
   const MenuSheet({
     super.key,
@@ -40,6 +38,7 @@ class MenuSheet extends StatelessWidget {
     required this.onDelete,
     required this.onAllTasks,
     required this.onNewTask,
+    required this.onSettings,
   });
 
   /// Tareas pendientes. Con una sola, "Todas mis tareas" se ve desactivado
@@ -51,6 +50,10 @@ class MenuSheet extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onAllTasks;
   final VoidCallback onNewTask;
+
+  /// "Ajustes": cierra el menú y quien lo abrió sube Ajustes a la vez
+  /// (spec 015, CA-015-01a, P-015-1).
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +136,12 @@ class MenuSheet extends StatelessWidget {
                   onPressed: onNewTask,
                 ),
                 const SizedBox(height: UnaSpace.sm + 2),
-                Center(child: _SettingsButton(label: l10n.menuSettings)),
+                Center(
+                  child: _SettingsButton(
+                    label: l10n.menuSettings,
+                    onPressed: onSettings,
+                  ),
+                ),
               ],
             ),
           ),
@@ -143,49 +151,34 @@ class MenuSheet extends StatelessWidget {
   }
 }
 
-/// "Configuración y perfil": abre el nivel 1 de la Configuración (spec 012,
-/// CA-012-01; enmienda de CA-005-09 y CL-010-7). Un solo toque abre una sola
-/// pantalla (CL-012-2) y, al volver, el foco es de este botón (CA-012-02).
+/// "Ajustes" (spec 015, CA-015-01a; antes "Configuración y perfil", spec 012):
+/// un botón con anillo de foco y zona táctil de 48 dp de alto que cierra el
+/// menú; `_openMenu` sube Ajustes a la vez (P-015-1). Un doble toque lo
+/// entrega una sola vez (CL-015-1).
 class _SettingsButton extends StatefulWidget {
-  const _SettingsButton({required this.label});
+  const _SettingsButton({required this.label, required this.onPressed});
 
   final String label;
+  final VoidCallback onPressed;
 
   @override
   State<_SettingsButton> createState() => _SettingsButtonState();
 }
 
 class _SettingsButtonState extends State<_SettingsButton> {
-  final _focus = FocusNode(debugLabel: 'menu settings');
-  final _key = GlobalKey();
   bool _opening = false;
 
-  @override
-  void dispose() {
-    _focus.dispose();
-    super.dispose();
-  }
-
-  Future<void> _open() async {
+  void _open() {
     if (_opening) return;
     _opening = true;
-    final back = settingsTransition(context);
-    await openSettings(context);
-    if (!mounted) return;
-    requestFocusAfter(
-      after: back,
-      isMounted: () => mounted,
-      node: _focus,
-      semantics: _key,
-    );
-    _opening = false;
+    widget.onPressed();
   }
 
   @override
   Widget build(BuildContext context) => UnaLinkButton(
     label: widget.label,
-    focusNode: _focus,
-    semanticsKey: _key,
+    // `size.linkButton` mide 44; Android pide 48 dp (androidTapTargetGuideline).
+    height: kMinInteractiveDimension,
     onPressed: _open,
   );
 }

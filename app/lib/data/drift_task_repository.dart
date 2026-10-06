@@ -1,12 +1,12 @@
-import 'dart:convert';
-
 import 'package:drift/drift.dart';
 
 import '../domain/entities/attachment.dart';
+import '../domain/entities/locale_choice.dart';
 import '../domain/entities/rank.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/clock.dart';
 import '../domain/ports/task_repository.dart';
+import '../domain/services/settings_codec.dart';
 import 'db/app_database.dart';
 
 /// Repositorio sobre SQLite (drift). Mismo contrato que [InMemoryTaskRepository].
@@ -15,10 +15,6 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
 
   final AppDatabase db;
   final Clock clock;
-
-  static const _firstRunKey = 'firstRunDone';
-  static const _hasEverHadTasksKey = 'hasEverHadTasks';
-  static const _keepScreenOnKey = 'keepScreenOn';
 
   SimpleSelectStatement<$TasksTable, TaskRow> _pendingQuery() =>
       db.select(db.tasks)
@@ -174,7 +170,7 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
     if (a != null) {
       await db.into(db.attachments).insert(_toAttachmentRow(task.id, a));
     }
-    await _setFlag(_hasEverHadTasksKey, true);
+    await _setFlag(SettingKeys.hasEverHadTasks, true);
   });
 
   @override
@@ -224,63 +220,54 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
     return true;
   });
 
-  @override
-  Future<bool> hasEverHadTasks() => _flag(_hasEverHadTasksKey);
-
-  Future<bool> _flag(String key) async {
+  /// Texto guardado de [key], tal cual (null si no hay fila). Lo decodifica
+  /// siempre `settings_codec.dart`, que no lanza (CA-015-26).
+  Future<String?> _raw(String key) async {
     final row = await (db.select(
       db.settingEntries,
     )..where((s) => s.key.equals(key))).getSingleOrNull();
-    return row != null && jsonDecode(row.value) == true;
+    return row?.value;
   }
 
-  Future<void> _setFlag(String key, bool value) => db
+  Future<void> _setRaw(String key, String value) => db
       .into(db.settingEntries)
       .insertOnConflictUpdate(
         SettingEntriesCompanion.insert(
           key: key,
-          value: jsonEncode(value),
+          value: value,
           updatedAt: clock.now().millisecondsSinceEpoch,
         ),
       );
 
-  @override
-  Future<bool> firstRunDone() async {
-    final row = await (db.select(
-      db.settingEntries,
-    )..where((s) => s.key.equals(_firstRunKey))).getSingleOrNull();
-    return row != null && jsonDecode(row.value) == true;
-  }
+  Future<void> _setFlag(String key, bool value) =>
+      _setRaw(key, encodeFlag(value));
 
   @override
-  Future<void> setFirstRunDone() => db
-      .into(db.settingEntries)
-      .insertOnConflictUpdate(
-        SettingEntriesCompanion.insert(
-          key: _firstRunKey,
-          value: jsonEncode(true),
-          updatedAt: clock.now().millisecondsSinceEpoch,
-        ),
-      );
+  Future<bool> hasEverHadTasks() async =>
+      decodeFlag(await _raw(SettingKeys.hasEverHadTasks));
 
   @override
-  Future<bool> keepScreenOn() async {
-    final row = await (db.select(
-      db.settingEntries,
-    )..where((s) => s.key.equals(_keepScreenOnKey))).getSingleOrNull();
-    return row == null || jsonDecode(row.value) != false;
-  }
+  Future<bool> firstRunDone() async =>
+      decodeFlag(await _raw(SettingKeys.firstRunDone));
 
   @override
-  Future<void> setKeepScreenOn(bool value) => db
-      .into(db.settingEntries)
-      .insertOnConflictUpdate(
-        SettingEntriesCompanion.insert(
-          key: _keepScreenOnKey,
-          value: jsonEncode(value),
-          updatedAt: clock.now().millisecondsSinceEpoch,
-        ),
-      );
+  Future<void> setFirstRunDone() => _setFlag(SettingKeys.firstRunDone, true);
+
+  @override
+  Future<bool> keepScreenOn() async =>
+      decodeKeepScreenOn(await _raw(SettingKeys.keepScreenOn));
+
+  @override
+  Future<void> setKeepScreenOn(bool value) =>
+      _setFlag(SettingKeys.keepScreenOn, value);
+
+  @override
+  Future<LocaleChoice> locale() async =>
+      decodeLocaleChoice(await _raw(SettingKeys.locale));
+
+  @override
+  Future<void> setLocale(LocaleChoice choice) =>
+      _setRaw(SettingKeys.locale, encodeLocaleChoice(choice));
 
   static DateTime _date(int ms) =>
       DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);

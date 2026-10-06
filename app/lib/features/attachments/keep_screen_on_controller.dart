@@ -3,43 +3,45 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../app/providers.dart';
 import '../../data/platform/screen_awake.dart';
+import '../settings/settings_controller.dart';
 
 final screenAwakeProvider = Provider<ScreenAwake>(
   (ref) => const ChannelScreenAwake(),
 );
 
-/// Pantalla encendida con adjuntos (CA-007-12, CA-008-13, CA-009-16): mientras
-/// se ve la tarea actual con imagen, PDF o web (en vertical o en horizontal),
-/// con el ajuste activo, la app en primer plano y menos de 10 minutos sin tocar
-/// la pantalla. El estado es si está encendida.
+/// Pantalla siempre activa (CA-015-04, D10 enmendada; CA-007-12, CA-008-13,
+/// CA-009-16): mientras se ve la tarea actual con imagen, PDF o web (en
+/// vertical o en horizontal), con el ajuste encendido en Ajustes y la app en
+/// primer plano, **sin límite de tiempo** (ya no hay los 10 minutos sin tocar
+/// ni cuentan los toques). El estado es si está encendida.
 final keepScreenOnProvider = NotifierProvider<KeepScreenOnController, bool>(
   KeepScreenOnController.new,
 );
 
 class KeepScreenOnController extends Notifier<bool> {
-  /// Sin tocar la pantalla durante este tiempo, vuelven el apagado y el
-  /// bloqueo normales.
-  static const idleLimit = Duration(minutes: 10);
-
   final Set<Object> _showing = {};
-  bool _enabled = true;
+  bool _enabled = false;
   bool _foreground = true;
-  bool _idle = false;
   bool _on = false;
-  Timer? _timer;
   AppLifecycleListener? _lifecycle;
 
   @override
   bool build() {
-    _enabled = ref.read(bootStateProvider).keepScreenOn;
+    // El ajuste de Ajustes (apagado por defecto). Se lee y se escucha, no se
+    // observa: observarlo reconstruiría el controlador y soltaría la petición.
+    _enabled = ref.read(settingsProvider).keepScreenOn;
+    ref.listen(settingsProvider.select((s) => s.keepScreenOn), (_, value) {
+      _enabled = value;
+      _apply();
+    });
     final awake = ref.read(screenAwakeProvider);
     _lifecycle = AppLifecycleListener(
+      // Cualquier estado distinto de `resumed` (`inactive`, `hidden`,
+      // `paused`) retira la petición (CA-015-04d).
       onStateChange: (s) => _setForeground(s == AppLifecycleState.resumed),
     );
     ref.onDispose(() {
-      _timer?.cancel();
       _lifecycle?.dispose();
       if (_on) unawaited(awake.keepOn(false));
     });
@@ -49,48 +51,22 @@ class KeepScreenOnController extends Notifier<bool> {
   /// [owner] (la tarea actual con imagen, PDF o web) se ve o deja de verse.
   void showing(Object owner, {required bool visible}) {
     if (!ref.mounted) return;
-    final wasEmpty = _showing.isEmpty;
     if (visible) {
       _showing.add(owner);
     } else {
       _showing.remove(owner);
     }
-    // Entrar en la pantalla cuenta como usarla.
-    if (wasEmpty && _showing.isNotEmpty) _restart();
-    _apply();
-  }
-
-  /// Un toque en cualquier parte reinicia los 10 minutos.
-  void touched() {
-    if (_showing.isEmpty) return;
-    _restart();
-    _apply();
-  }
-
-  /// El ajuste de la spec 010.
-  void setEnabled(bool value) {
-    _enabled = value;
     _apply();
   }
 
   void _setForeground(bool value) {
     if (value == _foreground) return;
     _foreground = value;
-    if (value) _restart();
     _apply();
   }
 
-  void _restart() {
-    _idle = false;
-    _timer?.cancel();
-    _timer = Timer(idleLimit, () {
-      _idle = true;
-      _apply();
-    });
-  }
-
   void _apply() {
-    final on = _enabled && _foreground && _showing.isNotEmpty && !_idle;
+    final on = _enabled && _foreground && _showing.isNotEmpty;
     if (on == _on || !ref.mounted) return;
     _on = state = on;
     unawaited(ref.read(screenAwakeProvider).keepOn(on));

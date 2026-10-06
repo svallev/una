@@ -65,7 +65,7 @@ final _cases = <_Case>[
     'SquareIconButton',
     ({required onPressed}) => SquareIconButton(
       icon: UnaIcons.menu,
-      label: 'Configuración y perfil',
+      label: 'Cerrar ajustes',
       fill: UnaColors.surface,
       onPressed: onPressed ?? () {},
     ),
