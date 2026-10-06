@@ -523,20 +523,22 @@ class UndoController extends Notifier<UndoState> {
     if (task != null && janitor != null) _discard(task, janitor);
   }
 
-  /// Borra los archivos retenidos de [task], aparte y sin lanzar (si falla,
-  /// los recoge el barrido del siguiente arranque).
+  /// Borra los archivos retenidos de **todas** las fotos de [task] (spec 016),
+  /// aparte y sin lanzar (si falla, los recoge el barrido del siguiente
+  /// arranque).
   static void _discard(Task task, AttachmentJanitor janitor) {
-    final attachment = task.attachment;
-    if (attachment == null) return;
-    unawaited(_discardQuietly(janitor, attachment.id));
+    if (task.attachments.isEmpty) return;
+    unawaited(
+      _discardQuietly(janitor, [for (final a in task.attachments) a.id]),
+    );
   }
 
   static Future<void> _discardQuietly(
     AttachmentJanitor janitor,
-    String id,
+    List<String> ids,
   ) async {
     try {
-      await janitor.discardHeld(id);
+      await janitor.discardHeldAll(ids);
     } on Object {
       // Sin registro: lo recoge el barrido.
     }

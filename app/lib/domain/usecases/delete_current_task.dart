@@ -40,22 +40,22 @@ class DeleteCurrentTask {
   }
 }
 
-/// Quita la fila de [task] reteniendo antes sus archivos (ADR-0021): si no se
-/// llega a quitar (falla o ya no estaba), los suelta, pero solo si los ha
-/// retenido esta llamada. Relanza los errores de escritura.
+/// Quita la fila de [task] reteniendo antes los archivos de **todas** sus
+/// fotos (ADR-0021, spec 016): si no se llega a quitar (falla o ya no
+/// estaba), los suelta, pero solo los que ha retenido esta llamada. Relanza
+/// los errores de escritura.
 Future<bool> removeHolding(
   TaskRepository repository,
   AttachmentJanitor janitor,
   Task task,
 ) async {
-  final attachment = task.attachment;
-  if (attachment == null) return repository.remove(task.id);
-  final held = janitor.hold(attachment.id);
+  if (task.attachments.isEmpty) return repository.remove(task.id);
+  final held = janitor.holdAll([for (final a in task.attachments) a.id]);
   var removed = false;
   try {
     removed = await repository.remove(task.id);
     return removed;
   } finally {
-    if (held && !removed) janitor.releaseHeld(attachment.id);
+    if (!removed) janitor.releaseHeldAll(held);
   }
 }
