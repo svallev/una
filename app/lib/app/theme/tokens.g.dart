@@ -485,6 +485,9 @@ abstract final class UnaMotion {
 
   /// Transición de una foto a otra del carrusel, con la curva photoSwipe (prototipo: transform .28s). Sin transición con reducir movimiento. CA-016-09, CA-016-22
   static const Duration photoSwipe = Duration(milliseconds: 280);
+
+  /// Retardo, tras el fotograma que lleva el foco a la pila del editor, antes de anunciar las fotos añadidas (asertivo), para que no lo pise la lectura de la pila ni el "Preparando…" anterior. No es una animación: no cambia con reducir movimiento. CA-016-21
+  static const Duration announceAfterFocus = Duration(milliseconds: 300);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);

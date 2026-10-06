@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show Tristate;
 
 import 'package:app/app/providers.dart';
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
@@ -112,6 +113,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(row));
     await tester.pumpAndSettle();
+    // El anuncio de las fotos añadidas sale tras el foco (CA-016-21).
+    await tester.pump(UnaMotion.announceAfterFocus);
   }
 
   AttachmentImportState importState(WidgetTester tester) =>
@@ -247,7 +250,7 @@ void main() {
 
       expect(importState(tester).staged, hasLength(1));
       expect(_stack, findsNothing);
-      expect(announcements, ['1 foto añadida']);
+      expect(announcements, ['1 foto añadida. No se pudieron añadir 2 fotos.']);
     });
 
     testWidgets('CA-016-05: fallan todas → el editor como estaba y el error '
@@ -572,6 +575,7 @@ void main() {
 
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
+      await tester.pump(UnaMotion.announceAfterFocus);
       expect(find.text('3 fotos'), findsOneWidget);
       expect(announcements, ['Preparando foto 1 de 3…', '3 fotos añadidas']);
     });

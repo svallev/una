@@ -25,6 +25,7 @@ import '../attachments/attach_sheet.dart';
 import '../attachments/attachment_import_controller.dart';
 import '../attachments/attachment_preview.dart';
 import '../attachments/import_error_text.dart';
+import '../attachments/import_notice_banner.dart';
 import '../attachments/pdf_labels.dart';
 import '../attachments/pdf_pages.dart';
 import '../attachments/pdf_strip.dart';
@@ -119,6 +120,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   int _previewSignal = 0;
   int _cancelSignal = 0;
 
+  /// El anuncio de "fotos añadidas" espera a que el foco llegue a la pila
+  /// (CA-016-21); se cancela si el grupo cambia antes de que salga.
+  Timer? _addedAnnouncement;
+
   /// Lo recién elegido (una imagen, un PDF o un grupo de 2 a 10 fotos), aún en
   /// la preparación.
   List<StagedAttachment> get _staged =>
@@ -177,6 +182,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     _controller.dispose();
     _fieldFocus.dispose();
     _plusFocus.dispose();
+    _addedAnnouncement?.cancel();
     super.dispose();
   }
 
@@ -186,6 +192,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   /// DEV-17).
   Future<void> _attach() async {
     if (_saving || ref.read(attachmentImportProvider).preparing) return;
+    _addedAnnouncement?.cancel();
     final choice = await showAttachSheet(
       context,
       // Una tarea no se convierte en web al editarla (CA-009-01).
@@ -225,12 +232,20 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         final notice = ref.read(attachmentImportProvider).notice;
         // Elegir una sola foto es la 007; con 2 o más (aunque queden menos),
         // el vocabulario del grupo (CA-016-03, 05, 21).
-        final isGroup = notice != null && notice.added + notice.failed >= 2;
+        if (origin == AttachmentOrigin.gallery &&
+            notice != null &&
+            notice.added + notice.failed >= 2) {
+          // Un único anuncio compuesto, con el mismo texto que el aviso, tras
+          // el foco a la pila (CA-016-21).
+          _announceAfterFocus(
+            notice.hasWarnings
+                ? importNoticeText(l10n, notice)
+                : l10n.a11yPhotosAdded(notice.added),
+          );
+          break;
+        }
         _announce(switch (origin) {
           AttachmentOrigin.camera => l10n.a11yPhotoAdded,
-          AttachmentOrigin.gallery when isGroup => l10n.a11yPhotosAdded(
-            notice.added,
-          ),
           AttachmentOrigin.gallery => l10n.a11yImageAdded,
           AttachmentOrigin.file || AttachmentOrigin.url => l10n.a11yPdfAdded,
         });
@@ -276,6 +291,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   /// (CA-016-06).
   Future<void> _removeImage() async {
     if (_saving) return;
+    _addedAnnouncement?.cancel();
     if (_staged.isNotEmpty) {
       await ref.read(attachmentImportProvider.notifier).remove();
     } else {
@@ -346,6 +362,28 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       Directionality.of(context),
     ),
   );
+
+  /// Anuncio asertivo de las fotos añadidas, **después** de que el foco llegue
+  /// a la pila (fotograma + [UnaMotion.announceAfterFocus]): así no lo pisa la
+  /// lectura de la pila ni el "Preparando foto…" anterior (CA-016-21).
+  void _announceAfterFocus(String message) {
+    _addedAnnouncement?.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _addedAnnouncement = Timer(UnaMotion.announceAfterFocus, () {
+        if (!mounted) return;
+        unawaited(
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            message,
+            Directionality.of(context),
+            assertiveness: Assertiveness.assertive,
+          ),
+        );
+      });
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
 
   void _focusPlus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -459,7 +497,13 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       setState(() => _saving = false);
       await ref.read(attachmentImportProvider.notifier).dropLost(e.ids);
       if (!mounted) return false;
-      _announce(AppLocalizations.of(context).imagesSomeFailed(e.ids.length));
+      final l10n = AppLocalizations.of(context);
+      final notice = ref.read(attachmentImportProvider).notice;
+      _announce(
+        notice == null
+            ? l10n.imagesSomeFailed(e.ids.length)
+            : importNoticeText(l10n, notice),
+      );
       if (_hasImage) {
         setState(() => _previewSignal++);
       } else {
@@ -768,6 +812,21 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                         child: Text(
                           l10n.editorCharsLeft(Task.maxTextLength - length),
                           style: UnaTheme.mono.copyWith(color: UnaColors.ink),
+                        ),
+                      ),
+                    // Fotos omitidas o más de 10 (CA-016-05, 21): un aviso sin
+                    // caducidad, encima de los botones.
+                    if (import.notice case final notice?
+                        when notice.hasWarnings)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          UnaSpace.l,
+                          UnaSpace.s,
+                          UnaSpace.l,
+                          0,
+                        ),
+                        child: ImportNoticeBanner(
+                          text: importNoticeText(l10n, notice),
                         ),
                       ),
                     Padding(
