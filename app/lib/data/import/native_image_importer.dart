@@ -38,12 +38,48 @@ class NativeImageImporter implements ImageImporter {
     },
   );
 
-  /// **[Pendiente]** T-016-08: hasta entonces elegir varias es como cancelar.
+  /// Selector múltiple del sistema (spec 016, CA-016-02): el nativo ya recorta
+  /// a [max] antes de abrir ninguna, y aquí se vuelve a recortar por si acaso
+  /// (los demás elementos ni se miran). Los errores salen **solo como código**:
+  /// el texto de la excepción de plataforma puede llevar una URI (CL-016-16).
   @override
-  Future<PickedImages?> pickMany({required int max}) async => null;
+  Future<PickedImages?> pickMany({required int max}) =>
+      _pickMany('pickMany', max);
 
+  /// Solo en builds de depuración: fuerza el selector de documentos (el de
+  /// Android 8-12) aunque el dispositivo tenga el selector de fotos, para
+  /// probar el recorte a 10 en el emulador.
+  Future<PickedImages?> debugPickManyDocuments({required int max}) =>
+      _pickMany('debugPickManyDocuments', max);
+
+  Future<PickedImages?> _pickMany(String method, int max) => _guard(() async {
+    final r = await _channel.invokeMapMethod<String, Object?>(method, {
+      'max': max,
+    });
+    final tokens = r?['tokens'] as List<Object?>?;
+    if (r == null || tokens == null || tokens.isEmpty) return null;
+    final items = <PickedImage>[
+      for (final token in tokens.take(max))
+        (token: token! as String, origin: AttachmentOrigin.gallery),
+    ];
+    return (
+      items: items,
+      total: (r['total'] as num?)?.toInt() ?? tokens.length,
+    );
+  });
+
+  /// Bytes libres de la partición de datos, o null si no se sabe: un fallo
+  /// nunca bloquea la importación (CL-016-6).
   @override
-  Future<int?> freeSpace() async => null;
+  Future<int?> freeSpace() async {
+    try {
+      return (await _channel.invokeMethod<num>('freeSpace'))?.toInt();
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
 
   @override
   Future<CopiedImage> copy(

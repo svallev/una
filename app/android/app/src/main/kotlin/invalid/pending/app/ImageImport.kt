@@ -42,6 +42,9 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         const val CHANNEL = "una/images"
         const val REQUEST_CAMERA = 7001
         const val REQUEST_PICK = 7002
+        const val REQUEST_PICK_MANY = 7003
+        /** Tope de fotos de un grupo (spec 016, CA-016-02); Dart pide el suyo y aquí se acota. */
+        private const val MAX_GROUP = 10
         private const val HEAD_BYTES = 64
         /** Cabecera máxima que se devuelve (el PDF busca `%PDF-` en 1024, spec 008). */
         private const val MAX_HEAD_BYTES = 1024
@@ -63,6 +66,16 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
      * desbloquea y el borrado va por su propio hilo.
      */
     private val cleaner = Executors.newSingleThreadExecutor()
+
+    /**
+     * La limpieza (`sanitize`) corre en **un solo hilo propio**, distinto del
+     * [cleaner] y de [executor] (spec 016, CA-016-04): nunca hay dos limpiezas a
+     * la vez, aunque Dart dé por agotada una y empiece otra; y una limpieza
+     * cancelada mientras esperaba turno sale sin hacer nada (mira su bandera
+     * **antes de empezar**). El tiempo de espera no cuenta: los 20 s los mide
+     * Dart y no empieza la foto siguiente hasta que acabe la llamada anterior.
+     */
+    private val sanitizer = Executors.newSingleThreadExecutor()
     private val cancelled = ConcurrentHashMap<String, AtomicBoolean>()
     private val openStreams = ConcurrentHashMap<String, Closeable>()
 
@@ -70,6 +83,8 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
     private var pending: MethodChannel.Result? = null
     private var pendingCameraId: String? = null
     private var pendingIsFile = false
+    private var pendingMany = false
+    private var pendingMax = MAX_GROUP
 
     private val importRoot: File get() = File(activity.cacheDir, "import")
     private val authority: String get() = "${activity.packageName}.imports"
@@ -81,6 +96,12 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         when (call.method) {
             "capabilities" -> result.success(mapOf("heic" to (Build.VERSION.SDK_INT >= 28)))
             "pick" -> pick(call.argument<String>("origin")!!, id(call), result)
+            "pickMany" -> pickMany(maxPhotos(call), forceDocuments = false, result)
+            // Solo en depuración: el selector de documentos de Android 8-12 en un
+            // dispositivo que tiene el de fotos (probar el recorte a 10).
+            "debugPickManyDocuments" ->
+                if (debuggable) pickMany(maxPhotos(call), forceDocuments = true, result) else result.notImplemented()
+            "freeSpace" -> freeSpace(result)
             "copy" -> copy(call.argument<String>("token")!!, id(call), maxBytes(call), headBytes(call), result)
             "sanitize" -> sanitize(call, result)
             "cancel" -> cancel(id(call), result)
@@ -96,6 +117,9 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         require(ID.matches(id)) { "id" }
         return id
     }
+
+    private fun maxPhotos(call: MethodCall): Int =
+        (call.argument<Number>("max")?.toInt() ?: MAX_GROUP).coerceIn(1, MAX_GROUP)
 
     private fun maxBytes(call: MethodCall): Long = call.argument<Number>("maxBytes")!!.toLong()
 
@@ -156,23 +180,91 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         }
     }
 
+    /**
+     * Selector múltiple (spec 016, CA-016-02), sin permisos: el de fotos del
+     * sistema con `EXTRA_PICK_IMAGES_MAX` o, sin él, el de documentos con
+     * `EXTRA_ALLOW_MULTIPLE`. Una sola llamada pendiente (`busy`), como [pick].
+     * Los errores van **solo como código**: nada de URI ni de `clipData` en un
+     * mensaje (sus `toString` las llevan, CL-016-16).
+     */
+    private fun pickMany(max: Int, forceDocuments: Boolean, result: MethodChannel.Result) {
+        if (pending != null) {
+            result.error("busy", null, null)
+            return
+        }
+        try {
+            val intent = if (!forceDocuments && photoPickerAvailable()) {
+                // `getPickImagesMaxLimit` (API 33+) puede ser menor que 10 en un
+                // fabricante raro; con la extensión de API 30-32 vale 10.
+                val limit = if (Build.VERSION.SDK_INT >= 33) {
+                    minOf(max, MediaStore.getPickImagesMaxLimit())
+                } else {
+                    max
+                }
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    type = "image/*"
+                    // El sistema exige más de 1: con 1 se deja el valor por defecto.
+                    if (limit > 1) putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, limit)
+                }
+            } else {
+                Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "image/*"
+                    putExtra(Intent.EXTRA_MIME_TYPES, PICKER_MIME)
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                }
+            }
+            pending = result
+            pendingMany = true
+            pendingMax = max
+            activity.startActivityForResult(intent, REQUEST_PICK_MANY)
+        } catch (e: Exception) {
+            // ActivityNotFoundException u otro fallo al abrir: `unreadable`, sin
+            // mensaje y sin cerrar la app.
+            pending = null
+            pendingMany = false
+            result.error("unreadable", null, null)
+        }
+    }
+
+    /** Lo que se puede guardar en la partición de datos (CL-016-6), o null si no se sabe. */
+    private fun freeSpace(result: MethodChannel.Result) {
+        val free = try {
+            activity.filesDir.usableSpace
+        } catch (e: Exception) {
+            0L
+        }
+        // 0 es lo que devuelve `usableSpace` cuando falla: se da por desconocido
+        // (un disco de verdad lleno acabaría igual en `noSpace` al copiar).
+        result.success(if (free > 0) free else null)
+    }
+
     private fun photoPickerAvailable(): Boolean =
         Build.VERSION.SDK_INT >= 33 ||
             (Build.VERSION.SDK_INT >= 30 && SdkExtensions.getExtensionVersion(Build.VERSION_CODES.R) >= 2)
 
     /** Devuelve true si el resultado era nuestro. */
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        if (requestCode != REQUEST_CAMERA && requestCode != REQUEST_PICK) return false
+        if (requestCode != REQUEST_CAMERA && requestCode != REQUEST_PICK &&
+            requestCode != REQUEST_PICK_MANY
+        ) {
+            return false
+        }
         val result = pending
         val cameraId = pendingCameraId
         val isFile = pendingIsFile
+        val many = pendingMany
+        val max = pendingMax
         pending = null
         pendingCameraId = null
         pendingIsFile = false
+        pendingMany = false
         // Sin llamada pendiente, Android mató la app con la cámara abierta
         // (CL-007-7): se ignora; el barrido borra la foto del siguiente arranque.
         if (result == null) return true
-        if (requestCode == REQUEST_CAMERA) {
+        if (requestCode == REQUEST_PICK_MANY && many) {
+            result.success(if (resultCode == Activity.RESULT_OK) pickedMany(data, max) else null)
+        } else if (requestCode == REQUEST_CAMERA) {
             val file = File(importRoot, "$cameraId.camera")
             activity.revokeUriPermission(
                 FileProvider.getUriForFile(activity, authority, file),
@@ -196,6 +288,32 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
             }
         }
         return true
+    }
+
+    /**
+     * Lo elegido en el selector múltiple: como mucho [max] fichas en el orden en
+     * que las devolvió Android y `total`, lo que devolvió el sistema. **El tope se
+     * aplica antes de abrir, consultar o copiar ninguna** (`itemCount` es un
+     * entero; los demás elementos ni se miran, lleguen miles o repetidos, T-3).
+     * Null si no se eligió nada.
+     */
+    private fun pickedMany(data: Intent?, max: Int): Map<String, Any>? {
+        if (data == null) return null
+        val clip = data.clipData
+        val total: Int
+        val tokens = ArrayList<String>(max)
+        if (clip != null && clip.itemCount > 0) {
+            total = clip.itemCount
+            for (i in 0 until minOf(total, max)) {
+                clip.getItemAt(i).uri?.let { tokens.add(it.toString()) }
+            }
+        } else {
+            val uri = data.data ?: return null
+            total = 1
+            tokens.add(uri.toString())
+        }
+        if (tokens.isEmpty()) return null
+        return mapOf("tokens" to tokens, "total" to total)
     }
 
     /** `OpenableColumns.DISPLAY_NAME` del documento, o null. */
@@ -334,7 +452,9 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
     private fun sanitize(call: MethodCall, result: MethodChannel.Result) {
         val id = id(call)
         val flag = cancelled.getOrPut(id) { AtomicBoolean(false) }
-        background(result, id, last = true) {
+        background(result, id, last = true, pool = sanitizer) {
+            // Cancelada mientras esperaba turno: sale sin hacer nada.
+            if (flag.get()) throw ImportException("cancelled")
             val dir = File(importRoot, id)
             val source = File(dir, "source")
             if (!source.exists()) throw ImportException("unreadable")
@@ -498,9 +618,10 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         result: MethodChannel.Result,
         id: String,
         last: Boolean = false,
+        pool: java.util.concurrent.ExecutorService = executor,
         work: () -> Any?,
     ) {
-        executor.execute {
+        pool.execute {
             var outcome: Result<Any?> = try {
                 Result.success(work())
             } catch (e: ImportException) {
@@ -531,6 +652,7 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
 
     fun dispose() {
         executor.shutdownNow()
+        sanitizer.shutdownNow()
         cleaner.shutdown()
     }
 }
