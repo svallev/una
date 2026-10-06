@@ -960,6 +960,18 @@ class $AttachmentsTable extends Attachments
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -981,6 +993,7 @@ class $AttachmentsTable extends Attachments
     pageCount,
     sha256,
     createdAt,
+    position,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1133,6 +1146,12 @@ class $AttachmentsTable extends Attachments
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
     return context;
   }
 
@@ -1218,6 +1237,10 @@ class $AttachmentsTable extends Attachments
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
       )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
     );
   }
 
@@ -1247,6 +1270,10 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
   final int? pageCount;
   final String? sha256;
   final int createdAt;
+
+  /// Orden dentro de la tarea (v3, ADR-0024): 0..N-1 en las tareas con varias
+  /// fotos; 0 en el resto. La lectura ordena por `(position, id)`.
+  final int position;
   const AttachmentRow({
     required this.id,
     required this.taskId,
@@ -1267,6 +1294,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
     this.pageCount,
     this.sha256,
     required this.createdAt,
+    required this.position,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1312,6 +1340,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
       map['sha256'] = Variable<String>(sha256);
     }
     map['created_at'] = Variable<int>(createdAt);
+    map['position'] = Variable<int>(position);
     return map;
   }
 
@@ -1358,6 +1387,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
           ? const Value.absent()
           : Value(sha256),
       createdAt: Value(createdAt),
+      position: Value(position),
     );
   }
 
@@ -1386,6 +1416,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
       pageCount: serializer.fromJson<int?>(json['pageCount']),
       sha256: serializer.fromJson<String?>(json['sha256']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
+      position: serializer.fromJson<int>(json['position']),
     );
   }
   @override
@@ -1411,6 +1442,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
       'pageCount': serializer.toJson<int?>(pageCount),
       'sha256': serializer.toJson<String?>(sha256),
       'createdAt': serializer.toJson<int>(createdAt),
+      'position': serializer.toJson<int>(position),
     };
   }
 
@@ -1434,6 +1466,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
     Value<int?> pageCount = const Value.absent(),
     Value<String?> sha256 = const Value.absent(),
     int? createdAt,
+    int? position,
   }) => AttachmentRow(
     id: id ?? this.id,
     taskId: taskId ?? this.taskId,
@@ -1458,6 +1491,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
     pageCount: pageCount.present ? pageCount.value : this.pageCount,
     sha256: sha256.present ? sha256.value : this.sha256,
     createdAt: createdAt ?? this.createdAt,
+    position: position ?? this.position,
   );
   AttachmentRow copyWithCompanion(AttachmentsCompanion data) {
     return AttachmentRow(
@@ -1492,6 +1526,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
       pageCount: data.pageCount.present ? data.pageCount.value : this.pageCount,
       sha256: data.sha256.present ? data.sha256.value : this.sha256,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      position: data.position.present ? data.position.value : this.position,
     );
   }
 
@@ -1516,7 +1551,8 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
           ..write('height: $height, ')
           ..write('pageCount: $pageCount, ')
           ..write('sha256: $sha256, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('position: $position')
           ..write(')'))
         .toString();
   }
@@ -1542,6 +1578,7 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
     pageCount,
     sha256,
     createdAt,
+    position,
   );
   @override
   bool operator ==(Object other) =>
@@ -1565,7 +1602,8 @@ class AttachmentRow extends DataClass implements Insertable<AttachmentRow> {
           other.height == this.height &&
           other.pageCount == this.pageCount &&
           other.sha256 == this.sha256 &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.position == this.position);
 }
 
 class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
@@ -1588,6 +1626,7 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
   final Value<int?> pageCount;
   final Value<String?> sha256;
   final Value<int> createdAt;
+  final Value<int> position;
   final Value<int> rowid;
   const AttachmentsCompanion({
     this.id = const Value.absent(),
@@ -1609,6 +1648,7 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
     this.pageCount = const Value.absent(),
     this.sha256 = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.position = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AttachmentsCompanion.insert({
@@ -1631,6 +1671,7 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
     this.pageCount = const Value.absent(),
     this.sha256 = const Value.absent(),
     required int createdAt,
+    this.position = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        taskId = Value(taskId),
@@ -1660,6 +1701,7 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
     Expression<int>? pageCount,
     Expression<String>? sha256,
     Expression<int>? createdAt,
+    Expression<int>? position,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1682,6 +1724,7 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
       if (pageCount != null) 'page_count': pageCount,
       if (sha256 != null) 'sha256': sha256,
       if (createdAt != null) 'created_at': createdAt,
+      if (position != null) 'position': position,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1706,6 +1749,7 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
     Value<int?>? pageCount,
     Value<String?>? sha256,
     Value<int>? createdAt,
+    Value<int>? position,
     Value<int>? rowid,
   }) {
     return AttachmentsCompanion(
@@ -1728,6 +1772,7 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
       pageCount: pageCount ?? this.pageCount,
       sha256: sha256 ?? this.sha256,
       createdAt: createdAt ?? this.createdAt,
+      position: position ?? this.position,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1792,6 +1837,9 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1820,6 +1868,7 @@ class AttachmentsCompanion extends UpdateCompanion<AttachmentRow> {
           ..write('pageCount: $pageCount, ')
           ..write('sha256: $sha256, ')
           ..write('createdAt: $createdAt, ')
+          ..write('position: $position, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2106,6 +2155,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_attachments_task',
     'CREATE INDEX idx_attachments_task ON attachments (task_id)',
   );
+  late final Index idxAttachmentsTaskPosition = Index(
+    'idx_attachments_task_position',
+    'CREATE INDEX idx_attachments_task_position ON attachments (task_id, position, id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2117,6 +2170,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxTasksCurrent,
     idxTasksParent,
     idxAttachmentsTask,
+    idxAttachmentsTaskPosition,
   ];
 }
 
@@ -2694,6 +2748,7 @@ typedef $$AttachmentsTableCreateCompanionBuilder =
       Value<int?> pageCount,
       Value<String?> sha256,
       required int createdAt,
+      Value<int> position,
       Value<int> rowid,
     });
 typedef $$AttachmentsTableUpdateCompanionBuilder =
@@ -2717,6 +2772,7 @@ typedef $$AttachmentsTableUpdateCompanionBuilder =
       Value<int?> pageCount,
       Value<String?> sha256,
       Value<int> createdAt,
+      Value<int> position,
       Value<int> rowid,
     });
 
@@ -2838,6 +2894,11 @@ class $$AttachmentsTableFilterComposer
 
   ColumnFilters<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2964,6 +3025,11 @@ class $$AttachmentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TasksTableOrderingComposer get taskId {
     final $$TasksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -3063,6 +3129,9 @@ class $$AttachmentsTableAnnotationComposer
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
   $$TasksTableAnnotationComposer get taskId {
     final $$TasksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -3134,6 +3203,7 @@ class $$AttachmentsTableTableManager
                 Value<int?> pageCount = const Value.absent(),
                 Value<String?> sha256 = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
+                Value<int> position = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AttachmentsCompanion(
                 id: id,
@@ -3155,6 +3225,7 @@ class $$AttachmentsTableTableManager
                 pageCount: pageCount,
                 sha256: sha256,
                 createdAt: createdAt,
+                position: position,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3178,6 +3249,7 @@ class $$AttachmentsTableTableManager
                 Value<int?> pageCount = const Value.absent(),
                 Value<String?> sha256 = const Value.absent(),
                 required int createdAt,
+                Value<int> position = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AttachmentsCompanion.insert(
                 id: id,
@@ -3199,6 +3271,7 @@ class $$AttachmentsTableTableManager
                 pageCount: pageCount,
                 sha256: sha256,
                 createdAt: createdAt,
+                position: position,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

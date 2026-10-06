@@ -552,7 +552,7 @@ void main() {
       'dirección, sin archivos ni medidas, en el esquema actual', () async {
     final db = openInMemoryDatabase();
     final repo = DriftTaskRepository(db);
-    expect(db.schemaVersion, 2);
+    expect(db.schemaVersion, 3); // v3: spec 016 (position)
     await repo.insert(_task('a', 'C', attachment: _web('web-a')));
 
     final row = await db.select(db.attachments).getSingle();
