@@ -211,6 +211,46 @@ void main() {
       });
     }
 
+    for (final (label, answer) in <(String, Object?)>[
+      (
+        'un elemento que no es texto',
+        {
+          'tokens': ['t-1', 7],
+          'total': 2,
+        },
+      ),
+      (
+        'un elemento nulo',
+        {
+          'tokens': ['t-1', null],
+          'total': 2,
+        },
+      ),
+      ('tokens que no es una lista', {'tokens': 'content://x', 'total': 1}),
+      (
+        'un total que no es un número',
+        {
+          'tokens': ['t-1'],
+          'total': 'muchos',
+        },
+      ),
+    ]) {
+      test('CA-016-24: una respuesta del canal con $label es un fallo '
+          'ilegible, no un TypeError', () async {
+        reply = (_) => answer;
+        await expectLater(
+          importer.pickMany(max: 10),
+          throwsA(
+            isA<ImageImportFailure>().having(
+              (e) => e.error,
+              'error',
+              ImageImportError.unreadable,
+            ),
+          ),
+        );
+      });
+    }
+
     test('CA-016-02: sin canal (iOS), pickMany falla como ilegible', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);

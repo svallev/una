@@ -6,6 +6,7 @@ import '../../domain/entities/attachment.dart';
 import '../../domain/entities/pdf_position.dart';
 import '../../domain/entities/staged_attachment.dart';
 import '../../domain/ports/attachment_store.dart';
+import '../attachment_reader.dart';
 
 /// Adjuntos en el almacenamiento privado de la app (spec 007, plan §1):
 ///
@@ -29,10 +30,8 @@ class FileAttachmentStore implements AttachmentStore {
   final Directory filesRoot;
   final Directory stagingRoot;
 
-  static final _validId = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
-
   static String _checked(String id) {
-    if (!_validId.hasMatch(id)) throw ArgumentError.value(id, 'id');
+    if (!isValidAttachmentId(id)) throw ArgumentError.value(id, 'id');
     return id;
   }
 

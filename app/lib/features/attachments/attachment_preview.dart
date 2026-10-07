@@ -202,14 +202,18 @@ class _Preparing extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: UnaSpace.sm),
-              // Con reducir movimiento, sin animación (CA-007-23).
+              // Con reducir movimiento, sin animación (CA-007-23). Es solo
+              // decoración: el lector lee el texto de arriba (CA-016-04), y el
+              // indicador de Flutter crea siempre su propio nodo.
               if (!reduced)
-                const SizedBox(
-                  width: UnaSizes.button * 2,
-                  child: LinearProgressIndicator(
-                    color: UnaColors.ink,
-                    backgroundColor: UnaColors.line,
-                    minHeight: UnaBorders.strongWidth,
+                const ExcludeSemantics(
+                  child: SizedBox(
+                    width: UnaSizes.button * 2,
+                    child: LinearProgressIndicator(
+                      color: UnaColors.ink,
+                      backgroundColor: UnaColors.line,
+                      minHeight: UnaBorders.strongWidth,
+                    ),
                   ),
                 ),
               const SizedBox(height: UnaSpace.s),

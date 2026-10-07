@@ -303,6 +303,12 @@ class AttachmentImportController extends Notifier<AttachmentImportState> {
     } on ImageImportCancelled {
       // El sistema lo canceló: como si no se hubiera elegido nada.
       return ImportOutcome.unchanged;
+    } on Object {
+      // Un fallo sin tipo, del selector o de la preparación (un canal que
+      // contesta mal, una excepción de plataforma): "no se pudo leer", sin su
+      // texto, que puede llevar una URI (CA-016-24, CL-016-16). `_prepare` lo
+      // deja subir hasta aquí; los trabajos ya borran lo suyo al fallar.
+      return _failed(ImageImportError.unreadable, generation);
     } finally {
       _busy = false;
     }

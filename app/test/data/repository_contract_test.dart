@@ -549,6 +549,39 @@ void _contract(
       },
     );
 
+    for (final (label, id) in <(String, String)>[
+      ('con ../', '../x'),
+      ('de 65 caracteres', 'x' * 65),
+      ('con una barra', 'a/b'),
+      ('con un espacio', 'a b'),
+    ]) {
+      test('CA-016-25: una fila de imagen válida con un id inválido ($label) '
+          'se lee como no válida y sin lanzar (T-7)', () async {
+        await seed('a', 'C', [
+          const _RawRow('a', 'ok', position: 0),
+          _RawRow('a', id, position: 1),
+        ]);
+        final t = (await repo.currentTask())!;
+        final bad = t.attachments.last;
+        expect(bad.unreadable, isTrue);
+        expect((bad.width, bad.height), (1, 1));
+        expect(t.attachments.isValidGroup, isFalse);
+        expect(t.attachments.first.unreadable, isFalse);
+      });
+    }
+
+    test('CA-016-25: un id válido en el límite (64 caracteres, guiones y '
+        'guiones bajos) se lee igual que siempre', () async {
+      await seed('a', 'C', [
+        _RawRow('a', 'A-z_9' * 12 + 'abcd', position: 0),
+        const _RawRow('a', 'g2', position: 1),
+      ]);
+      final t = (await repo.currentTask())!;
+      expect(t.attachments.map((a) => a.unreadable), [false, false]);
+      expect(t.attachments.first.id, hasLength(64));
+      expect(t.attachments.isPhotoGroup, isTrue);
+    });
+
     for (final (label, w, h) in <(String, int?, int?)>[
       ('ancho 0', 0, 3000),
       ('alto -1', 4000, -1),

@@ -5,9 +5,17 @@ import '../domain/entities/image_type.dart';
 /// el tope del grupo. Lo aplica la consulta en SQL; la memoria hace lo mismo.
 const int maxReadAttachments = ImageLimits.maxGroup;
 
+final _validAttachmentId = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
+
+/// Un id de adjunto que puede ser nombre de carpeta: solo letras, cifras, `_` y
+/// `-`, de 1 a 64. Lo comprueban el almacén de archivos (que lanza si no) y la
+/// lectura de filas (que marca la fila como ilegible; CA-016-25, T-7).
+bool isValidAttachmentId(String id) => _validAttachmentId.hasMatch(id);
+
 /// Lee una fila de adjunto con tolerancia (spec 016, CA-016-25, T-7): una base
 /// de datos restaurada o manipulada puede traer un tipo u origen que esta
-/// versión no conoce, o medidas absurdas (0, negativas, enormes). Nunca lanza:
+/// versión no conoce, medidas absurdas (0, negativas, enormes) o un id que no
+/// sirve de nombre de carpeta (`../x`, de más de 64 caracteres). Nunca lanza:
 /// la fila se lee como una imagen sin archivos con la marca
 /// [Attachment.unreadable] y medidas 1 × 1 (ningún diseño divide por cero), y
 /// la tarea entera se ve como "Adjunto no disponible"
@@ -41,7 +49,7 @@ Attachment readAttachment({
           w > ImageLimits.maxPixels ||
           h > ImageLimits.maxPixels ||
           w * h > ImageLimits.maxPixels);
-  if (!known || badSize) {
+  if (!known || badSize || !isValidAttachmentId(id)) {
     return Attachment(
       id: id,
       kind: AttachmentKind.image,

@@ -1,5 +1,5 @@
 // La rotura (completar) y el arrugado (eliminar) con un grupo de fotos
-// (T-016-18b; CA-016-13, CA-016-16, CL-016-12): la cara es una imagen en
+// (T-016-18b; CA-016-19, CA-016-16, CL-016-12): la cara es una imagen en
 // memoria de la foto que se veía, tomada antes de descartar los archivos;
 // sin captura es estática y no lee nada del disco; la copia no instala la
 // salud de los adjuntos ni regenera; la captura se libera al terminar; y
@@ -208,7 +208,7 @@ void main() {
     await tester.pump(_frame);
   }
 
-  group('CA-016-13, CL-016-12: completar viendo la foto 3', () {
+  group('CA-016-19, CL-016-12: completar viendo la foto 3', () {
     testWidgets('la captura se toma antes de descartar los archivos y la cara '
         'dibuja esa imagen, con la foto 3 en los puntos', (tester) async {
       final all = await photos(3);
@@ -362,7 +362,7 @@ void main() {
     });
   });
 
-  group('CA-016-13, CL-016-12: eliminar viendo la foto 2', () {
+  group('CA-016-19, CL-016-12: eliminar viendo la foto 2', () {
     Future<void> deleteFromMenu(WidgetTester tester) async {
       await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
       await tester.pumpAndSettle();

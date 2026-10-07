@@ -23,6 +23,7 @@ import 'package:app/features/attachments/photo_stack.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -130,6 +131,62 @@ void main() {
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
   }
+
+  testWidgets(
+    'CA-016-04: "Preparando foto {i} de {n}…" lo leen solo el texto y '
+    '"Cancelar": la barra de progreso no es un nodo',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpEditor(tester);
+      importer.sanitizeDelay = const Duration(seconds: 2);
+      await tester.tap(find.bySemanticsLabel(_plusLabel));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Subir imágenes'));
+      // La entrada de "Preparando" (a los 400 ms) y el cierre de la hoja.
+      for (var i = 0; i < 15; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.textContaining('Preparando foto'), findsOneWidget);
+      // La barra se ve (sin reducir movimiento) y aun así no se lee.
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+      final heard = <String>[];
+      final roles = <SemanticsRole>[];
+      void visit(SemanticsNode node) {
+        if (!node.isInvisible) {
+          final data = node.getSemanticsData();
+          if (data.label.isNotEmpty || data.value.isNotEmpty) {
+            heard.add(data.label.isNotEmpty ? data.label : data.value);
+          }
+          roles.add(data.role);
+        }
+        node.visitChildren((child) {
+          visit(child);
+          return true;
+        });
+      }
+
+      visit(
+        tester
+            .binding
+            .renderViews
+            .first
+            .owner!
+            .semanticsOwner!
+            .rootSemanticsNode!,
+      );
+      expect(roles, isNot(contains(SemanticsRole.loadingSpinner)));
+      expect(roles, isNot(contains(SemanticsRole.progressBar)));
+      // El área de "Preparando" aporta solo esos dos nodos; después vienen los
+      // del editor (campo, (+) y Guardar), que no son suyos.
+      expect(heard.take(2), ['Preparando foto 1 de 3…', 'Cancelar']);
+      expect(heard.skip(2), isNot(contains(startsWith('Preparando'))));
+
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pumpAndSettle();
+      semantics.dispose();
+    },
+  );
 
   for (final scale in [1.0, 2.0]) {
     group('CA-016-22: guías de accesibilidad con el texto ×$scale', () {

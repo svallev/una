@@ -424,6 +424,26 @@ void main() {
       });
     }
 
+    testWidgets('CA-016-24: un fallo sin tipo en el selector sale de '
+        '"Preparando" con el aviso y el editor queda como estaba', (
+      tester,
+    ) async {
+      await pumpEditor(tester);
+      await pick(tester, 'Subir imágenes');
+      final before = importState(tester).staged;
+      importer.pickError = StateError('content://media/secret/1.jpg');
+      await pick(tester, 'Subir imágenes');
+
+      expect(
+        find.text('No hemos podido leer esta imagen. Prueba con otra.'),
+        findsOneWidget,
+      );
+      expect(importState(tester).preparing, isFalse);
+      expect(importState(tester).staged, before);
+      expect(find.textContaining('Preparando'), findsNothing);
+      expect(find.byType(AttachmentPreview), findsOneWidget);
+    });
+
     testWidgets('CL-007-1: sin app de cámara', (tester) async {
       await pumpEditor(tester);
       importer.pickError = const ImageImportFailure(ImageImportError.noCamera);

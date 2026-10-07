@@ -9,6 +9,7 @@ import 'package:app/domain/entities/image_type.dart';
 import 'package:app/domain/ports/id_generator.dart';
 import 'package:app/domain/ports/image_importer.dart';
 import 'package:app/domain/services/attachment_janitor.dart';
+import 'package:app/domain/usecases/import_image.dart';
 import 'package:app/features/attachments/attachment_import_controller.dart';
 import 'package:app/features/attachments/import_error_text.dart';
 import 'package:app/l10n/generated/app_localizations_en.dart';
@@ -19,6 +20,47 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_image_importer.dart';
 import '../../support/fake_pdf_importer.dart';
+
+/// Un grupo cuya preparación lanza una excepción sin tipo (CA-016-24).
+class _ExplodingGroup implements ImportGroup {
+  var runs = 0;
+
+  @override
+  bool get limited => false;
+  @override
+  int get length => 2;
+  @override
+  GroupState get state => GroupState.running;
+
+  @override
+  Future<GroupResult> prepareAll({
+    void Function(int index, int total)? onProgress,
+    int reservedBytes = 0,
+    Iterable<String> replacedStagedIds = const [],
+  }) async {
+    runs++;
+    onProgress?.call(1, 2);
+    throw StateError('content://media/secret/1.jpg');
+  }
+
+  @override
+  Future<void> cancel() async {}
+  @override
+  Future<void> dispose() async {}
+}
+
+class _ExplodingImport extends ImportImage {
+  _ExplodingImport(Ref ref, this.group)
+    : super(
+        importer: ref.read(imageImporterProvider),
+        janitor: ref.read(attachmentJanitorProvider),
+        ids: ref.read(idGeneratorProvider),
+      );
+  final ImportGroup group;
+
+  @override
+  Future<ImportGroup?> pickMany() async => group;
+}
 
 class _SeqIds implements IdGenerator {
   var _n = 0;
@@ -196,6 +238,69 @@ void main() {
     expect(state().preparing, isFalse);
     expect(await staging(), isEmpty);
     await tester.pump(const Duration(seconds: 60));
+  });
+
+  group('CA-016-24: una excepción sin tipo no deja el editor bloqueado', () {
+    for (final (label, run) in <(String, Future<ImportOutcome> Function())>[
+      ('el selector múltiple', () => ctrl().pickMany()),
+      (
+        'el selector de una imagen',
+        () => ctrl().pick(AttachmentOrigin.gallery),
+      ),
+    ]) {
+      testWidgets('$label: un StateError sale como "no se pudo leer", sin '
+          'preparar y sin su texto', (tester) async {
+        importer.pickError = StateError('content://media/secret/1.jpg');
+        expect(await run(), ImportOutcome.failed);
+        expect(state().error, ImageImportError.unreadable);
+        expect(state().preparing, isFalse);
+        expect(state().showPreparing, isFalse);
+        expect(registry.active, isEmpty);
+        expect(await staging(), isEmpty);
+        // No queda ocupado: la siguiente importación funciona.
+        importer.pickError = null;
+        expect(await run(), ImportOutcome.added);
+        expect(state().error, isNull);
+      });
+    }
+
+    testWidgets('al preparar: un fallo inesperado deja el estado limpio, '
+        '"Cancelar" no hace nada y se puede volver a importar', (tester) async {
+      final exploding = _ExplodingGroup();
+      final broken = ProviderContainer(
+        overrides: [
+          taskRepositoryProvider.overrideWithValue(InMemoryTaskRepository()),
+          attachmentStoreProvider.overrideWithValue(store),
+          importRegistryProvider.overrideWithValue(registry),
+          idGeneratorProvider.overrideWithValue(_SeqIds()),
+          imageImporterProvider.overrideWithValue(importer),
+          importImageProvider.overrideWith(
+            (ref) => _ExplodingImport(ref, exploding),
+          ),
+        ],
+      );
+      addTearDown(broken.dispose);
+      broken.listen(attachmentImportProvider, (_, _) {});
+      final c = broken.read(attachmentImportProvider.notifier);
+      final seen = <bool>[];
+      broken.listen(
+        attachmentImportProvider,
+        (_, now) => seen.add(now.preparing),
+      );
+
+      expect(await c.pickMany(), ImportOutcome.failed);
+      expect(seen, contains(true)); // sí llegó a "Preparando"
+      final s = broken.read(attachmentImportProvider);
+      expect(s.error, ImageImportError.unreadable);
+      expect(s.preparing, isFalse);
+      expect(s.showPreparing, isFalse);
+      await c.cancel(); // sin trabajo en curso: no hace nada ni lanza
+      expect(broken.read(attachmentImportProvider).error, isNotNull);
+
+      // No queda ocupado: la siguiente importación se intenta.
+      expect(await c.pickMany(), ImportOutcome.failed);
+      expect(exploding.runs, 2);
+    });
   });
 
   testWidgets('CA-007-02/03: sin cámara se avisa; cancelar el selector no '

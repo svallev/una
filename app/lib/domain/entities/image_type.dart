@@ -27,8 +27,9 @@ abstract final class ImageLimits {
   static const Duration groupTimeout = Duration(minutes: 2);
 
   /// Bytes que se estima que ocupa una foto guardada, para comprobar el espacio
-  /// libre antes de importar un grupo. **[Suposición]** 16 MB; se fija al medir
-  /// (R-24, T-016-20).
+  /// libre antes de importar un grupo. **[Hecho]** 16 MB, cota superior medida
+  /// en el emulador: ninguna foto guardó más de 14,5 MB (R-24, T-016-20;
+  /// `specs/016-varias-imagenes-carrusel/dispositivo.md`).
   static const int storedPhotoEstimate = 16 * 1000 * 1000;
 
   /// Bytes de cabecera que necesita [sniffImageType].

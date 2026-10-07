@@ -212,7 +212,7 @@ void main() {
   });
 
   group('CA-016-16: completar el grupo', () {
-    test('CA-016-16, CA-016-13: se descartan las 10 fotos, y solo después '
+    test('CA-016-16, CA-016-19: se descartan las 10 fotos, y solo después '
         'de quitar la fila (la captura de la cara ya se tomó con los '
         'archivos en su sitio)', () async {
       final task = await groupTask('g');

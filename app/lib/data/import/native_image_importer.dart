@@ -56,16 +56,24 @@ class NativeImageImporter implements ImageImporter {
     final r = await _channel.invokeMapMethod<String, Object?>(method, {
       'max': max,
     });
-    final tokens = r?['tokens'] as List<Object?>?;
-    if (r == null || tokens == null || tokens.isEmpty) return null;
+    if (r == null) return null;
+    // Lo que contesta el canal no se cree: un tipo inesperado es un fallo
+    // ilegible, no un `TypeError` suelto (CA-016-24).
+    final tokens = r['tokens'];
+    if (tokens == null) return null;
+    final total = r['total'];
+    if (tokens is! List<Object?> || (total != null && total is! num)) {
+      throw const ImageImportFailure(ImageImportError.unreadable);
+    }
+    if (tokens.isEmpty) return null;
     final items = <PickedImage>[
       for (final token in tokens.take(max))
-        (token: token! as String, origin: AttachmentOrigin.gallery),
+        if (token is String)
+          (token: token, origin: AttachmentOrigin.gallery)
+        else
+          throw const ImageImportFailure(ImageImportError.unreadable),
     ];
-    return (
-      items: items,
-      total: (r['total'] as num?)?.toInt() ?? tokens.length,
-    );
+    return (items: items, total: (total as num?)?.toInt() ?? tokens.length);
   });
 
   /// Bytes libres de la partición de datos, o null si no se sabe: un fallo
