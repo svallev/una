@@ -1,6 +1,6 @@
 # ADR-0013: Sin visor de imágenes: la imagen se ve y se amplía en la propia tarea
 
-- **Estado:** Aceptado (propietario, 2026-09-27). Ampliado por el ADR-0022 (2026-10-06): la imagen y el horizontal valen también para cada foto de un grupo, y el swipe del carrusel entra en la excepción a P6
+- **Estado:** Aceptado (propietario, 2026-09-27). Ampliado por el ADR-0022 (2026-10-06): la imagen y el horizontal valen también para cada foto de un grupo, y el swipe del carrusel entra en la excepción a P6. Con el ajuste **Bloquear zoom** (spec 017, enmienda 1 del ADR-0022, 2026-10-07) no hay pellizco ni desplazamiento por contacto; la lupa del sistema sigue y el desplazamiento por orden (lector, switch, teclado) también: la excepción no se amplía
 - **Fecha:** 2026-09-27
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** spec 007 (CA-007-08 a CA-007-12, CA-007-21 a CA-007-23), D10 (enmendada), DEV-35 y DEV-37 (revocadas), DEV-41 a DEV-43, constitución P6
