@@ -43,7 +43,7 @@ Detalle: `specs/016-varias-imagenes-carrusel/dispositivo.md`.
 ## Definition of Done (`specs/constitution.md`)
 
 - [x] Criterios de aceptación cumplidos y con tests en verde (los de dispositivo, en la 022)
-- [ ] CI en verde: los *goldens* de la 016 (T-016-11 y T-016-22) se revisaron a ojo en el Mac y **no están subidos**; el primer `CI` fallará por ellos hasta lanzar `actualizar-goldens`
+- [x] CI en verde (*goldens* de la 016 generados en CI con `actualizar-goldens` y subidos)
 - [x] Textos nuevos en ES y EN; ninguno incrustado en el código
 - [x] Sin valores visuales sueltos (todo sale de los tokens)
 - [x] Accesibilidad: semántica, alternativas a gestos (con la excepción del ADR-0022), contraste, texto grande, reducir movimiento
@@ -57,7 +57,7 @@ Detalle: `specs/016-varias-imagenes-carrusel/dispositivo.md`.
 
 ## Pendiente antes o después de fusionar
 
-- **[Pendiente, antes de fusionar]** Generar en CI los *goldens* de la 016 con la etiqueta `actualizar-goldens`, revisarlos a ojo y subirlos.
+- **[Hecho]** *Goldens* de la 016 (19 PNG) generados en CI con `actualizar-goldens`, revisados a ojo y subidos.
 - **[Hecho, propietario 2026-10-07]** Listado con 500 tareas de 10 fotos: se abre en ~130 ms (< 300 ms de CA-006-20); no se repite en el Xiaomi.
 - **[Pendiente, 022]** Casillas de dispositivo (`docs/PLAN.md`, «Casillas de la 016»): Android 8 y 12L con `check-recents.sh` (PD-10) y su calibración en horizontal, medidas en el Xiaomi, TalkBack a oído (anuncios del editor), Switch Access y control por voz, teclado físico, test de Chrome del selector múltiple.
 - **[Pendiente, 020/022]** Hallazgos bajos de las revisiones de cierre (mismo apartado de `PLAN.md`): «Foto no disponible» y el pie al ×2,0 en 360 × 640, foto corrupta anunciada sin «no disponible», barrido y migración con millones de filas, código muerto `SendAnnouncementAnnouncer`.
