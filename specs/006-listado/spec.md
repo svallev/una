@@ -38,6 +38,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
   - El texto de cada fila se recorta a **3 líneas** con "…" (DEV-29); el lector de pantalla lee el texto completo.
   - Imagen: CA-007-20. *[Diferido a 008–009]* Miniatura de 44 px (imagen) o insignia con la extensión en mayúsculas (PDF, DOCX…; "WEB" para las URL) entre el asa y el texto; sin texto, se muestra el nombre del archivo o el dominio.
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* mientras se ve la card de deshacer, ocupa el sitio de "Nueva tarea" (CA-014-05).
+  - *Enmienda (spec 016, implementada; en vigor):* la miniatura de una tarea con un grupo es la de la primera foto, sin contador (CA-016-19).
 - **CA-006-03 Volver**
   - **Dado** el listado
   - **Cuando** pulsa "Volver a la tarea" o usa el gesto atrás
@@ -155,6 +156,7 @@ Ver y organizar la cola cuando hace falta, sin que ese acceso compita con el foc
     - con el lector activo, la ayuda dice "La primera es la que tienes ahora. Usa las acciones de cada tarea para cambiar el orden, editarla o eliminarla." (DEV-33).
   - Tras el texto, el tipo de adjunto si hay: imagen, CA-007-21; *[documento y URL: 008–009]*.
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* mientras se ve la card de deshacer, es lo primero en el orden de lectura (CA-014-16).
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo, "{posición} de {total}: {texto}. {n} fotos", también en la primera fila (CA-016-20).
 - **CA-006-19 Reducir movimiento**
   - **Dado** "reducir movimiento" activado
   - **Cuando** se reordena, se crea o se desplaza la lista por programa

@@ -78,7 +78,7 @@ sequenceDiagram
   participant UI as CurrentTaskScreen
   OS->>N: lanza la app (splash mostrado por el SO)
   N->>M: runApp (sin await de plugins no críticos)
-  M->>DB: abrir SQLite en el isolate principal (I-1) + SELECT tarea actual (índice status,deletedAt,rank) LIMIT 1
+  M->>DB: abrir SQLite en el isolate principal (I-1) + SELECT tarea actual (índice status,deletedAt,rank) LIMIT 1 y sus adjuntos acotados a 10 filas (índice `idx_attachments_task_position`)
   DB-->>M: Task + Attachment (rutas)
   M->>UI: primer fotograma: nota o miniatura en caché
   UI-->>OS: tarea visible (medida: TTFD)
@@ -87,17 +87,17 @@ sequenceDiagram
 
 - **Splash nativo [Hecho, medido en el emulador de API 37]:** lo que ve el usuario mientras arranca el proceso es el *splash* que pinta el sistema (Android 12+) con el fondo de `launch_background.xml` (`?android:colorBackground`) y el icono de la app: **fondo liso, sin logo propio y sin el color `paper`**; en modo claro sale blanco y en modo oscuro **negro** (`values-night` usa `Theme.Black`), unos 0,5 s antes del primer fotograma de Flutter. **[Pendiente, F5]** mitigación posible, fuera de la spec 011: usar `paper` en `launch_background` (y su versión para modo oscuro) para que el arranque en frío no sea blanco o negro. No cambiaría el fotograma blanco al volver a la app sin instantánea (spec 011, CA-011-03): se midió blanco también en modo oscuro, así que no sale de `launch_background` (`specs/011-ocultar-recientes/dispositivo.md`, "T-011-08 previa").
 - Fuentes empaquetadas (ya en el primer fotograma) y *shaders* precompilados.
-- Imagen: se muestra primero la **versión de pantalla** pregenerada al importar, **JPEG al ancho físico exacto de la pantalla** (I-2; ~20 % más rápido que PNG en S1); el original se carga al hacer zoom.
+- Imagen: se muestra primero la **versión de pantalla** pregenerada al importar (con un grupo, **la de la primera foto y nada más**: el primer fotograma no espera a ninguna otra; `readBootState` lee ya el grupo, acotado a 10 filas por una consulta indexada), **JPEG al ancho físico exacto de la pantalla** (I-2; ~20 % más rápido que PNG en S1); el original se carga al hacer zoom.
 - PDF (spec 008): antes de `runApp`, y solo si la tarea actual tiene PDF (tope de 1 s), se leen `position.json` y se decodifica `screen.jpg`, que es **lo que se ve desde la última posición**; el primer fotograma la pinta y pdfrx abre el documento debajo, sin quitarla hasta que ha dibujado las páginas visibles (detalle en §4, «PDF»).
 - Web (spec 009): el primer fotograma pinta la barra del dominio y la línea de carga; la WebView se crea **después** del primer fotograma y la página, que depende de la red, queda fuera del presupuesto (ADR-0016). Si se usó la web y la app se cerró sin limpiar, el borrado de los datos de la WebView va también tras el primer fotograma (§4, «Tarea web»). **[Hecho]** Xiaomi, *release*: p50 478 ms con una tarea web actual (`docs/perf/baseline.md`).
 - Bienvenida (R1) **solo** en el primer uso; nunca retrasa R8.
 - Migraciones: las de esquema se ejecutan al abrir la BD (rápidas); las de datos pesadas se trocean en segundo plano.
 
-## 3. Modelo de datos (esquema v1)
+## 3. Modelo de datos (esquema v3)
 
 ```mermaid
 erDiagram
-  TASKS ||--o{ ATTACHMENTS : "tiene (v1: 0..1)"
+  TASKS ||--o{ ATTACHMENTS : "tiene (0..N: una imagen, hasta 10 imágenes en grupo, un PDF o una web; v3, ADR-0024)"
   TASKS ||--o{ TASKS : "parentId (futuro)"
   TASKS {
     text id PK "UUIDv7"
@@ -133,6 +133,7 @@ erDiagram
     int height "nullable"
     int pageCount "nullable (PDF)"
     text sha256 "integridad y duplicados; nullable (no se calcula para imágenes)"
+    int position "orden dentro de la tarea (v3); 0..N-1 al escribir, se lee ordenando por (position, id)"
     int createdAt
   }
   SETTINGS {
@@ -142,22 +143,22 @@ erDiagram
   }
 ```
 
-- **Índices:** `tasks(status, deletedAt, rank)`; `attachments(taskId)`; `tasks(parentId)` y `tasks(source, externalId)` único parcial (futuro).
-- **Invariantes (se prueban en el dominio):** una tarea tiene `text` no vacío **o** un adjunto (o ambos); una tarea web no lleva texto en la v1 (como el prototipo); `rank` es único entre las pendientes; desde el esquema v2 (ADR-0012) solo se guardan tareas pendientes: completar y eliminar las borran de la BD (al eliminar, los archivos esperan a que no se pueda deshacer, ADR-0021), y `status`, `completedAt` y `deletedAt` quedan sin uso.
+- **Índices:** `tasks(status, deletedAt, rank)`; `attachments(taskId)`; `attachments(taskId, position, id)` (`idx_attachments_task_position`, **no único**, v3: sirve a la lectura acotada a 10 filas por tarea); `tasks(parentId)` y `tasks(source, externalId)` único parcial (futuro).
+- **Invariantes (se prueban en el dominio):** una tarea tiene `text` no vacío **o** un adjunto (o ambos); **desde la v3 (ADR-0024) una tarea tiene de 0 a N adjuntos y solo son válidos ninguno, uno de cualquier tipo o de 2 a 10 imágenes** (nunca un PDF o una web junto a otra fila, ni una fila ilegible junto a otras: `AttachmentGroup.isValidGroup`); `Task.attachments` es la lista (ordenada) y `Task.attachment` la primera; **no hay entidad para el grupo** (cada foto es un `Attachment` con su id y su carpeta); `Task` nunca lanza con una mezcla no válida (se lee, no se valida al construir: la validación es de `CreateTask`/`EditTask`); **sin índice único en `(taskId, position)`**, para poder leer una BD restaurada con posiciones repetidas o con huecos (la unicidad la garantiza la escritura); una tarea web no lleva texto en la v1 (como el prototipo); `rank` es único entre las pendientes; desde el esquema v2 (ADR-0012) solo se guardan tareas pendientes: completar y eliminar las borran de la BD (al eliminar, los archivos esperan a que no se pueda deshacer, ADR-0021), y `status`, `completedAt` y `deletedAt` quedan sin uso.
 - **Ajustes v1:** `locale` (`system | es | en`, por defecto `system`) y `keepScreenOn` (bool, **apagado por defecto**; spec 015, ya los escribe la pantalla Ajustes y se leen al arrancar; sección «Ajustes»), `palette` (`classic`), `firstRunDone` (bool), `hasEverHadTasks` (bool: ya se guardó alguna tarea; decide entre "Todo hecho." y el editor de la primera tarea; lo activa `insert` en su transacción, ADR-0012), `notifications` (reservado). Las claves se versionan con el esquema; un valor por defecto distinto no es un cambio de esquema. Todas se leen con decodificadores que no lanzan (`settings_codec.dart`).
-- **Versionado:** `schemaVersion = 2` (v2, ADR-0012: la migración borra una vez las completadas y las marcas de borrado, y activa `hasEverHadTasks`; mismas tablas). Cada cambio → nueva versión, captura en `app/drift_schemas/`, paso de migración y **test de migración** generado (ADR-0002).
+- **Versionado:** `schemaVersion = 3` (**v3, spec 016, ADR-0024:** columna `attachments.position` con valor por defecto 0, el índice de arriba y `from2To3`, que numera **solo las tareas con más de una fila** con un recorrido lineal en Dart sobre `ORDER BY task_id, created_at, id`; ninguna tarea cambia, captura `drift_schema_v3.json`; v2, ADR-0012: la migración borra una vez las completadas y las marcas de borrado, y activa `hasEverHadTasks`; mismas tablas). Cada cambio → nueva versión, captura en `app/drift_schemas/`, paso de migración y **test de migración** generado (ADR-0002).
 
 ### Casos de uso ↔ reglas
 
 | Caso de uso | Efecto en los datos | Regla |
 |---|---|---|
 | `CreateTask(text, position)` | inserta con `rank` antes de la primera (`top`) o después de la última (`end`); `colorKey` ≠ el de la actual | R3, R4 |
-| `CreateTask(attachment)` | importa el archivo → inserta **top** siempre | R5 |
+| `CreateTask(attachment)` | importa el archivo → inserta **top** siempre. **Con un grupo (spec 016):** `CreateTask(attachments: [...])` valida el grupo (≤ 10 imágenes o uno de cualquier tipo; si no, `ArgumentError`), `commitGroup` mueve las N carpetas (si falta una preparación, `StagedPhotosLost` sin mover nada; si una falla, devuelve las movidas), inserta la tarea y las N filas (`position` = índice) en **una transacción** y suelta la protección de todas | R5 |
 | `CompleteTask(current)` | `remove(id)`: borra la fila y las de sus adjuntos en una transacción; después, sus archivos (`AttachmentJanitor`). Sin histórico. Antes, `UndoController.commit()`: una eliminación que aún se podía deshacer pasa a definitiva (spec 014) | R9, ADR-0012 |
-| `DeleteTask(id)` (`DeleteCurrentTask`, `DeletePendingTask`) | `hold` de los archivos del adjunto **antes** de `remove(id)` (la fila y las de su adjunto salen de la BD al instante); **no** borra archivos: devuelve la tarea leída de la BD y la retiene `UndoController`. Los archivos se borran cuando la eliminación es definitiva (spec 014, ADR-0021; más abajo) | R10, ADR-0012, ADR-0021 |
+| `DeleteTask(id)` (`DeleteCurrentTask`, `DeletePendingTask`) | `holdAll` de los archivos de **todas las fotos** (o del adjunto) **antes** de `remove(id)` (la fila y las de su adjunto salen de la BD al instante); **no** borra archivos: devuelve la tarea leída de la BD y la retiene `UndoController`. Los archivos se borran cuando la eliminación es definitiva (spec 014, ADR-0021; más abajo) | R10, ADR-0012, ADR-0021 |
 | `RestoreDeletedTask(task)` | Deshace una eliminación: vuelve a `insert` la **misma** `Task` (id, `rank`, color, `createdAt`, `updatedAt`, adjunto) y después suelta la protección de sus archivos. Comprueba que ningún pendiente tiene ese `rank` (`RankTaken`); si el id ya existe, no hace nada; nunca `restage` ni `store.commit` (los archivos no se mueven) | R10, ADR-0021 |
 | `ReorderTask(id, newIndex)` | nuevo `rank` entre los vecinos; el índice 0 ⇒ pasa a ser la actual | R13 |
-| `EditTask(id, text, attachment?)` | actualiza y conserva `rank` y `colorKey` | R11, R13 |
+| `EditTask(id, text, attachment?)` | actualiza y conserva `rank` y `colorKey`. **Con grupos (spec 016):** `ReplaceAttachment(List)` / `.one` sustituye el grupo entero (borra las filas y reinserta `0..N-1` en una transacción y, **solo después de confirmar**, descarta los archivos que ya no están); `null` = no tocar las filas (editar solo el texto no borra nada, ni con filas raras); `[]` = quitarlo | R11, R13 |
 
 ## 4. Adjuntos: canal de importación
 
@@ -176,7 +177,7 @@ flowchart LR
   J --> K[Insertar Task + Attachment en una transacción]
 ```
 
-Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D18; en la v1 el único documento, ADR-0014). La web no pasa por este canal: no hay archivo (§4, «Tarea web»). La importación no bloquea la UI (las imágenes y el JPEG del PDF, en un hilo nativo; PDFium, en el *isolate* de trabajo de pdfrx) y cancelar limpia los temporales. **[Hecho]** El `sha256` de la tabla no se calcula todavía (ni imágenes ni PDF): queda nulo. Detalle de seguridad en `docs/security/threat-model.md`.
+Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP; **cada una de las hasta 10 de un grupo**, spec 016, §4 «Varias imágenes con carrusel»), **PDF 10 MB** (D18; en la v1 el único documento, ADR-0014). La web no pasa por este canal: no hay archivo (§4, «Tarea web»). La importación no bloquea la UI (las imágenes y el JPEG del PDF, en un hilo nativo; PDFium, en el *isolate* de trabajo de pdfrx) y cancelar limpia los temporales. **[Hecho]** El `sha256` de la tabla no se calcula todavía (ni imágenes ni PDF): queda nulo. Detalle de seguridad en `docs/security/threat-model.md`.
 
 ### Imágenes (spec 007)
 
@@ -192,6 +193,23 @@ Límites: imagen 30 MB y 64 MP (se guarda como mucho a 24 MP), **PDF 10 MB** (D1
 - **Archivos que faltan** (CA-007-19): si faltan la versión de pantalla o la miniatura, se regeneran desde las teselas (`regenerateDerived`); si falta la completa, "Adjunto no disponible".
 - **Borrado:** un solo servicio, `AttachmentJanitor`. El barrido (2 s después del primer fotograma) borra los adjuntos sin tarea y las preparaciones abandonadas; `ImportRegistry` protege las importaciones en curso y el conjunto propio `held` (spec 014) las eliminaciones que aún se pueden deshacer.
 - **Web de pruebas:** `WebImageImporter` hace lo mismo con el selector del navegador y un `canvas`, todo en memoria (`MemoryAttachmentStore`); HEIC no se admite.
+
+### Varias imágenes con carrusel (spec 016, ADR-0022 y ADR-0024)
+
+Estado: **[Hecho]** en Android (rama `feat/016-varias-imagenes-carrusel`; emulador de API 37, `specs/016-varias-imagenes-carrusel/dispositivo.md`). **[Pendiente]** para la 022: Android 8 y 12L (`check-recents.sh`, PD-10), las medidas en el Xiaomi, los anuncios del editor, el gesto real de TalkBack, Switch Access, la voz y el control por voz (`docs/PLAN.md`, «Casillas de la 016»). Sin dependencias, permisos ni componentes nuevos; el único cambio de datos es el esquema v3 (§3).
+
+- **Un grupo es `Task.attachments`** (de 2 a 10 imágenes, cada una con su id, su carpeta y los tres archivos de siempre); la primera foto es `Task.attachment`. Una tarea con una imagen y otra con un grupo solo se distinguen por tener una o más fotos (CA-016-03). El nombre provisional `ImageSet` se retiró.
+- **Importar el grupo** (CA-016-02 a 05, CA-016-24): `ImageImporter.pickMany({max})` y `freeSpace()` (canal `una/images`, `ImageImport.kt`: selector de fotos con `EXTRA_PICK_IMAGES_MAX` o de documentos con `ALLOW_MULTIPLE`; **como mucho 10 tokens** de `clipData` y `total` = lo devuelto, antes de abrir ninguno). `ImportImage.pickMany` devuelve un `ImportGroup`: registra **un id por foto** en `ImportRegistry` al volver el selector, y `prepareAll` las prepara **una tras otra** con el `ImportJob` de siempre bajo un `ImportBudget` (20 s por foto y 2 min en total, con tiempo activo: latido de 1 s que suma `min(hueco, 2 s)`; un hueco de más de 3 s reinicia la foto en curso) y un estado del grupo (`running | cancelled | expired`) que se mira antes de cada paso. La limpieza nativa va en un hilo propio con su bandera comprobada antes de empezar y Dart espera a que termine la anterior (o 3 s). Una foto que falla se omite y se avisa (solo el código); si fallan todas, el error de la primera; sin espacio, se descarta todo (30 MB + 10 × `storedPhotoEstimate` de 16 MB + lo que ocupa el grupo que se reemplaza). `ImportGroup` tiene una única salida que suelta todo id que no esté en `staged`. En la web de pruebas, `WebImageImporter.pickMany` usa `<input multiple>` y `takeFirst` lee solo los 10 primeros.
+- **Guardar y borrar son del grupo entero:** `commitGroup` (§3, tabla de casos de uso) y `AttachmentJanitor` por lotes (`holdAll`, `releaseHeldAll`, `discardHeldAll`, `discardAll`, `restageAll`, `releaseAll`; sin lanzar, la comprobación «¿tiene fila?» por lote con `existingAttachmentIds`). Completar, eliminar, deshacer, editar, cancelar y el barrido usan los mismos métodos, así que no queda ningún archivo huérfano ni temporal (CA-016-16).
+- **Lectura tolerante** (CA-016-25): una sola consulta SQL a mano (`customSelect`) con `LEFT JOIN attachments a ON a.id IN (SELECT … ORDER BY position, id LIMIT 10)`, que sirve el índice por clave y escucha las dos tablas; un tipo u origen desconocido o unas medidas fuera de rango dan `Attachment.unreadable` (medidas 1 × 1) y toda la tarea sale como «Adjunto no disponible».
+- **Salud** (`group_health.dart`): `groupHealthProvider` solo hace `check` (barato) para saber si faltan **todas** (tarjeta «Adjunto no disponible») o algunas (`PhotoMissingBox`, «Foto no disponible», en su sitio); la regeneración de derivadas va **de una en una** (`RepairQueue`) solo para la foto a la vista y las contiguas.
+- **Carrusel** (`photo_carousel.dart`, `photo_swipe.dart`, `zoomable_photo.dart`): no es un `PageView`. `PhotoCarousel` es infinito (también con 2), monta la foto actual y la vecina hacia la que se arrastra (claves por id: el `State` pasa de vecina a actual), anima 280 ms con la curva `photoSwipe` (instantáneo con reducir movimiento) y mantiene como mucho 3 versiones de pantalla decodificadas (`precacheImage` de las contiguas, `evict` del resto); cada foto tiene su `PhotoScrollController` (conserva su desplazamiento mientras la tarea siga a la vista; el zoom no). `ZoomablePhoto` es la página de `TaskImage` extraída (versión de pantalla en el primer fotograma, teselas, desplazamiento vertical, pellizco ×8 que vuelve al soltar). `PhotoSwipeRecognizer` (un `OneSequenceGestureRecognizer` propio) reparte el gesto por dirección: tras `min(16 dp, touchSlop)` de recorrido es horizontal si `|dx| > 1,5 · |dy|` y el eje no cambia hasta levantar todos los dedos; cambia de foto con > 18 % del ancho o ≥ 700 dp/s; con dos dedos nunca (un segundo dedo cancela el swipe y el que queda tras un pellizco no inicia nada); un gesto que empieza en el borde del sistema (`systemGestureInsets`, medido: 78 px ≈ 30 dp con gestos, 0 con tres botones, también en horizontal) no es del carrusel.
+- **Pie y puntos** (`photo_group.dart`): `PhotoGroupHost` (estado: controlador y margen) y `PhotoGroupFooter` (pie `ImageCaption` + `PhotoDots`), **fijos** al cambiar de foto y **bajo el pie, encima del botón de completar** (P-016-1, DEV-53); miden su caja real (`GlobalKey` + `SizeChangedLayoutNotifier`) para dar el margen inferior de las fotos (`ZoomablePhoto.bottomInset`). `PhotoDots`: 9 × 9, borde de 2, halo blanco de 1,5, `IgnorePointer` y fuera de la lectura.
+- **Lectura, teclado y anuncios** (`photo_announcer.dart`; CA-016-20 y 21): un solo nodo `taskNode` («Tarea actual: {texto}. {n} fotos. Foto {i} de {n}», calculado por `photoGroupReading`/`photoState` con una sola función para la etiqueta y el anuncio, «Foto no disponible» incluida) con «Foto siguiente», «Foto anterior» (registradas **antes** de Completar y Eliminar) y `onScrollLeft/Right`; el nodo no se recrea al cambiar de foto. El anuncio único «Foto {i} de {n}» lo da una **región viva** en un nodo propio con el idioma de la app (`LiveRegionAnnouncer`, con `accessibilityFocusBlockType: blockNode` para que no sea una parada de foco; elegida frente a `SendAnnouncementAnnouncer` con TalkBack en el emulador: una frase por cambio en 5 por acción y 5 por gesto) y un antirrebote de 300 ms. Con teclado, el elemento de la tarea es un punto de foco con anillo (también en horizontal) que recibe el foco al abrir y consume las flechas (sin repetición ni Alt/Ctrl/Meta). Con una foto alta, «desplazar adelante» del lector la recorre y luego pasa a la siguiente (decisión del propietario, 2026-10-07).
+- **Horizontal** (CA-016-12): el mismo `PhotoCarousel`, sin menú, botón, pie ni puntos; conserva la foto y su desplazamiento (el zoom no).
+- **Completar y eliminar** (CA-016-19): `PhotoFaceCapture` (`RepaintBoundary.toImageSync`, como `PdfFaceCapture`) guarda **solo en memoria** lo que se ve —la foto actual con su desplazamiento, el pie y los puntos— **antes** de descartar los archivos; la cara (`PhotoFaceLayer`) la pinta esa imagen y no lee disco, ni comprueba salud ni regenera; se libera al terminar. Sin captura, la cara es estática (color y pie). Deshacer devuelve la tarea en la primera foto.
+- **Editor** (CA-016-06): `PhotoStack` (≤ 3 fotos con -1°/4°/-5°, la primera arriba, etiqueta «{n} fotos» blanca sobre tinta, un solo nodo «Vista previa: {n} fotos»), «Preparando foto {i} de {n}…» con «Cancelar», `ImportNoticeBanner` (el aviso visible sin caducidad y el anuncio compuesto único, tras el foco a la pila) y `BrutalButton(semanticsEnabled: false)` para «+» y «Continuar» mientras se prepara.
+- **Medidas** (emulador de API 37, 24 MP; T-016-20, `dispositivo.md`): arranque p50 425 ms con 1 foto y 429 ms con 10; pico de memoria 81 → 102 MB (+21, límite +50); hueco al cambiar de foto 0 fotogramas; **62 MB** en disco por tarea de 10 (límite 150), así que `storedPhotoEstimate` (16 MB) se queda y no hace falta rebajar la versión completa de los grupos (ADR-0024); listado con 500 tareas de 10 fotos: se abre en 130 ms frente a 24–49 ms con una (< 300 ms de CA-006-20).
 
 ### PDF (spec 008, ADR-0014)
 

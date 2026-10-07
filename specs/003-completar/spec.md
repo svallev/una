@@ -80,6 +80,7 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
   - **Dado** un lector de pantalla (TalkBack/VoiceOver) o acceso por switch activo
   - **Cuando** el usuario invoca la acción personalizada "Completar tarea" sobre la tarea actual o sobre el botón
   - **Entonces** la tarea se completa sin mantener pulsado, se hace **un único anuncio** "Tarea completada. Siguiente: {texto}" (o "Tarea completada. Todo hecho.") y, al terminar, el foco pasa a la nueva tarea actual (o al título "Todo hecho.", leído como un solo texto). El doble toque de TalkBack sobre el botón **no** completa (evita accidentes; la acción está en el menú de acciones).
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo, el anuncio dice "{n} fotos" (CA-016-19) y se añaden las acciones "Foto siguiente" y "Foto anterior" (CA-016-20).
 - **CA-003-08 Teclado**
   - **Dado** un teclado físico con el foco en el botón
   - **Cuando** mantiene Espacio o Intro durante 1,2 s
@@ -100,11 +101,11 @@ Que completar sea un gesto deliberado y satisfactorio que refuerza el hábito y 
 | CL-003-1 | La app se mata durante la animación, después de 1,2 s | La tarea ya consta como completada (CA-003-03a); al reabrir se ve la siguiente o "Todo hecho." |
 | CL-003-2 | Llamada entrante o notificación a pantalla completa mientras se mantiene pulsado | Se cancela (CA-003-02) |
 | CL-003-3 | Multitoque: dos dedos | Solo cuenta el primer puntero |
-| CL-003-4 | Tarea con adjunto (imagen, PDF, web) | Misma animación; las mitades muestran el mismo contenido que la tarea |
+| CL-003-4 | Tarea con adjunto (imagen, PDF, web) | Misma animación; las mitades muestran el mismo contenido que la tarea *Enmienda (spec 016, implementada; en vigor):* con un grupo, las mitades muestran la foto que se ve (CA-016-19). |
 | CL-003-5 | Reducir movimiento activado | El relleno se mantiene; sin rotura ni confeti: fundido `reducedMotionFade` (0,4 s) a una enhorabuena estática que dura lo mismo (CA-003-04) |
 | CL-003-6 | Toque breve (menos de 1,2 s) | Como soltar antes de tiempo (CA-003-02). **Sin pista visual ni texto adicional** (decisión del propietario, 2026-09-24) |
 | CL-003-7 | La app pasa a segundo plano durante la rotura o la enhorabuena | Al volver se ve la siguiente tarea o "Todo hecho.", sin repetir la animación |
-| CL-003-8 | Tarea solo con adjunto (sin texto), en el anuncio de CA-003-07 | `{texto}` = "Foto" o "Imagen" (CA-007-21); documento y URL, 008–009 |
+| CL-003-8 | Tarea solo con adjunto (sin texto), en el anuncio de CA-003-07 | `{texto}` = "Foto" o "Imagen" (CA-007-21); documento y URL, 008–009 *Enmienda (spec 016, implementada; en vigor):* con un grupo, `{texto}` = "{n} fotos" (CA-016-19). |
 
 Solo vertical en la v1 (CL-001-7): no hay rotación durante la animación.
 

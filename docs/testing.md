@@ -123,6 +123,32 @@ tools/check-recents.sh $S record 10               # CA-011-03: parpadeo
 - Las capturas son de la app con datos de prueba ("uno" y "dos"): no se guardan con datos reales ni en el repositorio.
 - **Ajustes y la página de Idioma (spec 015, CA-015-18):** `capture` y `compare` miran lo que haya delante, así que se visitan a mano con `adb shell input tap` (menú → «Ajustes»; «Idioma» para el nivel 2; con `adb`, no con el teclado, que cambiaría el foco): Ajustes **arriba**, Ajustes **con el aviso** «No hay ninguna app…» (con `adb shell pm disable-user --user 0 com.android.chrome`, y `pm enable` al acabar) y la página de Idioma. En cada una, tarjeta visible y lisa (desviación 0,00) y `compare` entre pantallas con tarjetas idénticas; `secure` da `not-secure`. No hay ninguna hoja de confirmación de enlace en Ajustes. Resultado de la 015: `specs/015-ajustes/dispositivo.md`.
 
+## Varias imágenes (spec 016, ADR-0022 y ADR-0024)
+
+Resultados y casillas: `specs/016-varias-imagenes-carrusel/dispositivo.md`; medidas: `docs/perf/baseline.md`.
+
+- **Matriz de "Recientes" (CA-011-02, enmienda de la 016, CA-016-13).** Además de las filas de la 011, 014 y 015, **cada entorno de verificación** prueba: el **editor con la preselección** (pila de fotos), la **tarea con el carrusel**, el carrusel **en horizontal**, la tarea con **«Foto no disponible»** y **«Preparando foto {i} de {n}…»**. Con el selector de fotos del sistema delante, la tarjeta enseña la hoja del propio selector (límite ya aceptado de la 011, CL-011-15), no es un fallo del script.
+- **Escenario «grupo de 3 fotos distinguibles»** de `tools/check-recents.sh` (solo emulador o dispositivo de pruebas; son archivos de prueba sin datos reales):
+
+  ```bash
+  tools/check-recents.sh $S fixtures push     # deja foto-1 (roja), foto-2 (verde) y foto-3 (azul) en Pictures/una-recents
+  # en la app: «Subir imágenes» con las tres, en ese orden, y guardar; el carrusel a la vista
+  tools/check-recents.sh $S capture carrusel1 $D
+  # swipe a la foto 3
+  tools/check-recents.sh $S capture carrusel3 $D
+  tools/check-recents.sh $S compare carrusel1 carrusel3 $D   # tarjeta lisa e idéntica: ninguna foto se ve
+  tools/check-recents.sh $S loop 10 $D; tools/check-recents.sh $S record 10 $D
+  tools/check-recents.sh $S fixtures clean
+  ```
+
+  Se repite con «Foto no disponible» (borrando la carpeta de una foto con `adb shell run-as <paquete> rm -r files/attachments/<id>`), con el editor y la pila, y con «Preparando foto …» (9 fotos grandes). Resultado de la 016 en el emulador de API 37: tarjeta lisa (desviación 0,00) en todos, `secure` = `not-secure` y `loop 5` / `record 5` sin fallos.
+- **[Hallazgo, T-016-20] `tools/check-recents.sh` no está calibrado en horizontal.** La posición de la tarjeta (`CARD`, en **fracciones** de la pantalla, por defecto `0.160,0.122,0.840,0.802`, medida en vertical con 1080×2400) no vale con el móvil girado: la tarjeta lleva una franja negra a la izquierda (el borde del sistema girado) y `capture` falla con desviación 14 aunque el interior sea blanco liso (0,00) y las tarjetas con distinta foto sean idénticas. Mientras no se calibre, el horizontal se comprueba **a ojo y recortando la franja** (`CARD="x0,y0,x1,y1"`, en fracciones, ajustado al interior de la tarjeta girada); calibrarlo (recorte propio para horizontal, o detectar la franja) es una **casilla de la 022** (`docs/PLAN.md`, «Casillas de la 016») y no cambia el criterio.
+- **Fotos de prueba.** En tests: `stageImage` (`test/support/attachments.dart`: copia `Uint8List.fromList(tinyImage)` por foto si hay que distinguirlas en la caché de imágenes; por defecto son fotos de la cámara, la insignia dice «FOTO»). Archivos reales: `tools/fixtures/out/*.jpg` (`adb push` a `/sdcard/Pictures/<carpeta>/` + `am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://…`, y se borran al acabar), con `html_as.jpg` como ilegible y las malformadas de CL-016-19 (`debugCopyFile` de la 007). Selector de fotos real (API 37): tocar las miniaturas y **Done**; DocumentsUI: ☰ → Images → carpeta, pulsación larga para multiselección y **Select** (solo con `NativeImageImporter.debugPickManyDocuments`, solo depuración).
+- ***Goldens* de la 016** (`test/goldens/photo_group_golden_test.dart`: pila de 2 y 10 fotos, foto que falta, «Preparando», aviso compuesto, carrusel con puntos, «Foto no disponible»; ES y EN, ×1,0 y ×2,0). **[Pendiente]** Se revisaron a ojo en el Mac (`GOLDENS_ANY_OS=1 flutter test --update-goldens`) pero **no se subieron** (los del Mac difieren de Linux): hay que generarlos en CI con la etiqueta `actualizar-goldens` en la PR (los de T-016-11 y T-016-22), descargarlos, revisarlos y subirlos en un commit.
+- **Rendimiento.** `integration_test/task_list_perf_test.dart` admite `--dart-define=UNA_PERF_PHOTOS=N` (0 = texto, 1 = imagen suelta, 10 = peor caso); `flutter drive --profile` **necesita `--no-dds`**. Arranque, memoria (`dumpsys meminfo`), hueco al cambiar de foto y espacio en disco (`run-as … du -sk`) con `adb`, método en `docs/perf/baseline.md` (no hay `photo_group_perf_test.dart`).
+- **Gestos con varios dedos en el emulador:** `adb emu event send` para el pellizco y el segundo dedo; `systemGestures` se lee con `dumpsys window`. TalkBack: contar frases por cambio de foto con `GoogleTTSServiceImpl: Synthesis request` en logcat y marcas `UNA-STEP` (método de la 014/015, arriba).
+- **Chrome:** `flutter test --platform chrome test/data/web_image_importer_browser_test.dart` (tope de 10 del selector múltiple de la web de pruebas) **no corre en CI**, solo a mano.
+
 ## Pruebas en el móvil del propietario (lecciones aprendidas)
 
 - Las pruebas de integración se instalan como apps aparte: `invalid.pending.app.debug` (debug) e `invalid.pending.app.profile` (profile). Solo esas pueden borrar su base de datos (las pruebas lo comprueban).

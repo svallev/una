@@ -33,6 +33,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - "Subir archivo — PDF, Word, Excel… · va arriba del todo" (DEV-02);
     - "Cargar URL — Una página web · va arriba del todo".
   - "Subir archivo" y "Cargar URL" se ven activas pero no hacen nada hasta las specs 008 y 009 (DEV-18).
+  - *Enmienda (spec 016, implementada; en vigor):* la segunda fila pasa a "Subir imágenes — Una o varias · van arriba del todo" (CA-016-01). Solo esa fila admite varias; "Hacer foto" y "Subir archivo" siguen de una en una.
 - **CA-007-02 Hacer foto sin permisos**
   - **Dado** la hoja
   - **Cuando** elige "Hacer foto"
@@ -42,6 +43,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Cuando** elige "Subir imagen"
   - **Entonces** se abre el selector de fotos del sistema (en Android 8–12 sin selector de fotos, el selector de documentos), **sin pedir acceso a la galería**, y la imagen elegida aparece en el editor.
   - La app de *release* no declara permisos de cámara, de fotos ni de almacenamiento (se comprueba en CI).
+  - *Enmienda (spec 016, implementada; en vigor):* selección múltiple, de 1 a 10, sin pedir acceso a la galería (CA-016-02); con una sola elegida todo es como aquí (CA-016-03).
 - **CA-007-04 Editor con imagen**
   - **Dado** una imagen elegida
   - **Cuando** se muestra el editor
@@ -50,16 +52,19 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - el campo "Añade un texto (opcional)", sin abrir el teclado solo;
     - "Continuar" (nueva tarea con otras pendientes), "Guardar" (primera tarea o desde "Todo hecho.") o "Guardar cambios" (editar).
   - Con imagen, el texto es opcional. Pulsar (+) con una imagen ya elegida abre la hoja y la nueva imagen **sustituye** a la anterior.
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo de 2 a 10 fotos la vista previa es la pila de CA-016-06 y "Quitar adjunto" quita el grupo entero; (+) lo reemplaza entero, nunca se suman.
 - **CA-007-05 Siempre arriba (R5, cierra CA-002-09)**
   - **Dado** el editor de una tarea **nueva** con una imagen
   - **Cuando** pulsa "Continuar"
   - **Entonces** la tarea se crea como **tarea actual** sin preguntar la posición y se vuelve al origen: a la pantalla principal mostrándola, o al listado con la fila en la posición 1, resaltada y con el foco (como "Arriba del todo" en CA-006-15/17).
+  - *Enmienda (spec 016, implementada; en vigor):* también con un grupo (CA-016-07).
 - **CA-007-06 Editar: añadir, sustituir o quitar la imagen (cierra CA-005-07 y CL-005-3)**
   - **Dado** el editor en modo editar
   - **Cuando** añade, sustituye o quita la imagen y pulsa "Guardar cambios"
   - **Entonces** la tarea **conserva su posición y su color** (no sube, CA-005-05).
   - Si queda sin texto ni imagen, "Guardar cambios" no guarda y el foco va al campo (DEV-17).
   - "Cancelar" deja la tarea como estaba.
+  - *Enmienda (spec 016, implementada; en vigor):* también con un grupo: añadir, sustituir o quitar el grupo conserva la posición y el color (CA-016-07).
 - **CA-007-07 Copia propia y sin datos ocultos**
   - **Dado** una imagen importada
   - **Cuando** se guarda
@@ -71,6 +76,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - la **versión completa** es la imagen entera, reducida solo si pasa de 24 megapíxeles, conservando la proporción y **sin límite de lado** (una captura de 1080 × 20 000 se conserva entera);
     - si se borra el original de la galería, la tarea sigue mostrando la imagen;
     - la app nunca escribe en la galería ni en el almacenamiento compartido.
+  - *Enmienda (spec 016, implementada; en vigor):* cada foto de un grupo cumple esto por separado (CA-016-04 y 14).
 
 **Ver la imagen**
 
@@ -81,6 +87,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - Si es más baja que la pantalla, queda el color de la nota arriba y abajo; si es más alta, se desplaza en vertical (CA-007-09; DEV-41; propietario, 2026-09-27; antes, recortada para llenar la pantalla, como en el prototipo).
   - El logotipo y el menú llevan fondo blanco sobre la imagen.
   - Si hay texto, se ve como pie sobre la imagen: recuadro negro con texto blanco (22 px, peso 800), 146 px por encima del borde inferior. Máximo 3 líneas con "…"; el lector lee el texto completo.
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo se ve la primera foto, y se abre siempre en ella (CA-016-08).
 - **CA-007-09 Imagen entera a lo ancho, sin visor (DEV-41; propietario, 2026-09-27, ADR-0013)**
   - **Dado** la tarea actual con imagen
   - **Entonces**:
@@ -88,11 +95,13 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - si es más alta que la pantalla, se desplaza **solo en vertical**, ahí mismo;
     - tocarla no hace nada: no hay visor ni botón "Cerrar";
     - completar y el menú siguen como en cualquier tarea.
+  - *Enmienda (spec 016, implementada; en vigor):* cada foto del carrusel se ve entera a lo ancho y se desplaza solo en vertical (CA-016-10).
 - **CA-007-10 Zoom de vistazo con el pellizco (DEV-43; propietario, 2026-09-27)**
   - **Dado** la tarea actual con imagen, en vertical o en horizontal
   - **Cuando** pellizca la imagen
   - **Entonces** la imagen se amplía ahí mismo, hasta ×8, siguiendo a los dedos (sin desplazarse mientras hay dos dedos), y **al soltar vuelve al 100 %**: con una animación corta, o al instante con reducir movimiento.
   - No hay zoom que se quede puesto ni acciones de zoom: para ampliar sin gestos, la lupa del sistema (excepción a P6, ADR-0013).
+  - *Enmienda (spec 016, implementada; en vigor):* el pellizco de cada foto del carrusel es este (CA-016-10); ADR-0022 amplía la excepción de P6.
 - **CA-007-11 Solo gira la tarea actual con imagen (D10 enmendada; DEV-42)**
   - **Dado** la tarea actual con imagen a la vista (sin el menú, el editor ni el listado encima)
   - **Cuando** gira el móvil a horizontal
@@ -101,12 +110,14 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - Respeta el bloqueo de rotación del sistema. El resto de la app (y la tarea sin imagen) queda solo en vertical.
   - En tablets y plegables, en horizontal usa todo el ancho de la pantalla aunque el resto de la app esté limitado a 600 px (CL-001-7).
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar en horizontal, además se ve la card de deshacer (CL-014-7).
+  - *Enmienda (spec 016, implementada; en vigor):* el grupo gira igual, con swipe, pellizco y las acciones de foto en horizontal (CA-016-12; CA-008-11 es el texto vigente).
 - **CA-007-12 Pantalla encendida, ~~con límite~~ sin límite (D10 enmendada)** *(**Enmienda 2026-10-05 (spec 015, implementada; en vigor)**: ver abajo)*
   - **Dado** que el ajuste ~~"Mantener la pantalla encendida con adjuntos"~~ **"Pantalla siempre activa"** está activo (~~por defecto sí; su pantalla llega con la spec futura de Configuración y perfil; en la beta está siempre activo, enmienda 2026-09-29~~ **por defecto apagado**; se enciende en Ajustes, spec 015)
   - **Cuando** se ve la tarea actual con imagen
   - **Entonces** la pantalla no se apaga por inactividad ~~**mientras se use**: tras **10 minutos sin tocarla** vuelven el apagado y el bloqueo normales del teléfono~~ **sin límite de tiempo** (CA-015-04a): ya no hay los 10 minutos sin tocar ni cuentan los toques.
   - ~~Solo cuentan como uso los **toques** en la pantalla; las teclas de un teclado físico no reinician los 10 minutos (propietario, 2026-09-26).~~ Sin efecto desde la spec 015: no hay límite que reiniciar.
   - También vuelven al pasar a otra pantalla de la app (menú, editor, listado), a segundo plano o a una tarea sin imagen.
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo actúa igual (CA-016-13).
 
 **Validar, guardar y borrar**
 
@@ -116,6 +127,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Entonces** el tipo se decide **por el contenido**, no por la extensión ni por el tipo declarado. Se aceptan JPEG, PNG, WebP, GIF (se toma el primer fotograma) y HEIC/HEIF (Android 9 o superior), de hasta 30 MB (30 × 10⁶ bytes) y 64 megapíxeles.
   - Si no se cumple, aparece el error correspondiente (§5) y el editor queda como estaba.
   - No se admiten SVG, AVIF (v1) ni HEIC en Android 8.
+  - *Enmienda (spec 016, implementada; en vigor):* cada foto de un grupo pasa por esta validación (CA-016-04).
 - **CA-007-14 Importación acotada**
   - **Dado** un archivo, por grande, falso o malformado que sea
   - **Cuando** se importa
@@ -125,12 +137,14 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - la importación no bloquea la interfaz;
     - tras 20 s se aborta con "No hemos podido leer esta imagen.";
     - con los ficheros de prueba malformados (cabecera truncada, dimensiones falsas, bomba de descompresión PNG, GIF de miles de fotogramas, HEIC corrupto, flujo sin fin, nombre con `../`, dirección que apunta a los datos de la propia app) la app **nunca se cierra** y no escribe nada fuera de su zona temporal.
+  - *Enmienda (spec 016, implementada; en vigor):* cada foto del grupo tiene su límite de 20 s y el grupo, uno de 2 minutos en total (CA-016-04).
 - **CA-007-15 Preparando la imagen**
   - **Dado** una importación que tarda más de 400 ms
   - **Cuando** está en curso
   - **Entonces** el editor muestra "Preparando imagen…" con el botón "Cancelar" (≥ 48 dp), dentro del recuadro de la vista previa y con una barra de progreso fina (DEV-39).
   - Mientras tanto, "+" y "Continuar" no hacen nada (sin verse desactivados, DEV-17).
   - "Cancelar" deja el editor como estaba.
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo dice "Preparando foto {i} de {n}…" (CA-016-04).
 - **CA-007-16 Ningún archivo huérfano (ADR-0011, cierra CL-004-3)**
   - **Dado** cualquier camino que deje una imagen sin uso:
     - eliminar la tarea desde la pantalla principal o desde el listado;
@@ -144,12 +158,14 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Entonces** no queda ningún archivo de esa imagen (versiones completa, de pantalla y miniatura) ni ningún temporal. **Todos los caminos usan el mismo borrado.**
   - Si falla, en el siguiente arranque (después del primer fotograma, sin retrasar CA-001-09) se barren las imágenes que no pertenecen a ninguna tarea y todos los temporales. Una imagen que se está importando en ese momento nunca se barre.
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar la tarea, los archivos se borran cuando la eliminación es definitiva (CA-014-15), no al momento.
+  - *Enmienda (spec 016, implementada; en vigor):* vale para todos los archivos del grupo (CA-016-16).
 - **CA-007-17 Las completadas conservan la imagen (D8)**
   - **Dado** que se completa una tarea con imagen
   - **Cuando** se consulta el almacenamiento
   - **Entonces** sus versiones se conservan y el barrido no las borra.
   - ~~**[Pendiente, spec 010]**~~ *(Sin efecto: ver la enmienda del ADR-0012 justo debajo)* "Borrar archivos de tareas completadas", con el espacio que ocupan, antes de la v1.0.
   - *Enmienda (ADR-0012, aceptado 2026-09-26; implementada 2026-09-27):* **se sustituye:** al completar una tarea con imagen, sus archivos se borran (con el mismo borrado de CA-007-16) y el barrido ya no respeta completadas. Desaparece el pendiente de la 010. Se implementa en la rama del ADR-0012, después de cerrar esta spec.
+  - *Enmienda (spec 016, implementada; en vigor):* completar una tarea con un grupo borra todas sus fotos (CA-016-16).
 - **CA-007-18 Copia de seguridad (ADR-0004, R-10)**
   - **Dado** tareas con imágenes que ocupan más de 25 MB en total
   - **Cuando** Android hace la copia de seguridad en la nube
@@ -166,6 +182,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - Si solo faltan la miniatura o la versión de pantalla, o no se pueden leer, se regeneran en segundo plano sin avisar; si tampoco se puede, se ve la tarjeta.
   - En el listado, la fila muestra la insignia "FOTO" o "IMAGEN" en lugar de la miniatura.
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "Eliminar tarea" elimina sin confirmación y con deshacer (CA-014-01).
+  - *Enmienda (spec 016, implementada; en vigor):* si falta una foto del grupo se ve "Foto no disponible" en su sitio; solo si faltan todas, la tarjeta de aquí (CA-016-18a y 18b).
 
 **Donde aparece la imagen**
 
@@ -177,6 +194,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - **Sin texto:** en el listado, en la confirmación de eliminar (cierra CA-004-01) y en los anuncios, se usa "Foto" (de la cámara) o "Imagen" (de la galería).
     - **Completar y eliminar (cierra CL-003-4):** la rotura y el arrugado muestran la imagen recortada, como la tarea; con reducir movimiento, sus alternativas.
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* la etiqueta sin texto se usa en la card de deshacer (CA-014-04), ya no en la confirmación.
+  - *Enmienda (spec 016, implementada; en vigor):* miniatura de la primera foto, sin contador, y "{n} fotos" en el texto (CA-016-19).
 
 **Accesibilidad**
 
@@ -192,10 +210,12 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - anuncios de completar y eliminar sin texto (cierra CL-003-8): "Tarea completada. Siguiente: Foto".
   - Sin visor no hay acciones de zoom ni teclas de zoom: para ampliar, la lupa del sistema (ADR-0013).
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* los anuncios de eliminar pasan a la lectura de la card de deshacer (CA-014-16).
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo, "Tarea actual: {texto}. {n} fotos. Foto {i} de {n}" (CA-016-20).
 - **CA-007-22 Foco y anuncios**
   - **Dado** un lector de pantalla activo
   - **Cuando** ocurre cada acción
   - **Entonces** se hace **un único anuncio** y el foco queda donde dice la tabla:
+  - *Enmienda (spec 016, implementada; en vigor):* tabla de foco y anuncios con un grupo en CA-016-21.
 
     | Acción | Foco | Anuncio |
     |---|---|---|
@@ -226,12 +246,12 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
 |---|---|---|
 | CL-007-1 | No hay ninguna app de cámara (tablet, cámara desactivada) | Aviso "No hay ninguna app de cámara disponible."; el editor queda como estaba |
 | CL-007-2 | Captura larga (1080 × 20 000) | Pantalla principal: al ancho y con desplazamiento vertical; se lee el texto sin ampliar |
-| CL-007-3 | Sin espacio libre al importar o al guardar | "Tu teléfono no tiene espacio libre" (con "Reintentar" al guardar, como `editorSaveError`); no se crea la tarea y no quedan temporales |
+| CL-007-3 | Sin espacio libre al importar o al guardar | "Tu teléfono no tiene espacio libre" (con "Reintentar" al guardar, como `editorSaveError`); no se crea la tarea y no quedan temporales *Enmienda (spec 016, implementada; en vigor):* con un grupo, CL-016-6 (al importar: se descarta todo) y CL-016-6b (al guardar). |
 | CL-007-4 | Imagen con transparencia (PNG, WebP) | Las zonas transparentes se ven sobre blanco |
 | CL-007-5 | Foto de 50 MP de la cámara del móvil | Se acepta (≤ 64 MP) y se guarda reducida a 24 MP |
 | CL-007-6 | Imagen de Google Fotos que solo está en la nube, sin conexión | "No hemos podido leer esta imagen."; el editor queda como estaba |
-| CL-007-7 | Android mata la app con la cámara abierta | Al volver, se ve el editor sin imagen (o la tarea actual si pasaron 10 min, CA-001-12); la foto de la cámara se descarta y no queda ninguna copia |
-| CL-007-8 | Doble toque rápido en "Continuar" con imagen | Se crea una sola tarea |
+| CL-007-7 | Android mata la app con la cámara abierta | Al volver, se ve el editor sin imagen (o la tarea actual si pasaron 10 min, CA-001-12); la foto de la cámara se descarta y no queda ninguna copia *Enmienda (spec 016, implementada; en vigor):* CL-016-7: con un grupo, todo lo preparado se descarta. |
+| CL-007-8 | Doble toque rápido en "Continuar" con imagen | Se crea una sola tarea *Enmienda (spec 016, implementada; en vigor):* CL-016-8: también con un grupo. |
 | CL-007-9 | Listado con 500 tareas, todas con imagen | Se cumple CA-006-20 |
 | CL-007-10 | Registros (logs) en *release* | No se registra ninguna dirección, nombre, ruta ni metadato de una imagen |
 | CL-007-11 | La miniatura de la app en "Recientes" | Muestra la imagen. **[Resuelto por la spec 011, ADR-0019]** La miniatura no muestra contenido: se oculta siempre, no solo con adjunto (propietario, 2026-09-30). **Límites aceptados (propietario, 2026-09-30):** "Recientes" abierto desde la propia app, el gesto de cambio entre apps y la hoja parcial del selector de fotos enseñan lo que hay a la vista (CL-011-14, CL-011-6, CL-011-15); fotograma blanco al volver (CA-011-03); en Android 8–12, **[Suposición]** sin verificar hasta PD-10. Ver `specs/011-ocultar-recientes/spec.md` y `docs/adr/0019-ocultar-recientes-sin-bloquear-capturas.md` *(antes: Se oculta siempre, no solo con adjunto (propietario, 2026-09-30) *(antes spec 010; enmiendas 2026-09-29 y 2026-09-30)*)* |
@@ -253,7 +273,7 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 
 ## 6. Accesibilidad
 
-- Lectura, foco y anuncios: CA-007-21 y CA-007-22. La miniatura del listado es decorativa.
+- Lectura, foco y anuncios: CA-007-21 y CA-007-22. La miniatura del listado es decorativa. *Enmienda (spec 016, implementada; en vigor):* con un grupo, CA-016-20 y 21; en horizontal con un grupo sí hay un punto de foco (CA-016-12).
 - **Excepción a P6 (propietario, 2026-09-27, ADR-0013):** el pellizco de la tarea actual es un zoom de vistazo que vuelve al soltar y no tiene alternativa en la app para lector, teclado o switch. Incumple WCAG 2.5.1 (gesto de dos dedos sin alternativa). Para ampliar sin gestos se usa la lupa del sistema (ampliación de accesibilidad de Android). **[Suposición]** Que la lupa baste se comprueba en la auditoría de F5; en Android 8–11, moverse por lo ampliado exige dos dedos. Nada esencial depende del zoom: completar y eliminar tienen sus acciones, y el menú está en vertical.
 - Desplazamiento de una imagen alta sin gestos (WCAG 2.1.1): acciones de desplazamiento del lector y de Switch Access en el nodo de la tarea (solo las que se pueden hacer), y Av Pág / Re Pág con teclado; con reducir movimiento, sin animar.
 - Contraste:
@@ -297,7 +317,7 @@ Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction`
 
 ## 8. Fuera de alcance
 
-- Brillo máximo (D10); editar o recortar la imagen; varias imágenes por tarea; visor a pantalla completa (retirado, ADR-0013); girar fuera de la tarea con imagen.
+- Brillo máximo (D10); editar o recortar la imagen; varias imágenes por tarea; visor a pantalla completa (retirado, ADR-0013); girar fuera de la tarea con imagen. *Enmienda (spec 016, implementada; en vigor):* "varias imágenes por tarea" **entra** con la 016 (hasta 10 por tarea, en carrusel).
 - Descripción alternativa escrita por el usuario (P-5, v1.1).
 - La copia de las imágenes en la nube (tarea propia antes de la v1.0) y el ajuste de "Recientes" (F5; antes spec 010, enmienda 2026-09-29).
 
@@ -307,7 +327,7 @@ Se reutilizan `storageErrorNoSpace`, `retry`, `editorCancel`, `deleteA11yAction`
 - **[Resuelto 2026-09-27, propietario]** Solo gira la tarea actual con imagen; en horizontal, solo la imagen y el logotipo (D10 enmendada, DEV-42).
 - **[Resuelto 2026-09-26, propietario]** Pantalla encendida hasta 10 minutos sin tocarla.
 - **[Resuelto 2026-09-26, propietario]** "Adjunto no disponible" sin "Sustituir": la interacción, lo más simple posible (una sola acción).
-- **[Resuelto 2026-09-26, propietario]** Un solo adjunto por tarea (imagen, foto, documento o URL). No hay botón "Sustituir" en ninguna parte: en el editor, (+) sigue visible con un adjunto y lo que se cargue sustituye al que había (CA-007-04).
+- **[Resuelto 2026-09-26, propietario]** Un solo adjunto por tarea (imagen, foto, documento o URL). No hay botón "Sustituir" en ninguna parte: en el editor, (+) sigue visible con un adjunto y lo que se cargue sustituye al que había (CA-007-04). *Enmienda (spec 016, implementada; en vigor):* ahora, **una imagen, un grupo de imágenes**, un PDF o una web (ADR-0024).
 - **[Resuelto 2026-09-26, propietario, con la recomendación de la revisión]**:
   - cámara del sistema sin permisos;
   - imágenes fuera de la copia en la nube por ahora;

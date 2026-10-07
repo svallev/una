@@ -52,6 +52,7 @@ Quitar una tarea que ya no tiene sentido **sin** que cuente como hecha, con un g
     - el logotipo y el botón de menú se quedan (el menú no responde, CA-005-10); el botón "Pulsa para completar" se oculta y la papelera aparece en su lugar.
   - Al terminar, la siguiente tarea es la actual.
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* "la hoja se cierra" pasa a "el menú se cierra"; al terminar aparece la card de deshacer (CA-014-03).
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo, el arrugado muestra la foto que se ve, capturada en memoria (CA-016-19).
 - **CA-004-05 Bloqueo durante la animación**
   - **Dado** la animación en curso
   - **Cuando** el usuario toca el menú o el botón de completar, usa las acciones del lector de pantalla o hace el gesto atrás
