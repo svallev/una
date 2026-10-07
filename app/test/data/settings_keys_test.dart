@@ -25,8 +25,7 @@ void main() {
     expect(await settings.saveLocale(LocaleChoice.en), SaveResult.saved);
     expect(await settings.setKeepScreenOn(true), SaveResult.saved);
     expect(await settings.saveLocale(LocaleChoice.es), SaveResult.saved);
-    // El controlador gana `setLockZoom` en T-017-03: aquí, el repositorio.
-    await repo.setLockZoom(true);
+    expect(await settings.setLockZoom(true), SaveResult.saved);
 
     final keys = {
       for (final r in await db.select(db.settingEntries).get()) r.key,
