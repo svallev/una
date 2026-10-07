@@ -18,6 +18,7 @@ import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'package:app/ui/focus_on_signal.dart';
 import 'package:app/ui/focus_ring.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -89,6 +90,7 @@ void main() {
     Locale locale = const Locale('es'),
     Size size = const Size(390, 844),
     EdgeInsets padding = EdgeInsets.zero,
+    bool lock = false,
   }) async {
     await pumpWithApp(
       tester,
@@ -100,6 +102,7 @@ void main() {
       ),
       locale: locale,
       size: size,
+      lockZoom: lock,
       overrides: overrides(mode),
     );
     await tester.pump();
@@ -654,6 +657,123 @@ void main() {
       expect(liveNodes(tester), isEmpty);
       handle.dispose();
     });
+  });
+
+  group('CA-017-09 y 14: con Bloquear zoom, la tarea se lee y se oye igual', () {
+    /// Todo el árbol semántico que ve el lector, sin ids: etiqueta, acciones
+    /// (también las propias, por su nombre), banderas y rectángulo de cada nodo.
+    String readingOf(WidgetTester tester) {
+      final out = StringBuffer();
+      void visit(SemanticsNode node, int depth) {
+        final d = node.getSemanticsData();
+        final f = d.flagsCollection;
+        final custom = [
+          for (final id in d.customSemanticsActionIds ?? const <int>[])
+            CustomSemanticsAction.getAction(id)!.label,
+        ];
+        out.writeln(
+          '${'  ' * depth}${d.label}|${d.actions}|$custom|'
+          '${f.isButton}${f.isImage}${f.isLiveRegion}${f.isHidden}|${node.rect}',
+        );
+        node.visitChildren((child) {
+          visit(child, depth + 1);
+          return true;
+        });
+      }
+
+      visit(
+        tester
+            .binding
+            .renderViews
+            .first
+            .owner!
+            .semanticsOwner!
+            .rootSemanticsNode!,
+        0,
+      );
+      return out.toString();
+    }
+
+    for (final mode in modes) {
+      testWidgets('(${mode.name}) la lectura de la tarea es idéntica con y '
+          'sin el ajuste, y no se anuncia nada al abrirla', (tester) async {
+        final handle = tester.ensureSemantics();
+        final all = await photos(3);
+        final readings = <bool, String>{};
+        for (final lock in [false, true]) {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await pumpScreen(tester, taskOf(all), mode: mode, lock: lock);
+          final said = recordAnnouncements(tester, mode);
+          await settle(tester);
+          expect(said(), isEmpty, reason: 'nada al abrir (bloqueo: $lock)');
+          readings[lock] = readingOf(tester);
+        }
+        expect(readings[true], readings[false]);
+        expect(
+          readings[true],
+          contains('Tarea actual: $_text. 3 fotos. Foto 1 de 3'),
+        );
+        handle.dispose();
+      });
+
+      testWidgets('(${mode.name}) mismas acciones y mismo orden', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        final all = await photos(3);
+        await pumpScreen(tester, taskOf(all), mode: mode, lock: true);
+        expect(customActionsOf(tester), [
+          'Foto siguiente',
+          'Foto anterior',
+          'Completar tarea',
+          'Eliminar tarea',
+        ]);
+        expect(has(tester, SemanticsAction.scrollLeft), isTrue);
+        expect(has(tester, SemanticsAction.scrollRight), isTrue);
+        handle.dispose();
+      });
+
+      testWidgets('(${mode.name}) un solo anuncio «Foto {i} de {n}» por '
+          'acción, por tecla y por swipe (dedo y lápiz)', (tester) async {
+        final handle = tester.ensureSemantics();
+        final all = await photos(3);
+        await pumpScreen(tester, taskOf(all), mode: mode, lock: true);
+        final said = recordAnnouncements(tester, mode);
+        expect(said(), isEmpty, reason: 'nada al abrir');
+
+        performCustom(tester, 'Foto siguiente');
+        await settle(tester);
+        expect(said(), ['Foto 2 de 3']);
+
+        perform(tester, SemanticsAction.scrollLeft);
+        await settle(tester);
+        expect(said(), ['Foto 3 de 3']);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await settle(tester);
+        expect(said(), ['Foto 1 de 3']);
+
+        await swipe(tester, -200);
+        await settle(tester);
+        expect(said(), ['Foto 2 de 3']);
+
+        // Con el lápiz, igual.
+        final pen = await tester.startGesture(
+          const Offset(60, 300),
+          kind: PointerDeviceKind.stylus,
+        );
+        var clock = Duration.zero;
+        for (var i = 0; i < 20; i++) {
+          clock += const Duration(milliseconds: 16);
+          await pen.moveBy(const Offset(10, 0), timeStamp: clock);
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await pen.up(timeStamp: clock);
+        await settle(tester);
+        expect(said(), ['Foto 1 de 3']);
+        handle.dispose();
+      });
+    }
   });
 
   group('CA-016-12: horizontal', () {
