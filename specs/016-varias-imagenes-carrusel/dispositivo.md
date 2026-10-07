@@ -87,3 +87,41 @@ Escenario "grupo de 3 fotos distinguibles" (`fixtures push`; roja, verde y azul)
 - **[Hallazgo, sin corregir]** `check-recents.sh` no está calibrado para la tarjeta apaisada (ver arriba).
 - Método: pellizco y segundo dedo con `adb emu event send` (el panel táctil virtual acepta eventos multitoque); `sendevent` no funciona (sin root).
 - Ajustes restaurados: gestos de navegación, rotación automática y a 0, fuente 1,0, sin TalkBack; galería, relleno de disco y *release* borrados; la app de depuración se reinstaló con la compilación normal (`flutter test integration_test` deja instalado el APK de la prueba, que no arranca solo).
+
+## T-016-21 (2/2): TalkBack, teclado y Switch Access (2026-10-07)
+
+Mismo emulador (`emulator-5554`, API 37, inglés; el Xiaomi no se tocó). Método de `docs/testing.md` §3: `integration_test` temporal (no subido) con un grupo de 5 fotos (la 1, la `tall_1080x20000.png`), acciones del árbol semántico, `adb` para capturas en ráfaga (~8 por segundo, recorte del panel de voz), teclas y giros, y recuento de frases (`GoogleTTSServiceImpl: Synthesis request`) entre marcas escritas en logcat. Para que el teclado del sistema no ensucie el panel se puso `show_ime_with_hard_keyboard 0` (valor de partida, ya restaurado).
+
+### TalkBack
+
+| Casilla | Resultado | Estado |
+|---|---|---|
+| Foco al abrir | TalkBack enfoca el **nodo único** de la tarea (recuadro verde en toda la pantalla) y lo lee: «Current task: Probe. 5 photos. Photo 1 of 5». Sin segunda parada (el nodo vivo del anuncio no se enfoca) | [Hecho] |
+| **5 cambios seguidos por acción** (`scrollLeft`) y **5 por gesto** (`fling` en el carrusel) | **Una frase por cambio** en dos pasadas limpias: 1-1-1-1-1 y 1-1-1-1-1 (el panel lee «Photo 2 of 5» … «Photo 5 of 5», sin eco de la etiqueta del nodo enfocado). Se descartaron dos pasadas con 2–3 frases en algunos pasos: eran ruido del propio guion (un `uiautomator dump` hace que TalkBack vuelva a leer el nodo y dice «Actions available…»; y el teclado del sistema decía «Showing English (US)»). **Se queda B (región viva)**; A y el plan C quedan sin usar | [Hecho] |
+| Foco en el mismo elemento al cambiar | El recuadro sigue en el nodo tras cada cambio, en la foto que falta y en horizontal; el nodo no se recrea | [Hecho] |
+| Llegada a «Foto no disponible» (borrada la carpeta de la 3) | Por acción: «Photo 3 of 5. Photo unavailable» (una frase); volver: «Photo 2 of 5»; en horizontal, la misma frase y el foco donde estaba | [Hecho] |
+| Horizontal (`adb emu rotate`) | Foto a pantalla completa, cambio por acción con una frase, foco en el nodo | [Hecho] |
+| **«Desplazar hacia delante» con una foto alta** (plan §6) | `javap` del `AccessibilityBridge` del *embedding* (Flutter 3.47.5): `ACTION_SCROLL_FORWARD` → `SCROLL_UP` si el nodo lo tiene, si no `SCROLL_LEFT`; `ACTION_SCROLL_BACKWARD` → `SCROLL_DOWN`, si no `SCROLL_RIGHT`. Con la foto 1 (alta) arriba, el nodo ofrece `up`, `left` y `right` (no `down`); tras 10 `scrollUp` llega al final y `up` desaparece y sale `down`. **Resultado:** «adelante» recorre la foto hasta el final y **luego** pasa a la siguiente; «atrás», lo contrario; con una foto que cabe, «adelante» = siguiente. Orden lineal, nada queda inalcanzable y «Foto siguiente/anterior» es siempre directa: **se deja como está** (no se fuerza vertical/horizontal) | [Hecho] la decisión; **[Pendiente 022]** el gesto real de TalkBack (no se puede conducir con `adb`) |
+| Editor: foco tras importar | Recuadro verde en la **pila** al volver; con «Preparando foto 3 de 4…» el árbol lleva ese texto y «Cancel» con el foco de entrada; tras «Quitar adjunto» el foco va a **(+)** («Add a photo, image or file») | [Hecho] |
+| Editor: **anuncios** («{n} fotos añadidas», el compuesto, «Attachment removed», «Preparando…») | `sendAnnouncement` **no sale en el panel de voz del emulador** (igual que el hallazgo 1 de la 014: se oye en el móvil); el recuento de frases no basta para distinguirlas | **[Pendiente 022]** con el móvil y el oído del propietario: que el compuesto no lo pise «Vista previa: …» ni el «Preparando…» |
+
+### Teclado real (sin TalkBack; Tab con `adb emu event text`, flechas y Av Pág con `input keyevent` ya en modo teclado)
+
+| Casilla | Resultado | Estado |
+|---|---|---|
+| Foco al abrir | La tarea tiene el foco desde el principio: la primera flecha derecha, **sin Tab**, cambia de foto (también en horizontal); el primer Tab lo lleva a «Menú» | [Hecho] |
+| Anillo | Visible alrededor de la foto al volver a ella (negro y blanco, dentro del margen), en el menú y en Completar; en horizontal, dentro de la foto | [Hecho] |
+| Flechas | Derecha = siguiente, izquierda = anterior; **con el foco en el menú, la flecha no cambia de foto**; una tecla **mantenida 1,8 s cambia una sola vez** (repetición ignorada) | [Hecho] |
+| Av Pág / Re Pág | Con la foto alta, **desplazan la foto** sin cambiar de foto; con una foto que cabe, no hacen nada | [Hecho] |
+| Orden de Tab | foto → Menú → Completar | [Hecho] |
+
+### Otros
+
+| Casilla | Resultado | Estado |
+|---|---|---|
+| 200 % de texto, 360 dp (`wm density 480`), tres botones | El pie sale con 3 líneas y «…», los puntos debajo sin tapar el texto ni Completar, la etiqueta «5 photos» y el aviso enteros; en horizontal, solo la foto. **Aparte:** con un texto largo el editor deja (+) y Guardar medio bajo la barra de tres botones, **igual sin fotos** (comprobado): es del editor de la 003, no de la 016 | [Hecho]; hallazgo previo a la 016 a la **022** |
+| Reducir movimiento (`transition/animator/window_animation_scale 0`) | Sin él, la foto nueva entra deslizando (fotogramas intermedios); con él, ningún fotograma intermedio | [Hecho] |
+| **Switch Access** con el teclado como interruptor | Las teclas DPAD de `input keyevent` no llegan a su barrido (límite ya anotado en la 015): no se puede conducir. Las acciones «Foto siguiente/anterior» y las de desplazamiento horizontal están en el nodo (probadas por acción) | **[Pendiente 022]** (móvil del propietario) |
+| **La voz** (idioma de la app frente al del sistema) y el **control por voz** («Foto siguiente» por su nombre) | No se deciden aquí (spec) | **[Pendiente 022]** |
+
+Ajustes restaurados: sin TalkBack, densidad 420, fuente 1,0, navegación por gestos, animaciones a 1, `show_ime_with_hard_keyboard` como estaba, rotación vertical.
