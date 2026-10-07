@@ -1,4 +1,5 @@
 import '../entities/attachment.dart';
+import '../entities/image_type.dart';
 import '../entities/pdf_position.dart';
 import '../entities/staged_attachment.dart';
 
@@ -39,6 +40,11 @@ abstract interface class AttachmentStore {
 
   /// Ids de las preparaciones en disco.
   Future<Set<String>> stagingIds();
+
+  /// Bytes que ocupa la preparación [id] (0 si no existe). Acotado: solo los
+  /// archivos de su carpeta, sin seguir enlaces y con un tope de entradas; si
+  /// no se puede medir, lanza (quien llama usa [stagedSizeOrEstimate]).
+  Future<int> sizeOf(String id);
 
   /// Estado de los archivos de [attachment]; una página web, siempre
   /// [AttachmentFiles.ok] (no tiene archivos que puedan faltar).
@@ -91,3 +97,14 @@ Attachment attachmentFrom(StagedAttachment staged, DateTime at) =>
         url: staged.url,
       ),
     };
+
+/// Bytes de la preparación [id], o el estimado de una foto guardada
+/// ([ImageLimits.storedPhotoEstimate]) si no se pueden medir: el espacio libre
+/// previo de un grupo nunca bloquea por un fallo al medir (plan §4).
+Future<int> stagedSizeOrEstimate(AttachmentStore store, String id) async {
+  try {
+    return await store.sizeOf(id);
+  } on Object {
+    return ImageLimits.storedPhotoEstimate;
+  }
+}

@@ -11,8 +11,8 @@ class RankTaken implements Exception {
 }
 
 /// Deshace una eliminación (CA-014-09, ADR-0021): vuelve a guardar la misma
-/// [Task] que se eliminó (id, `rank`, color, fechas y adjunto), en el mismo
-/// sitio de la cola. No es una tarea nueva: no pasa por la preparación de
+/// [Task] que se eliminó (id, `rank`, color, fechas y adjuntos: con un grupo de
+/// fotos, todas y en su orden), en el mismo sitio de la cola. No es una tarea nueva: no pasa por la preparación de
 /// adjuntos (sus archivos siguen en su sitio, retenidos) y conserva
 /// `createdAt` y `updatedAt` (plan §10).
 class RestoreDeletedTask {
@@ -29,8 +29,8 @@ class RestoreDeletedTask {
     final pending = await repository.pendingTasks();
     if (pending.any((t) => t.rank == task.rank)) throw const RankTaken();
     await repository.insert(task);
-    // Primero la fila y después soltar: el barrido nunca ve los archivos sin
-    // fila ni retención.
-    if (task.attachment case final a?) janitor.releaseHeld(a.id);
+    // Primero la fila y después soltar todas las fotos: el barrido nunca ve
+    // los archivos sin fila ni retención (CA-016-16).
+    janitor.releaseHeldAll([for (final a in task.attachments) a.id]);
   }
 }

@@ -231,10 +231,9 @@ Future<void> _seed(
   if (web != null) {
     await create.call(
       '',
-      attachment: StagedWeb(
-        id: container.read(idGeneratorProvider).newId(),
-        url: web,
-      ),
+      attachments: [
+        StagedWeb(id: container.read(idGeneratorProvider).newId(), url: web),
+      ],
     );
   }
   await _shutdown(tester);

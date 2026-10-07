@@ -119,7 +119,7 @@ void main() {
     final staged = await job.prepare();
     final task = await container
         .read(createTaskProvider)
-        .call(_text, attachment: staged);
+        .call(_text, attachments: [staged]);
     final id = task.attachment!.id;
     await _wait(tester, const Duration(seconds: 1));
     expect(find.byType(TaskPdfView), findsOneWidget);

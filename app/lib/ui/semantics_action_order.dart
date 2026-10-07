@@ -5,10 +5,14 @@ import '../l10n/generated/app_localizations.dart';
 /// Flutter ordena las acciones personalizadas del lector por el orden en que
 /// se crearon por primera vez en la app, no por el orden en que se declaran.
 /// Se registran aquí, antes de pintar ninguna pantalla, en el orden de las
-/// specs: la tarea actual (Completar, Eliminar) y las filas del listado
-/// (CA-006-16: Hacer actual, Mover arriba, Mover abajo, Editar, Eliminar).
+/// specs: la tarea actual (con un grupo de fotos, "Foto siguiente" y "Foto
+/// anterior" **antes** de Completar y Eliminar, CA-016-20; luego Completar,
+/// Eliminar) y las filas del listado (CA-006-16: Hacer actual, Mover arriba,
+/// Mover abajo, Editar, Eliminar).
 void registerSemanticsActionOrder(AppLocalizations l10n) {
   for (final label in [
+    l10n.a11yPhotoNext,
+    l10n.a11yPhotoPrevious,
     l10n.completeA11yAction,
     l10n.listMakeCurrent,
     l10n.listMoveUp,

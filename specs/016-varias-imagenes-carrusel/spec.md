@@ -1,6 +1,6 @@
 # Spec 016: Tareas con varias imágenes (carrusel)
 
-- **Estado:** **Aprobada** (propietario, 2026-10-06; enmendada el mismo día al aprobar el plan: los puntos van bajo el pie, P-016-1). Revisada ese día por `spec-reviewer`, `a11y-reviewer` y `security-reviewer` (sin hallazgos altos; todo aplicado). Q-016-1 a 3 resueltas por el propietario. Con la aprobación quedan **Aceptados el ADR-0022 y el ADR-0024** y en vigor la **constitución 1.9**. El propietario descartó que la hoja "Añadir a la tarea" avise de que lo nuevo sustituye al grupo. **[Pendiente]** comprobar en el dispositivo si el control por voz expone "Foto siguiente" por su nombre (§6)
+- **Estado:** **Implementada parcialmente** (2026-10-07: código, tests y emulador de API 37 hechos; las casillas de dispositivo pasan a la 022, `docs/PLAN.md`, «Casillas de la 016»). Estuvo **Aprobada** (propietario, 2026-10-06; enmendada el mismo día al aprobar el plan: los puntos van bajo el pie, P-016-1). Revisada ese día por `spec-reviewer`, `a11y-reviewer` y `security-reviewer` (sin hallazgos altos; todo aplicado). Q-016-1 a 3 resueltas por el propietario. Con la aprobación quedan **Aceptados el ADR-0022 y el ADR-0024** y en vigor la **constitución 1.9**. El propietario descartó que la hoja "Añadir a la tarea" avise de que lo nuevo sustituye al grupo. **[Pendiente]** comprobar en el dispositivo si el control por voz expone "Foto siguiente" por su nombre (§6)
 - **Fase:** F4b Nuevas funcionalidades (plan aprobado por el propietario el 2026-10-04). Tercera de las specs 014–019 (después de la 014 y la 015, fusionadas)
 - **Reglas de producto:** R17 (varias imágenes con carrusel), R3 (imágenes de la galería), R5 (los adjuntos van arriba del todo), R8 (abrir → tarea actual rápido), **propuesta de valor 2**
 - **Pantallas del prototipo:** 9 "Añadir (+)" (fila "Subir imágenes"), 14 "Varias imágenes: preselección" (`FotosSel.dc.html`), 15 "Tarea con varias fotos: carrusel" (`Fotos.dc.html`); 3 "Nueva tarea", 1 "Tarea actual" y 5 "Todas las tareas" (miniatura). El prototipo recorta las fotos altas, no tiene pellizco, admite 30 y no tiene los errores ni el giro: eso se decide aquí (P-17, P-18 y D21) y se registra en `docs/design/prototype-deviations.md` como **DEV-53, al aprobar la spec** (como hicieron la 014 y la 015). Ver `docs/design/screen-map.md`
@@ -55,7 +55,7 @@ Que un horario, un mapa o unos pasos fotografiados en **varias fotos** (hasta 10
     - hay un tiempo máximo de **20 s por imagen** (CA-007-14) y, **[Suposición]**, de **2 minutos en total**; pasado el total, la foto en curso se cancela y las que no llegaron se tratan como **fallidas** (CA-016-05: se conservan las ya preparadas y se avisa), no como una cancelación; los tiempos usan un reloj que no avanza con el proceso congelado, y si el proceso estuvo congelado se reinicia el de la foto en curso;
     - la importación **continúa** si la app pasa a segundo plano o se gira el móvil, mientras el proceso siga vivo (si muere, CL-016-7);
     - antes de empezar se comprueba el **espacio libre**: se exige, **[Suposición, se fija al medir, R-24]**, el de un original (30 MB) más 10 veces el tamaño máximo estimado de una foto guardada, **sumando el grupo anterior si se está reemplazando** (los dos conviven hasta guardar); si no hay, se aplica CL-016-6 sin escribir nada; **quedarse sin espacio a mitad de la importación se trata igual**: se descarta todo el grupo, también lo ya preparado;
-    - si tarda más de 400 ms, el editor muestra "**Preparando foto {i} de {n}…**" con "Cancelar" (≥ 48 dp), dentro del recuadro de la vista previa y con una barra de progreso fina (DEV-39), y mientras tanto "+" y "Continuar" **no hacen nada y se anuncian como no disponibles** para el lector; el texto de avance se puede leer al enfocarlo pero **no se anuncia solo** (la barra de progreso queda fuera de la lectura);
+    - si tarda más de 400 ms, el editor muestra "**Preparando foto {i} de {n}…**" con "Cancelar" (≥ 48 dp), dentro del recuadro de la vista previa y con una barra de progreso fina (DEV-39), y mientras tanto "+" y "Continuar" **no hacen nada y se anuncian como no disponibles** para el lector; el texto de avance se puede leer al enfocarlo pero **los avances no se anuncian** (el texto se anuncia una sola vez, al empezar: CA-016-21; la barra de progreso queda fuera de la lectura);
     - **"Cancelar", pulsado por el usuario, descarta todo el grupo** (también lo ya preparado) y deja el editor como estaba. Cancelar y el vencimiento del total son **un estado del grupo**: tras cualquiera de los dos no se empieza ninguna foto más, en ningún momento (antes de la primera, entre fotos, a mitad de la copia o de la limpieza), y no queda nada en la zona temporal.
 - **CA-016-05 Si una falla, se omite y se avisa (P-18)**
   - **Dado** que una o más de las imágenes elegidas fallan (tipo no admitido, demasiado grande o con demasiada resolución, ilegible, tiempo agotado)
@@ -181,7 +181,7 @@ Que un horario, un mapa o unos pasos fotografiados en **varias fotos** (hasta 10
     - **listado:** la miniatura de 44 px es la de **la primera foto**, **sin contador ni número** (propietario, 2026-10-06; como en el prototipo); el número de fotos lo dice la fila al lector (CA-016-20);
     - **sin texto:** en el listado, en la card de deshacer (CA-014-04) y en los anuncios se usa "**{n} fotos**" (una sola, "Foto" o "Imagen", como la 007);
     - **completar y eliminar:** la rotura y el arrugado muestran **la foto que se ve** en ese momento, recortada como la tarea (la captura vive **solo en memoria**, nunca en disco ni en la caché); con reducir movimiento, sus alternativas.
-  - Con 500 tareas de 10 fotos cada una, el listado cumple CA-006-20 (no es más lento que con imágenes sueltas).
+  - Con 500 tareas de 10 fotos cada una, el listado cumple CA-006-20 (no es más lento que con imágenes sueltas). *Enmienda (propietario, 2026-10-07, tras medir en el emulador: abrir ~130 ms con 10 fotos frente a 24–49 ms con una, por leer 5000 filas):* basta el **objetivo absoluto** de CA-006-20 (< 300 ms); no se exige igualar a las imágenes sueltas ni repetirlo en el Xiaomi.
 
 **Accesibilidad**
 
@@ -359,3 +359,22 @@ Marcadas con **[Pendiente]** y con quién decide. Cada una lleva mi recomendaci�
 | HU-016-4 | CA-016-20 y 21 (y CA-016-12 en horizontal) |
 | HU-016-5 | CA-016-05, 18a y 18b |
 | HU-016-6 | CA-016-04 y 14 |
+
+## 13. Tabla CA → prueba (cierre, 2026-10-07)
+
+Rutas relativas a `app/test/` (o `app/integration_test/`). Revisada por `spec-reviewer` (0 bloqueantes). «Dispositivo» = `dispositivo.md` (emulador de API 37); lo que sigue sin comprobar en el móvil está en `docs/PLAN.md`, «Casillas de la 016».
+
+| CA | Pruebas | Estado |
+|---|---|---|
+| 01, 02, 03, 04, 05 | `features/attachments/photo_group_editor_test.dart`, `domain/import_group_test.dart`, `domain/import_budget_test.dart`, `data/native_image_importer_test.dart`, `features/attachments/attachment_import_controller_test.dart`, `integration_test/photo_group_import_test.dart` | Completo (el test de Chrome del selector no corre en CI; el tope de 5000 nativo solo con el canal simulado) |
+| 06, 07 | `features/attachments/photo_stack_test.dart`, `photo_group_editor_test.dart`, `domain/create_task_test.dart`, `domain/edit_task_test.dart` | Completo |
+| 08, 23 | `features/current_task/photo_carousel_screen_test.dart`, `features/attachments/photo_carousel_test.dart`, `integration_test/photo_group_flow_test.dart`, `photo_missing_test.dart` | Parcial: arranque, memoria y espacio medidos con `adb` en el emulador (sin test repetible); Xiaomi en la 022 |
+| 09, 10, 11, 12 | `features/attachments/photo_swipe_test.dart`, `photo_carousel_test.dart`, `features/current_task/photo_carousel_landscape_test.dart`, `photo_group_a11y_test.dart`, goldens | Completo |
+| 13 | `features/attachments/keep_screen_on_test.dart`, `tools/check-recents.sh` | Parcial: Android 8 y 12L (PD-10); horizontal a ojo |
+| 14, 15, 25 | `domain/task_attachments_test.dart`, `data/repository_contract_test.dart`, `drift/app/migration_test.dart`, `integration_test/photo_group_flow_test.dart` | Completo |
+| 16 | `features/delete/undo_group_test.dart`, `domain/commit_group_test.dart`, `attachment_janitor_group_test.dart` | Completo |
+| 17, 24 | `app/backup_rules_test.dart` (CA-007-18), diff de `pubspec.*`, manifiesto, `res/xml` sin cambios, `check-android-permissions.sh release` solo `INTERNET`; `domain/import_group_test.dart`, `import_budget_test.dart` | Completo |
+| 18a, 18b | `features/attachments/photo_missing_test.dart`, `photo_stack_test.dart`, goldens | Completo |
+| 19 | `features/task_list/photo_group_list_test.dart`, `features/delete/photo_face_test.dart`, `integration_test/task_list_perf_test.dart` | Completo; 500 tareas × 10 fotos: basta el objetivo absoluto (enmienda de CA-016-19) |
+| 20, 21 | `features/attachments/photo_a11y_test.dart`, `import_notice_test.dart`, `l10n/semantics_language_test.dart`, dispositivo | Parcial: gesto real de TalkBack, anuncios del editor a oído, Switch Access, voz y control por voz (022) |
+| 22 | `features/attachments/photo_group_a11y_test.dart`, `photo_group_editor_test.dart`, goldens | Completo (los PNG de los *goldens* se generan en CI con `actualizar-goldens`) |

@@ -10,6 +10,7 @@ import '../../app/storage_errors.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../data/platform/attachment_rotation.dart';
+import '../../domain/entities/attachment.dart';
 import '../../domain/entities/link_target.dart';
 import '../../domain/entities/pdf_position.dart';
 import '../../domain/entities/task.dart';
@@ -23,12 +24,15 @@ import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/wordmark.dart';
 import '../attachments/attachment_health.dart';
+import '../attachments/group_health.dart';
 import '../attachments/keep_screen_on_controller.dart';
 import '../attachments/link_confirm_sheet.dart';
 import '../attachments/missing_attachment_card.dart';
 import '../attachments/pdf_labels.dart';
 import '../attachments/pdf_position_controller.dart';
 import '../attachments/pdf_strip.dart';
+import '../attachments/photo_announcer.dart';
+import '../attachments/photo_carousel.dart';
 import '../attachments/task_image.dart';
 import '../attachments/task_labels.dart';
 import '../attachments/task_pdf.dart';
@@ -46,10 +50,18 @@ import '../settings/settings_screen.dart';
 import '../task_list/task_list_screen.dart';
 import '../web/edit_web_task.dart';
 import '../web/task_web.dart';
+import 'image_scroll.dart';
 import 'pdf_face_snapshot.dart';
+import 'photo_face_snapshot.dart';
+import 'photo_group.dart';
 
 /// Pantalla principal: solo la tarea actual, a pantalla completa (R6, CA-001-06/07).
-class CurrentTaskScreen extends ConsumerWidget {
+///
+/// Con un grupo de fotos (spec 016) lleva el estado del carrusel: qué foto se
+/// ve y el margen que el pie y los puntos dejan a las fotos ([PhotoGroupHost]).
+/// Nace con la tarea y muere con ella: con otra tarea, o al volver tras 10
+/// minutos (la pantalla se recrea), vuelve a la primera foto (CA-016-08).
+class CurrentTaskScreen extends StatefulWidget {
   const CurrentTaskScreen({
     super.key,
     required this.task,
@@ -82,6 +94,81 @@ class CurrentTaskScreen extends ConsumerWidget {
 
   /// Límite de escala de texto para la nota (docs/design/tokens.md).
   static const maxNoteTextScale = 1.6;
+
+  @override
+  State<CurrentTaskScreen> createState() => _CurrentTaskScreenState();
+}
+
+class _CurrentTaskScreenState extends State<CurrentTaskScreen> {
+  PhotoGroupHost? _host;
+
+  /// Las copias de la rotura y el arrugado (`faceOnly`, `chromeOnly`) no llevan
+  /// carrusel.
+  bool _hasGroup(CurrentTaskScreen w) =>
+      !w.faceOnly &&
+      !w.chromeOnly &&
+      w.task.attachments.length >= 2 &&
+      w.task.attachments.isValidGroup;
+
+  @override
+  void didUpdateWidget(CurrentTaskScreen old) {
+    super.didUpdateWidget(old);
+    // Otra tarea o ya sin grupo: el estado se suelta (tras este fotograma, que
+    // aún lo usa el carrusel que se va).
+    if (old.task.id != widget.task.id || !_hasGroup(widget)) _dropHost();
+  }
+
+  void _dropHost() {
+    final host = _host;
+    if (host == null) return;
+    _host = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) => host.dispose());
+  }
+
+  @override
+  void dispose() {
+    _host?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final host = _hasGroup(widget) ? (_host ??= PhotoGroupHost()) : null;
+    return _TaskView(
+      task: widget.task,
+      faceOnly: widget.faceOnly,
+      chromeOnly: widget.chromeOnly,
+      showLogoAndMenu: widget.showLogoAndMenu,
+      ctaHide: widget.ctaHide,
+      focusSignal: widget.focusSignal,
+      host: host,
+    );
+  }
+}
+
+/// La pantalla principal propiamente dicha (la que dibuja [CurrentTaskScreen]).
+class _TaskView extends ConsumerWidget {
+  const _TaskView({
+    required this.task,
+    required this.faceOnly,
+    required this.chromeOnly,
+    required this.showLogoAndMenu,
+    required this.ctaHide,
+    required this.focusSignal,
+    required this.host,
+  });
+
+  final Task task;
+  final bool faceOnly;
+  final bool chromeOnly;
+  final bool showLogoAndMenu;
+  final Animation<double>? ctaHide;
+  final int focusSignal;
+
+  /// El estado del carrusel, si la tarea tiene un grupo de fotos.
+  final PhotoGroupHost? host;
+
+  static const maxNoteTextScale = CurrentTaskScreen.maxNoteTextScale;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -129,6 +216,10 @@ class CurrentTaskScreen extends ConsumerWidget {
     }
 
     final attachment = task.attachment;
+    // Un grupo no válido (tipo desconocido, mezcla, medidas raras: CA-016-25)
+    // es "Adjunto no disponible" desde el primer fotograma, antes de dibujar
+    // nada ni mirar el disco.
+    final invalidGroup = !task.attachments.isValidGroup;
     final isPhoto = attachment?.isPhoto ?? false;
     // Falta la versión completa: "Adjunto no disponible" (CA-007-19).
     // La tarea que se completa o se elimina no comprueba: sus archivos ya se
@@ -137,17 +228,25 @@ class CurrentTaskScreen extends ConsumerWidget {
     final leaving = ref.watch(
       completionProvider.select((c) => c.busy && c.task?.id == task.id),
     );
-    final isWeb = attachment?.isWeb ?? false;
-    // La web no tiene archivos que comprobar (ADR-0016).
+    final isWeb = !invalidGroup && (attachment?.isWeb ?? false);
+    // La web no tiene archivos que comprobar (ADR-0016). Con varias fotos, la
+    // salud del grupo: solo faltan todas = tarjeta (CA-016-18b).
     final health =
-        attachment != null && !isWeb && !faceOnly && !chromeOnly && !leaving
-        ? ref.watch(attachmentHealthProvider(attachment)).health
+        attachment != null &&
+            !isWeb &&
+            !invalidGroup &&
+            !faceOnly &&
+            !chromeOnly &&
+            !leaving
+        ? ref
+              .watch(groupHealthProvider(AttachmentGroupKey(task.attachments)))
+              .health
         : null;
-    final missing = health == AttachmentHealth.missing;
+    final missing = invalidGroup || health == AttachmentHealth.missing;
     // No gira hasta saber que el adjunto está: con "Adjunto no disponible" no
     // gira nunca, ni un momento (CA-008-18, CA-007-19).
     final canRotate = !faceOnly && health != AttachmentHealth.checking;
-    final isPdf = attachment?.isPdf ?? false;
+    final isPdf = !invalidGroup && (attachment?.isPdf ?? false);
     final showImage = attachment != null && !isPdf && !isWeb && !missing;
     // Con PDF: franja, banda del texto y páginas entre la cabecera y el botón
     // (CA-008-08).
@@ -155,6 +254,20 @@ class CurrentTaskScreen extends ConsumerWidget {
     // Web: barra y página en vivo entre la cabecera y el botón (CA-009-06).
     final showWeb = isWeb;
     final withAttachment = showImage || showPdf || showWeb;
+    // Con un grupo de fotos a la vista: el carrusel en lugar de la imagen, y el
+    // pie con los puntos en su sitio (spec 016).
+    final photoGroup = showImage ? host : null;
+    // La cara de la rotura y del arrugado de un grupo: la foto que se veía,
+    // capturada en memoria (sus archivos ya no están), y el pie; sin captura,
+    // solo el color de la nota y el pie. Nunca lee el disco (CA-016-13).
+    final groupFace = faceOnly && showImage && task.attachments.length >= 2;
+    final faceSnapshot = groupFace
+        ? ref.watch(
+            photoFaceSnapshotProvider.select(
+              (s) => s?.taskId == task.id ? s : null,
+            ),
+          )
+        : null;
     // Con un aviso en lugar de la página, la web no gira (CA-009-15).
     final webNotice =
         showWeb &&
@@ -181,11 +294,77 @@ class CurrentTaskScreen extends ConsumerWidget {
 
     final kind = isPhoto ? l10n.attachmentPhoto : l10n.attachmentImage;
 
+    // Fotos del grupo cuyo archivo falta: su lectura y su anuncio dicen "Foto no
+    // disponible" (CA-016-18a, CA-016-20).
+    final missingPhotos = photoGroup == null
+        ? const <String>{}
+        : ref.watch(
+            groupHealthProvider(AttachmentGroupKey(task.attachments))
+                .select((state) => state.missingIds),
+          );
+    String photoStateOf(PhotoGroupHost host) {
+      final index = host.carousel.index.clamp(0, task.attachments.length - 1);
+      return photoState(
+        l10n,
+        index + 1,
+        task.attachments.length,
+        missing: missingPhotos.contains(task.attachments[index].id),
+      );
+    }
+
+    /// El elemento de la tarea con un grupo de fotos (spec 016, CA-016-20): un
+    /// solo nodo para fotos y pie, con la etiqueta al día ("Foto 2 de 5") y
+    /// **sin recrearse** al cambiar de foto, las acciones de foto antes que
+    /// Completar y Eliminar, las de desplazamiento de la foto que se ve y las
+    /// estándar de desplazar a izquierda y derecha (control por voz y Switch
+    /// Access). Es un punto de foco del teclado con anillo y flechas.
+    Widget photoNode(Widget child, {required ImageScroll scroll}) {
+      final host = photoGroup!;
+      final carousel = host.carousel;
+      return FocusOnSignal(
+        signal: focusSignal,
+        suspended: undoCard.visible,
+        traversable: true,
+        autofocus: true,
+        ring: mq.padding,
+        onKeyEvent: (_, event) => carousel.handleKey(event),
+        child: ListenableBuilder(
+          listenable: carousel,
+          builder: (context, _) {
+            final index = carousel.index.clamp(0, task.attachments.length - 1);
+            return Semantics(
+              onScrollUp: scroll.canForward ? scroll.forward : null,
+              onScrollDown: scroll.canBack ? scroll.back : null,
+              onScrollLeft: carousel.next,
+              onScrollRight: carousel.previous,
+              label: photoGroupReading(
+                l10n,
+                text: text,
+                count: task.attachments.length,
+                position: index + 1,
+                missing: missingPhotos.contains(task.attachments[index].id),
+                landscape: landscape,
+              ),
+              customSemanticsActions: {
+                CustomSemanticsAction(label: l10n.a11yPhotoNext): carousel.next,
+                CustomSemanticsAction(label: l10n.a11yPhotoPrevious):
+                    carousel.previous,
+                CustomSemanticsAction(label: l10n.completeA11yAction): complete,
+                CustomSemanticsAction(label: l10n.deleteA11yAction): delete,
+              },
+              excludeSemantics: true,
+              child: child,
+            );
+          },
+        ),
+      );
+    }
+
     /// La tarea es un único nodo del lector; con imagen, imagen y pie juntos
     /// y sin decir "imagen" dos veces (CA-007-21).
     Widget taskNode(
       Widget child, {
-      _ImageScroll? scroll,
+      ImageScroll? scroll,
       String? webHost,
     }) => FocusOnSignal(
       signal: focusSignal,
@@ -351,7 +530,31 @@ class CurrentTaskScreen extends ConsumerWidget {
               key: const ValueKey('task-body'),
               // Con imagen, la tarea está detrás, a sangre.
               child: showImage
-                  ? const SizedBox.shrink()
+                  ? (photoGroup != null && !landscape
+                        // El pie y, bajo él, los puntos, justo encima del botón
+                        // de completar (CA-016-09 y 11).
+                        ? Align(
+                            alignment: Alignment.bottomCenter,
+                            child: side(
+                              PhotoGroupFooter(
+                                host: photoGroup,
+                                count: task.attachments.length,
+                                caption: text,
+                              ),
+                            ),
+                          )
+                        : groupFace && !(faceSnapshot?.landscape ?? false)
+                        ? Align(
+                            alignment: Alignment.bottomCenter,
+                            child: side(
+                              PhotoFaceFooter(
+                                count: task.attachments.length,
+                                index: faceSnapshot?.index,
+                                caption: text,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink())
                   : showWeb
                   // La tarea (la barra), la página o su aviso, antes que el
                   // menú: TalkBack empieza por el primero (CA-009-18).
@@ -524,20 +727,49 @@ class CurrentTaskScreen extends ConsumerWidget {
                         children: [
                           _Order(
                             0,
-                            child: _RotatesWithAttachment(
-                              enabled: canRotate,
-                              fullWidth: landscape,
-                              builder: (scroll) => taskNode(
-                                TaskImage(
-                                  attachment: attachment,
-                                  caption: landscape ? null : text,
-                                  scroll: scroll.controller,
-                                ),
-                                scroll: scroll,
-                              ),
-                            ),
+                            child: groupFace
+                                ? PhotoFaceLayer(snapshot: faceSnapshot)
+                                : _RotatesWithAttachment(
+                                    enabled: canRotate,
+                                    fullWidth: landscape,
+                                    carousel: photoGroup?.carousel,
+                                    builder: (scroll) => photoGroup != null
+                                        ? photoNode(
+                                            PhotoFaceCapture(
+                                              taskId: task.id,
+                                              host: photoGroup,
+                                              landscape: landscape,
+                                              child: PhotoGroupLayer(
+                                                host: photoGroup,
+                                                photos: task.attachments,
+                                                landscape: landscape,
+                                              ),
+                                            ),
+                                            scroll: scroll,
+                                          )
+                                        : taskNode(
+                                            TaskImage(
+                                              attachment: attachment,
+                                              caption: landscape ? null : text,
+                                              scroll: scroll.controller,
+                                            ),
+                                            scroll: scroll,
+                                          ),
+                                  ),
                           ),
                           content,
+                          // "Foto {i} de {n}" al cambiar de foto: su región
+                          // viva (o el anuncio del sistema), fuera del recorrido
+                          // (CA-016-20).
+                          if (photoGroup != null)
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              child: PhotoAnnouncements(
+                                carousel: photoGroup.carousel,
+                                message: () => photoStateOf(photoGroup),
+                              ),
+                            ),
                         ],
                       ),
               ),
@@ -803,7 +1035,7 @@ class _MissingAttachment extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MissingAttachmentCard(
       text: task.text ?? '',
-      isPdf: task.attachment?.isPdf ?? false,
+      isPdf: task.attachments.isValidGroup && (task.attachment?.isPdf ?? false),
       header: header,
       onRemove: interactive ? () => _remove(context, ref) : () {},
       onDelete: interactive ? () => deleteTask(context, ref, task) : () {},
@@ -864,52 +1096,6 @@ class _MissingAttachment extends ConsumerWidget {
   }
 }
 
-/// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
-/// pantalla y teclado), aunque el menú esté arriba en pantalla.
-/// Desplazamiento de la imagen de la tarea actual: por pasos del 80 % de la
-/// pantalla, sin animar con reducir movimiento.
-class _ImageScroll {
-  _ImageScroll(this.controller, this._reduced);
-
-  final ScrollController controller;
-  final bool Function() _reduced;
-
-  ScrollPosition? get _position =>
-      controller.hasClients ? controller.position : null;
-  bool get canForward {
-    final p = _position;
-    return p != null && p.pixels < p.maxScrollExtent - 0.5;
-  }
-
-  bool get canBack {
-    final p = _position;
-    return p != null && p.pixels > p.minScrollExtent + 0.5;
-  }
-
-  void forward() => _by(1);
-  void back() => _by(-1);
-
-  void _by(int direction) {
-    final p = _position;
-    if (p == null) return;
-    final to = (p.pixels + direction * p.viewportDimension * 0.8).clamp(
-      p.minScrollExtent,
-      p.maxScrollExtent,
-    );
-    if (_reduced()) {
-      p.jumpTo(to);
-    } else {
-      unawaited(
-        p.animateTo(
-          to,
-          duration: UnaMotion.imageZoomBack,
-          curve: UnaMotion.standardCurve,
-        ),
-      );
-    }
-  }
-}
-
 /// Mientras se ve la tarea actual con imagen, PDF o web (y es la pantalla de
 /// arriba, no bajo el menú, el editor o el listado; la confirmación de un
 /// enlace sí la deja girar), la app gira con el móvil (CA-008-11,
@@ -923,11 +1109,16 @@ class _RotatesWithAttachment extends StatefulWidget {
     required this.enabled,
     required this.fullWidth,
     required this.builder,
+    this.carousel,
   });
 
   final bool enabled;
   final bool fullWidth;
-  final Widget Function(_ImageScroll scroll) builder;
+  final Widget Function(ImageScroll scroll) builder;
+
+  /// Con un grupo de fotos, el desplazamiento es el de la foto que se ve y
+  /// cambia con ella (CA-016-20).
+  final PhotoCarouselController? carousel;
 
   @override
   State<_RotatesWithAttachment> createState() => _RotatesWithAttachmentState();
@@ -937,14 +1128,40 @@ class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
   bool? _rotating;
   bool _fullWidth = false;
   final _controller = ScrollController();
-  late final _scroll = _ImageScroll(
+  late final _scroll = ImageScroll(
     _controller,
     () => mounted && MediaQuery.disableAnimationsOf(context),
   );
   (bool, bool)? _can;
 
+  /// El controlador cuyos cambios se vigilan: el propio o, con un grupo, el de
+  /// la foto que se ve.
+  late ScrollController _watched = _controller;
+
+  void _watch(ScrollController controller) {
+    if (controller == _watched) return;
+    _watched.removeListener(_onScroll);
+    _watched = controller;
+    controller.addListener(_onScroll);
+    _scroll.controller = controller;
+  }
+
+  /// Cambió la foto que se ve: su desplazamiento pasa a ser el de las acciones
+  /// y de Av Pág / Re Pág, y cuánto se puede desplazar se mide tras el
+  /// fotograma.
+  void _onPhoto() {
+    final carousel = widget.carousel;
+    if (carousel == null) return;
+    _watch(carousel.scroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+  }
+
   /// Las acciones del lector cambian al llegar arriba o abajo del todo.
   void _onScroll() {
+    // Con un grupo, el carrusel solo conoce sus fotos tras montarse: la
+    // primera vez que se mide ya está.
+    final carousel = widget.carousel;
+    if (carousel != null) _watch(carousel.scroll);
     final can = (_scroll.canForward, _scroll.canBack);
     if (can != _can && mounted) setState(() => _can = can);
   }
@@ -966,6 +1183,7 @@ class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
   void initState() {
     super.initState();
     _controller.addListener(_onScroll);
+    widget.carousel?.addListener(_onPhoto);
     HardwareKeyboard.instance.addHandler(_onKey);
     linkConfirmOpen.addListener(_update);
     // Cuánto se puede desplazar solo se sabe tras la primera medida.
@@ -999,12 +1217,20 @@ class _RotatesWithAttachmentState extends State<_RotatesWithAttachment> {
   @override
   void didUpdateWidget(_RotatesWithAttachment oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.carousel != widget.carousel) {
+      oldWidget.carousel?.removeListener(_onPhoto);
+      widget.carousel?.addListener(_onPhoto);
+      _watch(widget.carousel?.scroll ?? _controller);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+    }
     _update();
   }
 
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKey);
+    widget.carousel?.removeListener(_onPhoto);
+    _watched.removeListener(_onScroll);
     _controller.dispose();
     linkConfirmOpen.removeListener(_update);
     if (_rotating ?? false) AttachmentRotation.request(on: false);
@@ -1053,6 +1279,8 @@ class _UndoCardSpace extends StatelessWidget {
   }
 }
 
+/// Orden de foco de la spec 001 §6: tarea → menú → completar (lector de
+/// pantalla y teclado), aunque el menú esté arriba en pantalla.
 class _Order extends StatelessWidget {
   const _Order(this.order, {required this.child});
   final double order;

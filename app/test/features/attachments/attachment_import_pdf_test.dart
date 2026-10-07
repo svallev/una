@@ -64,7 +64,7 @@ void main() {
   testWidgets('CA-008-01: cancelar el selector no cambia nada', (tester) async {
     pdfs.userCancelsPicker = true;
     expect(await ctrl().pick(AttachmentOrigin.file), ImportOutcome.unchanged);
-    expect(state().staged, isNull);
+    expect(state().staged, isEmpty);
     expect(await store.stagingIds(), isEmpty);
   });
 
@@ -82,7 +82,7 @@ void main() {
       await ctrl().cancel();
       expect(await outcome, ImportOutcome.unchanged);
       expect(state().preparing, isFalse);
-      expect(state().staged, isNull);
+      expect(state().staged, isEmpty);
       expect(await store.stagingIds(), isEmpty);
     },
   );
@@ -94,7 +94,7 @@ void main() {
         pdfs.inspectError = PdfImportFailure(error);
         expect(await ctrl().pick(AttachmentOrigin.file), ImportOutcome.failed);
         expect(state().error, error);
-        expect(state().staged, isNull);
+        expect(state().staged, isEmpty);
         expect(await store.stagingIds(), isEmpty);
       },
     );

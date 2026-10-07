@@ -66,6 +66,11 @@ class MemoryAttachmentStore implements AttachmentStore {
   Future<Set<String>> stagingIds() async => {..._staging.keys};
 
   @override
+  Future<int> sizeOf(String id) async =>
+      [for (final b in _staging[id]?.values ?? const <Uint8List>[]) b.length]
+          .fold<int>(0, (a, b) => a + b);
+
+  @override
   Future<AttachmentFiles> check(Attachment attachment) async {
     // Sin archivos, no puede faltar nada: nunca "Adjunto no disponible".
     if (attachment.isWeb) return AttachmentFiles.ok;

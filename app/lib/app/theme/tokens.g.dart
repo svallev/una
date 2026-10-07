@@ -58,6 +58,21 @@ abstract final class UnaColors {
 
   /// Pista del interruptor de Ajustes encendido y pomo apagado (prototipo, SW.on / SW.kOff; D22, P-13). Contra el papel mide ≈ 1,2:1: no distingue nada ni se le exige contraste; el estado lo da la posición del pomo y contrasta el borde ink (CA-015-03, CA-015-19)
   static const Color switchOn = Color(0xFFFFDC58);
+
+  /// Borde de cada punto del carrusel y relleno del actual (prototipo: #111111). Contra el papel y la superficie, ≥ 3:1 (WCAG 1.4.11; spec 016, CA-016-09, CA-016-22)
+  static const Color photoDotInk = Color(0xFF111111);
+
+  /// Relleno de los puntos que no son el actual (prototipo: #FFFFFF); el estado lo da el relleno, no el color (WCAG 1.4.1). CA-016-22
+  static const Color photoDotLight = Color(0xFFFFFFFF);
+
+  /// Halo blanco por fuera del borde de cada punto (DEV-53, plan §2): sobre cualquier foto, la tinta o el halo llegan a ≥ 3:1 (peor caso, un gris medio, ≈ 4,3:1; validate-tokens lo calcula)
+  static const Color photoDotHalo = Color(0xFFFFFFFF);
+
+  /// Fondo opaco de la etiqueta "{n} fotos" de la pila del editor (prototipo: #111111). CA-016-06
+  static const Color photoCountFill = Color(0xFF111111);
+
+  /// Texto de la etiqueta "{n} fotos": blanco sobre tinta, ≥ 4,5:1 sea cual sea la foto (DEV-53). CA-016-06
+  static const Color photoCountText = Color(0xFFFFFFFF);
 }
 
 abstract final class UnaPalettes {
@@ -176,6 +191,9 @@ abstract final class UnaFontSizes {
 
   /// Texto del campo de la hoja "Cargar URL" (monoespaciada, prototipo `url-input`, spec 009)
   static const double urlField = 16.0;
+
+  /// Etiqueta "{n} fotos" de la pila del editor (monoespaciada, 700, prototipo `carLabel`; spec 016, CA-016-06)
+  static const double photoCount = 12.0;
 }
 
 /// Interletrado en em (multiplicar por el tamaño de fuente).
@@ -272,6 +290,12 @@ abstract final class UnaSizes {
   static const double settingsRowSubIndent = 38.0;
   static const double separatorBlock = 4.0;
   static const double separatorRow = 1.0;
+  static const double photoDot = 9.0;
+  static const double photoDotGap = 6.0;
+  static const double photoStackMiddleDx = 12.0;
+  static const double photoStackMiddleDy = 6.0;
+  static const double photoStackBackDx = -10.0;
+  static const double photoStackBackDy = -8.0;
 }
 
 abstract final class UnaBorders {
@@ -282,6 +306,9 @@ abstract final class UnaBorders {
   static const double undoButtonWidth = 2.0;
   static const double switchTrackWidth = 3.0;
   static const double switchKnobWidth = 2.0;
+  static const double photoDotWidth = 2.0;
+  static const double photoDotHaloWidth = 1.5;
+  static const double photoStackWidth = 3.0;
   static const double noneRadius = 0.0;
   static const double switchTrackRadius = 8.0;
   static const double switchKnobRadius = 4.0;
@@ -327,6 +354,12 @@ abstract final class UnaShadows {
   static const BoxShadow listItemFlash = BoxShadow(
     color: Color(0xFF111111),
     offset: Offset(9.0, 9.0),
+    blurRadius: 0.0,
+    spreadRadius: 0.0,
+  );
+  static const BoxShadow photoStack = BoxShadow(
+    color: Color(0xFF111111),
+    offset: Offset(5.0, 5.0),
     blurRadius: 0.0,
     spreadRadius: 0.0,
   );
@@ -449,6 +482,12 @@ abstract final class UnaMotion {
 
   /// La pista del interruptor de Ajustes cambia de color (prototipo: background .12s). Con reducir movimiento, 0 ms. CA-015-01d, CA-015-03
   static const Duration switchTrack = Duration(milliseconds: 120);
+
+  /// Transición de una foto a otra del carrusel, con la curva photoSwipe (prototipo: transform .28s). Sin transición con reducir movimiento. CA-016-09, CA-016-22
+  static const Duration photoSwipe = Duration(milliseconds: 280);
+
+  /// Retardo, tras el fotograma que lleva el foco a la pila del editor, antes de anunciar las fotos añadidas (asertivo), para que no lo pise la lectura de la pila ni el "Preparando…" anterior. No es una animación: no cambia con reducir movimiento. CA-016-21
+  static const Duration announceAfterFocus = Duration(milliseconds: 300);
   static const Cubic standardCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const Cubic sheetCurve = Cubic(0.2, 0.9, 0.3, 1.0);
   static const Cubic sheetOutCurve = Cubic(0.5, 0.0, 0.8, 0.4);
@@ -458,6 +497,7 @@ abstract final class UnaMotion {
   static const Cubic confettiCurve = Cubic(0.15, 0.7, 0.3, 1.0);
   static const Cubic easeOutCurve = Cubic(0.0, 0.0, 0.58, 1.0);
   static const Cubic easeCurve = Cubic(0.25, 0.1, 0.25, 1.0);
+  static const Cubic photoSwipeCurve = Cubic(0.2, 0.8, 0.2, 1.0);
   static const double dragThreshold = 6.0;
   static const double dragTilt = -1.5;
   static const double imageZoomMax = 8.0;
@@ -465,4 +505,9 @@ abstract final class UnaMotion {
   static const double pdfZoomStep = 1.5;
   static const double pdfZoomDoubleTap = 2.5;
   static const double undoLabelTwoLinesTextScale = 1.3;
+  static const double photoStackTiltTop = -1.0;
+  static const double photoStackTiltMiddle = 4.0;
+  static const double photoStackTiltBack = -5.0;
+  static const double photoStackWidthFactor = 0.86;
+  static const double photoStackMaxHeightFactor = 0.84;
 }

@@ -131,4 +131,150 @@ void main() {
       throwsA(isA<ImageImportCancelled>()),
     );
   });
+  group('selector múltiple y espacio libre (spec 016)', () {
+    final importer = NativeImageImporter(heicSupported: true);
+
+    test('CA-016-02: pickMany pide el tope y devuelve las elegidas en el orden '
+        'de Android, de la galería', () async {
+      reply = (_) => {
+        'tokens': ['t-1', 't-2', 't-3'],
+        'total': 3,
+      };
+      final picked = await importer.pickMany(max: 10);
+      expect(calls.single.method, 'pickMany');
+      expect(calls.single.arguments, {'max': 10});
+      expect(picked!.total, 3);
+      expect(picked.items, [
+        (token: 't-1', origin: AttachmentOrigin.gallery),
+        (token: 't-2', origin: AttachmentOrigin.gallery),
+        (token: 't-3', origin: AttachmentOrigin.gallery),
+      ]);
+    });
+
+    test('CA-016-02 / CL-016-15: un selector que devuelve 5000 elementos '
+        'solo deja pasar 10 y avisa del total', () async {
+      reply = (_) => {
+        'tokens': [for (var i = 0; i < 5000; i++) 't-$i'],
+        'total': 5000,
+      };
+      final picked = await importer.pickMany(max: 10);
+      expect(picked!.items, hasLength(10));
+      expect(picked.items.first.token, 't-0');
+      expect(picked.items.last.token, 't-9');
+      expect(picked.total, 5000);
+    });
+
+    test('CA-016-03: una sola elegida es un grupo de una', () async {
+      reply = (_) => {
+        'tokens': ['t-1'],
+        'total': 1,
+      };
+      final picked = await importer.pickMany(max: 10);
+      expect(picked!.items, hasLength(1));
+      expect(picked.total, 1);
+    });
+
+    test('CA-016-02: sin total, se usa lo devuelto', () async {
+      reply = (_) => {
+        'tokens': ['a', 'b'],
+      };
+      expect((await importer.pickMany(max: 10))!.total, 2);
+    });
+
+    test('CA-016-02: si el usuario cancela (o no elige nada), pickMany '
+        'devuelve null', () async {
+      reply = (_) => null;
+      expect(await importer.pickMany(max: 10), isNull);
+      reply = (_) => {'tokens': <String>[], 'total': 0};
+      expect(await importer.pickMany(max: 10), isNull);
+    });
+
+    for (final code in ['busy', 'unreadable', 'somethingElse']) {
+      test('CA-016-02: el error "$code" del selector es un fallo sin texto, '
+          'nunca una excepción de plataforma', () async {
+        reply = (_) => throw PlatformException(
+          code: code,
+          message: 'content://media/secret/123.jpg',
+        );
+        await expectLater(
+          importer.pickMany(max: 10),
+          throwsA(
+            isA<ImageImportFailure>()
+                .having((e) => e.error, 'error', ImageImportError.unreadable)
+                .having(
+                  (e) => e.toString(),
+                  'texto',
+                  isNot(contains('content://')),
+                ),
+          ),
+        );
+      });
+    }
+
+    for (final (label, answer) in <(String, Object?)>[
+      (
+        'un elemento que no es texto',
+        {
+          'tokens': ['t-1', 7],
+          'total': 2,
+        },
+      ),
+      (
+        'un elemento nulo',
+        {
+          'tokens': ['t-1', null],
+          'total': 2,
+        },
+      ),
+      ('tokens que no es una lista', {'tokens': 'content://x', 'total': 1}),
+      (
+        'un total que no es un número',
+        {
+          'tokens': ['t-1'],
+          'total': 'muchos',
+        },
+      ),
+    ]) {
+      test('CA-016-24: una respuesta del canal con $label es un fallo '
+          'ilegible, no un TypeError', () async {
+        reply = (_) => answer;
+        await expectLater(
+          importer.pickMany(max: 10),
+          throwsA(
+            isA<ImageImportFailure>().having(
+              (e) => e.error,
+              'error',
+              ImageImportError.unreadable,
+            ),
+          ),
+        );
+      });
+    }
+
+    test('CA-016-02: sin canal (iOS), pickMany falla como ilegible', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+      await expectLater(
+        importer.pickMany(max: 10),
+        throwsA(isA<ImageImportFailure>()),
+      );
+    });
+
+    test('CL-016-6: freeSpace lee los bytes libres', () async {
+      reply = (_) => 123456789012; // más de 32 bits
+      expect(await importer.freeSpace(), 123456789012);
+      expect(calls.single.method, 'freeSpace');
+    });
+
+    test('CL-016-6: freeSpace desconocido (null, error o sin canal) no '
+        'bloquea', () async {
+      reply = (_) => null;
+      expect(await importer.freeSpace(), isNull);
+      reply = (_) => throw PlatformException(code: 'unreadable');
+      expect(await importer.freeSpace(), isNull);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+      expect(await importer.freeSpace(), isNull);
+    });
+  });
 }

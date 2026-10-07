@@ -22,6 +22,7 @@ import 'package:app/features/attachments/attach_sheet.dart';
 import 'package:app/features/attachments/attachment_preview.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
 import 'package:app/features/attachments/pdf_strip.dart';
+import 'package:app/features/attachments/photo_announcer.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
@@ -295,6 +296,75 @@ void main() {
 
           await _openMenu(tester, l10n);
           expectNoL10nLeaks(tester, languageCode: lang);
+        });
+      }
+
+      // Spec 016, CA-016-20: la tarea con un grupo de fotos, sus acciones y el
+      // anuncio "Foto {i} de {n}" (región viva o anuncio del sistema), con las
+      // claves nuevas, en el idioma de la app.
+      for (final mode in PhotoAnnouncerMode.values) {
+        testWidgets('tarea actual con un grupo de 3 fotos (${mode.name}): '
+            'lectura, acciones y anuncio', (tester) async {
+          final handle = tester.ensureSemantics();
+          final store = MemoryAttachmentStore();
+          final photos = <Attachment>[
+            for (var i = 0; i < 3; i++)
+              await store.commit(
+                stageImage(store, 'g$i', origin: AttachmentOrigin.gallery),
+                DateTime.utc(2026, 9, 20),
+              ),
+          ];
+          final base = sampleTask(id: 'grp', text: _neutral.first);
+          final repo = InMemoryTaskRepository();
+          await repo.insert(
+            base.withContent(
+              _neutral.first,
+              null,
+              base.updatedAt,
+              attachments: photos,
+            ),
+          );
+          await pumpUnaApp(
+            tester,
+            repo: repo,
+            locale: locale,
+            overrides: [
+              attachmentStoreProvider.overrideWithValue(store),
+              imageImporterProvider.overrideWithValue(FakeImageImporter(store)),
+              photoAnnouncerModeProvider.overrideWithValue(mode),
+            ],
+          );
+          await tester.pumpAndSettle();
+          final label = l10n.currentTaskSemantics(
+            '${l10n.a11yWithPhotos(_neutral.first, 3)}. ${l10n.a11yPhotoOf(1, 3)}',
+          );
+          expect(find.bySemanticsLabel(label), findsOneWidget);
+          expectNoL10nLeaks(tester, languageCode: lang);
+          expect(localeMarksOutsideApp(tester, lang), isEmpty);
+          final node = tester.getSemantics(find.bySemanticsLabel(label));
+          expect(node.getSemanticsData().locale?.languageCode, lang);
+
+          // La acción "Foto siguiente" (en el idioma de la app) y su anuncio.
+          tester.takeAnnouncements();
+          await _rowAction(tester, label, l10n.a11yPhotoNext);
+          for (var t = 0; t < 700; t += 16) {
+            await tester.pump(_frame);
+          }
+          final said = tester.takeAnnouncements();
+          if (mode == PhotoAnnouncerMode.announcement) {
+            expect(_messages(said), [l10n.a11yPhotoOf(2, 3)]);
+          } else {
+            expect(said, isEmpty);
+            // La región viva lleva el idioma de la app, como lo demás.
+            expect(
+              find.bySemanticsLabel(l10n.a11yPhotoOf(2, 3)),
+              findsOneWidget,
+            );
+          }
+          expectNoL10nLeaks(tester, languageCode: lang, announcements: said);
+          expect(localeMarksOutsideApp(tester, lang), isEmpty);
+          await tester.pump(const Duration(seconds: 3));
+          handle.dispose();
         });
       }
 

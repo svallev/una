@@ -173,7 +173,8 @@ class TaskListRow extends StatelessWidget {
             if (first) const SizedBox(width: UnaSpace.s),
             TaskThumbnail(
               attachment: attachment,
-              kindLabel: attachmentKindLabel(l10n, task)!,
+              // La insignia no lleva número, tampoco con un grupo (CA-016-19).
+              kindLabel: singleKindLabel(l10n, attachment),
             ),
             const SizedBox(width: _gap),
           ],

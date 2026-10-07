@@ -8,6 +8,7 @@ import '../../domain/entities/image_type.dart';
 import '../../domain/ports/image_importer.dart';
 import '../attachments/memory_attachment_store.dart';
 import 'image_geometry.dart';
+import 'take_first.dart';
 
 /// Importador de la web de pruebas (CL-007-12, ADR-0010): el selector del
 /// navegador (`<input type=file>`, con `capture` para "Hacer foto") y la
@@ -40,25 +41,77 @@ class WebImageImporter implements ImageImporter {
   @override
   bool get heicSupported => false;
 
+  /// Selector múltiple del navegador (`<input multiple>`, spec 016, CA-016-02,
+  /// CL-016-15): solo se miran los primeros [max] archivos (el resto ni se
+  /// toca) y cada uno recibe su token; `copy` los lee de uno en uno y suelta
+  /// cada archivo al leerlo, con las mismas reglas que una sola foto (tipo por
+  /// contenido, 30 MB, 64 MP). Todo queda en memoria.
+  @override
+  Future<PickedImages?> pickMany({required int max}) async {
+    final chosen = await _choose(multiple: true, max: max);
+    if (chosen == null || chosen.items.isEmpty) return null;
+    return (
+      items: [
+        for (final file in chosen.items)
+          (token: _register(file), origin: AttachmentOrigin.gallery),
+      ],
+      total: chosen.total,
+    );
+  }
+
+  /// No hay forma fiable de saberlo en el navegador: no bloquea (CL-016-6).
+  @override
+  Future<int?> freeSpace() async => null;
+
   @override
   Future<PickedImage?> pick(AttachmentOrigin origin, String id) async {
+    final chosen = await _choose(
+      multiple: false,
+      max: 1,
+      capture: origin == AttachmentOrigin.camera,
+    );
+    if (chosen == null || chosen.items.isEmpty) return null;
+    return (token: _register(chosen.items.first), origin: origin);
+  }
+
+  String _register(_File file) {
+    final token = 'web:${_nextToken++}';
+    _files[token] = file;
+    return token;
+  }
+
+  /// Abre el selector del navegador y devuelve los primeros [max] archivos
+  /// (con el total elegido), o null si se cancela. Los archivos se toman dentro
+  /// del evento, sin leer ningún byte.
+  Future<({List<_File> items, int total})?> _choose({
+    required bool multiple,
+    required int max,
+    bool capture = false,
+  }) async {
     final input = _document.createElement('input') as _Input
       ..type = 'file'
       ..accept = 'image/*';
-    if (origin == AttachmentOrigin.camera) {
-      input.setAttribute('capture', 'environment');
-    }
+    if (multiple) input.multiple = true;
+    if (capture) input.setAttribute('capture', 'environment');
     input.style.display = 'none';
     _document.body?.appendChild(input);
 
-    final done = Completer<_File?>();
-    void finish(_File? file) {
-      if (!done.isCompleted) done.complete(file);
+    final done = Completer<({List<_File> items, int total})?>();
+    void finish(({List<_File> items, int total})? chosen) {
+      if (!done.isCompleted) done.complete(chosen);
     }
 
     final onChange = ((JSAny _) {
       final files = input.files;
-      finish(files != null && files.length > 0 ? files.item(0) : null);
+      finish(
+        files == null || files.length == 0
+            ? null
+            : takeFirst<_File>(
+                length: files.length,
+                item: (i) => files.item(i),
+                max: max,
+              ),
+      );
     }).toJS;
     final onCancel = ((JSAny _) => finish(null)).toJS;
     Timer? grace;
@@ -72,11 +125,7 @@ class WebImageImporter implements ImageImporter {
     _window.addEventListener('focus', onFocus);
     try {
       input.click();
-      final file = await done.future;
-      if (file == null) return null;
-      final token = 'web:${_nextToken++}';
-      _files[token] = file;
-      return (token: token, origin: origin);
+      return await done.future;
     } finally {
       grace?.cancel();
       _window.removeEventListener('focus', onFocus);
@@ -443,6 +492,7 @@ extension type _Style._(JSObject _) implements JSObject {
 extension type _Input._(JSObject _) implements _Element {
   external set type(String value);
   external set accept(String value);
+  external set multiple(bool value);
   external _FileList? get files;
 }
 

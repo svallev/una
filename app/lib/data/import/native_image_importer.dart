@@ -38,6 +38,57 @@ class NativeImageImporter implements ImageImporter {
     },
   );
 
+  /// Selector múltiple del sistema (spec 016, CA-016-02): el nativo ya recorta
+  /// a [max] antes de abrir ninguna, y aquí se vuelve a recortar por si acaso
+  /// (los demás elementos ni se miran). Los errores salen **solo como código**:
+  /// el texto de la excepción de plataforma puede llevar una URI (CL-016-16).
+  @override
+  Future<PickedImages?> pickMany({required int max}) =>
+      _pickMany('pickMany', max);
+
+  /// Solo en builds de depuración: fuerza el selector de documentos (el de
+  /// Android 8-12) aunque el dispositivo tenga el selector de fotos, para
+  /// probar el recorte a 10 en el emulador.
+  Future<PickedImages?> debugPickManyDocuments({required int max}) =>
+      _pickMany('debugPickManyDocuments', max);
+
+  Future<PickedImages?> _pickMany(String method, int max) => _guard(() async {
+    final r = await _channel.invokeMapMethod<String, Object?>(method, {
+      'max': max,
+    });
+    if (r == null) return null;
+    // Lo que contesta el canal no se cree: un tipo inesperado es un fallo
+    // ilegible, no un `TypeError` suelto (CA-016-24).
+    final tokens = r['tokens'];
+    if (tokens == null) return null;
+    final total = r['total'];
+    if (tokens is! List<Object?> || (total != null && total is! num)) {
+      throw const ImageImportFailure(ImageImportError.unreadable);
+    }
+    if (tokens.isEmpty) return null;
+    final items = <PickedImage>[
+      for (final token in tokens.take(max))
+        if (token is String)
+          (token: token, origin: AttachmentOrigin.gallery)
+        else
+          throw const ImageImportFailure(ImageImportError.unreadable),
+    ];
+    return (items: items, total: (total as num?)?.toInt() ?? tokens.length);
+  });
+
+  /// Bytes libres de la partición de datos, o null si no se sabe: un fallo
+  /// nunca bloquea la importación (CL-016-6).
+  @override
+  Future<int?> freeSpace() async {
+    try {
+      return (await _channel.invokeMethod<num>('freeSpace'))?.toInt();
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
   @override
   Future<CopiedImage> copy(
     PickedImage picked,

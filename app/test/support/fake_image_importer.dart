@@ -33,6 +33,39 @@ class FakeImageImporter implements ImageImporter {
   Duration copyDelay = Duration.zero;
   Duration sanitizeDelay = Duration.zero;
 
+  /// Lo que devuelve el selector múltiple: [manyTotal] elegidas (el falso
+  /// entrega como mucho `max`, como el sistema tras el tope).
+  int manyTotal = 3;
+  final pickManyMax = <int>[];
+
+  /// Bytes libres; null = desconocido.
+  int? freeSpaceBytes;
+  Object? freeSpaceError;
+
+  /// Por foto del grupo (la clave es su `token`): fallo, tarde en copiar o
+  /// cabecera distinta, para probar que cada una falla por separado.
+  final copyErrorsByToken = <String, Object>{};
+  final copyDelaysByToken = <String, Duration>{};
+  final headsByToken = <String, List<int>>{};
+
+  /// Cuánto tarda en terminar una llamada en curso **después** de cancelarla
+  /// (el nativo no se puede interrumpir al instante).
+  Duration cancelSettleDelay = Duration.zero;
+
+  /// `token` de cada copia empezada, en orden.
+  final copiedTokens = <String>[];
+
+  /// Id de preparación de cada copia empezada, en orden (también con el
+  /// selector múltiple, que no pasa por `picks`).
+  final copiedIds = <String>[];
+
+  /// Llamadas de copia o limpieza en curso a la vez (el máximo visto) y
+  /// originales en la preparación a la vez (CA-016-04: nunca más de uno).
+  var _active = 0;
+  var maxActive = 0;
+  final _originals = <String>{};
+  var maxOriginals = 0;
+
   final picks = <String>[];
   final origins = <AttachmentOrigin>[];
   final limits = <int>[];
@@ -66,17 +99,60 @@ class FakeImageImporter implements ImageImporter {
   }
 
   @override
+  Future<PickedImages?> pickMany({required int max}) async {
+    pickManyMax.add(max);
+    if (pickDelay > Duration.zero) await Future<void>.delayed(pickDelay);
+    if (pickError case final e?) throw e;
+    if (userCancelsPicker) return null;
+    final count = manyTotal < max ? manyTotal : max;
+    return (
+      items: [
+        for (var i = 0; i < count; i++)
+          (token: 'content://many-$i', origin: AttachmentOrigin.gallery),
+      ],
+      total: manyTotal,
+    );
+  }
+
+  @override
+  Future<int?> freeSpace() async {
+    if (freeSpaceError case final e?) throw e;
+    return freeSpaceBytes;
+  }
+
+  @override
   Future<CopiedImage> copy(
     PickedImage picked,
     String id, {
     required int maxBytes,
   }) async {
     limits.add(maxBytes);
-    store.putStaging(id, 'original', Uint8List.fromList(head));
-    await _wait(id, copyDelay);
-    if (copyError case final e?) throw e;
-    return (byteSize: head.length, head: head);
+    copiedTokens.add(picked.token);
+    copiedIds.add(id);
+    _enter();
+    var ok = false;
+    try {
+      final photoHead = headsByToken[picked.token] ?? head;
+      store.putStaging(id, 'original', Uint8List.fromList(photoHead));
+      _originals.add(id);
+      if (_originals.length > maxOriginals) maxOriginals = _originals.length;
+      await _wait(id, copyDelaysByToken[picked.token] ?? copyDelay);
+      if (copyErrorsByToken[picked.token] case final e?) throw e;
+      if (copyError case final e?) throw e;
+      ok = true;
+      return (byteSize: photoHead.length, head: photoHead);
+    } finally {
+      if (!ok) _originals.remove(id);
+      _leave();
+    }
   }
+
+  void _enter() {
+    _active++;
+    if (_active > maxActive) maxActive = _active;
+  }
+
+  void _leave() => _active--;
 
   @override
   Future<StagedImage> sanitize(
@@ -90,9 +166,15 @@ class FakeImageImporter implements ImageImporter {
       ..add(maxPixels)
       ..add(storedMaxPixels);
     sniffedTypes.add(type);
-    await _wait(id, sanitizeDelay);
-    if (sanitizeError case final e?) throw e;
-    return stageImage(store, id, origin: origin);
+    _enter();
+    try {
+      await _wait(id, sanitizeDelay);
+      if (sanitizeError case final e?) throw e;
+      return stageImage(store, id, origin: origin);
+    } finally {
+      _originals.remove(id);
+      _leave();
+    }
   }
 
   /// Adjuntos cuyas derivadas se han regenerado.
@@ -101,16 +183,37 @@ class FakeImageImporter implements ImageImporter {
   /// Si no es null, regenerar falla con este error.
   Object? regenerateError;
 
+  /// Lo que tarda cada regeneración (para probar que van de una en una).
+  Duration regenerateDelay = Duration.zero;
+
+  /// Regeneraciones en curso a la vez (el máximo visto: CA-016-23, nunca > 1).
+  var _regenerating = 0;
+  var maxRegenerating = 0;
+
+  /// Fallo solo para estos adjuntos (por id).
+  final regenerateErrorsById = <String, Object>{};
+
   @override
   Future<void> regenerateDerived(Attachment attachment) async {
     regenerated.add(attachment.id);
-    if (regenerateError case final e?) throw e;
-    if (await store.check(attachment) == AttachmentFiles.missing) {
-      throw const ImageImportFailure(ImageImportError.unreadable);
+    maxRegenerating = ++_regenerating > maxRegenerating
+        ? _regenerating
+        : maxRegenerating;
+    try {
+      if (regenerateDelay > Duration.zero) {
+        await Future<void>.delayed(regenerateDelay);
+      }
+      if (regenerateError case final e?) throw e;
+      if (regenerateErrorsById[attachment.id] case final e?) throw e;
+      if (await store.check(attachment) == AttachmentFiles.missing) {
+        throw const ImageImportFailure(ImageImportError.unreadable);
+      }
+      store
+        ..putStored(attachment.id, 'screen.jpg', tinyImage)
+        ..putStored(attachment.id, 'thumb.jpg', tinyImage);
+    } finally {
+      _regenerating--;
     }
-    store
-      ..putStored(attachment.id, 'screen.jpg', tinyImage)
-      ..putStored(attachment.id, 'thumb.jpg', tinyImage);
   }
 
   /// Simula un proveedor colgado: cancelar no responde nunca (M1 de la
@@ -123,7 +226,16 @@ class FakeImageImporter implements ImageImporter {
     if (cancelHangs) return Completer<void>().future;
     final c = _waits[id];
     if (c != null && !c.isCompleted) {
-      c.completeError(const ImageImportCancelled());
+      if (cancelSettleDelay == Duration.zero) {
+        c.completeError(const ImageImportCancelled());
+      } else {
+        Timer(cancelSettleDelay, () {
+          if (!c.isCompleted) c.completeError(const ImageImportCancelled());
+        });
+      }
+    } else {
+      // Sin llamada en curso no queda nada que escriba el original.
+      _originals.remove(id);
     }
     await store.deleteStaging(id);
   }

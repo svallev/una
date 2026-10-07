@@ -13,6 +13,6 @@ Fuente de verdad: `app/lib/l10n/app_es.arb` (plantilla) y `app_en.arb`; término
 4. **Textos incrustados:** busca literales visibles en `app/lib/` fuera de `l10n/` (p. ej. `grep -rnE "Text\(\s*'[^']+'|semanticsLabel:\s*'|tooltip:\s*'|label:\s*'" app/lib`) y cualquier aparición del nombre de la app (`grep -rn "Una" app/lib`), que debe salir de `AppIdentity`/`appName`.
 5. **Specs ↔ ARB:** cada clave de las tablas de textos de las specs implementadas existe en las ARB con el mismo texto (salvo cambio aprobado).
 6. **Glosario:** los textos usan los términos del glosario ("tarea", no "nota"; "eliminar", no "borrar").
-7. **Resolución del idioma:** existe un test que prueba `es-ES`, `es-MX`, `es-419` → es; `en-US`, `fr-FR`, `ca-ES`, `pt-BR` → en; y la preferencia manual.
+7. **Resolución del idioma:** existe un test que prueba `es-ES`, `es-MX`, `es-419`, `ca-ES` → es; `en-US`, `fr-FR`, `gl-ES`, `eu-ES`, `pt-BR` → en; y la preferencia elegida en Ajustes (Como el sistema, Español, English).
 
 Resultado: lista de problemas con archivo:línea y la corrección propuesta (usa `/strings-add` para añadir textos).

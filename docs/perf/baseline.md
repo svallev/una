@@ -245,3 +245,13 @@ cd .. && tools/measure-cold-start.sh <serial> 20
 ```
 
 Se repite al cerrar cada spec que toque el arranque (003, 007–009, 011, 012) y antes de cada release.
+
+## Grupo de 10 fotos de 24 MP (spec 016, T-016-20)
+
+- **Fecha:** 2026-10-07 · **Dispositivo:** emulador `Pixel_6a` (API 37, arm64, sin GPU: más lento que el Xiaomi; no hay medida en el móvil). **[Pendiente]** repetir en el Xiaomi con el permiso del propietario.
+- **Fotos de prueba:** 10 JPEG de 4000 × 6000 (24 MP) de ~6,3 MB (color con textura, número grande), generadas con Pillow; más una de 19 MB de ruido casi incompresible para el peor caso. No se versionan (se regeneran).
+- **Arranque en frío** (`tools/measure-cold-start.sh emulator-5554 20`, *release*): 1 foto de 24 MP → p50 **425 ms** (p90 457); grupo de 10 → p50 **429 ms** (p90 446). **+4 ms** (objetivo ≤ +100 ms y < 1 s). `readBootState` lee ≤ 10 filas y el primer fotograma pinta una sola foto.
+- **Memoria** (`adb shell dumpsys meminfo <paquete>`, TOTAL PSS, muestreo continuo mientras se pasa por las 10 fotos 25 veces): grupo → reposo 76 MB, mediana 78 MB, pico **102 MB**; una foto → reposo 74 MB, mediana 81 MB, pico **81 MB**. **+21 MB** (objetivo ≤ +50 MB).
+- **Hueco al cambiar de foto:** `adb exec-out screenrecord --output-format=raw-frames --size 360x800 --time-limit 14` (se corta con `pkill -INT screenrecord`) durante 12 swipes; se cuentan los fotogramas en que la zona de la foto enseña el color de la página. 214 fotogramas (~15 fps en el emulador), 181 con movimiento, **0** con fondo → hueco p90 < 1 fotograma (≈ 66 ms; objetivo ≤ 200 ms).
+- **Espacio por tarea** (`adb shell run-as <debug> du -sk files/attachments`): 10 fotos de 6,3 MB → **62 MB**; una foto de 19 MB → 14,5 MB (`full` en dos teselas + `screen`). `storedPhotoEstimate` = 16 MB se mantiene como cota; la regla de ≥ 12 MP del ADR-0024 **no** hace falta.
+- **Importar** 9 fotos de 19 MB: ~0,4 s por foto (la barra "Preparando foto i de n…" se ve a partir del tercer fotograma); 10 de 6 MB, menos de 6 s.

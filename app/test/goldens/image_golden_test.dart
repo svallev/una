@@ -74,7 +74,9 @@ void main() {
 
   setUp(() {
     store = MemoryAttachmentStore();
-    importer = FakeImageImporter(store);
+    importer = FakeImageImporter(store)
+      // "Subir imágenes" con una sola elegida es la 007 (CA-016-03).
+      ..manyTotal = 1;
     repo = InMemoryTaskRepository();
   });
 
@@ -188,7 +190,7 @@ void main() {
     importer.sanitizeDelay = const Duration(seconds: 5);
     await tester.tap(find.bySemanticsLabel('Añadir foto, imagen o archivo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Subir imagen'));
+    await tester.tap(find.text('Subir imágenes'));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 300));

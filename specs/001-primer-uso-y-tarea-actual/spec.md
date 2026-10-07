@@ -65,6 +65,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
   - **Dado** que existe al menos una tarea pendiente y la app no está en memoria
   - **Cuando** el usuario abre la app
   - **Entonces** lo primero que ve tras la pantalla de lanzamiento es la tarea actual, sin animaciones de entrada que la retrasen, en **< 1 s (p50)** en el dispositivo Android de referencia (compilación *release*).
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo, el primer fotograma pinta la primera foto y no espera a ninguna otra (CA-016-08).
 - **CA-001-10 Persistencia**
   - **Dado** que el usuario creó tareas
   - **Cuando** cierra la app (o el sistema la mata) y la reabre, incluso en modo avión

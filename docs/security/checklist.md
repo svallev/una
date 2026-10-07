@@ -24,6 +24,17 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 - [ ] Nombre de archivo saneado; rutas construidas solo desde UUID.
 - [ ] Procesado fuera del hilo de UI y con *timeout*; los temporales se limpian si hay error.
 
+**Si importa varios archivos a la vez (un grupo de fotos, spec 016, CA-016-24; T-3, T-7, T-16):**
+
+- [ ] **El tope va en el origen y antes de todo:** como máximo 10 (`ImageLimits.maxGroup`); ningún elemento más se abre, consulta ni copia, aunque el selector devuelva miles (test con 5000: se tocan 10) ni en la web de pruebas (`takeFirst`).
+- [ ] **Cada archivo pasa por toda la cadena de una foto suelta**, en el mismo orden (rechazo de origen propio o autoridad ajena → copia acotada → tipo por contenido → dimensiones por cabecera → recodificación → borrado del original); ninguna comprobación se salta por ir en grupo; si uno falla, los demás siguen.
+- [ ] **Uno a uno:** nunca más de un original en disco ni dos limpiezas a la vez, y no se empieza el siguiente hasta que el anterior termina o vence su tiempo; tiempo por archivo (20 s) y **total** (2 min) con tiempo activo, y un proceso congelado no los gasta.
+- [ ] **Cancelar y vencer son un estado del grupo:** tras cualquiera, ninguna foto más en ningún momento; nada en la zona temporal; todas las preparaciones protegidas del barrido como una unidad hasta guardar o descartar (también con el editor abierto y con el deshacer).
+- [ ] **Sin texto de excepción ni datos del archivo** (URI, ruta, nombre, número) en ningún registro, aviso ni mensaje de error: los errores de varios archivos viajan **solo como un código** (`debugPrint`, `print` y `FlutterError` comprobados en los tests).
+- [ ] Espacio libre comprobado **antes** de empezar (con lo que ya ocupa el grupo que se reemplaza) y, si se agota a mitad, se descarta todo.
+- [ ] Lo que se lee de la BD al mostrar el grupo está **acotado en SQL** y tolera datos raros (posiciones repetidas o con huecos, más de 10 filas, tipo desconocido, medidas fuera de rango) sin lanzar ni cargar sin tope (CA-016-25); editar solo el texto no borra filas.
+- [ ] Sin dependencias, permisos ni componentes nuevos: `pubspec.lock`, manifiesto y `res/xml` (incluidos `backup_rules.xml` y `data_extraction_rules.xml`) sin cambios; `tools/check-android-permissions.sh release` da solo `INTERNET`.
+
 ## Si toca URL o WebView (T-4, T-5, T-6)
 
 - [ ] Solo `http(s)`; tests con `javascript:`, `data:`, `file:`, `intent:`, `user:pass@`, IDN mixto.
@@ -64,6 +75,7 @@ Aplica si la PR toca `MainActivity.kt`, `RecentsPrivacy.kt`, el tema de arranque
 
 - [ ] La tarjeta de "Recientes" no enseña contenido de la app (A en Android 13+, B en 8–12): sin `FLAG_SECURE` fija ni bloqueo de las capturas con la app delante (CA-011-04). Cualquier pantalla nueva entra en la matriz de CA-011-02 (sin pantallas "seguras" y "no seguras").
 - [ ] **Antes de cada versión entregada a testers** (CL-011-13, R-3; la 011 no tiene test de CI): ejecutar `tools/check-recents.sh` en el emulador y anotar el resultado en la entrega (ya recogido en la skill `/release-checklist`): `capture` y `compare` con dos tareas (A y B), `secure`, `loop 10` y `record 10`. Con `PKG` y `serial` del emulador; un dispositivo físico solo con permiso del propietario (`ALLOW_PHYSICAL=1`). Guía y límites conocidos en `docs/testing.md` y `specs/011-ocultar-recientes/dispositivo.md`.
+- [ ] **Varias fotos (spec 016, CA-016-13):** `tools/check-recents.sh $S fixtures push` deja tres fotos distinguibles; con una tarea de las tres a la vista se repite el flujo (`capture` con la foto 1 y con la 3, `compare`, `loop` y `record`) y también con la preselección del editor, "Foto no disponible" y "Preparando foto {i} de {n}…"; después `fixtures clean`. **En horizontal el script no está calibrado** (`docs/testing.md`): hasta que lo esté, se comprueba recortando la franja del borde del sistema.
 - [ ] **[Pendiente, PD-10]** Antes de dar la beta a testers, repetirlo en emuladores de Android 8 (API 26) y 12L (API 32): el mecanismo B no está verificado. Si no oculta la miniatura, se aplica la regla de desempate (la miniatura visible en 8–12 en la beta) y se anota en las notas de la beta.
 - [ ] Los límites aceptados siguen anotados en las notas de la beta: "Recientes" abierto desde la propia app y gesto de cambio entre apps (ventana en vivo), hoja parcial del selector de fotos y fotograma blanco al volver (CL-011-14, CL-011-6, CL-011-15, CA-011-03).
 

@@ -560,16 +560,16 @@ abstract class AppLocalizations {
   /// **'Con la cámara · va arriba del todo'**
   String get attachTakePhotoHint;
 
-  /// Fila de la hoja "Añadir". CA-007-01
+  /// Fila de la hoja "Añadir": admite una o varias imágenes de la galería. Antes "Subir imagen". CA-007-01, CA-016-01
   ///
   /// In es, this message translates to:
-  /// **'Subir imagen'**
+  /// **'Subir imágenes'**
   String get attachPickImage;
 
-  /// Segunda línea de "Subir imagen"
+  /// Segunda línea de "Subir imágenes". Antes "Desde tu galería · va arriba del todo". CA-016-01
   ///
   /// In es, this message translates to:
-  /// **'Desde tu galería · va arriba del todo'**
+  /// **'Una o varias · van arriba del todo'**
   String get attachPickImageHint;
 
   /// Fila de la hoja "Añadir": sube un PDF (spec 008)
@@ -1093,6 +1093,78 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Volver'**
   String get settingsBack;
+
+  /// Indicador de importación de un grupo de fotos (> 400 ms); con una sola foto sigue imagePreparing. CA-016-04
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando foto {current} de {total}…'**
+  String imagePreparingOf(int current, int total);
+
+  /// Etiqueta de la pila del editor y tarea sin texto con grupo (listado, card de deshacer, anuncios); con una sola foto, attachmentPhoto o attachmentImage. CA-016-06, CA-016-19
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{count} foto} other{{count} fotos}}'**
+  String photoCount(int count);
+
+  /// Lectura de una tarea con texto y grupo de fotos (listado, card de deshacer, anuncios). CA-016-20
+  ///
+  /// In es, this message translates to:
+  /// **'{text}. {count, plural, one{{count} foto} other{{count} fotos}}'**
+  String a11yWithPhotos(String text, int count);
+
+  /// Nodo único del lector para la pila de fotos del editor. CA-016-06, CA-016-20
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa: {count, plural, one{{count} foto} other{{count} fotos}}'**
+  String a11yPhotoStack(int count);
+
+  /// Foto actual tras cada cambio y en la lectura de la tarea con grupo; sustituye a "Foto i de N. Desliza para ver más" del prototipo. CA-016-20, CA-016-21
+  ///
+  /// In es, this message translates to:
+  /// **'Foto {index} de {total}'**
+  String a11yPhotoOf(int index, int total);
+
+  /// Acción del lector sobre la tarea con grupo: pasa a la foto siguiente (alternativa al swipe). CA-016-20
+  ///
+  /// In es, this message translates to:
+  /// **'Foto siguiente'**
+  String get a11yPhotoNext;
+
+  /// Acción del lector sobre la tarea con grupo: pasa a la foto anterior (alternativa al swipe). CA-016-20
+  ///
+  /// In es, this message translates to:
+  /// **'Foto anterior'**
+  String get a11yPhotoPrevious;
+
+  /// Anuncio al volver del selector con fotos añadidas; parte del anuncio compuesto. CA-016-21
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{count} foto añadida} other{{count} fotos añadidas}}'**
+  String a11yPhotosAdded(int count);
+
+  /// Aviso cuando el selector devuelve más fotos que el máximo del grupo. CA-016-02
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se usarán las {max} primeras.'**
+  String imagesLimitNotice(int max);
+
+  /// Aviso cuando algunas fotos del grupo no se pudieron preparar y se omiten. CA-016-05
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{No se pudo añadir {count} foto.} other{No se pudieron añadir {count} fotos.}}'**
+  String imagesSomeFailed(int count);
+
+  /// Recuadro en el sitio de una foto del grupo que falta. CA-016-18a
+  ///
+  /// In es, this message translates to:
+  /// **'Foto no disponible'**
+  String get photoMissing;
+
+  /// Lectura de la foto del grupo que falta (etiqueta y anuncio). CA-016-18a, CA-016-20
+  ///
+  /// In es, this message translates to:
+  /// **'Foto {index} de {total}. Foto no disponible'**
+  String a11yPhotoMissing(int index, int total);
 }
 
 class _AppLocalizationsDelegate

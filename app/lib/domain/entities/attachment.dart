@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'image_type.dart';
+
 /// Tipo de adjunto (docs/architecture.md §3): imagen (spec 007), PDF (spec
 /// 008) y página web (spec 009). En la v1 no hay otros documentos (ADR-0014).
 enum AttachmentKind { image, pdf, web }
@@ -27,6 +29,7 @@ class Attachment {
     this.originalName,
     this.pageCount,
     this.url,
+    this.unreadable = false,
   });
 
   final String id;
@@ -55,6 +58,13 @@ class Attachment {
   /// Dirección validada de una página web (`validateWebAddress`, CA-009-04);
   /// null en las imágenes y los PDF.
   final String? url;
+
+  /// Marca interna de lectura (spec 016, CA-016-25): la fila de la BD traía un
+  /// tipo u origen desconocidos o medidas fuera de rango y se leyó como una
+  /// imagen sin archivos. Nunca se guarda. Invalida el grupo entero
+  /// ([AttachmentGroup.isValidGroup]): la tarea sale como "Adjunto no
+  /// disponible".
+  final bool unreadable;
 
   bool get isPdf => kind == AttachmentKind.pdf;
 
@@ -102,13 +112,31 @@ class Attachment {
       other.createdAt == createdAt &&
       other.originalName == originalName &&
       other.pageCount == pageCount &&
-      other.url == url;
+      other.url == url &&
+      other.unreadable == unreadable;
 
   @override
   int get hashCode => Object.hash(id, origin, width, height);
 
   @override
   String toString() => 'Attachment($id, ${kind.name}, ${width}x$height)';
+}
+
+/// Invariantes de los adjuntos de una tarea (spec 016, ADR-0024). Extensión
+/// sobre la lista para que `Task` no valide al construir: una mezcla rara leída
+/// de la BD se conserva y se ve como "Adjunto no disponible".
+extension AttachmentGroup on List<Attachment> {
+  /// Ninguno, uno de cualquier tipo, o de 2 a [ImageLimits.maxGroup] imágenes;
+  /// y ninguno con la marca [Attachment.unreadable].
+  bool get isValidGroup {
+    if (any((a) => a.unreadable)) return false;
+    if (length <= 1) return true;
+    return length <= ImageLimits.maxGroup &&
+        every((a) => a.kind == AttachmentKind.image);
+  }
+
+  /// Un grupo de fotos válido (2 o más imágenes), el del carrusel.
+  bool get isPhotoGroup => length >= 2 && isValidGroup;
 }
 
 /// Rejilla de teselas de la versión completa: la GPU no dibuja imágenes de más

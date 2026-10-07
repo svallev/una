@@ -6,6 +6,7 @@ import '../../domain/entities/attachment.dart';
 import '../../domain/entities/pdf_position.dart';
 import '../../domain/entities/staged_attachment.dart';
 import '../../domain/ports/attachment_store.dart';
+import '../attachment_reader.dart';
 
 /// Adjuntos en el almacenamiento privado de la app (spec 007, plan §1):
 ///
@@ -29,10 +30,8 @@ class FileAttachmentStore implements AttachmentStore {
   final Directory filesRoot;
   final Directory stagingRoot;
 
-  static final _validId = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
-
   static String _checked(String id) {
-    if (!_validId.hasMatch(id)) throw ArgumentError.value(id, 'id');
+    if (!isValidAttachmentId(id)) throw ArgumentError.value(id, 'id');
     return id;
   }
 
@@ -119,6 +118,27 @@ class FileAttachmentStore implements AttachmentStore {
       await for (final e in dir.list(followLinks: false))
         e.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
     };
+  }
+
+  /// Tope de entradas que [sizeOf] recorre: una preparación tiene unas
+  /// decenas de archivos (teselas, pantalla y miniatura); una carpeta con
+  /// muchas más no es nuestra y no se recorre entera (T-3).
+  static const int sizeOfMaxEntries = 4096;
+
+  @override
+  Future<int> sizeOf(String id) async {
+    final dir = _staging(id);
+    if (!dir.existsSync()) return 0;
+    var total = 0;
+    var entries = 0;
+    // Sin seguir enlaces: un `Link` no es un `File` y no se cuenta.
+    await for (final e in dir.list(followLinks: false)) {
+      if (++entries > sizeOfMaxEntries) {
+        throw StateError('Demasiadas entradas en la preparación');
+      }
+      if (e is File) total += await e.length();
+    }
+    return total;
   }
 
   @override

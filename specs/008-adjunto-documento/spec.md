@@ -119,6 +119,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - ~~"Volver a vertical" dura mientras se vea esa tarea: si sale de ella y vuelve con el móvil aún en horizontal, se ve en vertical hasta que el móvil pase por vertical.~~ (Sin objeto desde la enmienda de 2026-09-28.)
   - Respeta el bloqueo de rotación del sistema. En tablets y plegables, en horizontal usa todo el ancho de la pantalla (como CA-007-11).
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* al eliminar en horizontal, además se ve la card de deshacer (CL-014-7).
+  - *Enmienda (spec 016, implementada; en vigor):* el grupo de imágenes gira igual, con las acciones de foto (CA-016-12).
 - **CA-008-12 Enlaces del PDF, sin nada peligroso**
   - **Dado** un PDF con JavaScript, formularios, acciones, archivos incrustados o enlaces
   - **Cuando** se muestra

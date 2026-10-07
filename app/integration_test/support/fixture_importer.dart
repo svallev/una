@@ -25,6 +25,13 @@ class FixtureImporter implements ImageImporter {
       (token: next, origin: origin);
 
   @override
+  Future<PickedImages?> pickMany({required int max}) =>
+      native.pickMany(max: max);
+
+  @override
+  Future<int?> freeSpace() => native.freeSpace();
+
+  @override
   Future<CopiedImage> copy(
     PickedImage picked,
     String id, {

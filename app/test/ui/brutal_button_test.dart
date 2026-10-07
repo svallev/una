@@ -1,6 +1,10 @@
+import 'dart:ui' show Tristate;
+
 import 'package:app/ui/brutal_button.dart';
 import 'package:app/ui/focus_ring.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show Opacity;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/pump_app.dart';
@@ -37,6 +41,33 @@ void main() {
     await tester.pump();
     expect(tester.widget<FocusRing>(find.byType(FocusRing)).visible, isFalse);
   });
+
+  testWidgets(
+    'CA-016-04: con semanticsEnabled false el lector lo anuncia como no '
+    'disponible y sin activar, pero se ve y se pulsa igual',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      var pressed = 0;
+      await pumpWithApp(
+        tester,
+        BrutalButton(
+          label: 'Continuar',
+          semanticsEnabled: false,
+          onPressed: () => pressed++,
+        ),
+      );
+      final data = tester
+          .getSemantics(find.bySemanticsLabel('Continuar'))
+          .getSemanticsData();
+      expect(data.flagsCollection.isEnabled, Tristate.isFalse);
+      expect(data.hasAction(SemanticsAction.tap), isFalse);
+      // Se ve activo (DEV-17) y el toque llega a su acción.
+      expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 1);
+      await tester.tap(find.text('Continuar'));
+      expect(pressed, 1);
+      handle.dispose();
+    },
+  );
 
   testWidgets(
     'CA-012-15: la pista (hint) llega al lector en el mismo nodo del botón',

@@ -82,7 +82,9 @@ void main() {
 
   setUp(() {
     store = MemoryAttachmentStore();
-    importer = FakeImageImporter(store);
+    importer = FakeImageImporter(store)
+      // "Subir imágenes" con una sola elegida es la 007 (CA-016-03).
+      ..manyTotal = 1;
     repo = InMemoryTaskRepository();
   });
 
@@ -148,7 +150,7 @@ void main() {
       expect(find.byType(AttachSheet), findsOneWidget);
       for (final row in [
         'Hacer foto',
-        'Subir imagen',
+        'Subir imágenes',
         'Subir archivo',
         'Cargar URL',
       ]) {
@@ -198,7 +200,7 @@ void main() {
       importer.sanitizeDelay = const Duration(seconds: 5);
       await tester.tap(_plus);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Subir imagen'));
+      await tester.tap(find.text('Subir imágenes'));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 400));
       expect(tester.takeException(), isNull);
@@ -344,7 +346,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_plus);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Subir imagen'));
+      await tester.tap(find.text('Subir imágenes'));
       await tester.pumpAndSettle();
       // La tarjeta visible (el SnackBar incluye su margen transparente).
       final snack = tester.getRect(
@@ -369,7 +371,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_plus);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Subir imagen'));
+      await tester.tap(find.text('Subir imágenes'));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Preparando imagen…'), findsOneWidget);

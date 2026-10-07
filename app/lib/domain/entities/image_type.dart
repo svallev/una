@@ -20,6 +20,18 @@ abstract final class ImageLimits {
   /// Tiempo máximo de copia + limpieza (CA-007-14).
   static const Duration timeout = Duration(seconds: 20);
 
+  /// Máximo de fotos de una tarea (spec 016, ADR-0024).
+  static const int maxGroup = 10;
+
+  /// Tiempo máximo de preparar un grupo entero, de tiempo activo (CA-016-24).
+  static const Duration groupTimeout = Duration(minutes: 2);
+
+  /// Bytes que se estima que ocupa una foto guardada, para comprobar el espacio
+  /// libre antes de importar un grupo. **[Hecho]** 16 MB, cota superior medida
+  /// en el emulador: ninguna foto guardó más de 14,5 MB (R-24, T-016-20;
+  /// `specs/016-varias-imagenes-carrusel/dispositivo.md`).
+  static const int storedPhotoEstimate = 16 * 1000 * 1000;
+
   /// Bytes de cabecera que necesita [sniffImageType].
   static const int headBytes = 64;
 }

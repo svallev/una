@@ -56,4 +56,5 @@ Es una **excepción a P6 (WCAG 2.5.1, nivel A, y 2.5.7, AA) decidida por el prop
   - registrar **DEV-53** en `docs/design/prototype-deviations.md` y notas en DEV-41 y DEV-43;
   - ADR-0013: nota "ampliado al grupo de imágenes por el ADR-0022" (como la de ADR-0014 y 0015) y la misma en `docs/adr/README.md`;
   - a11y: casillas de dispositivo de la 016 en la 022 (TalkBack, Switch Access, teclado, Voice Access, horizontal).
+- **[Hecho] Implementado (spec 016, 2026-10-07):** el anuncio único lo da una región viva con el idioma de la app (una frase por cambio en 5 por acción y 5 por gesto con TalkBack, emulador de API 37); con una foto alta, «desplazar adelante» del lector la recorre y luego pasa a la siguiente (propietario, 2026-10-07; «Foto siguiente/anterior» siempre es directa). **[Pendiente 022]** el gesto real de TalkBack, Switch Access, la voz y el control por voz (`specs/016-varias-imagenes-carrusel/dispositivo.md`); el criterio de revisión de arriba sigue en pie.
 - **Qué dispararía revisarlo:** los criterios de arriba, una versión de Flutter que permita indicar el idioma por anuncio (R-22) o la spec 017.

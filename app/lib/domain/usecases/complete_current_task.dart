@@ -10,6 +10,11 @@ typedef CompletionResult = ({Task completed, Task? next});
 /// Completa la tarea actual (R9): la borra del todo, sin histórico
 /// (ADR-0012). Se guarda **antes** de cualquier animación: si la app muere a
 /// mitad, ya no está (CL-003-1), y el barrido recoge sus archivos.
+///
+/// **Orden (CA-016-13, CA-016-16):** primero se quita la fila y **después** se
+/// descartan los archivos de todas las fotos. Quien pinta la rotura con lo que
+/// se ve (la captura de la cara de la tarea con fotos) la toma **antes** de
+/// llamar a [call], con los archivos todavía en su sitio.
 class CompleteCurrentTask {
   CompleteCurrentTask({required this.repository, required this.janitor});
 
@@ -25,8 +30,9 @@ class CompleteCurrentTask {
     // Solo borra si sigue pendiente: si entre medias dejó de estarlo, no se
     // anuncia como completada.
     if (!await repository.remove(task.id)) throw const TaskNotCurrent();
-    // Después de guardar, los archivos (CA-003-06, CA-007-16).
-    if (current.attachment case final a?) await janitor.discard(a.id);
+    // Después de guardar, los archivos de todo el grupo (CA-003-06,
+    // CA-007-16, CA-016-16).
+    await janitor.discardAll([for (final a in current.attachments) a.id]);
     return (completed: task, next: await repository.currentTask());
   }
 }

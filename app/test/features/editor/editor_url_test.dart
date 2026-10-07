@@ -51,11 +51,11 @@ class _FailingUpdate extends InMemoryTaskRepository {
   Future<bool> updateContent(
     String id,
     String? text,
-    Attachment? attachment,
-    DateTime at,
-  ) async {
+    DateTime at, {
+    List<Attachment>? attachments,
+  }) async {
     if (fail) throw StateError('disk I/O error');
-    return super.updateContent(id, text, attachment, at);
+    return super.updateContent(id, text, at, attachments: attachments);
   }
 }
 

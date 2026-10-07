@@ -30,7 +30,9 @@ void main() {
 
   setUp(() {
     store = MemoryAttachmentStore();
-    importer = FakeImageImporter(store);
+    importer = FakeImageImporter(store)
+      // "Subir imágenes" con una sola elegida es la 007 (CA-016-03).
+      ..manyTotal = 1;
     repo = InMemoryTaskRepository();
   });
 
@@ -120,7 +122,7 @@ void main() {
       testWidgets('vista previa, "Quitar adjunto", texto opcional y "$label" '
           '(${mode.name})', (tester) async {
         await pumpEditor(tester, mode: mode);
-        await pick(tester, 'Subir imagen');
+        await pick(tester, 'Subir imágenes');
 
         expect(find.byType(AttachmentPreview), findsOneWidget);
         final image = tester.widget<Image>(
@@ -155,7 +157,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Add a photo, image or file'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Upload image'));
+      await tester.tap(find.text('Upload images'));
       await tester.pumpAndSettle();
       expect(find.text('Add some text (optional)'), findsOneWidget);
       expect(find.bySemanticsLabel('Remove attachment'), findsOneWidget);
@@ -208,7 +210,7 @@ void main() {
 
     testWidgets('(+) con una imagen elegida la sustituye', (tester) async {
       await pumpEditor(tester);
-      await pick(tester, 'Subir imagen');
+      await pick(tester, 'Subir imágenes');
       await pick(tester, 'Hacer foto');
 
       expect(importState(tester).image!.id, importer.picks.last);
@@ -224,7 +226,7 @@ void main() {
     testWidgets('CA-007-06: "Quitar adjunto" vuelve al editor sin imagen y sin '
         'texto no guarda', (tester) async {
       await pumpEditor(tester);
-      await pick(tester, 'Subir imagen');
+      await pick(tester, 'Subir imágenes');
       await tester.tap(_remove);
       await tester.pumpAndSettle();
 
@@ -286,11 +288,11 @@ void main() {
       final task = sampleTask(text: 'Llamar', rank: 'M');
       await repo.insert(task);
       await pumpEditor(tester, mode: EditorMode.edit, task: task);
-      await pick(tester, 'Subir imagen');
+      await pick(tester, 'Subir imágenes');
       await tester.tap(find.text('Guardar cambios'));
       await tester.pumpAndSettle();
       final saved = (await repo.currentTask())!;
-      expect(saved.attachment!.id, importer.picks.last);
+      expect(saved.attachment!.id, importer.copiedIds.last);
       expect(saved.rank, task.rank);
     });
 
@@ -353,7 +355,7 @@ void main() {
       importer.sanitizeDelay = const Duration(seconds: 5);
       await tester.tap(_plus);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Subir imagen'));
+      await tester.tap(find.text('Subir imágenes'));
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pump(const Duration(milliseconds: 10));
       expect(find.text('Preparando imagen…'), findsNothing);
@@ -378,7 +380,7 @@ void main() {
       importer.sanitizeDelay = const Duration(seconds: 5);
       await tester.tap(_plus);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Subir imagen'));
+      await tester.tap(find.text('Subir imágenes'));
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('Preparando imagen…'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsNothing);
@@ -411,16 +413,36 @@ void main() {
         tester,
       ) async {
         await pumpEditor(tester);
-        await pick(tester, 'Subir imagen');
+        await pick(tester, 'Subir imágenes');
         final before = importState(tester).image;
         importer.copyError = ImageImportFailure(error);
-        await pick(tester, 'Subir imagen');
+        await pick(tester, 'Subir imágenes');
 
         expect(find.text(text), findsOneWidget);
         expect(importState(tester).image, before);
         expect(find.byType(AttachmentPreview), findsOneWidget);
       });
     }
+
+    testWidgets('CA-016-24: un fallo sin tipo en el selector sale de '
+        '"Preparando" con el aviso y el editor queda como estaba', (
+      tester,
+    ) async {
+      await pumpEditor(tester);
+      await pick(tester, 'Subir imágenes');
+      final before = importState(tester).staged;
+      importer.pickError = StateError('content://media/secret/1.jpg');
+      await pick(tester, 'Subir imágenes');
+
+      expect(
+        find.text('No hemos podido leer esta imagen. Prueba con otra.'),
+        findsOneWidget,
+      );
+      expect(importState(tester).preparing, isFalse);
+      expect(importState(tester).staged, before);
+      expect(find.textContaining('Preparando'), findsNothing);
+      expect(find.byType(AttachmentPreview), findsOneWidget);
+    });
 
     testWidgets('CL-007-1: sin app de cámara', (tester) async {
       await pumpEditor(tester);
@@ -446,7 +468,7 @@ void main() {
 
     testWidgets('desde la galería: "Imagen añadida"', (tester) async {
       await pumpEditor(tester);
-      await pick(tester, 'Subir imagen');
+      await pick(tester, 'Subir imágenes');
       expect(announcements, ['Imagen añadida']);
     });
 
@@ -455,14 +477,14 @@ void main() {
     ) async {
       await pumpEditor(tester);
       importer.userCancelsPicker = true;
-      await pick(tester, 'Subir imagen');
+      await pick(tester, 'Subir imágenes');
       expect(announcements, isEmpty);
       expect(plusFocused(tester), isTrue);
     });
 
     testWidgets('quitar: foco en (+) y "Adjunto quitado"', (tester) async {
       await pumpEditor(tester);
-      await pick(tester, 'Subir imagen');
+      await pick(tester, 'Subir imágenes');
       announcements.clear();
       await tester.tap(_remove);
       await tester.pumpAndSettle();
@@ -480,7 +502,7 @@ void main() {
         ..sanitizeDelay = const Duration(seconds: 5);
       await tester.tap(_plus);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Subir imagen'));
+      await tester.tap(find.text('Subir imágenes'));
       await tester.pump(const Duration(seconds: 1));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
@@ -505,7 +527,7 @@ void main() {
       importer.copyError = const ImageImportFailure(
         ImageImportError.unreadable,
       );
-      await pick(tester, 'Subir imagen');
+      await pick(tester, 'Subir imágenes');
       expect(announcements, isEmpty);
       expect(find.byType(SnackBar), findsOneWidget);
       expect(plusFocused(tester), isTrue);
@@ -514,7 +536,7 @@ void main() {
 
   testWidgets('las medidas del prototipo (tokens)', (tester) async {
     await pumpEditor(tester);
-    await pick(tester, 'Subir imagen');
+    await pick(tester, 'Subir imágenes');
     final field = tester.getSize(find.byType(TextField));
     expect(field.height, greaterThanOrEqualTo(UnaSizes.attachTextField));
     final preview = tester.getTopLeft(find.byType(AttachmentPreview));

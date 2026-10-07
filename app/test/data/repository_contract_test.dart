@@ -10,6 +10,7 @@ import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/rank.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/task_repository.dart';
+import 'package:drift/drift.dart' show OrderingTerm, Value;
 import 'package:flutter_test/flutter_test.dart';
 
 typedef _Repo = TaskRepository;
@@ -81,9 +82,34 @@ Attachment _web(String id, {String url = _webUrl}) => Attachment(
 /// una copia de seguridad restaurada (CA-015-26, CL-015-18).
 typedef _PutRaw = Future<void> Function(String key, String raw);
 
+/// Una fila de `attachments` tal cual (spec 016, CA-016-25): lo que dejaría
+/// una base restaurada o manipulada, con tipos y medidas que no hay que creer.
+class _RawRow {
+  const _RawRow(
+    this.taskId,
+    this.id, {
+    this.kind = 'image',
+    this.origin = 'gallery',
+    this.position = 0,
+    this.width = 4000,
+    this.height = 3000,
+  });
+  final String taskId;
+  final String id;
+  final String kind;
+  final String origin;
+  final int position;
+  final int? width;
+  final int? height;
+}
+
+typedef _PutRawRows = Future<void> Function(Iterable<_RawRow> rows);
+
 void _contract(
   String name,
-  Future<(_Repo, SettingsRepository, Future<void> Function(), _PutRaw)>
+  Future<
+    (_Repo, SettingsRepository, Future<void> Function(), _PutRaw, _PutRawRows)
+  >
   Function()
   create,
 ) {
@@ -92,8 +118,11 @@ void _contract(
     late SettingsRepository settings;
     late Future<void> Function() dispose;
     late _PutRaw putRaw;
+    late _PutRawRows putRows;
 
-    setUp(() async => (repo, settings, dispose, putRaw) = await create());
+    setUp(
+      () async => (repo, settings, dispose, putRaw, putRows) = await create(),
+    );
     tearDown(() => dispose());
 
     test('sin tareas: no hay tarea actual', () async {
@@ -223,14 +252,14 @@ void _contract(
         await repo.insert(_task('a', 'C', color: 3));
         await repo.insert(_task('b', 'M'));
         final at = DateTime.utc(2026, 9, 25, 12);
-        expect(await repo.updateContent('a', 'Nuevo texto', null, at), isTrue);
+        expect(await repo.updateContent('a', 'Nuevo texto', at), isTrue);
         final t = (await repo.findById('a'))!;
         expect(t.text, 'Nuevo texto');
         expect(t.rank, 'C');
         expect(t.colorKey, 3);
         expect(t.updatedAt, at);
         expect((await repo.currentTask())!.id, 'a');
-        expect(await repo.updateContent('missing', 'x', null, at), isFalse);
+        expect(await repo.updateContent('missing', 'x', at), isFalse);
       },
     );
 
@@ -373,7 +402,12 @@ void _contract(
         const other = 'https://otra.example.com/';
         final at = DateTime.utc(2026, 9, 28, 12);
         expect(
-          await repo.updateContent('a', null, _web('w2', url: other), at),
+          await repo.updateContent(
+            'a',
+            null,
+            at,
+            attachments: [_web('w2', url: other)],
+          ),
           isTrue,
         );
         final t = (await repo.findById('a'))!;
@@ -391,7 +425,12 @@ void _contract(
       await repo.insert(_task('b', 'M'));
       final at = DateTime.utc(2026, 9, 26, 12);
       expect(
-        await repo.updateContent('a', 'Con foto', _image('i1'), at),
+        await repo.updateContent(
+          'a',
+          'Con foto',
+          at,
+          attachments: [_image('i1')],
+        ),
         isTrue,
       );
       var t = (await repo.findById('a'))!;
@@ -399,15 +438,506 @@ void _contract(
         (t.text, t.attachment?.id, t.rank, t.colorKey),
         ('Con foto', 'i1', 'C', 3),
       );
-      expect(await repo.updateContent('a', null, _image('i2'), at), isTrue);
+      expect(
+        await repo.updateContent('a', null, at, attachments: [_image('i2')]),
+        isTrue,
+      );
       t = (await repo.findById('a'))!;
       expect((t.text, t.attachment?.id), (null, 'i2'));
       expect(await repo.attachmentIds(), {'i2'});
-      expect(await repo.updateContent('a', 'Sin foto', null, at), isTrue);
+      expect(
+        await repo.updateContent('a', 'Sin foto', at, attachments: const []),
+        isTrue,
+      );
       t = (await repo.findById('a'))!;
       expect((t.text, t.attachment), ('Sin foto', null));
       expect(await repo.attachmentIds(), isEmpty);
       expect((await repo.currentTask())!.id, 'a');
+    });
+
+    // ---- Spec 016: lectura con grupos (CA-016-25) ----
+
+    /// Una tarea sin adjuntos propios y sus filas crudas.
+    Future<void> seed(String id, String rank, List<_RawRow> rows) async {
+      await repo.insert(_task(id, rank, text: 'Tarea $id'));
+      await putRows(rows);
+    }
+
+    List<String> ids(Task? t) => [for (final a in t!.attachments) a.id];
+
+    test('CA-016-25: un grupo de 3 vuelve en su orden por todas las lecturas '
+        'aunque las filas estén guardadas desordenadas', () async {
+      await seed('a', 'C', [
+        const _RawRow('a', 'z3', position: 2),
+        const _RawRow('a', 'z1', position: 0),
+        const _RawRow('a', 'z2', position: 1),
+      ]);
+      await seed('b', 'M', [
+        const _RawRow('b', 'y2', position: 1),
+        const _RawRow('b', 'y1', position: 0),
+      ]);
+      expect(ids(await repo.currentTask()), ['z1', 'z2', 'z3']);
+      expect(ids(await repo.findById('a')), ['z1', 'z2', 'z3']);
+      expect(ids(await repo.findById('b')), ['y1', 'y2']);
+      final pending = await repo.pendingTasks();
+      expect(pending.map((t) => t.id), ['a', 'b']);
+      expect(ids(pending[0]), ['z1', 'z2', 'z3']);
+      expect(ids(pending[1]), ['y1', 'y2']);
+      expect(ids(await repo.watchCurrentTask().first), ['z1', 'z2', 'z3']);
+      expect((await repo.watchPending().first).map(ids), [
+        ['z1', 'z2', 'z3'],
+        ['y1', 'y2'],
+      ]);
+      expect((await repo.currentTask())!.attachments.isPhotoGroup, isTrue);
+    });
+
+    test('CA-016-25: la primera tarea no corta el grupo (limit(1) sobre el '
+        'JOIN devolvería una sola foto) y una tarea sin adjuntos sigue '
+        'siendo una tarea', () async {
+      await seed('a', 'C', [
+        for (var i = 0; i < 3; i++) _RawRow('a', 'p$i', position: i),
+      ]);
+      await repo.insert(_task('b', 'M'));
+      final current = (await repo.currentTask())!;
+      expect(current.attachments, hasLength(3));
+      expect(current.attachment!.id, 'p0');
+      expect((await repo.findById('b'))!.attachments, isEmpty);
+      expect((await repo.pendingTasks()).map((t) => t.attachments.length), [
+        3,
+        0,
+      ]);
+    });
+
+    test('CA-016-25: las posiciones repetidas se ordenan por id y las que '
+        'tienen huecos, por posición', () async {
+      await seed('a', 'C', [
+        const _RawRow('a', 'b', position: 4),
+        const _RawRow('a', 'd', position: 9),
+        const _RawRow('a', 'c', position: 4),
+        const _RawRow('a', 'a', position: 4),
+        const _RawRow('a', 'e', position: 0),
+      ]);
+      expect(ids(await repo.currentTask()), ['e', 'a', 'b', 'c', 'd']);
+    });
+
+    test('CA-016-25: una fila con un tipo desconocido deja la tarea no válida '
+        '(sola o junto a 2 buenas) y no lanza', () async {
+      await seed('a', 'C', [const _RawRow('a', 'xa', kind: 'document')]);
+      await seed('b', 'M', [
+        const _RawRow('b', 'g1', position: 0),
+        const _RawRow('b', 'xb', kind: 'hologram', position: 1),
+        const _RawRow('b', 'g2', position: 2),
+      ]);
+      final a = (await repo.findById('a'))!;
+      expect(a.attachments.single.unreadable, isTrue);
+      expect(a.attachments.isValidGroup, isFalse);
+      final b = (await repo.findById('b'))!;
+      expect(ids(b), ['g1', 'xb', 'g2']);
+      expect(b.attachments.map((x) => x.unreadable), [false, true, false]);
+      expect(b.attachments.isValidGroup, isFalse);
+      expect(b.attachments.isPhotoGroup, isFalse);
+      expect((await repo.pendingTasks()).map((t) => t.id), ['a', 'b']);
+    });
+
+    test(
+      'CA-016-25: un origen desconocido también deja la tarea no válida',
+      () async {
+        await seed('a', 'C', [const _RawRow('a', 'xo', origin: 'telepathy')]);
+        final a = (await repo.currentTask())!;
+        expect(a.attachments.single.unreadable, isTrue);
+        expect(a.attachments.isValidGroup, isFalse);
+      },
+    );
+
+    for (final (label, id) in <(String, String)>[
+      ('con ../', '../x'),
+      ('de 65 caracteres', 'x' * 65),
+      ('con una barra', 'a/b'),
+      ('con un espacio', 'a b'),
+    ]) {
+      test('CA-016-25: una fila de imagen válida con un id inválido ($label) '
+          'se lee como no válida y sin lanzar (T-7)', () async {
+        await seed('a', 'C', [
+          const _RawRow('a', 'ok', position: 0),
+          _RawRow('a', id, position: 1),
+        ]);
+        final t = (await repo.currentTask())!;
+        final bad = t.attachments.last;
+        expect(bad.unreadable, isTrue);
+        expect((bad.width, bad.height), (1, 1));
+        expect(t.attachments.isValidGroup, isFalse);
+        expect(t.attachments.first.unreadable, isFalse);
+      });
+    }
+
+    test('CA-016-25: un id válido en el límite (64 caracteres, guiones y '
+        'guiones bajos) se lee igual que siempre', () async {
+      await seed('a', 'C', [
+        _RawRow('a', 'A-z_9' * 12 + 'abcd', position: 0),
+        const _RawRow('a', 'g2', position: 1),
+      ]);
+      final t = (await repo.currentTask())!;
+      expect(t.attachments.map((a) => a.unreadable), [false, false]);
+      expect(t.attachments.first.id, hasLength(64));
+      expect(t.attachments.isPhotoGroup, isTrue);
+    });
+
+    for (final (label, w, h) in <(String, int?, int?)>[
+      ('ancho 0', 0, 3000),
+      ('alto -1', 4000, -1),
+      ('ancho 2^31', 2147483648, 3000),
+      ('los dos 2^31 (el producto desbordaría)', 2147483648, 2147483648),
+      ('sin medidas', null, null),
+      ('64 MP y un píxel más', 8001, 8000),
+    ]) {
+      test('CA-016-25: una imagen con medidas fuera de rango ($label) se lee '
+          'como no válida con medidas 1 × 1 y sin lanzar', () async {
+        await seed('a', 'C', [
+          _RawRow('a', 'ok', position: 0),
+          _RawRow('a', 'bad', position: 1, width: w, height: h),
+        ]);
+        final t = (await repo.currentTask())!;
+        final bad = t.attachments.last;
+        expect(bad.unreadable, isTrue);
+        expect((bad.width, bad.height), (1, 1));
+        expect(t.attachments.isValidGroup, isFalse);
+        expect(t.attachments.first.unreadable, isFalse);
+        expect(t.attachments.first.width, 4000);
+      });
+    }
+
+    test('CA-016-25: una imagen grande pero real (24 MP, un lado de 20 000) '
+        'se lee bien', () async {
+      await seed('a', 'C', [
+        const _RawRow('a', 'tall', width: 1080, height: 20000),
+        const _RawRow('a', 'pano', position: 1, width: 20000, height: 1200),
+      ]);
+      final t = (await repo.currentTask())!;
+      expect(t.attachments.map((a) => a.unreadable), [false, false]);
+      expect(t.attachments.isPhotoGroup, isTrue);
+    });
+
+    test('CA-016-25: un PDF o una web con imágenes se lee tal cual y la '
+        'mezcla no es válida', () async {
+      await seed('a', 'C', [
+        const _RawRow('a', 'i1', position: 0),
+        const _RawRow('a', 'pd', kind: 'pdf', origin: 'file', position: 1),
+      ]);
+      await seed('b', 'M', [
+        const _RawRow(
+          'b',
+          'w1',
+          kind: 'web',
+          origin: 'url',
+          position: 0,
+          width: null,
+          height: null,
+        ),
+        const _RawRow('b', 'i2', position: 1),
+        const _RawRow('b', 'i3', position: 2),
+      ]);
+      final a = (await repo.findById('a'))!;
+      expect(a.attachments.map((x) => x.kind), [
+        AttachmentKind.image,
+        AttachmentKind.pdf,
+      ]);
+      expect(a.attachments.isValidGroup, isFalse);
+      final b = (await repo.findById('b'))!;
+      expect(b.attachments.map((x) => x.kind), [
+        AttachmentKind.web,
+        AttachmentKind.image,
+        AttachmentKind.image,
+      ]);
+      expect(b.attachments.isValidGroup, isFalse);
+      expect(b.attachments.any((x) => x.unreadable), isFalse);
+    });
+
+    test('CA-016-25: con 11 filas se leen solo las 10 primeras por '
+        '(posición, id), pero attachmentIds() las devuelve todas', () async {
+      await seed('a', 'C', [
+        for (var i = 10; i >= 0; i--)
+          _RawRow('a', 'f${i.toString().padLeft(2, '0')}', position: i),
+      ]);
+      final t = (await repo.currentTask())!;
+      expect(t.attachments, hasLength(10));
+      expect(ids(t).first, 'f00');
+      expect(ids(t).last, 'f09');
+      expect(t.attachments.isValidGroup, isTrue);
+      expect(await repo.attachmentIds(), hasLength(11));
+      expect(await repo.attachmentIds(), contains('f10'));
+    });
+
+    test(
+      'CA-016-25: 100 000 filas en una tarea: se leen 10, dentro de un '
+      'presupuesto de tiempo, y el resto de tareas no se ven afectadas',
+      () async {
+        await seed('a', 'C', [
+          for (var i = 99999; i >= 0; i--)
+            _RawRow('a', 'm${i.toString().padLeft(6, '0')}', position: i),
+        ]);
+        await repo.insert(_task('b', 'M'));
+        final watch = Stopwatch()..start();
+        final current = (await repo.currentTask())!;
+        final byId = (await repo.findById('a'))!;
+        final pending = await repo.pendingTasks();
+        final streamed = (await repo.watchCurrentTask().first)!;
+        watch.stop();
+        for (final t in [current, byId, pending.first, streamed]) {
+          expect(t.attachments, hasLength(10));
+          expect(ids(t).first, 'm000000');
+          expect(ids(t).last, 'm000009');
+        }
+        expect(pending.map((t) => t.id), ['a', 'b']);
+        expect(
+          watch.elapsedMilliseconds,
+          lessThan(2000),
+          reason: 'cuatro lecturas de una tarea con 100 000 filas',
+        );
+        expect(await repo.attachmentIds(), hasLength(100000));
+      },
+    );
+
+    test(
+      'CA-016-25: el flujo emite al cambiar una fila de attachments',
+      () async {
+        await seed('a', 'C', [const _RawRow('a', 'p0')]);
+        final seen = <List<String>>[];
+        final sub = repo.watchCurrentTask().listen((t) => seen.add(ids(t)));
+        await pumpEventQueue();
+        await putRows([const _RawRow('a', 'p1', position: 1)]);
+        await pumpEventQueue();
+        await putRows([const _RawRow('a', 'p2', position: 2)]);
+        await pumpEventQueue();
+        await sub.cancel();
+        expect(seen.first, ['p0']);
+        expect(seen.last, ['p0', 'p1', 'p2']);
+      },
+    );
+
+    test('CA-016-25: el flujo de la cola también emite al cambiar una fila '
+        'de attachments', () async {
+      await seed('a', 'C', [const _RawRow('a', 'p0')]);
+      await repo.insert(_task('b', 'M'));
+      final seen = <List<int>>[];
+      final sub = repo.watchPending().listen(
+        (l) => seen.add([for (final t in l) t.attachments.length]),
+      );
+      await pumpEventQueue();
+      await putRows([const _RawRow('b', 'q0')]);
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(seen.first, [1, 0]);
+      expect(seen.last, [1, 1]);
+    });
+
+    test('CA-016-25: existingAttachmentIds devuelve solo los que tienen fila, '
+        'por lote', () async {
+      await seed('a', 'C', [
+        const _RawRow('a', 'k1'),
+        const _RawRow('a', 'k2', position: 1),
+      ]);
+      expect(await repo.existingAttachmentIds([]), isEmpty);
+      expect(await repo.existingAttachmentIds(['k1', 'nope', 'k1']), {'k1'});
+      expect(await repo.existingAttachmentIds(['nope', 'tampoco']), isEmpty);
+      // Más ids que variables por consulta: se parte en lotes y no falla.
+      final many = [for (var i = 0; i < 1300; i++) 'n$i', 'k2'];
+      expect(await repo.existingAttachmentIds(many), {'k2'});
+    });
+
+    // ---- Spec 016: escritura con grupos (CA-016-14, 15, 25) ----
+
+    Task group(String id, String rank, List<String> photoIds) => Task(
+      id: id,
+      text: null,
+      attachments: [for (final p in photoIds) _image(p)],
+      status: TaskStatus.pending,
+      rank: rank,
+      colorKey: 2,
+      createdAt: DateTime.utc(2026, 9, 24, 10),
+      updatedAt: DateTime.utc(2026, 9, 24, 10),
+    );
+    final at16 = DateTime.utc(2026, 10, 6, 9);
+
+    test('CA-016-14: insertar un grupo de 3 y leerlo en su orden por todas '
+        'las lecturas', () async {
+      final task = group('a', 'C', ['g3', 'g1', 'g2']);
+      await repo.insert(task);
+      expect(ids(await repo.currentTask()), ['g3', 'g1', 'g2']);
+      expect(ids(await repo.findById('a')), ['g3', 'g1', 'g2']);
+      expect((await repo.pendingTasks()).map(ids), [
+        ['g3', 'g1', 'g2'],
+      ]);
+      expect(await repo.findById('a'), task);
+      expect(await repo.attachmentIds(), {'g1', 'g2', 'g3'});
+    });
+
+    test('CA-016-14: el grupo de 10 se guarda y se lee entero', () async {
+      final names = [for (var i = 0; i < 10; i++) 'p${9 - i}'];
+      await repo.insert(group('a', 'C', names));
+      expect(ids(await repo.currentTask()), names);
+      expect(await repo.attachmentIds(), hasLength(10));
+    });
+
+    test('CA-016-15: insertar con un id de foto repetido lanza y no deja ni '
+        'la tarea, ni ninguna fila, ni la marca de "alguna vez hubo tareas" '
+        '(una sola transacción)', () async {
+      await expectLater(
+        repo.insert(group('a', 'C', ['dup', 'ok', 'dup'])),
+        throwsA(anything),
+      );
+      expect(await repo.findById('a'), isNull);
+      expect(await repo.countPending(), 0);
+      expect(await repo.attachmentIds(), isEmpty);
+      expect(await settings.hasEverHadTasks(), isFalse);
+      // Chocar con la foto de otra tarea también deshace todo.
+      await repo.insert(group('b', 'M', ['b1']));
+      await expectLater(
+        repo.insert(group('c', 'X', ['c1', 'b1'])),
+        throwsA(anything),
+      );
+      expect(await repo.findById('c'), isNull);
+      expect(await repo.attachmentIds(), {'b1'});
+    });
+
+    test('CA-016-25: editar solo el texto (attachments: null) no borra las '
+        'filas: ni las de un grupo, ni 11 restauradas, ni una mezcla rara '
+        'ni una con tipo desconocido', () async {
+      await repo.insert(group('a', 'C', ['a1', 'a2', 'a3']));
+      await seed('b', 'M', [
+        for (var i = 0; i < 11; i++) _RawRow('b', 'f$i', position: i),
+      ]);
+      await seed('c', 'T', [
+        const _RawRow('c', 'c1'),
+        const _RawRow('c', 'c2', kind: 'pdf', origin: 'file', position: 1),
+        const _RawRow('c', 'c3', kind: 'hologram', position: 2),
+      ]);
+      final before = await repo.attachmentIds();
+      expect(before, hasLength(3 + 11 + 3));
+      for (final id in ['a', 'b', 'c']) {
+        expect(await repo.updateContent(id, 'Solo texto', at16), isTrue);
+        expect((await repo.findById(id))!.text, 'Solo texto');
+        expect((await repo.findById(id))!.updatedAt, at16);
+      }
+      expect(await repo.attachmentIds(), before);
+      expect(ids(await repo.findById('a')), ['a1', 'a2', 'a3']);
+      expect(ids(await repo.findById('b')), hasLength(10));
+      expect((await repo.findById('c'))!.attachments.map((x) => x.unreadable), [
+        false,
+        false,
+        true,
+      ]);
+    });
+
+    test('CA-016-14: reemplazar un grupo por otro cambia las filas y deja el '
+        'orden de la lista nueva; conserva posición y color', () async {
+      await repo.insert(group('a', 'C', ['a1', 'a2', 'a3']));
+      await repo.insert(group('b', 'M', ['b1']));
+      expect(
+        await repo.updateContent(
+          'a',
+          'Con texto',
+          at16,
+          attachments: [_image('n2'), _image('n1')],
+        ),
+        isTrue,
+      );
+      final t = (await repo.findById('a'))!;
+      expect(ids(t), ['n2', 'n1']);
+      expect((t.text, t.rank, t.colorKey), ('Con texto', 'C', 2));
+      expect(await repo.attachmentIds(), {'n1', 'n2', 'b1'});
+      expect((await repo.currentTask())!.id, 'a');
+      // Una foto sola por un PDF, y el PDF por un grupo.
+      await repo.updateContent('b', null, at16, attachments: [_pdf('pb')]);
+      expect((await repo.findById('b'))!.attachment!.isPdf, isTrue);
+      await repo.updateContent(
+        'b',
+        null,
+        at16,
+        attachments: [_image('q1'), _image('q2'), _image('q3')],
+      );
+      expect(ids(await repo.findById('b')), ['q1', 'q2', 'q3']);
+      expect(await repo.attachmentIds(), {'n1', 'n2', 'q1', 'q2', 'q3'});
+    });
+
+    test('CA-016-14: una lista vacía quita todas las filas, también las que '
+        'la lectura no muestra', () async {
+      await seed('a', 'C', [
+        for (var i = 0; i < 12; i++) _RawRow('a', 'f$i', position: i),
+      ]);
+      await repo.insert(group('b', 'M', ['b1', 'b2']));
+      expect(
+        await repo.updateContent('a', 'Sin fotos', at16, attachments: const []),
+        isTrue,
+      );
+      expect((await repo.findById('a'))!.attachments, isEmpty);
+      expect(await repo.attachmentIds(), {'b1', 'b2'});
+    });
+
+    test('CA-016-15: si el reemplazo falla a mitad (id repetido) no cambia '
+        'nada: ni el texto ni las filas anteriores', () async {
+      await repo.insert(group('a', 'C', ['a1', 'a2']));
+      await repo.insert(group('b', 'M', ['b1']));
+      await expectLater(
+        repo.updateContent(
+          'a',
+          'Nuevo',
+          at16,
+          attachments: [_image('x1'), _image('b1')],
+        ),
+        throwsA(anything),
+      );
+      final t = (await repo.findById('a'))!;
+      expect(ids(t), ['a1', 'a2']);
+      expect(t.text, isNull);
+      expect(await repo.attachmentIds(), {'a1', 'a2', 'b1'});
+      await expectLater(
+        repo.updateContent(
+          'a',
+          'Nuevo',
+          at16,
+          attachments: [_image('y1'), _image('y1')],
+        ),
+        throwsA(anything),
+      );
+      expect(ids(await repo.findById('a')), ['a1', 'a2']);
+    });
+
+    test('CA-016-14: quitar borra todas las filas del grupo y deja las de '
+        'las demás tareas', () async {
+      await repo.insert(group('a', 'C', ['a1', 'a2', 'a3']));
+      await repo.insert(group('b', 'M', ['b1', 'b2']));
+      expect(await repo.remove('a'), isTrue);
+      expect(await repo.attachmentIds(), {'b1', 'b2'});
+      expect(await repo.findById('a'), isNull);
+    });
+
+    test('CA-016-14: quitar una tarea con 100 000 filas borra todas (no solo '
+        'las 10 que se leen)', () async {
+      await seed('a', 'C', [
+        for (var i = 0; i < 100000; i++)
+          _RawRow('a', 'm${i.toString().padLeft(6, '0')}', position: i),
+      ]);
+      await repo.insert(group('b', 'M', ['b1']));
+      expect(await repo.attachmentIds(), hasLength(100001));
+      expect(await repo.remove('a'), isTrue);
+      expect(await repo.attachmentIds(), {'b1'});
+    });
+
+    test('CA-016-14: el flujo emite al reemplazar las fotos', () async {
+      await repo.insert(group('a', 'C', ['a1']));
+      final seen = <List<String>>[];
+      final sub = repo.watchCurrentTask().listen((t) => seen.add(ids(t)));
+      await pumpEventQueue();
+      await repo.updateContent(
+        'a',
+        null,
+        at16,
+        attachments: [_image('n1'), _image('n2')],
+      );
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(seen.first, ['a1']);
+      expect(seen.last, ['n1', 'n2']);
     });
 
     test('ajuste de primer uso', () async {
@@ -498,6 +1028,19 @@ void main() {
       r as SettingsRepository,
       r.dispose,
       (String key, String raw) async => r.putRawSetting(key, raw),
+      (Iterable<_RawRow> rows) async {
+        for (final row in rows) {
+          r.putRawAttachment(
+            row.taskId,
+            id: row.id,
+            kind: row.kind,
+            origin: row.origin,
+            position: row.position,
+            width: row.width,
+            height: row.height,
+          );
+        }
+      },
     );
   });
 
@@ -513,7 +1056,45 @@ void main() {
           .insertOnConflictUpdate(
             SettingEntriesCompanion.insert(key: key, value: raw, updatedAt: 0),
           ),
+      (Iterable<_RawRow> rows) => db.batch(
+        (b) => b.insertAll(db.attachments, [
+          for (final row in rows)
+            AttachmentsCompanion.insert(
+              id: row.id,
+              taskId: row.taskId,
+              kind: row.kind,
+              origin: row.origin,
+              mime: 'image/jpeg',
+              byteSize: 1234,
+              relPath: 'attachments/${row.id}/full',
+              width: Value(row.width),
+              height: Value(row.height),
+              createdAt: 0,
+              position: Value(row.position),
+            ),
+        ]),
+      ),
     );
+  });
+
+  test('CA-016-25 (plan §3): la lectura acotada usa el índice '
+      '(task_id, position, id) y busca cada foto por clave, sin recorrer todas '
+      'las filas de la tarea (drift)', () async {
+    final db = openInMemoryDatabase();
+    final repo = DriftTaskRepository(db);
+    final plan = await db
+        .customSelect('EXPLAIN QUERY PLAN ${repo.currentTaskSql}')
+        .get();
+    final details = plan.map((r) => r.read<String>('detail')).join('\n');
+    expect(details, contains('idx_attachments_task_position'));
+    // La unión busca por la clave primaria de `attachments` (IN de la
+    // subconsulta acotada), no por un recorrido de la tabla.
+    expect(
+      details,
+      matches(RegExp(r'SEARCH a USING INDEX sqlite_autoindex_attachments_1')),
+    );
+    expect(details, isNot(contains('SCAN a')));
+    await db.close();
   });
 
   test(
@@ -548,11 +1129,44 @@ void main() {
     },
   );
 
+  test('CA-016-14 (plan §3): insertar y reemplazar numeran `position` de 0 a '
+      'N-1 en el orden de la lista (drift)', () async {
+    final db = openInMemoryDatabase();
+    final repo = DriftTaskRepository(db);
+    await repo.insert(
+      Task(
+        id: 'a',
+        text: null,
+        attachments: [_image('z'), _image('y'), _image('x')],
+        status: TaskStatus.pending,
+        rank: 'C',
+        colorKey: 0,
+        createdAt: DateTime.utc(2026, 10, 6),
+        updatedAt: DateTime.utc(2026, 10, 6),
+      ),
+    );
+    Future<List<(String, int)>> rows() async => [
+      for (final r in await (db.select(
+        db.attachments,
+      )..orderBy([(a) => OrderingTerm.asc(a.position)])).get())
+        (r.id, r.position),
+    ];
+    expect(await rows(), [('z', 0), ('y', 1), ('x', 2)]);
+    await repo.updateContent(
+      'a',
+      null,
+      DateTime.utc(2026, 10, 6, 1),
+      attachments: [_image('n2'), _image('n1')],
+    );
+    expect(await rows(), [('n2', 0), ('n1', 1)]);
+    await db.close();
+  });
+
   test('CA-009-04 (plan §3): la fila de una tarea web guarda solo la '
       'dirección, sin archivos ni medidas, en el esquema actual', () async {
     final db = openInMemoryDatabase();
     final repo = DriftTaskRepository(db);
-    expect(db.schemaVersion, 2);
+    expect(db.schemaVersion, 3); // v3: spec 016 (position)
     await repo.insert(_task('a', 'C', attachment: _web('web-a')));
 
     final row = await db.select(db.attachments).getSingle();

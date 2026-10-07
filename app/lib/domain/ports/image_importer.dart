@@ -8,6 +8,11 @@ export '../entities/staged_attachment.dart';
 /// [token] es opaco: solo lo entiende el importador que lo creó.
 typedef PickedImage = ({String token, AttachmentOrigin origin});
 
+/// Lo que devuelve el selector múltiple (spec 016): como mucho `max` imágenes
+/// (el tope se aplica **antes** de abrir o copiar ninguna) y [total], lo que
+/// devolvió el sistema, para avisar de que se recortó (CA-016-02).
+typedef PickedImages = ({List<PickedImage> items, int total});
+
 /// Archivo copiado a la zona de preparación: tamaño y primeros bytes, para
 /// decidir el tipo por el contenido.
 typedef CopiedImage = ({int byteSize, List<int> head});
@@ -22,6 +27,9 @@ enum ImageImportError {
   noSpace,
 }
 
+/// Un fallo de importación. **Solo lleva el código**: nunca la excepción
+/// original ni su pila, que pueden traer rutas, nombres o direcciones de las
+/// fotos (CL-016-16).
 class ImageImportFailure implements Exception {
   const ImageImportFailure(this.error);
   final ImageImportError error;
@@ -45,6 +53,15 @@ abstract interface class ImageImporter {
   /// Devuelve null si el usuario cancela. Lanza [ImageImportFailure]
   /// (`noCamera`).
   Future<PickedImage?> pick(AttachmentOrigin origin, String id);
+
+  /// Abre el selector del sistema para elegir **varias** imágenes (spec 016,
+  /// CA-016-02): [max] como mucho; el resto ni se abre ni se toca. Sin pedir
+  /// permisos. Devuelve null si el usuario cancela. Lanza [ImageImportFailure].
+  Future<PickedImages?> pickMany({required int max});
+
+  /// Bytes libres en la partición donde se guardan las fotos, o null si no se
+  /// sabe (entonces no se bloquea la importación, CL-016-6).
+  Future<int?> freeSpace();
 
   /// Copia lo elegido a la preparación `<id>`, contando los bytes y abortando
   /// al pasar de [maxBytes] (CA-007-14). Lanza [ImageImportFailure].

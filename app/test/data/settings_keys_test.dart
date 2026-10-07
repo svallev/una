@@ -30,7 +30,7 @@ void main() {
       for (final r in await db.select(db.settingEntries).get()) r.key,
     };
     expect(keys, {'locale', 'keepScreenOn'});
-    expect(db.schemaVersion, 2);
+    expect(db.schemaVersion, 3); // v3: spec 016 (position)
   });
 
   test(

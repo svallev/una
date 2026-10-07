@@ -6,6 +6,7 @@
 #   tools/check-recents.sh <serial-adb> secure
 #   tools/check-recents.sh <serial-adb> loop <vueltas> [directorio]
 #   tools/check-recents.sh <serial-adb> record <vueltas> [directorio]
+#   tools/check-recents.sh <serial-adb> fixtures push|clean
 #
 # El serial es OBLIGATORIO (no hay valor por defecto: con dos dispositivos
 # conectados adb falla y nunca se debe tocar el móvil del propietario).
@@ -31,6 +32,17 @@
 #            visible la pantalla de la app, vuelve a desaparecer (parpadeo,
 #            CA-011-03). El fotograma liso BLANCO al volver desde "Recientes" es
 #            la excepción aceptada (CA-011-03 enmendado): se cuenta, no falla.
+#   fixtures push|clean: escenario "grupo de 3 fotos distinguibles" (CA-016-13).
+#            push deja en la galería del dispositivo tres fotos de prueba (roja, verde
+#            y azul, con un número enorme: la 1, la 2 y la 3) en Pictures/una-recents; clean las
+#            borra. Con ellas se crea una tarea con "Subir imágenes" (las tres, en ese
+#            orden) y se repite el flujo de siempre con la tarea a la vista: capture
+#            carrusel1 (foto 1), cambiar a la foto 3 (swipe), capture carrusel3, y
+#            compare carrusel1 carrusel3 (la tarjeta no enseña ninguna foto y las dos
+#            son idénticas); loop y record con el carrusel a la vista. Mismas
+#            comprobaciones con el móvil en horizontal, con una foto que falta ("Foto no
+#            disponible"), con "Preparando foto 2 de 3…" y con el editor y la preselección.
+#            Solo emulador o dispositivo de pruebas: son archivos de prueba, sin datos reales.
 #   VIA=direct abre "Recientes" desde la propia app (por defecto pasa por el
 #            escritorio). Esa ruta queda FUERA de CA-011-01 (CL-011-14): el
 #            lanzador enseña la ventana en vivo; el script solo informa.
@@ -53,7 +65,7 @@
 # Códigos de salida: 0 todo bien; 1 un criterio falla; 2 uso incorrecto.
 set -euo pipefail
 
-usage() { sed -n "2,53p" "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n "2,65p" "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 SERIAL="${1:-}"
 [ -n "$SERIAL" ] || { echo "Falta el serial de adb (primer argumento). Sin serial no se ejecuta nada." >&2; usage; }
@@ -348,6 +360,48 @@ case "$CMD" in
       rm -f "$OUT/record-$i.raw"
     done
     exit "$fail"
+    ;;
+
+  fixtures)
+    SUB="${1:-}"
+    DIR_ON_DEVICE="/sdcard/Pictures/una-recents"
+    case "$SUB" in
+      push)
+        tmp="$(mktemp -d "${TMPDIR:-/tmp}/una-fixtures.XXXXXX")"
+        trap 'rm -rf "${tmp:?}"' EXIT
+        python3 - "$tmp" <<'PY'
+import sys
+from PIL import Image, ImageDraw, ImageFont
+
+out = sys.argv[1]
+colors = [(220, 40, 40), (40, 170, 70), (40, 80, 220)]
+for i, color in enumerate(colors, start=1):
+    img = Image.new("RGB", (1200, 1600), color)
+    d = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.load_default(size=900)
+    except TypeError:
+        font = ImageFont.load_default()
+    d.text((600, 800), str(i), fill=(255, 255, 255), anchor="mm", font=font)
+    img.save(f"{out}/foto-{i}.jpg", quality=85)
+PY
+        adb shell mkdir -p "$DIR_ON_DEVICE"
+        for i in 1 2 3; do
+          adb push "$tmp/foto-$i.jpg" "$DIR_ON_DEVICE/foto-$i.jpg" >/dev/null
+          adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$DIR_ON_DEVICE/foto-$i.jpg" >/dev/null
+        done
+        echo "Tres fotos de prueba en $DIR_ON_DEVICE (la 1 roja, la 2 verde, la 3 azul). Al acabar: fixtures clean."
+        ;;
+      clean)
+        for i in 1 2 3; do
+          adb shell rm -f "$DIR_ON_DEVICE/foto-$i.jpg"
+          adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$DIR_ON_DEVICE/foto-$i.jpg" >/dev/null
+        done
+        adb shell rmdir "$DIR_ON_DEVICE" 2>/dev/null || true
+        echo "Fotos de prueba borradas de $DIR_ON_DEVICE."
+        ;;
+      *) usage ;;
+    esac
     ;;
 
   *) usage ;;

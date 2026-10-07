@@ -83,6 +83,7 @@ final importImageProvider = Provider<ImportImage>(
     importer: ref.watch(imageImporterProvider),
     janitor: ref.watch(attachmentJanitorProvider),
     ids: ref.watch(idGeneratorProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 

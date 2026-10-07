@@ -61,6 +61,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
   - **Dado** la card
   - **Cuando** se muestra
   - **Entonces** la etiqueta es el texto de la tarea, con los saltos de línea como espacios; si no tiene texto, la misma que usaba la confirmación: "Foto" o "Imagen" (CA-007-20), el nombre del PDF (spec 008) o el dominio (CA-009-14).
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo la etiqueta es "{n} fotos" (CA-016-19).
 - **CA-014-05 Qué se oculta mientras se ve**
   - **Dado** la card visible
   - **Cuando** se mira la pantalla de debajo
@@ -102,6 +103,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
     - la tarea vuelve a la cola **en la misma posición** que tenía al eliminarla (la cola no ha podido cambiar entre medias: crear, editar, eliminar, completar y reordenar la hacen definitiva, CA-014-11), con su texto, su color y su adjunto tal como estaban: la imagen con sus versiones, el PDF con su última posición (spec 008) o la web con su dirección guardada;
     - no cuenta como tarea nueva: no aparece "¿Dónde la pones?", no se anuncia "Tarea añadida…" y conserva su color;
     - si vuelve a la posición 1, pasa a ser otra vez la tarea actual (la que lo era pasa a la 2).
+  - *Enmienda (spec 016, implementada; en vigor):* se recupera todo el grupo, en su orden y en la primera foto (CA-016-16).
 - **CA-014-10 Dónde se queda el usuario**
   - **Dado** que se ha pulsado "Deshacer"
   - **Cuando** la tarea vuelve
@@ -144,6 +146,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
   - **Dado** una eliminación que ha pasado a ser definitiva (por tiempo, antes de tiempo o porque la app murió)
   - **Cuando** se consultan la BD y el almacenamiento de la app
   - **Entonces** no queda nada de la tarea: ni fila, ni adjunto, ni archivos (como CA-004-09 tras el ADR-0012, y CA-007-16). Sus archivos solo siguen en el disco mientras se puede deshacer; si su borrado falla, los recoge el barrido del siguiente arranque.
+  - *Enmienda (spec 016, implementada; en vigor):* alcanza a los archivos de todas las fotos del grupo (CA-016-16).
 
 **Accesibilidad**
 
@@ -156,6 +159,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
     - la card es un solo elemento con papel de botón y se lee **una sola vez**: «Deshacer. Tarea eliminada: {etiqueta}» (la etiqueta, completa);
     - la card no se anuncia sola (no es una región en vivo, a diferencia del prototipo): solo se lee al recibir el foco;
     - no hay más anuncios: sustituye a "Tarea eliminada. Siguiente: …", "Tarea eliminada. Todo hecho." y "Tarea eliminada. Quedan …" (CA-004-11 y CA-006-17).
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo se lee "{n} fotos" (CA-016-19 y 20).
 - **CA-014-17 No caduca mientras tiene el foco**
   - **Dado** la card visible y un lector de pantalla activo (o un teclado físico en uso)
   - **Cuando** aparece la card y mientras el foco del lector (o el del teclado) está en ella
@@ -169,6 +173,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
   - **Entonces** se recupera la tarea (CA-014-09), se hace **un único anuncio**, "Tarea recuperada", cuando la pantalla de destino ya se ve (para que no lo corte el cambio de pantalla), y el foco pasa:
     - en la pantalla principal (también al volver a ella desde "Todo hecho."), a la tarea actual, que es la recuperada si ha vuelto a ser la primera;
     - en el listado (también al volver a él desde "Todo hecho."), a la fila recuperada, no al título de la pantalla.
+  - *Enmienda (spec 016, implementada; en vigor):* con un grupo se lee "{n} fotos" al deshacer (CA-016-19 y 20).
 - **CA-014-19 La acción "Eliminar tarea" elimina**
   - **Dado** un lector de pantalla o acceso por switch
   - **Cuando** invoca la acción "Eliminar tarea" sobre la tarea actual (en vertical y en horizontal, specs 007–009) o sobre una fila del listado (CA-006-16, mismo orden de acciones)

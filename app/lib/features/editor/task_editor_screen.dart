@@ -10,8 +10,10 @@ import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../domain/entities/attachment.dart';
 import '../../domain/entities/queue_position.dart';
+import '../../domain/entities/staged_attachment.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/ports/image_importer.dart';
+import '../../domain/services/commit_group.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
@@ -22,10 +24,13 @@ import '../../ui/wordmark.dart';
 import '../attachments/attach_sheet.dart';
 import '../attachments/attachment_import_controller.dart';
 import '../attachments/attachment_preview.dart';
+import '../attachments/group_health.dart';
 import '../attachments/import_error_text.dart';
+import '../attachments/import_notice_banner.dart';
 import '../attachments/pdf_labels.dart';
 import '../attachments/pdf_pages.dart';
 import '../attachments/pdf_strip.dart';
+import '../attachments/photo_stack.dart';
 import '../current_task/current_task_screen.dart';
 import '../web/url_sheet.dart';
 import 'placement_sheet.dart';
@@ -116,14 +121,20 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   int _previewSignal = 0;
   int _cancelSignal = 0;
 
-  /// El adjunto recién elegido (imagen o PDF), aún en la preparación.
-  StagedAttachment? get _staged => ref.read(attachmentImportProvider).staged;
+  /// El anuncio de "fotos añadidas" espera a que el foco llegue a la pila
+  /// (CA-016-21); se cancela si el grupo cambia antes de que salga.
+  Timer? _addedAnnouncement;
 
-  /// El adjunto que ya tenía la tarea y sigue en ella.
-  Attachment? get _existing =>
-      _removedExisting ? null : widget.task?.attachment;
+  /// Lo recién elegido (una imagen, un PDF o un grupo de 2 a 10 fotos), aún en
+  /// la preparación.
+  List<StagedAttachment> get _staged =>
+      ref.read(attachmentImportProvider).staged;
 
-  bool get _hasImage => _staged != null || _existing != null;
+  /// Lo que ya tenía la tarea y sigue en ella (uno o un grupo de fotos).
+  List<Attachment> get _existing =>
+      _removedExisting ? const [] : widget.task?.attachments ?? const [];
+
+  bool get _hasImage => _staged.isNotEmpty || _existing.isNotEmpty;
 
   /// Con imagen, el texto es opcional (CA-007-04).
   bool get _canSave =>
@@ -138,7 +149,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     );
     _controller.addListener(_onChanged);
     // Con imagen, el teclado no se abre solo (CA-007-04).
-    if (_existing != null) return;
+    if (_existing.isNotEmpty) return;
     // `autofocus` no basta: al venir de la bienvenida, esta aún tiene el foco
     // mientras se funde y el campo no lo recibiría (ni se abriría el teclado).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -172,14 +183,17 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     _controller.dispose();
     _fieldFocus.dispose();
     _plusFocus.dispose();
+    _addedAnnouncement?.cancel();
     super.dispose();
   }
 
-  /// (+): hoja "Añadir a la tarea" (CA-007-01). Con una imagen ya elegida, la
-  /// nueva la sustituye (CA-007-04). Mientras se prepara una imagen no hace
-  /// nada, sin verse desactivado (CA-007-15, DEV-17).
+  /// (+): hoja "Añadir a la tarea" (CA-007-01). Con un adjunto ya elegido (una
+  /// imagen o un grupo), lo nuevo lo sustituye entero (CA-007-04, CA-016-06).
+  /// Mientras se prepara no hace nada, sin verse desactivado (CA-007-15,
+  /// DEV-17).
   Future<void> _attach() async {
     if (_saving || ref.read(attachmentImportProvider).preparing) return;
+    _addedAnnouncement?.cancel();
     final choice = await showAttachSheet(
       context,
       // Una tarea no se convierte en web al editarla (CA-009-01).
@@ -198,17 +212,39 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       AttachChoice.gallery => AttachmentOrigin.gallery,
       AttachChoice.file || AttachChoice.url => AttachmentOrigin.file,
     };
-    final outcome = await ref
-        .read(attachmentImportProvider.notifier)
-        .pick(origin);
+    final controller = ref.read(attachmentImportProvider.notifier);
+    final outcome = choice == AttachChoice.gallery
+        // "Subir imágenes": una o varias (CA-016-02). Lo guardado que se
+        // reemplaza cuenta para el espacio libre.
+        ? await controller.pickMany(
+            reservedBytes: _existing.fold(0, (n, a) => n + a.byteSize),
+          )
+        : await controller.pick(origin);
     if (!mounted) return;
     switch (outcome) {
       case ImportOutcome.added:
-        // La imagen nueva sustituye a la que tenía la tarea.
-        if (widget.task?.attachment != null) _removedExisting = true;
+        // Lo nuevo sustituye a lo que tenía la tarea.
+        if (widget.task?.attachments.isNotEmpty ?? false) {
+          _removedExisting = true;
+        }
         _fieldFocus.unfocus();
         setState(() => _previewSignal++);
         final l10n = AppLocalizations.of(context);
+        final notice = ref.read(attachmentImportProvider).notice;
+        // Elegir una sola foto es la 007; con 2 o más (aunque queden menos),
+        // el vocabulario del grupo (CA-016-03, 05, 21).
+        if (origin == AttachmentOrigin.gallery &&
+            notice != null &&
+            notice.added + notice.failed >= 2) {
+          // Un único anuncio compuesto, con el mismo texto que el aviso, tras
+          // el foco a la pila (CA-016-21).
+          _announceAfterFocus(
+            notice.hasWarnings
+                ? importNoticeText(l10n, notice)
+                : l10n.a11yPhotosAdded(notice.added),
+          );
+          break;
+        }
         _announce(switch (origin) {
           AttachmentOrigin.camera => l10n.a11yPhotoAdded,
           AttachmentOrigin.gallery => l10n.a11yImageAdded,
@@ -245,17 +281,19 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     if (await _write(
       () => ref
           .read(createTaskProvider)
-          .call('', colorKey: _colorKey, attachment: web),
+          .call('', colorKey: _colorKey, attachments: [web]),
       retry: () => _createWeb(url),
     )) {
       _created();
     }
   }
 
-  /// "Quitar adjunto" (CA-007-06, CA-007-22).
+  /// "Quitar adjunto" (CA-007-06, CA-007-22): con un grupo, lo quita entero
+  /// (CA-016-06).
   Future<void> _removeImage() async {
     if (_saving) return;
-    if (_staged != null) {
+    _addedAnnouncement?.cancel();
+    if (_staged.isNotEmpty) {
       await ref.read(attachmentImportProvider.notifier).remove();
     } else {
       _removedExisting = true;
@@ -271,12 +309,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     AttachmentImportState now,
   ) {
     if (now.showPreparing && !(before?.showPreparing ?? false)) {
-      final l10n = AppLocalizations.of(context);
-      _announce(
-        now.preparingKind == AttachmentKind.pdf
-            ? l10n.pdfPreparing
-            : l10n.imagePreparing,
-      );
+      // Una vez al empezar, no en cada foto (CA-016-21).
+      _announce(_preparingText(AppLocalizations.of(context), now));
       setState(() => _cancelSignal++);
     }
     final error = now.error;
@@ -296,6 +330,15 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       _focusPlus();
     }
   }
+
+  /// "Preparando imagen…", "Preparando PDF…" o, en un grupo, "Preparando foto
+  /// {i} de {n}…" (CA-016-04).
+  String _preparingText(AppLocalizations l10n, AttachmentImportState import) =>
+      import.preparingKind == AttachmentKind.pdf
+      ? l10n.pdfPreparing
+      : import.preparingTotal >= 2
+      ? l10n.imagePreparingOf(import.preparingIndex, import.preparingTotal)
+      : l10n.imagePreparing;
 
   /// Margen de un aviso flotante que queda justo encima de la fila de
   /// botones, mida lo que mida con el texto grande.
@@ -321,6 +364,28 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     ),
   );
 
+  /// Anuncio asertivo de las fotos añadidas, **después** de que el foco llegue
+  /// a la pila (fotograma + [UnaMotion.announceAfterFocus]): así no lo pisa la
+  /// lectura de la pila ni el "Preparando foto…" anterior (CA-016-21).
+  void _announceAfterFocus(String message) {
+    _addedAnnouncement?.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _addedAnnouncement = Timer(UnaMotion.announceAfterFocus, () {
+        if (!mounted) return;
+        unawaited(
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            message,
+            Directionality.of(context),
+            assertiveness: Assertiveness.assertive,
+          ),
+        );
+      });
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   void _focusPlus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -345,23 +410,23 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       _fieldFocus.requestFocus();
       return;
     }
-    final image = _staged;
+    final staged = _staged;
     switch (widget.mode) {
       case EditorMode.first:
         if (await _write(
           () => ref
               .read(createTaskProvider)
-              .call(_controller.text, colorKey: _colorKey, attachment: image),
+              .call(_controller.text, colorKey: _colorKey, attachments: staged),
         )) {
           _created();
         }
-      case EditorMode.create when image != null:
-        // Con adjunto (imagen o PDF), siempre arriba y sin preguntar
-        // (CA-007-05, CA-008-05).
+      case EditorMode.create when staged.isNotEmpty:
+        // Con adjunto (imagen, grupo o PDF), siempre arriba y sin preguntar
+        // (CA-007-05, CA-008-05, CA-016-07).
         if (await _write(
           () => ref
               .read(createTaskProvider)
-              .call(_controller.text, colorKey: _colorKey, attachment: image),
+              .call(_controller.text, colorKey: _colorKey, attachments: staged),
         )) {
           _created();
         }
@@ -394,9 +459,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         }
       case EditorMode.edit:
         final task = widget.task!;
-        final AttachmentEdit edit = image != null
-            ? ReplaceAttachment(image)
-            : _removedExisting && task.attachment != null
+        final AttachmentEdit edit = staged.isNotEmpty
+            ? ReplaceAttachment(staged)
+            : _removedExisting && task.attachments.isNotEmpty
             ? const RemoveAttachment()
             : const KeepAttachment();
         await _write(
@@ -426,6 +491,26 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       // Desde el listado, el foco lo decide el listado (CA-006-17).
       if (!widget.fromList) ref.read(screenFocusProvider.notifier).signal();
       return true;
+    } on StagedPhotosLost catch (e) {
+      // El sistema vació la zona temporal (CL-016-6b): no se guarda, se quitan
+      // las fotos perdidas y se avisa. Sin "Reintentar": no podría triunfar.
+      if (!mounted) return false;
+      setState(() => _saving = false);
+      await ref.read(attachmentImportProvider.notifier).dropLost(e.ids);
+      if (!mounted) return false;
+      final l10n = AppLocalizations.of(context);
+      final notice = ref.read(attachmentImportProvider).notice;
+      _announce(
+        notice == null
+            ? l10n.imagesSomeFailed(e.ids.length)
+            : importNoticeText(l10n, notice),
+      );
+      if (_hasImage) {
+        setState(() => _previewSignal++);
+      } else {
+        _focusPlus();
+      }
+      return false;
     } on Object catch (e) {
       if (!mounted) return false;
       setState(() => _saving = false);
@@ -456,7 +541,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
           child: TextField(
             controller: _controller,
             focusNode: _fieldFocus,
-            autofocus: _existing == null && _staged == null,
+            autofocus: _existing.isEmpty && _staged.isEmpty,
             maxLines: null,
             maxLength: Task.maxTextLength,
             // El teclado no aprende del texto de las tareas
@@ -484,6 +569,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         ),
       );
 
+  /// Proporción (ancho / alto) de una foto; nunca divide por cero.
+  static double _ratio(int width, int height) =>
+      width > 0 && height > 0 ? width / height : 1;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -492,9 +581,41 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final import = ref.watch(attachmentImportProvider);
     ref.listen(attachmentImportProvider, _onImportChanged);
     final images = ref.watch(attachmentImagesProvider);
-    final staged = import.staged;
-    final existing = staged == null ? _existing : null;
-    // Una imagen (la nueva o la que ya tenía la tarea): su versión de pantalla.
+    // Una imagen o un PDF (lo nuevo o lo que ya tenía la tarea) y, con 2 o más
+    // fotos, la pila (CA-016-06).
+    final all = import.staged;
+    final staged = all.length == 1 ? all.first : null;
+    final existingAll = all.isEmpty ? _existing : const <Attachment>[];
+    final existing = existingAll.isPhotoGroup ? null : existingAll.firstOrNull;
+    final groupMissing = existingAll.isPhotoGroup
+        ? ref
+              .watch(groupHealthProvider(AttachmentGroupKey(existingAll)))
+              .missingIds
+        : const <String>{};
+    final stackPhotos = all.length >= 2
+        ? [
+            for (final s in all.whereType<StagedImage>().take(
+              PhotoStack.maxVisible,
+            ))
+              StackPhoto(
+                image: images.staged(s.id, 'screen.jpg'),
+                aspectRatio: _ratio(s.width, s.height),
+              ),
+          ]
+        : existingAll.isPhotoGroup
+        ? [
+            for (final a in existingAll.take(PhotoStack.maxVisible))
+              StackPhoto(
+                // Si falta su archivo: "Foto no disponible" en su sitio y las
+                // demás se ven (CA-016-18a).
+                image: groupMissing.contains(a.id)
+                    ? null
+                    : images.stored(a.screenPath),
+                aspectRatio: _ratio(a.width, a.height),
+              ),
+          ]
+        : null;
+    final groupCount = all.length >= 2 ? all.length : existingAll.length;
     final ImageProvider? previewImage = switch (staged) {
       StagedImage(:final id) => images.staged(id, 'screen.jpg'),
       StagedPdf() || StagedWeb() => null,
@@ -537,7 +658,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
             ],
           );
     final withAttachment =
-        previewImage != null || pdf != null || import.showPreparing;
+        previewImage != null ||
+        pdf != null ||
+        stackPhotos != null ||
+        import.showPreparing;
     final preparingPdf = import.preparingKind == AttachmentKind.pdf;
     const attachmentTextStyle = TextStyle(
       fontFamily: UnaFonts.display,
@@ -615,14 +739,18 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                           child: AttachmentPreview(
                             image: previewImage,
                             document: previewDocument,
+                            stack: stackPhotos == null
+                                ? null
+                                : PhotoStack(
+                                    photos: stackPhotos,
+                                    count: groupCount,
+                                  ),
                             semanticLabel: pdf != null
                                 ? l10n.a11yPdfOnly(pdf.name, pdf.size)
                                 : previewIsPhoto
                                 ? l10n.attachmentPhoto
                                 : l10n.attachmentImage,
-                            preparingLabel: preparingPdf
-                                ? l10n.pdfPreparing
-                                : l10n.imagePreparing,
+                            preparingLabel: _preparingText(l10n, import),
                             cancelLabel: preparingPdf
                                 ? l10n.pdfPreparingCancel
                                 : l10n.imagePreparingCancel,
@@ -696,6 +824,21 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                           style: UnaTheme.mono.copyWith(color: UnaColors.ink),
                         ),
                       ),
+                    // Fotos omitidas o más de 10 (CA-016-05, 21): un aviso sin
+                    // caducidad, encima de los botones.
+                    if (import.notice case final notice?
+                        when notice.hasWarnings)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          UnaSpace.l,
+                          UnaSpace.s,
+                          UnaSpace.l,
+                          0,
+                        ),
+                        child: ImportNoticeBanner(
+                          text: importNoticeText(l10n, notice),
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
                         UnaSpace.l,
@@ -712,6 +855,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                             icon: UnaIcons.plus,
                             focusNode: _plusFocus,
                             semanticsKey: _plusSemantics,
+                            // Mientras se prepara, no hace nada y el lector lo
+                            // anuncia como no disponible (CA-016-04).
+                            semanticsEnabled: !import.preparing,
                             onPressed: _attach,
                           ),
                           const SizedBox(width: UnaSpace.m),
@@ -726,6 +872,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                               iconSize: UnaSizes.iconM,
                               expand: false,
                               singleLine: true,
+                              semanticsEnabled: !import.preparing,
                               onPressed: _save,
                             ),
                           ),

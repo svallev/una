@@ -13,6 +13,12 @@ class UnavailableImageImporter implements ImageImporter {
   Future<PickedImage?> pick(AttachmentOrigin origin, String id) async => null;
 
   @override
+  Future<PickedImages?> pickMany({required int max}) async => null;
+
+  @override
+  Future<int?> freeSpace() async => null;
+
+  @override
   Future<CopiedImage> copy(
     PickedImage picked,
     String id, {

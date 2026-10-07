@@ -11,14 +11,16 @@ import '../../ui/una_sheet.dart';
 /// Vista previa del adjunto en el editor (CA-007-04, CA-008-04, prototipo
 /// `hasDraftAtt`): recuadro blanco con borde y sombra dura, la imagen recortada
 /// para llenarlo o el PDF ([document]: franja y páginas desplazables), y
-/// "Quitar adjunto" arriba a la derecha (48 dp, DEV-36). Mientras se prepara
-/// otro adjunto, encima "Preparando imagen…" / "Preparando PDF…" con
-/// "Cancelar" (CA-007-15, CA-008-15).
+/// "Quitar adjunto" arriba a la derecha (48 dp, DEV-36; con un grupo, quita el
+/// grupo entero). Mientras se prepara otro adjunto, encima "Preparando
+/// imagen…" / "Preparando PDF…" / "Preparando foto {i} de {n}…" con "Cancelar"
+/// (CA-007-15, CA-008-15, CA-016-04).
 class AttachmentPreview extends StatelessWidget {
   const AttachmentPreview({
     super.key,
     required this.image,
     this.document,
+    this.stack,
     required this.semanticLabel,
     required this.onRemove,
     required this.preparing,
@@ -34,6 +36,12 @@ class AttachmentPreview extends StatelessWidget {
 
   /// El PDF (franja y páginas), en lugar de [image].
   final Widget? document;
+
+  /// La pila de un grupo de fotos (`PhotoStack`, CA-016-06), en lugar de
+  /// [image]: sin recuadro (prototipo: `border: none; background: transparent`)
+  /// mientras no se prepara otro adjunto. Lleva su propia lectura (un solo
+  /// nodo, "Vista previa: {n} fotos"); [semanticLabel] no se usa con ella.
+  final Widget? stack;
 
   /// "Foto", "Imagen" o "{nombre}. PDF, {tamaño}".
   final String semanticLabel;
@@ -56,7 +64,11 @@ class AttachmentPreview extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final image = this.image;
     final document = this.document;
-    final hasContent = image != null || document != null;
+    final stack = this.stack;
+    final hasContent = image != null || document != null || stack != null;
+    // La pila va sin recuadro; con "Preparando…" encima, el recuadro de
+    // siempre (tapa la pila, como tapa a la imagen).
+    final framed = stack == null || preparing;
     // Llena el hueco que le deja el editor, sin crecer con la imagen: la
     // imagen va posicionada, así que no cuenta en la altura intrínseca con la
     // que SliverFillRemaining mide la columna (una foto vertical empujaba los
@@ -66,17 +78,31 @@ class AttachmentPreview extends StatelessWidget {
         minHeight: UnaSizes.removeAttachment + 2 * (UnaSpace.s - UnaSpace.xxs),
       ),
       child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: UnaColors.surface,
-          border: Border.fromBorderSide(
-            BorderSide(color: UnaColors.ink, width: UnaBorders.strongWidth),
-          ),
-          boxShadow: [UnaShadows.button],
-        ),
+        decoration: framed
+            ? const BoxDecoration(
+                color: UnaColors.surface,
+                border: Border.fromBorderSide(
+                  BorderSide(
+                    color: UnaColors.ink,
+                    width: UnaBorders.strongWidth,
+                  ),
+                ),
+                boxShadow: [UnaShadows.button],
+              )
+            : const BoxDecoration(),
         child: ClipRect(
+          clipBehavior: framed ? Clip.hardEdge : Clip.none,
           child: Stack(
             fit: StackFit.expand,
             children: [
+              if (stack != null)
+                Positioned.fill(
+                  child: FocusOnSignal(
+                    signal: focusSignal,
+                    // Tapada por "Preparando…", el lector no la lee.
+                    child: ExcludeSemantics(excluding: preparing, child: stack),
+                  ),
+                ),
               if (document != null)
                 Positioned.fill(
                   child: FocusOnSignal(
@@ -176,14 +202,18 @@ class _Preparing extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: UnaSpace.sm),
-              // Con reducir movimiento, sin animación (CA-007-23).
+              // Con reducir movimiento, sin animación (CA-007-23). Es solo
+              // decoración: el lector lee el texto de arriba (CA-016-04), y el
+              // indicador de Flutter crea siempre su propio nodo.
               if (!reduced)
-                const SizedBox(
-                  width: UnaSizes.button * 2,
-                  child: LinearProgressIndicator(
-                    color: UnaColors.ink,
-                    backgroundColor: UnaColors.line,
-                    minHeight: UnaBorders.strongWidth,
+                const ExcludeSemantics(
+                  child: SizedBox(
+                    width: UnaSizes.button * 2,
+                    child: LinearProgressIndicator(
+                      color: UnaColors.ink,
+                      backgroundColor: UnaColors.line,
+                      minHeight: UnaBorders.strongWidth,
+                    ),
                   ),
                 ),
               const SizedBox(height: UnaSpace.s),

@@ -106,6 +106,16 @@ void _contract(
       },
     );
 
+    test('CA-016-04: sizeOf suma lo preparado y es 0 si no existe', () async {
+      final s = _staged('a1');
+      stageAll(s);
+      expect(await store.sizeOf('a1'), _names(s).length * _bytes.length);
+      expect(await store.sizeOf('nope'), 0);
+      // Una vez guardada ya no es una preparación.
+      await store.commit(s, DateTime.utc(2026));
+      expect(await store.sizeOf('a1'), 0);
+    });
+
     StagedPdf pdf(String id) => StagedPdf(
       id: id,
       byteSize: 2400000,
@@ -305,6 +315,24 @@ void main() {
         expect(() => store.file(bad), throwsArgumentError, reason: bad);
       }
     });
+
+    test(
+      'CA-016-04: sizeOf no sigue enlaces y tiene un tope de entradas',
+      () async {
+        final dir = Directory('${tmp.path}/cache/import/g1')
+          ..createSync(recursive: true);
+        File('${dir.path}/a.jpg').writeAsBytesSync(_bytes);
+        final outside = File('${tmp.path}/fuera.bin')
+          ..writeAsBytesSync(Uint8List(1000));
+        Link('${dir.path}/enlace').createSync(outside.path);
+        expect(await store.sizeOf('g1'), _bytes.length);
+        for (var i = 0; i < FileAttachmentStore.sizeOfMaxEntries; i++) {
+          File('${dir.path}/f$i').writeAsBytesSync(_bytes);
+        }
+        await expectLater(store.sizeOf('g1'), throwsStateError);
+        expect(() => store.sizeOf('../x'), throwsArgumentError);
+      },
+    );
 
     test(
       'CA-007-16: la preparación lista y borra también archivos sueltos',
