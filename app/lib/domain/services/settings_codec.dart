@@ -7,6 +7,7 @@ abstract final class SettingKeys {
   static const firstRunDone = 'firstRunDone';
   static const hasEverHadTasks = 'hasEverHadTasks';
   static const keepScreenOn = 'keepScreenOn';
+  static const lockZoom = 'lockZoom';
   static const locale = 'locale';
 }
 
@@ -41,6 +42,11 @@ LocaleChoice decodeLocaleChoice(String? raw) {
 /// "Pantalla siempre activa": encendida solo si el valor es exactamente el
 /// booleano `true`; lo demás, apagada (por defecto).
 bool decodeKeepScreenOn(String? raw) => _decode(raw) == true;
+
+/// "Bloquear zoom" (CA-017-03): encendido solo si el texto guardado es
+/// **exactamente** `true`. A diferencia de los demás, ni siquiera pasa por
+/// `jsonDecode`: ` true`, `true\n` o `"true"` son basura y dan apagado.
+bool decodeLockZoom(String? raw) => raw == encodeFlag(true);
 
 /// Marcas de un solo uso (`firstRunDone`, `hasEverHadTasks`): `true` exacto;
 /// lo demás falla cerrado a `false`.

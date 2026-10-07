@@ -86,6 +86,59 @@ void main() {
     });
   });
 
+  group('decodeLockZoom', () {
+    test('CA-017-03: solo el texto `true` exacto enciende el bloqueo', () {
+      expect(decodeLockZoom('true'), isTrue);
+      expect(decodeLockZoom(encodeFlag(true)), isTrue);
+    });
+
+    test('CA-017-03: cualquier otro valor está apagado, sin lanzar', () {
+      for (final raw in [
+        ..._garbage,
+        '"es"',
+        '"system"',
+        ' true',
+        'true ',
+        'true\n',
+        '\ttrue',
+        'TRUE',
+        'True',
+        '"true"',
+        'tru',
+        'truee',
+        '[[[[[[[[[[[[[[[[[',
+        // En la frontera de 16 y 17 caracteres (tope del decodificador).
+        'true${' ' * 12}',
+        'true${' ' * 13}',
+        'a' * 16,
+        'a' * 17,
+        'true${'e' * 100000}',
+      ]) {
+        expect(
+          decodeLockZoom(raw),
+          isFalse,
+          reason: 'entrada: ${raw?.substring(0, raw.length.clamp(0, 20))}',
+        );
+      }
+    });
+
+    test('CA-017-03: lo que se escribe se lee igual', () {
+      expect(decodeLockZoom(encodeFlag(true)), isTrue);
+      expect(decodeLockZoom(encodeFlag(false)), isFalse);
+    });
+  });
+
+  group('SettingKeys', () {
+    test(
+      'CA-017-16: la clave del bloqueo es `lockZoom`, junto a las otras dos',
+      () {
+        expect(SettingKeys.lockZoom, 'lockZoom');
+        expect(SettingKeys.keepScreenOn, 'keepScreenOn');
+        expect(SettingKeys.locale, 'locale');
+      },
+    );
+  });
+
   group('decodeFlag (firstRunDone, hasEverHadTasks)', () {
     test('CL-015-18: solo true exacto; lo demás falla cerrado a false', () {
       expect(decodeFlag('true'), isTrue);

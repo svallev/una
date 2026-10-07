@@ -318,9 +318,9 @@ class FirstRunController extends Notifier<bool> {
 ///
 /// La tarea actual se lee **primero**: una base de datos inaccesible
 /// falla ahí y sale la pantalla de error de almacenamiento (CL-015-16). Los
-/// dos ajustes de Ajustes (idioma y pantalla siempre activa) se leen después,
-/// cada uno en su propio `try/catch`: si no se puede leer, vale su valor por
-/// defecto y el arranque sigue (CA-015-26).
+/// tres ajustes de Ajustes (idioma, pantalla siempre activa y bloquear zoom)
+/// se leen después, cada uno en su propio `try/catch`: si no se puede leer,
+/// vale su valor por defecto y el arranque sigue (CA-015-26, CA-017-03).
 Future<BootState> readBootState(
   TaskRepository tasks,
   SettingsRepository settings,
@@ -332,6 +332,7 @@ Future<BootState> readBootState(
     hasEverHadTasks: current != null || await settings.hasEverHadTasks(),
     keepScreenOn: await _orDefault(settings.keepScreenOn, false),
     locale: await _orDefault(settings.locale, LocaleChoice.system),
+    lockZoom: await _orDefault(settings.lockZoom, false),
   );
 }
 
@@ -353,6 +354,7 @@ class BootState {
     this.hasEverHadTasks = false,
     this.keepScreenOn = false,
     this.locale = LocaleChoice.system,
+    this.lockZoom = false,
   });
   final Task? currentTask;
   final bool firstRunDone;
@@ -364,6 +366,10 @@ class BootState {
   /// Idioma elegido en Ajustes (CA-015-10): ya leído para que el primer
   /// fotograma salga en ese idioma.
   final LocaleChoice locale;
+
+  /// Ajuste "Bloquear zoom" (CA-017-03): apagado por defecto. Leído aquí para
+  /// que la primera construcción de la foto ya salga bloqueada (CA-017-11).
+  final bool lockZoom;
 }
 
 class UuidV7Ids implements IdGenerator {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:app/app/providers.dart' show readBootState;
 import 'package:app/data/db/app_database.dart';
 import 'package:app/data/db/open_database_native.dart';
 import 'package:app/data/drift_task_repository.dart';
@@ -11,6 +12,8 @@ import 'package:app/domain/entities/rank.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/task_repository.dart';
 import 'package:drift/drift.dart' show OrderingTerm, Value;
+import 'package:flutter/foundation.dart'
+    show FlutterError, FlutterErrorDetails, debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 
 typedef _Repo = TaskRepository;
@@ -955,6 +958,44 @@ void _contract(
       expect(await settings.keepScreenOn(), isFalse);
     });
 
+    test('CA-017-03: "Bloquear zoom" está apagado por defecto y se '
+        'guarda', () async {
+      expect(await settings.lockZoom(), isFalse);
+      await settings.setLockZoom(true);
+      expect(await settings.lockZoom(), isTrue);
+      await settings.setLockZoom(false);
+      expect(await settings.lockZoom(), isFalse);
+    });
+
+    test(
+      'CA-017-03: cada ajuste escribe solo su clave (aislamiento)',
+      () async {
+        await settings.setLockZoom(true);
+        expect(await settings.lockZoom(), isTrue);
+        expect(await settings.keepScreenOn(), isFalse);
+        expect(await settings.locale(), LocaleChoice.system);
+
+        await settings.setKeepScreenOn(true);
+        await settings.setLocale(LocaleChoice.en);
+        await settings.setLockZoom(false);
+        expect(await settings.keepScreenOn(), isTrue);
+        expect(await settings.locale(), LocaleChoice.en);
+
+        await settings.setLockZoom(true);
+        await settings.setKeepScreenOn(false);
+        expect(await settings.lockZoom(), isTrue);
+        await settings.setLocale(LocaleChoice.es);
+        expect(await settings.lockZoom(), isTrue);
+      },
+    );
+
+    test('CA-017-03: un valor guardado en otra clave no enciende el '
+        'bloqueo', () async {
+      await putRaw('keepScreenOn', 'true');
+      await putRaw('locale', 'true');
+      expect(await settings.lockZoom(), isFalse);
+    });
+
     test(
       'CA-015-06: el idioma es "Como el sistema" por defecto y se guarda',
       () async {
@@ -998,6 +1039,12 @@ void _contract(
         expect(await settings.keepScreenOn(), isFalse);
       });
 
+      test('CA-017-03, CL-017-8: "Bloquear zoom" guardado como `$shown` '
+          'está apagado y no lanza', () async {
+        await putRaw('lockZoom', raw);
+        expect(await settings.lockZoom(), isFalse);
+      });
+
       test('CL-015-18: las marcas guardadas como `$shown` fallan cerradas '
           'a false y no lanzan', () async {
         await putRaw('firstRunDone', raw);
@@ -1016,7 +1063,43 @@ void _contract(
       expect(await settings.locale(), LocaleChoice.system);
       await putRaw('keepScreenOn', 'true');
       expect(await settings.keepScreenOn(), isTrue);
+      await putRaw('lockZoom', 'true');
+      expect(await settings.lockZoom(), isTrue);
     });
+
+    test(
+      'CA-017-03, CL-017-8: solo `true` exacto enciende el bloqueo; las '
+      'variantes de texto y las fronteras de 16 y 17 caracteres, no',
+      () async {
+        for (final raw in [
+          ' true',
+          'true ',
+          'true\n',
+          '"true"',
+          'TRUE',
+          'True',
+          '1',
+          '0',
+          'null',
+          '[true]',
+          '[[[[[[[[[[[[[[[[[',
+          'true${' ' * 12}', // 16 caracteres
+          'true${' ' * 13}', // 17 caracteres
+          'a' * 16,
+          'a' * 17,
+          'x' * 100000,
+        ]) {
+          await putRaw('lockZoom', raw);
+          expect(
+            await settings.lockZoom(),
+            isFalse,
+            reason: 'entrada: ${raw.substring(0, raw.length.clamp(0, 20))}',
+          );
+        }
+        await putRaw('lockZoom', 'true');
+        expect(await settings.lockZoom(), isTrue);
+      },
+    );
   });
 }
 
@@ -1076,6 +1159,50 @@ void main() {
       ),
     );
   });
+
+  group(
+    'CA-017-03, CL-017-8: valores que no son texto en `settings` (drift)',
+    () {
+      // Una copia restaurada o una base manipulada puede traer un entero, un
+      // real o un BLOB donde se espera el texto JSON.
+      const cases = <String, String>{
+        'entero 1': '1',
+        'real 1.5': '1.5',
+        'BLOB X\'74727565\' (los bytes de `true`)': "X'74727565'",
+        'BLOB vacío': "X''",
+      };
+      for (final MapEntry(key: label, value: literal) in cases.entries) {
+        test(
+          'lockZoom() con $label está apagado y no lanza ni registra',
+          () async {
+            final db = openInMemoryDatabase();
+            addTearDown(db.close);
+            final repo = DriftTaskRepository(db);
+            await db.customStatement(
+              'INSERT OR REPLACE INTO settings (key, value, updated_at) '
+              "VALUES ('lockZoom', $literal, 0)",
+            );
+            final printed = <String>[];
+            final oldDebugPrint = debugPrint;
+            debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+            FlutterErrorDetails? reported;
+            final oldOnError = FlutterError.onError;
+            FlutterError.onError = (details) => reported = details;
+            try {
+              expect(await repo.lockZoom(), isFalse);
+              final boot = await readBootState(repo, repo);
+              expect(boot.lockZoom, isFalse);
+            } finally {
+              FlutterError.onError = oldOnError;
+              debugPrint = oldDebugPrint;
+            }
+            expect(printed, isEmpty);
+            expect(reported, isNull);
+          },
+        );
+      }
+    },
+  );
 
   test('CA-016-25 (plan §3): la lectura acotada usa el índice '
       '(task_id, position, id) y busca cada foto por clave, sin recorrer todas '

@@ -309,6 +309,13 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
       _setFlag(SettingKeys.keepScreenOn, value);
 
   @override
+  Future<bool> lockZoom() async =>
+      decodeLockZoom(await _raw(SettingKeys.lockZoom));
+
+  @override
+  Future<void> setLockZoom(bool value) => _setFlag(SettingKeys.lockZoom, value);
+
+  @override
   Future<LocaleChoice> locale() async =>
       decodeLocaleChoice(await _raw(SettingKeys.locale));
 
