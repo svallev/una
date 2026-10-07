@@ -2,7 +2,9 @@ import 'dart:ui' show Tristate;
 
 import 'package:app/features/settings/language_page.dart';
 import 'package:app/features/settings/settings_screen.dart';
+import 'package:app/ui/live_notice.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -107,6 +109,20 @@ Future<void> _tab(WidgetTester tester, {bool shift = false}) async {
   await tester.pump();
 }
 
+/// Tab hasta que [label] tiene el foco (como mucho una vuelta y media: si
+/// nunca llega, el test falla en lugar de colgarse).
+Future<void> _tabUntil(
+  WidgetTester tester,
+  String label, {
+  bool settle = false,
+}) async {
+  for (var i = 0; i < 12 && focusedLabel(tester) != label; i++) {
+    await _tab(tester);
+    if (settle) await tester.pumpAndSettle();
+  }
+  expect(focusedLabel(tester), label, reason: 'Tab no llega a "$label"');
+}
+
 /// Abre Ajustes y deja a la vista los dos avisos de error: el de guardado
 /// (bajo "Pantalla siempre activa") y el de enlace (tras "Ayuda").
 Future<void> _showBothNotices(WidgetTester tester, _Texts t) async {
@@ -120,6 +136,27 @@ Future<void> _showBothNotices(WidgetTester tester, _Texts t) async {
   expect(inSettings(find.text(t.saveError)), findsOneWidget);
   expect(inSettings(find.text(t.noApp)), findsOneWidget);
 }
+
+/// Abre Ajustes y deja a la vista los tres avisos a la vez (T-017-08a): el de
+/// guardado de "Pantalla siempre activa", el de "Bloquear zoom" y el de enlace
+/// (tras "Ayuda"). Cada fila se lleva a la vista antes de tocarla (al 200 % no
+/// caben todas).
+Future<void> _showAllNotices(WidgetTester tester, _Texts t) async {
+  for (final label in [t.keepAwake, t.lockZoom, t.help]) {
+    final row = inSettings(find.text(label));
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    await tester.tap(row);
+    await settleSettings(tester);
+  }
+  expect(inSettings(find.text(t.saveError)), findsNWidgets(2));
+  expect(inSettings(find.text(t.noApp)), findsOneWidget);
+}
+
+/// El repositorio de los tres avisos: los dos guardados fallan.
+SettingsRepo _failingRepo() => SettingsRepo()
+  ..error = Exception('x')
+  ..lockError = Exception('y');
 
 /// Abre la página de Idioma desde el nivel 1.
 Future<void> _openLanguage(WidgetTester tester, _Texts t) async {
@@ -303,6 +340,106 @@ void main() {
       );
     });
 
+    group(
+      'Lector de pantalla con la fila "Bloquear zoom", $lang (CA-017-14)',
+      () {
+        testWidgets(
+          'CA-017-14: con los tres avisos a la vez, cada aviso de guardado se lee tras su fila, el de enlace tras Ayuda y Cerrar ajustes sigue lo último',
+          (tester) async {
+            final handle = tester.ensureSemantics();
+            await openSettingsScreen(
+              tester,
+              locale: t.locale,
+              screenReader: true,
+              opener: FakeOpener()..available = false,
+              repo: _failingRepo(),
+            );
+            await _showAllNotices(tester, t);
+            final order = readingOrder(tester);
+            expect(order.sublist(order.length - 12), [
+              t.title,
+              '${t.language}, ${t.languageValue}',
+              '${t.keepAwake}, ${t.keepAwakeHint}',
+              t.saveError,
+              '${t.lockZoom}, ${t.lockZoomHint}',
+              t.saveError,
+              t.info,
+              '${t.privacy}, ${t.web}',
+              '${t.licenses}, ${t.web}',
+              '${t.help}, ${t.web}',
+              t.noApp,
+              t.close,
+            ]);
+            handle.dispose();
+          },
+        );
+
+        testWidgets(
+          'CA-017-14: la fila es un solo nodo (interruptor, nombre primero y luego el subtítulo) y los avisos son regiones vivas aparte',
+          (tester) async {
+            final handle = tester.ensureSemantics();
+            await openSettingsScreen(
+              tester,
+              locale: t.locale,
+              screenReader: true,
+              opener: FakeOpener()..available = false,
+              repo: _failingRepo(),
+            );
+            await _showAllNotices(tester, t);
+            final label = '${t.lockZoom}, ${t.lockZoomHint}';
+            expect(find.bySemanticsLabel(label), findsOneWidget);
+            final row = tester.getSemantics(find.bySemanticsLabel(label));
+            final data = row.getSemanticsData();
+            expect(data.label, label);
+            expect(data.flagsCollection.isToggled, Tristate.isFalse);
+            expect(data.hasAction(SemanticsAction.tap), isTrue);
+            // Ni el nombre ni el subtítulo son nodos propios: lo leído es uno.
+            final readings = readingOrder(tester);
+            expect(readings.where((l) => l.contains(t.lockZoom)), [label]);
+            expect(readings.where((l) => l.contains(t.lockZoomHint)), [label]);
+            // El aviso de la fila no se fusiona con ella.
+            final notices = find.descendant(
+              of: find.byType(LiveNotice),
+              matching: find.bySemanticsLabel(t.saveError),
+            );
+            expect(notices, findsNWidgets(2));
+            for (var i = 0; i < 2; i++) {
+              final n = tester.getSemantics(notices.at(i)).getSemanticsData();
+              expect(n.flagsCollection.isLiveRegion, isTrue);
+              expect(n.flagsCollection.isToggled, Tristate.none);
+            }
+            handle.dispose();
+          },
+        );
+
+        testWidgets(
+          'CA-017-14, CA-017-15: con los tres avisos a la vista se cumplen las guías Android, iOS, de etiquetas y de contraste',
+          (tester) async {
+            final handle = tester.ensureSemantics();
+            await openSettingsScreen(
+              tester,
+              locale: t.locale,
+              screenReader: true,
+              opener: FakeOpener()..available = false,
+              repo: _failingRepo(),
+            );
+            await _showAllNotices(tester, t);
+            await expectLater(
+              tester,
+              meetsGuideline(androidTapTargetGuideline),
+            );
+            await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+            await expectLater(
+              tester,
+              meetsGuideline(labeledTapTargetGuideline),
+            );
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+            handle.dispose();
+          },
+        );
+      },
+    );
+
     group('Teclado, $lang (CA-015-21)', () {
       testWidgets(
         'CA-015-21g: Tab y Mayús+Tab circulan dentro de Ajustes, con los avisos a la vista, sin pasar por el título ni salir a la tarea',
@@ -385,6 +522,138 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.escape);
           await settleSettings(tester);
           expect(find.byType(SettingsScreen), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'CA-017-14: con los tres avisos a la vista, Tab recorre Idioma, Pantalla, Bloquear zoom, las tres webs y Cerrar, en ese orden, sin parar en los avisos ni en el título; Mayús+Tab vuelve por el mismo camino',
+        (tester) async {
+          await openSettingsScreen(
+            tester,
+            locale: t.locale,
+            keyboard: true,
+            opener: FakeOpener()..available = false,
+            repo: _failingRepo(),
+          );
+          await _showAllNotices(tester, t);
+          await _tabUntil(tester, t.close);
+          final forward = <String?>[];
+          for (var i = 0; i < 7; i++) {
+            await _tab(tester);
+            forward.add(focusedLabel(tester));
+          }
+          final rows = [
+            t.language,
+            t.keepAwake,
+            t.lockZoom,
+            t.privacy,
+            t.licenses,
+            t.help,
+            t.close,
+          ];
+          expect(forward, rows);
+          // Mayús+Tab: el camino inverso, también sin paradas en los avisos.
+          final backward = <String?>[];
+          for (var i = 0; i < 6; i++) {
+            await _tab(tester, shift: true);
+            backward.add(focusedLabel(tester));
+          }
+          expect(backward, rows.reversed.skip(1).toList());
+        },
+      );
+
+      testWidgets(
+        'CA-017-14: Intro y Espacio activan la fila "Bloquear zoom" enfocada y el foco se queda en ella; Escape cierra Ajustes con los avisos a la vista',
+        (tester) async {
+          final repo = SettingsRepo();
+          await openSettingsScreen(
+            tester,
+            locale: t.locale,
+            keyboard: true,
+            opener: FakeOpener()..available = false,
+            repo: repo,
+          );
+          await _tabUntil(tester, t.lockZoom);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await settleSettings(tester);
+          expect(await repo.lockZoom(), isTrue);
+          expect(focusedLabel(tester), t.lockZoom);
+          await tester.sendKeyEvent(LogicalKeyboardKey.space);
+          await settleSettings(tester);
+          expect(await repo.lockZoom(), isFalse);
+          expect(focusedLabel(tester), t.lockZoom);
+          expect(repo.lockWrites, [true, false]);
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+          await settleSettings(tester);
+          expect(find.byType(SettingsScreen), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'CA-017-14: al 200 % a 360x480 con los tres avisos, el foco lleva cada fila a la vista y ningún aviso se solapa con una fila',
+        (tester) async {
+          final opener = FakeOpener()..available = false;
+          await openSettingsScreen(
+            tester,
+            locale: t.locale,
+            keyboard: true,
+            textScale: 2,
+            size: const Size(360, 640),
+            opener: opener,
+            repo: _failingRepo(),
+          );
+          tester.view.physicalSize = const Size(360, 480);
+          await tester.pumpAndSettle();
+          await _showAllNotices(tester, t);
+          final scroll = inSettings(find.byType(SingleChildScrollView)).first;
+          final viewport = tester.getRect(scroll);
+          // De arriba abajo: cada fila y su aviso no se pisan.
+          final stack = [
+            for (final f in [
+              inSettings(find.text(t.keepAwake)),
+              inSettings(find.text(t.saveError)).first,
+              inSettings(find.text(t.lockZoom)),
+              inSettings(find.text(t.saveError)).last,
+              inSettings(find.text(t.help)),
+              inSettings(find.text(t.noApp)),
+            ])
+              tester.getRect(f),
+          ];
+          for (var i = 1; i < stack.length; i++) {
+            expect(
+              stack[i].top,
+              greaterThanOrEqualTo(stack[i - 1].bottom - 1),
+              reason: 'el elemento $i está sobre el anterior',
+            );
+          }
+          await _tabUntil(tester, t.close, settle: true);
+          final seen = <String?>[];
+          for (var i = 0; i < 7; i++) {
+            await _tab(tester);
+            await tester.pumpAndSettle();
+            final label = focusedLabel(tester);
+            seen.add(label);
+            if (label == t.close) continue;
+            final ctx = FocusManager.instance.primaryFocus!.context!;
+            final box = ctx.findRenderObject()! as RenderBox;
+            final rect = box.localToGlobal(Offset.zero) & box.size;
+            expect(
+              rect.top,
+              greaterThanOrEqualTo(viewport.top - 0.5),
+              reason: '$label',
+            );
+            expect(rect.bottom, lessThanOrEqualTo(480.5), reason: '$label');
+          }
+          expect(seen, [
+            t.language,
+            t.keepAwake,
+            t.lockZoom,
+            t.privacy,
+            t.licenses,
+            t.help,
+            t.close,
+          ]);
+          expect(tester.takeException(), isNull);
         },
       );
 

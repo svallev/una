@@ -23,6 +23,7 @@ import '../../support/app_harness.dart';
 import '../../support/attachments.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
+import '../../support/screen_fingerprint.dart';
 
 const _text = 'Horario del festival';
 const _frame = Duration(milliseconds: 16);
@@ -99,6 +100,7 @@ void main() {
     int n = 3,
     int height = 6000,
     double? touchSlop,
+    double textScale = 1.0,
   }) async {
     final all = await photos(n, height: height);
     final repo = InMemoryTaskRepository();
@@ -117,6 +119,7 @@ void main() {
       tester,
       repo: repo,
       reduced: reduced,
+      textScale: textScale,
       overrides: [attachmentStoreProvider.overrideWithValue(store)],
     );
     await tester.pumpAndSettle();
@@ -717,6 +720,84 @@ void main() {
       await tester.pump();
       expect(pixels(tester), closeTo(844 * 0.8, 0.5));
     });
+  });
+
+  // --- CA-017-14 y CA-017-15: guías y texto grande ---------------------------
+
+  group('CA-017-14, CA-017-15: la tarea con grupo y bloqueo al 200 %', () {
+    // Proporciones normales (3:4 y 1:2, Q-017-7).
+    for (final (name, height) in [('3:4', 1440), ('1:2', 2160)]) {
+      testWidgets(
+        'con fotos $name el bloqueo no cambia nada (píxeles y lectura) y se cumplen las cuatro guías, con el logotipo, el menú y completar enteros',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          Future<Fingerprint> shot(bool lock) async {
+            await pumpGroup(tester, lock: lock, height: height, textScale: 2);
+            if (lock) {
+              // Con el bloqueo: los controles caben y se pueden tocar.
+              for (final finder in [
+                find.byType(Wordmark),
+                find.bySemanticsLabel('Menú de la tarea'),
+                find.byType(HoldToCompleteButton),
+              ]) {
+                expect(finder, findsOneWidget);
+                final size = tester.getSize(finder);
+                expect(
+                  size.shortestSide,
+                  greaterThanOrEqualTo(UnaSizes.minTouchTarget),
+                  reason: '$finder',
+                );
+                final r = tester.getRect(finder);
+                expect(r.left, greaterThanOrEqualTo(0));
+                expect(r.right, lessThanOrEqualTo(390));
+                expect(r.bottom, lessThanOrEqualTo(844));
+              }
+              await expectLater(
+                tester,
+                meetsGuideline(androidTapTargetGuideline),
+              );
+              await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+              await expectLater(
+                tester,
+                meetsGuideline(labeledTapTargetGuideline),
+              );
+              await expectLater(tester, meetsGuideline(textContrastGuideline));
+            }
+            expect(tester.takeException(), isNull);
+            return fingerprintOf(tester);
+          }
+
+          final off = await shot(false);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(seconds: 1));
+          final on = await shot(true);
+          expect(on.pixels.toSet().length, greaterThan(8));
+          expectSameFingerprint(off, on);
+          handle.dispose();
+        },
+      );
+    }
+
+    testWidgets(
+      'con reducir movimiento y el texto al 200 %, el swipe cambia de foto sin animar y las guías se cumplen',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpGroup(tester, reduced: true, height: 1440, textScale: 2);
+        expect(index(tester), 0);
+        await tester.timedDragFrom(
+          const Offset(330, 400),
+          const Offset(-250, 0),
+          const Duration(milliseconds: 320),
+        );
+        await tester.pump();
+        expect(index(tester), 1);
+        expect(tester.hasRunningAnimations, isFalse);
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await advance(tester, 4000);
+        handle.dispose();
+      },
+    );
   });
 
   // --- CL-017-12: los controles siguen --------------------------------------

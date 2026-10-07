@@ -33,6 +33,8 @@ class _Lang {
     required this.resulting,
     required this.keepAwake,
     required this.hint,
+    required this.lockZoom,
+    required this.lockHint,
     required this.help,
     required this.saveError,
     required this.noApp,
@@ -49,6 +51,8 @@ class _Lang {
   final String resulting;
   final String keepAwake;
   final String hint;
+  final String lockZoom;
+  final String lockHint;
   final String help;
   final String saveError;
   final String noApp;
@@ -69,6 +73,8 @@ const _langs = [
     resulting: 'Español',
     keepAwake: 'Pantalla siempre activa',
     hint: 'Imágenes, documentos y web',
+    lockZoom: 'Bloquear zoom',
+    lockHint: 'Solo imágenes: sin zoom ni scroll',
     help: 'Ayuda',
     saveError: 'No se pudo guardar el ajuste.',
     noApp: 'No hay ninguna app para abrir este enlace.',
@@ -83,6 +89,8 @@ const _langs = [
     resulting: 'English',
     keepAwake: 'Keep screen on',
     hint: 'Images, documents and web',
+    lockZoom: 'Lock zoom',
+    lockHint: 'Images only: no zoom or scroll',
     help: 'Help',
     saveError: "Couldn't save the setting.",
     noApp: "There's no app to open this link.",
@@ -204,6 +212,152 @@ void main() {
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
           handle.dispose();
+        },
+      );
+
+      testWidgets(
+        'CA-017-15 ($name): Ajustes al 200 % a 360 dp con "Bloquear zoom" y los tres avisos: nombre y subtítulo enteros, la fila crece, nada se solapa ni se corta',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await openSettingsScreen(
+            tester,
+            locale: lang.locale,
+            textScale: 2,
+            size: _size,
+            reduced: reduced,
+            opener: FakeOpener()..available = false,
+            repo: SettingsRepo()
+              ..error = Exception('texto-secreto')
+              ..lockError = Exception('texto-secreto'),
+          );
+          for (final label in [lang.keepAwake, lang.lockZoom, lang.help]) {
+            final row = inSettings(find.text(label));
+            await tester.ensureVisible(row);
+            await tester.pumpAndSettle();
+            await tester.tap(row);
+            await settleSettings(tester);
+          }
+          expect(tester.takeException(), isNull);
+          expect(inSettings(find.text(lang.saveError)), findsNWidgets(2));
+
+          // El nombre y el subtítulo, enteros, dentro de la fila y uno bajo el
+          // otro; la fila es más alta que a tamaño normal (76).
+          final row = tester.getRect(
+            find.byWidgetPredicate(
+              (w) => w is UnaSwitchRow && w.label == lang.lockZoom,
+            ),
+          );
+          expect(row.height, greaterThan(UnaSizes.settingsRowSwitchHint));
+          final name = tester.getRect(inSettings(find.text(lang.lockZoom)));
+          final hint = tester.getRect(inSettings(find.text(lang.lockHint)));
+          expect(name.top, greaterThanOrEqualTo(row.top));
+          expect(hint.bottom, lessThanOrEqualTo(row.bottom + 0.5));
+          expect(hint.top, greaterThanOrEqualTo(name.bottom - 1));
+          for (final text in [lang.lockZoom, lang.lockHint]) {
+            _expectWhole(tester, inSettings(find.text(text)), text);
+          }
+          // El subtítulo pasa a más de una línea (no se recorta a una).
+          final hintLines = tester
+              .renderObject<RenderParagraph>(
+                inSettings(find.text(lang.lockHint)),
+              )
+              .getBoxesForSelection(
+                TextSelection(
+                  baseOffset: 0,
+                  extentOffset: lang.lockHint.length,
+                ),
+              )
+              .map((b) => b.top.round())
+              .toSet();
+          expect(hintLines.length, greaterThan(1), reason: 'más de una línea');
+
+          // El interruptor entero cabe en la fila: pomo y pista, sin tocar el
+          // texto.
+          final knob = tester.getRect(find.byKey(UnaSwitchRow.knobKey).at(1));
+          final track = tester.getRect(find.byKey(UnaSwitchRow.trackKey).at(1));
+          expect(row.contains(knob.center), isTrue);
+          expect(track.right, lessThanOrEqualTo(_size.width));
+          expect(name.right, lessThanOrEqualTo(track.left + 0.5));
+          expect(hint.right, lessThanOrEqualTo(track.left + 0.5));
+
+          // De arriba abajo, cada fila y su aviso no se pisan.
+          final stack = [
+            for (final f in [
+              inSettings(find.text(lang.keepAwake)),
+              inSettings(find.text(lang.saveError)).first,
+              inSettings(find.text(lang.lockZoom)),
+              inSettings(find.text(lang.saveError)).last,
+              inSettings(find.text(lang.help)),
+              inSettings(find.text(lang.noApp)),
+            ])
+              tester.getRect(f),
+          ];
+          for (var i = 1; i < stack.length; i++) {
+            expect(
+              stack[i].top,
+              greaterThanOrEqualTo(stack[i - 1].bottom - 1),
+              reason: 'el elemento $i está sobre el anterior',
+            );
+          }
+          for (final notice in [lang.saveError, lang.noApp]) {
+            _expectWhole(tester, inSettings(find.text(notice)), notice);
+          }
+          // Los dos de guardado se ven enteros tras llevarlos a la vista.
+          final viewport = tester.getRect(
+            inSettings(find.byType(SingleChildScrollView)).first,
+          );
+          await tester.ensureVisible(
+            inSettings(find.text(lang.saveError)).last,
+          );
+          await tester.pumpAndSettle();
+          expect(
+            viewport.contains(
+              tester.getCenter(inSettings(find.text(lang.saveError)).last),
+            ),
+            isTrue,
+          );
+          expect(tester.takeException(), isNull);
+
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          handle.dispose();
+        },
+      );
+
+      testWidgets(
+        'CA-017-15 / CA-015-01d ($name): el pomo de "Bloquear zoom" ${reduced ? 'cambia de sitio en el mismo fotograma, sin animar' : 'se anima hasta su sitio'}',
+        (tester) async {
+          final repo = SettingsRepo();
+          await openSettingsScreen(
+            tester,
+            locale: lang.locale,
+            textScale: 2,
+            size: _size,
+            reduced: reduced,
+            repo: repo,
+          );
+          final row = inSettings(find.text(lang.lockZoom));
+          await tester.ensureVisible(row);
+          await tester.pumpAndSettle();
+          double knobX() =>
+              tester.getTopLeft(find.byKey(UnaSwitchRow.knobKey).at(1)).dx;
+          final off = knobX();
+          await tester.tap(row);
+          // Lo justo para que se guarde y llegue el valor nuevo.
+          await tester.pump();
+          await tester.pump();
+          final first = knobX();
+          await tester.pumpAndSettle();
+          final on = knobX();
+          expect(on, isNot(off), reason: 'el pomo cambia de lado');
+          expect(await repo.lockZoom(), isTrue);
+          if (reduced) {
+            expect(first, on, reason: 'sin animación: ya está en su sitio');
+            expect(tester.hasRunningAnimations, isFalse);
+          } else {
+            expect(first, isNot(on), reason: 'se anima: aún va de camino');
+          }
         },
       );
 
