@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/attachment.dart';
+import '../settings/settings_controller.dart';
 import 'attachment_health.dart';
 
 /// Una foto a pantalla completa, lo que comparten la imagen suelta
@@ -15,6 +16,12 @@ import 'attachment_health.dart';
 /// mismo y, al soltar, vuelve al 100 %. El zoom nunca se conserva. Con dos
 /// dedos no se desplaza. No lleva pie ni semántica: la pantalla principal
 /// pone la foto y el pie en un único nodo (CA-007-21).
+///
+/// Con "Bloquear zoom" (CA-017-08) no hay pellizco ni desplazamiento por
+/// contacto: la física es [NeverScrollableScrollPhysics] y el [Listener] no
+/// registra punteros. Nada más cambia: el árbol es el mismo, el controlador
+/// de desplazamiento se queda y las órdenes (`jumpTo`, `animateTo`) no miran
+/// la física, así que el lector, el teclado y el swipe del carrusel siguen.
 class ZoomablePhoto extends ConsumerStatefulWidget {
   const ZoomablePhoto({
     super.key,
@@ -61,6 +68,18 @@ class _ZoomablePhotoState extends ConsumerState<ZoomablePhoto>
       final tween = _backTween;
       if (tween != null) _zoom.value = tween.value;
     });
+  }
+
+  /// Suelta lo que hubiera en curso al cambiar el ajuste: ni un pellizco a
+  /// medias ni la vuelta del zoom (plan §3.3). No lleva `setState`: la física
+  /// con el bloqueo ya es `Never`, y sin él `_pinching` se limpia aquí.
+  void _release() {
+    _back.stop();
+    _pointers.clear();
+    _startFocal = null;
+    _startSpan = null;
+    _pinching = false;
+    _zoom.value = Matrix4.identity();
   }
 
   @override
@@ -126,8 +145,15 @@ class _ZoomablePhotoState extends ConsumerState<ZoomablePhoto>
     final images = ref.watch(attachmentImagesProvider);
     final health = ref.watch(attachmentHealthProvider(attachment));
     final mq = MediaQuery.of(context);
+    final locked = ref.watch(settingsProvider.select((s) => s.lockZoom));
+    // Una sola vez por cambio; la física se recalcula en este mismo `build`.
+    ref.listen(settingsProvider.select((s) => s.lockZoom), (_, _) {
+      setState(_release);
+    });
     return Listener(
-      onPointerDown: _onDown,
+      // Con el bloqueo no se registra ningún dedo: `_pointers` queda vacío,
+      // `_pinching` no se enciende y `_zoom` se queda en la identidad.
+      onPointerDown: locked ? null : _onDown,
       onPointerMove: _onMove,
       onPointerUp: _onUp,
       onPointerCancel: _onUp,
@@ -141,7 +167,7 @@ class _ZoomablePhotoState extends ConsumerState<ZoomablePhoto>
                 width * attachment.height / math.max(1, attachment.width);
             return SingleChildScrollView(
               controller: widget.scroll,
-              physics: _pinching
+              physics: locked || _pinching
                   ? const NeverScrollableScrollPhysics()
                   : const ClampingScrollPhysics(),
               child: SizedBox(
