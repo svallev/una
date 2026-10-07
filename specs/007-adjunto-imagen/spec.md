@@ -215,7 +215,6 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
   - **Dado** un lector de pantalla activo
   - **Cuando** ocurre cada acción
   - **Entonces** se hace **un único anuncio** y el foco queda donde dice la tabla:
-  - *Enmienda (spec 016, implementada; en vigor):* tabla de foco y anuncios con un grupo en CA-016-21.
 
     | Acción | Foco | Anuncio |
     |---|---|---|
@@ -227,6 +226,7 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     | Quitar adjunto | El botón (+) | "Adjunto quitado" |
     | Error al importar | El botón (+) | El texto del error |
 
+  - *Enmienda (spec 016, implementada; en vigor):* tabla de foco y anuncios con un grupo en CA-016-21.
   - **Limitación de TalkBack aceptada (propietario, 2026-09-27):** al abrir la hoja "Añadir", TalkBack anuncia su nombre pero pone el foco en su primer botón (la X, la opción más segura), no en el título; al cerrarla o al volver de la cámara o del selector, lo pone en el primer elemento pulsable del editor, no en (+). TalkBack ignora el aviso de foco de Flutter y el foco de entrada (se probaron tres arreglos). Con teclado y con VoiceOver, el foco va donde dice la tabla.
 - **CA-007-23 Reducir movimiento y texto grande**
   - **Dado** "reducir movimiento" o el texto al 200 %
