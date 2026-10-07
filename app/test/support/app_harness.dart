@@ -35,6 +35,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
   double bottomInset = 0,
   Clock? clock,
   List<Override> overrides = const [],
+  bool firstFrameOnly = false,
 }) async {
   tester.platformDispatcher.localesTestValue = [locale];
   addTearDown(tester.platformDispatcher.clearLocalesTestValue);
@@ -88,6 +89,7 @@ Future<T> pumpUnaApp<T extends InMemoryTaskRepository>(
       child: const UnaApp(),
     ),
   );
-  await tester.pump();
+  // Con `firstFrameOnly` se queda en el primer fotograma de la app (CA-017-11).
+  if (!firstFrameOnly) await tester.pump();
   return repo;
 }

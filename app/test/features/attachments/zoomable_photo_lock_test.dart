@@ -2,6 +2,7 @@ import 'package:app/app/providers.dart';
 import 'package:app/data/attachments/memory_attachment_store.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/features/attachments/zoomable_photo.dart';
+import 'package:app/features/current_task/image_scroll.dart';
 import 'package:app/features/settings/settings_controller.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -287,6 +288,60 @@ void main() {
       // 1080 × 2160 a 390 de ancho: 780 de alto, a todo el ancho.
       expect(tester.getSize(inPhoto(Image).first), const Size(390, 780));
       expect(look(tester, scroll), unlocked);
+    });
+  });
+
+  group('CA-017-09: con el bloqueo, las órdenes de desplazamiento siguen', () {
+    for (final reduced in [false, true]) {
+      testWidgets('ImageScroll.forward y back mueven la foto alta '
+          '(reducir movimiento: $reduced)', (tester) async {
+        final scroll = await pumpPhoto(
+          tester,
+          await photo(),
+          disableAnimations: reduced,
+        );
+        await setLock(tester, true);
+        await tester.pumpAndSettle();
+        final imageScroll = ImageScroll(scroll, () => reduced);
+        expect(imageScroll.canForward, isTrue);
+        final before = look(tester, scroll);
+        imageScroll.forward();
+        if (reduced) {
+          // `jumpTo`: al instante, sin animación.
+          await tester.pump();
+          expect(tester.hasRunningAnimations, isFalse);
+        } else {
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 50));
+          expect(scroll.position.pixels, greaterThan(0));
+          await tester.pumpAndSettle();
+        }
+        // 780 de foto en 600 de ventana: hasta el final (180).
+        expect(scroll.position.pixels, 180);
+        expect(look(tester, scroll), isNot(before));
+        expect(imageScroll.canBack, isTrue);
+        imageScroll.back();
+        await tester.pumpAndSettle();
+        expect(scroll.position.pixels, 0);
+      });
+    }
+
+    testWidgets('CL-017-11: la parte que no se ve no se alcanza con el '
+        'contacto; tras desplazarla por orden, se queda ahí', (tester) async {
+      final scroll = await pumpPhoto(tester, await photo());
+      await setLock(tester, true);
+      ImageScroll(scroll, () => false).forward();
+      await tester.pumpAndSettle();
+      final before = look(tester, scroll);
+      expect(scroll.position.pixels, 180);
+      await gestures['arrastre vertical con el dedo']!(
+        tester,
+        tester.getCenter(find.byType(ZoomablePhoto)),
+        () async {
+          await tester.pump(frame);
+          expect(look(tester, scroll), before);
+        },
+      );
     });
   });
 
