@@ -22,6 +22,7 @@ void main() {
     'lock': UnaIcons.lock,
     'globe': UnaIcons.globe,
     'phone': UnaIcons.phone,
+    'magnifierMinus': UnaIcons.magnifierMinus,
     'info': UnaIcons.info,
     'help': UnaIcons.help,
     'licenseFile': UnaIcons.licenseFile,
@@ -45,6 +46,22 @@ void main() {
       }
     }
   });
+
+  test(
+    'CA-017-01: la lupa con el signo menos es la del prototipo (tablero 16)',
+    () {
+      expect(UnaIcons.magnifierMinus.paths, [
+        'M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0',
+        'M15 15l6 6',
+        'M7 10h6',
+      ]);
+      // El mango llega a (21, 21) y el signo menos cruza el centro del cristal.
+      final handle = parseSvgPath('M15 15l6 6').getBounds();
+      expect((handle.right, handle.bottom), (21, 21));
+      final minus = parseSvgPath('M7 10h6').getBounds();
+      expect((minus.left, minus.right, minus.top), (7, 13, 10));
+    },
+  );
 
   test('comandos relativos y arcos', () {
     final plus = parseSvgPath('M12 4v16M4 12h16').getBounds();

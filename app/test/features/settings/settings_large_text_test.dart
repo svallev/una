@@ -170,16 +170,22 @@ void main() {
             _expectWhole(tester, inSettings(find.text(text)), text);
           }
 
-          // El interruptor entero cabe en su fila: el pomo y la pista dentro.
-          final row = tester.getRect(find.byType(UnaSwitchRow));
-          expect(
-            row.contains(tester.getCenter(find.byKey(UnaSwitchRow.knobKey))),
-            isTrue,
-          );
-          expect(
-            tester.getRect(find.byKey(UnaSwitchRow.trackKey)).right,
-            lessThanOrEqualTo(_size.width),
-          );
+          // El interruptor entero cabe en su fila: el pomo y la pista dentro
+          // (en las dos filas de interruptor).
+          expect(find.byType(UnaSwitchRow), findsNWidgets(2));
+          for (var i = 0; i < 2; i++) {
+            final row = tester.getRect(find.byType(UnaSwitchRow).at(i));
+            expect(
+              row.contains(
+                tester.getCenter(find.byKey(UnaSwitchRow.knobKey).at(i)),
+              ),
+              isTrue,
+            );
+            expect(
+              tester.getRect(find.byKey(UnaSwitchRow.trackKey).at(i)).right,
+              lessThanOrEqualTo(_size.width),
+            );
+          }
 
           // Los avisos, enteros y dentro de la pantalla tras desplazar al
           // final.

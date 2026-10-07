@@ -24,6 +24,8 @@ class _Texts {
     required this.languageValue,
     required this.keepAwake,
     required this.keepAwakeHint,
+    required this.lockZoom,
+    required this.lockZoomHint,
     required this.info,
     required this.privacy,
     required this.licenses,
@@ -41,6 +43,8 @@ class _Texts {
   final String languageValue;
   final String keepAwake;
   final String keepAwakeHint;
+  final String lockZoom;
+  final String lockZoomHint;
   final String info;
   final String privacy;
   final String licenses;
@@ -61,6 +65,8 @@ const _es = _Texts(
   languageValue: 'Como el sistema',
   keepAwake: 'Pantalla siempre activa',
   keepAwakeHint: 'Imágenes, documentos y web',
+  lockZoom: 'Bloquear zoom',
+  lockZoomHint: 'Solo imágenes: sin zoom ni scroll',
   info: 'Información',
   privacy: 'Política de privacidad',
   licenses: 'Licencias de terceros',
@@ -79,6 +85,8 @@ const _en = _Texts(
   languageValue: 'Same as system',
   keepAwake: 'Keep screen on',
   keepAwakeHint: 'Images, documents and web',
+  lockZoom: 'Lock zoom',
+  lockZoomHint: 'Images only: no zoom or scroll',
   info: 'Information',
   privacy: 'Privacy policy',
   licenses: 'Third-party licenses',
@@ -140,11 +148,12 @@ void main() {
           );
           await _showBothNotices(tester, t);
           final order = readingOrder(tester);
-          expect(order.sublist(order.length - 10), [
+          expect(order.sublist(order.length - 11), [
             t.title,
             '${t.language}, ${t.languageValue}',
             '${t.keepAwake}, ${t.keepAwakeHint}',
             t.saveError,
+            '${t.lockZoom}, ${t.lockZoomHint}',
             t.info,
             '${t.privacy}, ${t.web}',
             '${t.licenses}, ${t.web}',
@@ -204,6 +213,7 @@ void main() {
             t.title,
             t.info,
             t.keepAwake,
+            t.lockZoom,
             t.privacy,
             t.help,
             t.close,
@@ -307,11 +317,14 @@ void main() {
           await _showBothNotices(tester, t);
           // Con el foco ya dentro de Ajustes, una vuelta entera de Tab.
           final seen = <String?>{};
-          for (var i = 0; i < 14; i++) {
+          for (var i = 0; i < 16; i++) {
             await _tab(tester);
             seen.add(focusedLabel(tester));
           }
-          expect(seen, containsAll([t.close, t.language, t.keepAwake, t.help]));
+          expect(
+            seen,
+            containsAll([t.close, t.language, t.keepAwake, t.lockZoom, t.help]),
+          );
           expect(seen, isNot(contains(t.title)));
           expect(seen, isNot(contains(null)));
           // Desde Cerrar, Mayús+Tab va a la última fila; desde esta, Tab vuelve.
@@ -344,6 +357,7 @@ void main() {
           for (final outside in [
             t.title,
             t.keepAwake,
+            t.lockZoom,
             t.privacy,
             t.licenses,
             t.help,
@@ -398,8 +412,8 @@ void main() {
             return box.localToGlobal(Offset.zero) & box.size;
           }
 
-          // Una vuelta entera hacia delante: Idioma, Pantalla, Política,
-          // Licencias, Ayuda, Cerrar (la vuelta) e Idioma otra vez, ya de
+          // Una vuelta entera hacia delante: Idioma, Pantalla, Bloquear zoom,
+          // Política, Licencias, Ayuda, Cerrar (la vuelta) e Idioma otra vez, ya de
           // nuevo arriba (el foco la lleva a la vista hacia atrás también).
           final seen = <String?>[];
           void expectRowInView() {
@@ -419,7 +433,7 @@ void main() {
             );
           }
 
-          for (var i = 0; i < 7; i++) {
+          for (var i = 0; i < 8; i++) {
             await _tab(tester);
             await tester.pumpAndSettle();
             expectRowInView();
@@ -427,6 +441,7 @@ void main() {
           expect(seen, [
             t.language,
             t.keepAwake,
+            t.lockZoom,
             t.privacy,
             t.licenses,
             t.help,

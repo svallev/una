@@ -24,10 +24,14 @@ class _Opener implements LinkOpener {
   Future<bool> open(LinkTarget target) async => true;
 }
 
-/// Un repositorio cuyo guardado de "Pantalla siempre activa" falla.
+/// Un repositorio cuyo guardado de los dos interruptores ("Pantalla siempre
+/// activa" y "Bloquear zoom") falla.
 class _FailingRepo extends InMemoryTaskRepository {
   @override
   Future<void> setKeepScreenOn(bool value) async => throw StateError('boom');
+
+  @override
+  Future<void> setLockZoom(bool value) async => throw StateError('boom');
 }
 
 Future<void> _settle(WidgetTester tester) async {
@@ -191,50 +195,61 @@ void main() {
         handle.dispose();
       });
 
-      testWidgets('CA-013-04: nivel 1 con los dos avisos a la vez', (
-        tester,
-      ) async {
-        final handle = tester.ensureSemantics();
-        await _openSettings(
-          tester,
-          locale: locale,
-          opener: _Opener(available: false),
-          repo: _FailingRepo(),
-        );
-        await tester.tap(
-          find.descendant(
-            of: find.byType(SettingsScreen),
-            matching: find.text(
-              en ? 'Keep screen on' : 'Pantalla siempre activa',
+      testWidgets(
+        'CA-013-04: nivel 1 con los tres avisos a la vez (uno por interruptor y el de enlace)',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await _openSettings(
+            tester,
+            locale: locale,
+            opener: _Opener(available: false),
+            repo: _FailingRepo(),
+          );
+          await tester.tap(
+            find.descendant(
+              of: find.byType(SettingsScreen),
+              matching: find.text(
+                en ? 'Keep screen on' : 'Pantalla siempre activa',
+              ),
             ),
-          ),
-        );
-        await _settle(tester);
-        await tester.tap(
-          find.descendant(
-            of: find.byType(SettingsScreen),
-            matching: find.text(en ? 'Help' : 'Ayuda'),
-          ),
-        );
-        await _settle(tester);
-        expect(
-          find.text(
-            en ? "Couldn't save the setting." : 'No se pudo guardar el ajuste.',
-          ),
-          findsOneWidget,
-        );
-        expect(
-          find.text(
-            en
-                ? "There's no app to open this link."
-                : 'No hay ninguna app para abrir este enlace.',
-          ),
-          findsOneWidget,
-        );
-        expectNoUnnamedSemanticsStops(tester);
-        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-        handle.dispose();
-      });
+          );
+          await _settle(tester);
+          await tester.tap(
+            find.descendant(
+              of: find.byType(SettingsScreen),
+              matching: find.text(en ? 'Lock zoom' : 'Bloquear zoom'),
+            ),
+          );
+          await _settle(tester);
+          await tester.tap(
+            find.descendant(
+              of: find.byType(SettingsScreen),
+              matching: find.text(en ? 'Help' : 'Ayuda'),
+            ),
+          );
+          await _settle(tester);
+          // Un aviso de guardado por fila (CA-017-04).
+          expect(
+            find.text(
+              en
+                  ? "Couldn't save the setting."
+                  : 'No se pudo guardar el ajuste.',
+            ),
+            findsNWidgets(2),
+          );
+          expect(
+            find.text(
+              en
+                  ? "There's no app to open this link."
+                  : 'No hay ninguna app para abrir este enlace.',
+            ),
+            findsOneWidget,
+          );
+          expectNoUnnamedSemanticsStops(tester);
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          handle.dispose();
+        },
+      );
 
       testWidgets('CA-013-04: nivel 2 (página de Idioma)', (tester) async {
         final handle = tester.ensureSemantics();

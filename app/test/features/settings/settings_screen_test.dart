@@ -14,6 +14,7 @@ import 'package:app/features/settings/settings_controller.dart';
 import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/ui/focus_ring.dart';
 import 'package:app/ui/square_icon_button.dart';
+import 'package:app/ui/una_icons.dart';
 import 'package:app/ui/una_switch_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -49,8 +50,10 @@ Future<void> _tab(WidgetTester tester, {bool shift = false}) async {
   await tester.pump();
 }
 
-double _knobLeft(WidgetTester tester) =>
-    tester.getTopLeft(find.byKey(UnaSwitchRow.knobKey)).dx;
+/// Posición del pomo de una fila: 0 es "Pantalla siempre activa" y 1,
+/// "Bloquear zoom" (están en ese orden).
+double _knobLeft(WidgetTester tester, {int row = 0}) =>
+    tester.getTopLeft(find.byKey(UnaSwitchRow.knobKey).at(row)).dx;
 
 Tristate _toggled(WidgetTester tester, String label) => tester
     .getSemantics(find.bySemanticsLabel(label))
@@ -60,6 +63,8 @@ Tristate _toggled(WidgetTester tester, String label) => tester
 
 const _keepAwake = 'Pantalla siempre activa';
 const _keepAwakeLabel = '$_keepAwake, Imágenes, documentos y web';
+const _lockZoom = 'Bloquear zoom';
+const _lockZoomLabel = '$_lockZoom, Solo imágenes: sin zoom ni scroll';
 
 void main() {
   setUpAll(loadAppFonts);
@@ -242,7 +247,7 @@ void main() {
 
   group('Estructura (CA-015-01b, CA-015-01c)', () {
     testWidgets(
-      'CA-015-01b: de arriba abajo, Idioma, Pantalla siempre activa, Información (encabezado), Política, Licencias y Ayuda',
+      'CA-017-01: de arriba abajo, Idioma, Pantalla siempre activa, Bloquear zoom, Información (encabezado), Política, Licencias y Ayuda',
       (tester) async {
         await openSettingsScreen(tester);
         final tops = <String, double>{};
@@ -251,6 +256,8 @@ void main() {
           'Idioma',
           _keepAwake,
           'Imágenes, documentos y web',
+          _lockZoom,
+          'Solo imágenes: sin zoom ni scroll',
           'Información',
           'Política de privacidad',
           'Licencias de terceros',
@@ -270,11 +277,11 @@ void main() {
     );
 
     testWidgets(
-      'CA-015-01c: no hay Notificaciones ni Bloquear zoom en esta versión',
+      'CA-015-01c / CA-017-01: no hay Notificaciones en esta versión (llega con la 019)',
       (tester) async {
         for (final (locale, texts) in [
-          (const Locale('es'), ['Notificaciones', 'Bloquear zoom']),
-          (const Locale('en'), ['Notifications', 'Lock zoom']),
+          (const Locale('es'), ['Notificaciones']),
+          (const Locale('en'), ['Notifications']),
         ]) {
           await openSettingsScreen(tester, locale: locale);
           for (final text in texts) {
@@ -309,7 +316,7 @@ void main() {
             ),
           );
         }
-        // Línea de 1 px sobre las tres filas de web (tres filas con borde).
+        // Línea de 1 px sobre Bloquear zoom y las tres filas de web.
         final dividers = find.descendant(
           of: find.byType(SettingsScreen),
           matching: find.byWidgetPredicate(
@@ -323,12 +330,12 @@ void main() {
                     UnaSizes.separatorRow,
           ),
         );
-        expect(dividers, findsNWidgets(3));
+        expect(dividers, findsNWidgets(4));
       },
     );
 
     testWidgets(
-      'CA-015-01b: medidas del prototipo (Idioma 60, interruptor con subtítulo 76, Política y Licencias 52, Ayuda 60)',
+      'CA-015-01b: medidas del prototipo (Idioma 60, los dos interruptores con subtítulo 76, Política y Licencias 52, Ayuda 60)',
       (tester) async {
         await openSettingsScreen(tester);
         double height(String text) => tester
@@ -343,6 +350,7 @@ void main() {
             .height;
         expect(height('Idioma'), UnaSizes.settingsRow);
         expect(height(_keepAwake), UnaSizes.settingsRowSwitchHint);
+        expect(height(_lockZoom), UnaSizes.settingsRowSwitchHint);
         // Las filas de web miden su alto más la línea de 1 px de arriba.
         expect(height('Política de privacidad'), UnaSizes.settingsRowSub);
         expect(height('Licencias de terceros'), UnaSizes.settingsRowSub);
@@ -470,7 +478,7 @@ void main() {
         final handle = tester.ensureSemantics();
         await openSettingsScreen(tester, screenReader: true);
         expect(_toggled(tester, _keepAwakeLabel), Tristate.isFalse);
-        expect(find.byType(UnaSwitchRow), findsOneWidget);
+        expect(find.byType(UnaSwitchRow), findsNWidgets(2));
         expect(
           tester
               .getSemantics(find.bySemanticsLabel(_keepAwakeLabel))
@@ -566,6 +574,272 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.space);
         await settleSettings(tester);
         expect(_toggled(tester, _keepAwakeLabel), Tristate.isFalse);
+        handle.dispose();
+      },
+    );
+  });
+
+  group('Bloquear zoom (CA-017-01, CA-017-02, CA-017-14)', () {
+    Finder lockRow() => find.byWidgetPredicate(
+      (w) => w is UnaSwitchRow && w.label == _lockZoom,
+    );
+    Finder keepRow() => find.byWidgetPredicate(
+      (w) => w is UnaSwitchRow && w.label == _keepAwake,
+    );
+
+    testWidgets(
+      'CA-017-01: la fila va debajo de Pantalla siempre activa, pegada a ella con la línea de 1 px, con la lupa y el subtítulo; mide 76 y es un solo objetivo táctil',
+      (tester) async {
+        await openSettingsScreen(tester);
+        final keep = tester.getRect(keepRow());
+        final lock = tester.getRect(lockRow());
+        expect(lock.top, keep.bottom, reason: 'debajo y en el mismo bloque');
+        expect(lock.height, UnaSizes.settingsRowSwitchHint);
+        expect(lock.width, keep.width);
+        expect(lock.height, greaterThanOrEqualTo(UnaSizes.minTouchTarget));
+        // La línea de 1 px de las filas de un bloque, sobre la fila nueva.
+        final decoration = tester
+            .widget<Container>(
+              find
+                  .descendant(of: lockRow(), matching: find.byType(Container))
+                  .first,
+            )
+            .decoration!;
+        expect(
+          (decoration as BoxDecoration).border,
+          const Border(
+            top: BorderSide(
+              color: UnaColors.disabled,
+              width: UnaSizes.separatorRow,
+            ),
+          ),
+        );
+        // La lupa del tablero 16 y el subtítulo.
+        expect(
+          find.descendant(
+            of: lockRow(),
+            matching: find.byWidgetPredicate(
+              (w) => w is UnaIcon && w.icon == UnaIcons.magnifierMinus,
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: lockRow(),
+            matching: find.text('Solo imágenes: sin zoom ni scroll'),
+          ),
+          findsOneWidget,
+        );
+        // Un separador de bloque entre la fila y "Información".
+        expect(
+          tester.getTopLeft(inSettings(find.text('Información'))).dy,
+          greaterThan(lock.bottom + UnaSizes.separatorBlock),
+        );
+      },
+    );
+
+    testWidgets(
+      'CA-017-01 / CA-017-14: un solo nodo para el lector (nombre primero y luego el subtítulo, apagado, con tap), y el icono es decorativo',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await openSettingsScreen(tester, screenReader: true);
+        expect(find.bySemanticsLabel(_lockZoomLabel), findsOneWidget);
+        final data = tester
+            .getSemantics(find.bySemanticsLabel(_lockZoomLabel))
+            .getSemanticsData();
+        expect(data.label, _lockZoomLabel);
+        expect(data.flagsCollection.isToggled, Tristate.isFalse);
+        expect(data.hasAction(SemanticsAction.tap), isTrue);
+        // Ni el nombre ni el subtítulo salen como nodos aparte.
+        final labels = readingOrder(tester);
+        expect(labels.where((l) => l.contains(_lockZoom)), [_lockZoomLabel]);
+        expect(labels.where((l) => l.contains('Solo imágenes')), [
+          _lockZoomLabel,
+        ]);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CA-017-02: tocar la fila guarda y mueve su pomo (no el de la otra fila); vuelve a apagarlo; lo guardado sobrevive',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final repo = SettingsRepo();
+        await openSettingsScreen(tester, repo: repo, screenReader: true);
+        final keepOff = _knobLeft(tester);
+        final off = _knobLeft(tester, row: 1);
+        await tester.tap(inSettings(find.text(_lockZoom)));
+        await settleSettings(tester);
+        expect(repo.lockWrites, [true]);
+        expect(repo.keepWrites, isEmpty);
+        expect(await repo.lockZoom(), isTrue);
+        expect(await repo.keepScreenOn(), isFalse);
+        expect(_toggled(tester, _lockZoomLabel), Tristate.isTrue);
+        expect(_toggled(tester, _keepAwakeLabel), Tristate.isFalse);
+        expect(_knobLeft(tester, row: 1), greaterThan(off));
+        expect(_knobLeft(tester), keepOff);
+        await tester.tap(inSettings(find.text(_lockZoom)));
+        await settleSettings(tester);
+        expect(repo.lockWrites, [true, false]);
+        expect(_toggled(tester, _lockZoomLabel), Tristate.isFalse);
+        expect(_knobLeft(tester, row: 1), off);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CA-017-02: el interruptor no se mueve hasta que el guardado se confirma',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final repo = SettingsRepo()..lockGate = Completer<void>();
+        await openSettingsScreen(tester, repo: repo, screenReader: true);
+        final off = _knobLeft(tester, row: 1);
+        await tester.tap(inSettings(find.text(_lockZoom)));
+        await tester.pump(const Duration(seconds: 1));
+        expect(repo.lockWrites, [true]);
+        expect(_knobLeft(tester, row: 1), off, reason: 'sin cambio optimista');
+        expect(_toggled(tester, _lockZoomLabel), Tristate.isFalse);
+        repo.lockGate!.complete();
+        await settleSettings(tester);
+        expect(_knobLeft(tester, row: 1), greaterThan(off));
+        expect(_toggled(tester, _lockZoomLabel), Tristate.isTrue);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CA-017-02: dos toques casi seguidos en las dos filas guardan los dos valores, uno tras otro, y cada pomo se mueve con su guardado',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final repo = SettingsRepo()..gate = Completer<void>();
+        await openSettingsScreen(tester, repo: repo, screenReader: true);
+        final keepOff = _knobLeft(tester);
+        final lockOff = _knobLeft(tester, row: 1);
+        await tester.tap(inSettings(find.text(_keepAwake)));
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.tap(inSettings(find.text(_lockZoom)));
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(repo.keepWrites, [true]);
+        expect(repo.lockWrites, isEmpty, reason: 'espera al primero');
+        expect(_knobLeft(tester), keepOff);
+        expect(_knobLeft(tester, row: 1), lockOff);
+        repo.gate!.complete();
+        await settleSettings(tester);
+        expect(repo.lockWrites, [true]);
+        expect(await repo.keepScreenOn(), isTrue);
+        expect(await repo.lockZoom(), isTrue);
+        expect(_toggled(tester, _keepAwakeLabel), Tristate.isTrue);
+        expect(_toggled(tester, _lockZoomLabel), Tristate.isTrue);
+        expect(_knobLeft(tester), greaterThan(keepOff));
+        expect(_knobLeft(tester, row: 1), greaterThan(lockOff));
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CL-017-7: un segundo toque en la misma fila mientras se guarda no hace nada',
+      (tester) async {
+        final repo = SettingsRepo()..lockGate = Completer<void>();
+        await openSettingsScreen(tester, repo: repo);
+        await tester.tap(inSettings(find.text(_lockZoom)));
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.tap(inSettings(find.text(_lockZoom)));
+        await tester.pump(const Duration(milliseconds: 50));
+        repo.lockGate!.complete();
+        await settleSettings(tester);
+        expect(repo.lockWrites, [true], reason: 'una sola escritura');
+        expect(await repo.lockZoom(), isTrue);
+      },
+    );
+
+    testWidgets(
+      'CA-017-14: cambiar el interruptor no emite ningún anuncio ni crea una región viva',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await openSettingsScreen(tester, screenReader: true);
+        tester.takeAnnouncements();
+        int liveRegions() {
+          var n = 0;
+          void visit(SemanticsNode node) {
+            if (node.getSemanticsData().flagsCollection.isLiveRegion) n++;
+            node.visitChildren((c) {
+              visit(c);
+              return true;
+            });
+          }
+
+          visit(
+            tester
+                .binding
+                .renderViews
+                .first
+                .owner!
+                .semanticsOwner!
+                .rootSemanticsNode!,
+          );
+          return n;
+        }
+
+        final before = liveRegions();
+        await tester.tap(inSettings(find.text(_lockZoom)));
+        await settleSettings(tester);
+        await tester.tap(inSettings(find.text(_lockZoom)));
+        await settleSettings(tester);
+        expect(tester.takeAnnouncements(), isEmpty);
+        expect(liveRegions(), before);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CA-017-02: Intro y la barra espaciadora activan el interruptor',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await openSettingsScreen(tester, keyboard: true, screenReader: true);
+        // Cerrar ajustes → Idioma → Pantalla siempre activa → Bloquear zoom.
+        for (var i = 0; i < 3; i++) {
+          await _tab(tester);
+        }
+        expect(focusedLabel(tester), _lockZoom);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await settleSettings(tester);
+        expect(_toggled(tester, _lockZoomLabel), Tristate.isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await settleSettings(tester);
+        expect(_toggled(tester, _lockZoomLabel), Tristate.isFalse);
+        expect(_toggled(tester, _keepAwakeLabel), Tristate.isFalse);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'CA-017-02: lo que cambia el controlador se ve en la fila (lee el estado, no uno propio)',
+      (tester) async {
+        await openSettingsScreen(tester);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SettingsScreen)),
+        );
+        final off = _knobLeft(tester, row: 1);
+        await container.read(settingsProvider.notifier).setLockZoom(true);
+        await tester.pumpAndSettle();
+        expect(_knobLeft(tester, row: 1), greaterThan(off));
+      },
+    );
+
+    testWidgets(
+      'CA-017-01: en inglés la fila se llama "Lock zoom", con su subtítulo',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await openSettingsScreen(
+          tester,
+          locale: const Locale('en'),
+          screenReader: true,
+        );
+        expect(
+          find.bySemanticsLabel('Lock zoom, Images only: no zoom or scroll'),
+          findsOneWidget,
+        );
         handle.dispose();
       },
     );
@@ -686,10 +960,11 @@ void main() {
         await openSettingsScreen(tester, screenReader: true);
         const web = 'Abre una página web en el navegador';
         final order = readingOrder(tester);
-        expect(order.sublist(order.length - 8), [
+        expect(order.sublist(order.length - 9), [
           'Ajustes',
           'Idioma, Como el sistema',
           _keepAwakeLabel,
+          _lockZoomLabel,
           'Información',
           'Política de privacidad, $web',
           'Licencias de terceros, $web',
@@ -717,10 +992,11 @@ void main() {
         );
         const web = 'Opens a web page in the browser';
         final order = readingOrder(tester);
-        expect(order.sublist(order.length - 8), [
+        expect(order.sublist(order.length - 9), [
           'Settings',
           'Language, Same as system',
           'Keep screen on, Images, documents and web',
+          'Lock zoom, Images only: no zoom or scroll',
           'Information',
           'Privacy policy, $web',
           'Third-party licenses, $web',
@@ -756,13 +1032,14 @@ void main() {
         await openSettingsScreen(tester, keyboard: true);
         expect(focusedLabel(tester), 'Cerrar ajustes');
         final order = <String?>[];
-        for (var i = 0; i < 6; i++) {
+        for (var i = 0; i < 7; i++) {
           await _tab(tester);
           order.add(focusedLabel(tester));
         }
         expect(order, [
           'Idioma',
           _keepAwake,
+          _lockZoom,
           'Política de privacidad',
           'Licencias de terceros',
           'Ayuda',
@@ -785,7 +1062,7 @@ void main() {
       'CA-015-21b: Intro activa la fila enfocada (abre la web directamente) y el foco se queda en ella',
       (tester) async {
         final opener = await openSettingsScreen(tester, keyboard: true);
-        for (var i = 0; i < 5; i++) {
+        for (var i = 0; i < 6; i++) {
           await _tab(tester);
         }
         expect(focusedLabel(tester), 'Ayuda');
@@ -806,6 +1083,7 @@ void main() {
         'Cerrar ajustes',
         'Idioma',
         _keepAwake,
+        _lockZoom,
         'Política de privacidad',
         'Licencias de terceros',
         'Ayuda',
