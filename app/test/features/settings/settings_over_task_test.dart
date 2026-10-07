@@ -11,6 +11,8 @@ import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/attachment_store.dart';
 import 'package:app/domain/ports/link_opener.dart';
 import 'package:app/features/attachments/link_confirm_sheet.dart';
+import 'package:app/features/attachments/photo_carousel.dart';
+import 'package:app/features/attachments/photo_dots.dart';
 import 'package:app/features/attachments/task_image.dart';
 import 'package:app/features/attachments/task_pdf.dart';
 import 'package:app/features/attachments/zoomable_photo.dart';
@@ -83,6 +85,32 @@ Future<Task> _imageTask(MemoryAttachmentStore store) async {
   );
   final base = sampleTask(id: 'img', text: 'Zxq imagen', rank: 'MA');
   return base.withContent(base.text, attachment, base.updatedAt);
+}
+
+/// Imagen suelta alta (más que la pantalla): se puede desplazar.
+Future<Task> _tallImageTask(MemoryAttachmentStore store) async {
+  final attachment = await store.commit(
+    stageImage(store, 'tall', width: 1080, height: 6000),
+    DateTime.utc(2026, 9, 27),
+  );
+  final base = sampleTask(id: 'tall', text: 'Zxq alta', rank: 'MA');
+  return base.withContent(base.text, attachment, base.updatedAt);
+}
+
+/// Grupo de 3 fotos altas.
+Future<Task> _groupTask(MemoryAttachmentStore store) async {
+  final all = [
+    for (var i = 0; i < 3; i++)
+      await store.commit(
+        stageImage(store, 'g$i', width: 1080, height: 6000),
+        DateTime.utc(2026, 9, 27),
+      ),
+  ];
+  for (var i = 0; i < 3; i++) {
+    store.putStored('g$i', 'screen.jpg', Uint8List.fromList(tinyImage));
+  }
+  final base = sampleTask(id: 'grp', text: 'Zxq grupo', rank: 'MA');
+  return base.withContent(base.text, null, base.updatedAt, attachments: all);
 }
 
 /// Tarea con PDF; con [real], el documento de 20 páginas de verdad (para el
@@ -472,6 +500,79 @@ void main() {
 
       expect(find.byType(TaskImage), findsOneWidget);
       expect(tester.state(find.byType(ZoomablePhoto)), same(image));
+      expect(tester.takeException(), isNull);
+    });
+    testWidgets('CA-017-05, CL-017-2: imagen alta desplazada: el mismo '
+        'desplazamiento y el mismo estado tras abrir y cerrar Ajustes', (
+      tester,
+    ) async {
+      await pumpWith(tester, await _tallImageTask(store));
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pumpAndSettle();
+      Finder scrollable() => find.descendant(
+        of: find.byType(ZoomablePhoto),
+        matching: find.byType(Scrollable),
+      );
+      double pixels() =>
+          tester.state<ScrollableState>(scrollable().first).position.pixels;
+      final moved = pixels();
+      expect(moved, greaterThan(300));
+      final image = tester.state(find.byType(ZoomablePhoto));
+
+      await openSettings(tester);
+      await closeSettings(tester);
+
+      expect(tester.state(find.byType(ZoomablePhoto)), same(image));
+      expect(pixels(), moved);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CA-017-05, CL-017-2: grupo, foto 3 desplazada: la misma foto, '
+        'el mismo desplazamiento y el mismo carrusel tras abrir y cerrar '
+        'Ajustes', (tester) async {
+      await pumpWith(tester, await _groupTask(store));
+      for (var i = 0; i < 2; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        for (var t = 0; t < 400; t += 16) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+      }
+      for (var t = 0; t < 3200; t += 16) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pumpAndSettle();
+      double pixels() => tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(ZoomablePhoto),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position
+          .pixels;
+      int dot() => tester.widget<PhotoDots>(find.byType(PhotoDots)).index;
+      String shown() => tester
+          .widget<ZoomablePhoto>(find.byType(ZoomablePhoto))
+          .attachment
+          .id;
+      final moved = pixels();
+      expect(dot(), 2);
+      expect(moved, greaterThan(300));
+      final id = shown();
+      final carousel = tester.state(find.byType(PhotoCarousel));
+      final photo = tester.state(find.byType(ZoomablePhoto));
+
+      await openSettings(tester);
+      await closeSettings(tester);
+
+      expect(dot(), 2);
+      expect(shown(), id);
+      expect(pixels(), moved);
+      expect(tester.state(find.byType(PhotoCarousel)), same(carousel));
+      expect(tester.state(find.byType(ZoomablePhoto)), same(photo));
       expect(tester.takeException(), isNull);
     });
   });
