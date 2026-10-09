@@ -493,6 +493,76 @@ void main() {
 
   // --- CA-017-07 y CL-017-11: cada foto conserva su desplazamiento -----------
 
+  // --- CA-017-08 y CL-017-9: rueda y trackpad sobre el grupo -----------------
+
+  Future<void> wheelOver(WidgetTester tester) async {
+    final center = tester.getCenter(find.byType(PhotoCarousel));
+    final mouse = TestPointer(81, PointerDeviceKind.mouse);
+    await tester.sendEventToBinding(mouse.hover(center));
+    for (var i = 0; i < 4; i++) {
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 120)));
+      await tester.pump(_frame);
+    }
+  }
+
+  Future<void> trackpadOver(
+    WidgetTester tester, {
+    Offset? pan,
+    double? scale,
+  }) async {
+    final center = tester.getCenter(find.byType(PhotoCarousel));
+    final pad = await tester.createGesture(kind: PointerDeviceKind.trackpad);
+    await pad.panZoomStart(center);
+    await tester.pump(_frame);
+    for (var i = 1; i <= 10; i++) {
+      await pad.panZoomUpdate(
+        center,
+        pan: pan == null ? Offset.zero : pan * i.toDouble(),
+        scale: scale == null ? 1 : 1 + scale * i,
+      );
+      await tester.pump(_frame);
+    }
+    await pad.panZoomEnd();
+    await tester.pump(_frame);
+  }
+
+  group('CA-017-08 y CL-017-9: rueda y trackpad sobre el grupo', () {
+    final gestures = <String, Future<void> Function(WidgetTester)>{
+      'la rueda del ratón': wheelOver,
+      'el desplazamiento vertical del trackpad': (t) =>
+          trackpadOver(t, pan: const Offset(0, -24)),
+      'el pellizco del trackpad': (t) => trackpadOver(t, scale: 0.3),
+    };
+    for (final entry in gestures.entries) {
+      testWidgets('${entry.key} no mueve, no amplía ni cambia de foto con el '
+          'bloqueo', (tester) async {
+        await pumpGroup(tester);
+        final before = look(tester);
+        await entry.value(tester);
+        expect(look(tester), before);
+        expect(pixels(tester), 0);
+        expect(index(tester), 0);
+        expect(tester.binding.hasScheduledFrame, isFalse);
+        expect(tester.hasRunningAnimations, isFalse);
+      });
+    }
+
+    for (final name in [
+      'la rueda del ratón',
+      'el desplazamiento vertical del trackpad',
+    ]) {
+      testWidgets('control positivo: sin el bloqueo, $name desplaza la foto', (
+        tester,
+      ) async {
+        await pumpGroup(tester, lock: false);
+        await gestures[name]!(tester);
+        await tester.pumpAndSettle();
+        expect(pixels(tester), greaterThan(50));
+        expect(index(tester), 0);
+      });
+    }
+  });
+
   group('CA-017-07 y CL-017-11: la foto se queda donde estaba', () {
     testWidgets('cada foto conserva su desplazamiento; la no vista, arriba', (
       tester,

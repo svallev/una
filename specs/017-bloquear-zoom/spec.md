@@ -147,7 +147,7 @@ Dar a quien quiere **trabajar encima de una foto** (marcarla o dibujar sobre ell
 | CL-017-2 | Se enciende o se apaga el ajuste con un grupo y se estaba viendo la foto 3 | Al volver de Ajustes se ve **la foto 3, en el mismo desplazamiento**; solo si la app estuvo 10 minutos o más en segundo plano, la primera arriba (CA-017-05) |
 | CL-017-3 | Se abre Ajustes con la card de deshacer visible | Como siempre: la eliminación pasa a ser definitiva (CA-015-24); nada cambia por este ajuste |
 | CL-017-4 | Se cambia el idioma (Ajustes) | La fila cambia de idioma; el valor del interruptor se conserva |
-| CL-017-5 | La foto a la vista de un grupo es «Foto no disponible» | Se ve el recuadro como siempre (CA-016-18a); el swipe sigue y no hay pellizco ni desplazamiento |
+| CL-017-5 | La foto a la vista de un grupo es «Foto no disponible» | Se ve el recuadro como siempre (CA-016-18a); el swipe sigue y no hay pellizco ni desplazamiento de la foto. (El recuadro lleva su propio desplazamiento, solo para el texto del aviso al 200 %: no es el de la foto y no cambia con el ajuste) |
 | CL-017-6 | Swipe desde el borde de la pantalla (gesto de volver del sistema, Android 10 o posterior) | Es del sistema, como hoy (CA-016-10): la app no pide excluir el gesto, con o sin bloqueo |
 | CL-017-7 | Doble toque rápido en la fila o dos toques mientras se guarda | Se aplica una sola vez / el segundo se ignora (CA-017-02, como CL-015-1) |
 | CL-017-8 | Copia de seguridad restaurada con el ajuste ilegible o con un valor extraño | Apagado y la app arranca (CA-017-03) |

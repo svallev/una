@@ -71,8 +71,9 @@ class _ZoomablePhotoState extends ConsumerState<ZoomablePhoto>
   }
 
   /// Suelta lo que hubiera en curso al cambiar el ajuste: ni un pellizco a
-  /// medias ni la vuelta del zoom (plan §3.3). No lleva `setState`: la física
-  /// con el bloqueo ya es `Never`, y sin él `_pinching` se limpia aquí.
+  /// medias ni la vuelta del zoom (plan §3.3). Se llama dentro de `setState`
+  /// (línea del `ref.listen`): no lo lleva por dentro. La física con el
+  /// bloqueo ya es `Never`, y sin él `_pinching` se limpia aquí.
   void _release() {
     _back.stop();
     _pointers.clear();

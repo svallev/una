@@ -8,6 +8,7 @@ import 'package:app/features/attachments/zoomable_photo.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/current_task/current_task_screen.dart';
 import 'package:app/features/settings/settings_controller.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -281,6 +282,151 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
       await tester.pumpAndSettle();
       expect(await repo.findById('t1'), isNotNull);
+    });
+  });
+
+  /// La rueda del ratón y el desplazamiento del *trackpad* sobre la tarea
+  /// entera (CA-017-08; CL-017-9): en la web de pruebas y en un móvil con ratón.
+  Future<void> wheel(WidgetTester tester) async {
+    final center = tester.getCenter(find.byType(TaskImage));
+    final mouse = TestPointer(71, PointerDeviceKind.mouse);
+    await tester.sendEventToBinding(mouse.hover(center));
+    for (var i = 0; i < 4; i++) {
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 120)));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+  }
+
+  Future<void> trackpadPan(WidgetTester tester) async {
+    final center = tester.getCenter(find.byType(TaskImage));
+    final pad = await tester.createGesture(kind: PointerDeviceKind.trackpad);
+    await pad.panZoomStart(center);
+    await tester.pump(const Duration(milliseconds: 16));
+    for (var i = 1; i <= 10; i++) {
+      await pad.panZoomUpdate(center, pan: Offset(0, -24.0 * i));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await pad.panZoomEnd();
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+
+  Future<void> trackpadPinch(WidgetTester tester) async {
+    final center = tester.getCenter(find.byType(TaskImage));
+    final pad = await tester.createGesture(kind: PointerDeviceKind.trackpad);
+    await pad.panZoomStart(center);
+    await tester.pump(const Duration(milliseconds: 16));
+    for (var i = 1; i <= 10; i++) {
+      await pad.panZoomUpdate(center, scale: 1 + 0.3 * i);
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await pad.panZoomEnd();
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+
+  group('CA-017-08 y CL-017-9: rueda y trackpad en la tarea entera', () {
+    for (final entry in {
+      'la rueda del ratón': wheel,
+      'el desplazamiento del trackpad': trackpadPan,
+      'el pellizco del trackpad': trackpadPinch,
+    }.entries) {
+      testWidgets('${entry.key} no mueve ni amplía la foto con el bloqueo', (
+        tester,
+      ) async {
+        await pumpApp(tester, lock: true);
+        await tester.pumpAndSettle();
+        final before = look(tester);
+        await entry.value(tester);
+        expect(look(tester), before);
+        expect(offset(tester), 0);
+        expect(tester.binding.hasScheduledFrame, isFalse);
+        expect(tester.hasRunningAnimations, isFalse);
+      });
+    }
+
+    for (final entry in {
+      'la rueda del ratón': wheel,
+      'el desplazamiento del trackpad': trackpadPan,
+    }.entries) {
+      testWidgets('control positivo: sin el bloqueo, ${entry.key} desplaza la '
+          'foto', (tester) async {
+        await pumpApp(tester);
+        await tester.pumpAndSettle();
+        await entry.value(tester);
+        await tester.pumpAndSettle();
+        expect(offset(tester), greaterThan(50));
+      });
+    }
+  });
+
+  group('CL-017-1: llega una tarea con imagen tras completar una de texto', () {
+    testWidgets('con el bloqueo encendido, la imagen ya está bloqueada y '
+        'arriba', (tester) async {
+      await repo.insert(
+        sampleTask(id: 't0', text: 'Llamar a Marta', rank: 'A'),
+      );
+      await pumpApp(tester, lock: true);
+      await tester.pumpAndSettle();
+      expect(find.byType(ZoomablePhoto), findsNothing);
+      expect(find.text('Llamar a Marta'), findsOneWidget);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(HoldToCompleteButton)),
+      );
+      await tester.pump();
+      await tester.pump(UnaMotion.holdToComplete);
+      await tester.pump(const Duration(milliseconds: 16));
+      await gesture.up();
+      await tester.pump(UnaMotion.holdDonePause);
+      await tester.pump(UnaMotion.successHold);
+      await tester.pump(UnaMotion.successFade);
+      await tester.pump(UnaMotion.introFade);
+      await tester.pumpAndSettle();
+
+      // Sin histórico: completar borra la tarea de texto.
+      expect(await repo.findById('t0'), isNull);
+      expect(find.byType(ZoomablePhoto), findsOneWidget);
+      expect(offset(tester), 0);
+      expect(
+        tester
+            .widget<SingleChildScrollView>(
+              find.descendant(
+                of: find.byType(ZoomablePhoto),
+                matching: find.byType(SingleChildScrollView),
+              ),
+            )
+            .physics,
+        isA<NeverScrollableScrollPhysics>(),
+      );
+      final before = look(tester);
+      await pinchAndDrag(tester);
+      await wheel(tester);
+      expect(look(tester), before);
+      expect(offset(tester), 0);
+    });
+
+    testWidgets('control positivo: sin el bloqueo, la imagen que llega sí se '
+        'desplaza', (tester) async {
+      await repo.insert(
+        sampleTask(id: 't0', text: 'Llamar a Marta', rank: 'A'),
+      );
+      await pumpApp(tester);
+      await tester.pumpAndSettle();
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(HoldToCompleteButton)),
+      );
+      await tester.pump();
+      await tester.pump(UnaMotion.holdToComplete);
+      await tester.pump(const Duration(milliseconds: 16));
+      await gesture.up();
+      await tester.pump(UnaMotion.holdDonePause);
+      await tester.pump(UnaMotion.successHold);
+      await tester.pump(UnaMotion.successFade);
+      await tester.pump(UnaMotion.introFade);
+      await tester.pumpAndSettle();
+      expect(find.byType(ZoomablePhoto), findsOneWidget);
+      await tester.drag(find.byType(TaskImage), const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(offset(tester), greaterThan(100));
     });
   });
 

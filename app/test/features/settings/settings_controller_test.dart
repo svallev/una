@@ -176,7 +176,7 @@ void main() {
     expect(state().keepScreenOn, isTrue);
   });
 
-  test('CA-017-04: un guardado de otro ajuste o del idioma, mientras hay uno '
+  test('CA-017-02: un guardado de otro ajuste o del idioma, mientras hay uno '
       'en curso, espera y se aplica (ya no se ignora)', () async {
     repo.gates['keepScreenOn'] = Completer<void>();
     final first = controller().setKeepScreenOn(true);
@@ -283,12 +283,12 @@ void main() {
       expect(a.copyWith(keepScreenOn: true).lockZoom, isFalse);
     });
 
-    test('CA-017-04: el mismo valor no escribe', () async {
+    test('CL-017-7: el mismo valor no escribe', () async {
       expect(await controller().setLockZoom(false), SaveResult.unchanged);
       expect(repo.lockZoomWrites, isEmpty);
     });
 
-    test('CA-017-04: dos guardados de filas distintas que se solapan se '
+    test('CA-017-02: dos guardados de filas distintas que se solapan se '
         'escriben los dos, en orden, y ninguno pisa al otro', () async {
       repo.gates['keepScreenOn'] = Completer<void>();
       final first = controller().setKeepScreenOn(true);
@@ -339,7 +339,7 @@ void main() {
       expect(repo.keepScreenOnWrites, [true]);
     });
 
-    test('CA-017-04: el fallo del primero no bloquea al segundo, y el estado '
+    test('CA-017-02: el fallo del primero no bloquea al segundo, y el estado '
         'solo trae el segundo', () async {
       repo.gates['keepScreenOn'] = Completer<void>();
       repo.errors['keepScreenOn'] = Exception('texto-secreto');
@@ -355,7 +355,7 @@ void main() {
       expect(await repo.keepScreenOn(), isFalse);
     });
 
-    test('CA-017-04: un `unchanged` no bloquea ni espera a la cola', () async {
+    test('CA-017-02: un `unchanged` no bloquea ni espera a la cola', () async {
       repo.gates['keepScreenOn'] = Completer<void>();
       final first = controller().setKeepScreenOn(true);
       await turn();
@@ -372,7 +372,7 @@ void main() {
     });
 
     test(
-      'CA-017-04: tras un fallo, reintentar la misma fila funciona',
+      'CA-017-02: tras un fallo, reintentar la misma fila funciona',
       () async {
         repo.errors['lockZoom'] = Exception('x');
         expect(await controller().setLockZoom(true), SaveResult.failed);
@@ -383,7 +383,7 @@ void main() {
       },
     );
 
-    test('CA-017-04: una escritura que lanza de forma síncrona o un `Error` '
+    test('CA-017-02: una escritura que lanza de forma síncrona o un `Error` '
         '(no solo `Exception`) da `failed` y no bloquea la cola', () async {
       repo.syncThrow.add('lockZoom');
       expect(await controller().setLockZoom(true), SaveResult.failed);
@@ -402,7 +402,7 @@ void main() {
       expect(state().keepScreenOn, isFalse);
     });
 
-    test('CA-017-04: concurrencia máxima 1 y orden FIFO entre ajustes e '
+    test('CA-017-02: concurrencia máxima 1 y orden FIFO entre ajustes e '
         'idioma', () async {
       repo.delay = const Duration(milliseconds: 5);
       final results = await Future.wait([
@@ -422,7 +422,7 @@ void main() {
       ]);
     });
 
-    test('CA-017-04: con la primera colgada, la segunda espera sin escribir '
+    test('CA-017-02: con la primera colgada, la segunda espera sin escribir '
         'y al completarse se libera', () async {
       repo.gates['lockZoom'] = Completer<void>();
       final first = controller().setLockZoom(true);
@@ -441,7 +441,7 @@ void main() {
       expect(repo.keepScreenOnWrites, [true]);
     });
 
-    test('CA-017-04: varios fallos encadenados no dejan ningún error sin '
+    test('CA-017-02: varios fallos encadenados no dejan ningún error sin '
         'capturar (ni `FlutterError`, ni zona, ni `debugPrint`)', () async {
       final flutterErrors = <FlutterErrorDetails>[];
       final zoneErrors = <Object>[];
@@ -476,7 +476,7 @@ void main() {
       expect(seen, isEmpty);
     });
 
-    test('CA-017-04: con Drift real, dos toques solapados guardan los dos '
+    test('CA-017-02: con Drift real, dos toques solapados guardan los dos '
         'valores y sobreviven a reabrir', () async {
       final dir = await Directory.systemTemp.createTemp('una_lock_zoom');
       addTearDown(() => dir.delete(recursive: true));
