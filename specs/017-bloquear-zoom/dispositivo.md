@@ -52,3 +52,46 @@ Cambiados y restaurados: giro automático (`accelerometer_rotation` 1 → 0 dura
 ## T-017-09: `integration_test/settings_flow_test.dart` (T-017-08b) en el emulador (2026-10-09)
 
 `flutter test integration_test/settings_flow_test.dart -d emulator-5554` (APK de depuración con base de datos vacía): **3 de 3 pruebas pasan** en el emulador de API 37, incluida la nueva «CA-017-03/11: "Bloquear zoom" se enciende, se guarda sin tocar los demás ajustes y sobrevive a un rearranque» (13 s). **[Hecho]**
+
+## T-017-10a: gestos reales, orientación, tres botones y «Recientes» (2026-10-09)
+
+**Método.** La misma compilación *release* de T-017-09 (sin cambios de código desde entonces) y el mismo emulador, **sin tocar el Xiaomi**. Fotos de prueba generadas con Pillow (no se versionan y se borraron del emulador al acabar): `tallD` y `tallE` de **1000 × 2500 (1:2,5)**, y `shortB` de 1500 × 2000 (3:4), con una regla cada 5 % de su alto y un nombre grande en el centro. Con ellas, una tarea **nueva de 3 fotos** (D, B, E; «Subir imágenes» con el selector del sistema), que queda como tarea actual. **[Desviación del encargo]** Se usó 1:2,5 y no 1:2: en el emulador (1080 × 2400) el área de la foto es la pantalla entera (2400 px) y una foto 1:2 mide 2160 px a todo el ancho, así que **cabe** (probado: una 1:2 sale con franjas arriba y abajo y no hay nada que desplazar); la 1:2,5 mide 2700 px y se puede desplazar 300 px. Sigue siendo una proporción corriente (una captura larga de pantalla), no una foto extrema (Q-017-7). Las capturas se comparan **píxel a píxel** (`python3` con Pillow y numpy; se ignoran la barra de estado y la de gestos): «sin cambio» = 0,00 % de píxeles distintos (> 16 de 255), con el control de que el mismo gesto con el bloqueo **apagado** sí cambia la imagen.
+
+**Los gestos de dos y tres dedos sí se pueden conducir:** `adb emu event send` con el protocolo multitoque (`EV_ABS:ABS_MT_SLOT`, `ABS_MT_TRACKING_ID`, `ABS_MT_POSITION_X/Y` en 0..32767, `EV_KEY:BTN_TOUCH` y `EV_SYN:0:0` para cerrar cada informe; `SYN_REPORT` no vale como alias). Un pellizco son ~8 llamadas (bajar los dos dedos, seis pasos de separación, subir). Los puntos van en la **proporción de la pantalla girada** (en horizontal, x entre 0 y 2400 y y entre 0 y 1080 se escalan a 0..32767 cada uno; probado con el bloqueo apagado: con otra hipótesis no pasaba nada). Un dedo, con `adb shell input swipe` (el lápiz, el ratón, la rueda y el *trackpad* no se pueden simular así).
+
+### Con el bloqueo apagado (control)
+
+| Gesto | Resultado |
+|---|---|
+| Arrastre vertical de 400 px | La foto se desplaza (24 % de píxeles distintos) |
+| Pellizco (de 200 a 700 px, dedos puestos) | La foto se amplía (25 %); al soltar vuelve a lo de antes (0,00 %, DEV-43) |
+| Swipe horizontal / diagonal 400 × 150 | Cambia de foto (90 %) |
+| Horizontal: arrastre vertical y pellizco | Desplaza (26 %) y amplía (31 %) |
+| Arranque en frío + arrastre a 0,5, 0,7 y 0,9 s | La foto ya se desplaza (31 %) y el pellizco a 0,7 s también amplía (34 %) |
+
+### Con el bloqueo encendido (CA-017-05, 07, 08, 09, 10, 11, 12)
+
+Encendido con la propia pantalla de Ajustes (CA-017-02), estando la foto 1 **desplazada a mitad** (offset intermedio, colocado antes con un arrastre lento).
+
+- **[Hecho] CA-017-05 y 07:** al encender el bloqueo y volver de Ajustes la foto queda **exactamente igual** (0,00 %): ni tamaño ni desplazamiento cambian. Tras ir a la foto 2 y volver a la 1 por swipe conserva su desplazamiento (0,00 %); la foto 3, que no se había visto, empieza arriba (0 %) y el arrastre vertical no la mueve.
+- **[Hecho] CA-017-08 (un dedo y varios):** arrastre vertical rápido (300 ms) y lento (1,5 s), hacia arriba y hacia abajo; diagonal 200 × 300 y 180 × 130 (relación 1,38 < 1,5); toque sobre la foto; pellizco abriendo y cerrando con los dedos puestos; tres dedos hacia arriba; dos dedos hacia la izquierda: **0,00 % de cambio** en todos, durante el gesto y tras soltar. Dos dedos nunca cambian de foto.
+- **[Hecho] CA-017-09 (swipe):** swipe horizontal de 700 px (200 ms) y diagonal 400 × 150 (relación 2,67): cambian de foto (89 %), los puntos avanzan y el swipe de vuelta restaura la foto 1 sin diferencia. **[Pendiente]** swipe con lápiz y ratón (no se pueden simular con `adb`; casilla de la 022).
+- **[Hecho] CA-017-11 (primer fotograma):** arranque en frío + arrastre vertical a 0,5, 0,7 y 0,9 s: **0,00 %** de cambio y pellizco a 0,7 s: 0,00 % (con el bloqueo apagado, 31 % y 34 %). **Matiz:** el primer fotograma tocable llega a ~0,4 s en este emulador (p50 de T-017-09), así que el gesto más temprano probado (0,5 s) cae justo después; el «ya activo desde el primer fotograma» en sí lo prueba el test de widgets de T-017-04.
+- **[Hecho] CA-017-10 (giro):** en horizontal (`adb emu rotate`; las dos orientaciones horizontales) se ven solo la foto, al 100 % del ancho, y el logotipo (sin menú, botón, pie ni puntos); arrastre vertical, diagonal y pellizco (mapeo correcto) **0,00 %**, apagado sí desplazan y amplían; el swipe cambia de foto (99 %) y vuelve a la 1 sin diferencia; al volver a vertical se ve todo y la foto 1 está arriba como en el arranque (0,00 % frente al arranque en frío). La conservación exacta del desplazamiento al girar no se exige (CA-017-10).
+- **[Hecho] CL-017-6 (gesto de volver desde el borde):** con el bloqueo encendido y apagado el resultado es **el mismo**: un swipe que arranca a 3, 14 y 25 dp del borde (10, 40 y 70 px) lo recoge el sistema (sale al escritorio, la app no lo impide) y uno que arranca a **30 dp o más** (84, 100 y 140 px) **no** es el gesto de volver: es un swipe del carrusel (cambia de foto). Sin cambio con el bloqueo; el borde de 30 dp de CL-017-6 queda dentro del carrusel en este emulador (la zona del sistema mide ~25 dp).
+- **[Hecho] Tres botones** (`cmd overlay enable …navbar.threebutton`; la barra translúcida va sobre la foto): arrastre vertical, pellizco 0,00 %, swipe cambia de foto (90 %) y el botón Atrás sale al escritorio. Restaurado a gestos.
+- **[Hecho] CA-017-12:** al apagar el bloqueo (Ajustes) la foto vuelve a desplazarse y ampliarse (los controles de arriba) y el swipe sigue.
+
+### «Recientes» con Ajustes (CA-015-18, spec 011; `tools/check-recents.sh`, `RECENTS_WAIT=4`)
+
+Con el bloqueo **encendido**: `capture` con **Ajustes arriba** (la fila nueva a la vista) y con **la tarea con imagen y grupo**: tarjeta visible y **lisa, desviación 0,00** (máx. 2), parecido tarjeta/pantalla −0,003 y 0,007; `compare ajustes_on tarea_on`: tarjetas **idénticas** (0,00000 de píxeles distintos); `secure`: `not-secure`; `loop 5` y `record 5`: sin fallos (0 lisos que no sean blanco ni fotogramas perdidos; 1 a 3 blancos aceptados por vuelta). Con el bloqueo **apagado**: `capture ajustes_off` lisa (0,00) e **idéntica** a `ajustes_on`. **[Hecho]**. **[Pendiente]** «Recientes» en horizontal: el script no está calibrado (casilla ya abierta de la 016, T-016-20).
+
+### Casillas que quedan
+
+- **[Pendiente]** (022) Swipe con lápiz y ratón, rueda y *trackpad* reales (no se pueden simular con `adb`; los cubren los tests de widgets de T-017-04).
+- **[Pendiente]** (T-017-10b) TalkBack, teclado, 200 % con tres botones, reducir movimiento y la web de pruebas.
+- **[Hallazgo bajo]** La proporción 1:2 de CA-017-07 no es desplazable en una pantalla 1:2,22 (1080 × 2400) a todo el ancho: **cabe**. No es un fallo (el criterio es «una foto más alta que la pantalla»); T-017-10b usa las mismas fotos 1:2,5.
+
+### Ajustes del emulador
+
+Cambiados y **restaurados**: navegación de tres botones (`threebutton` activado y desactivado; modo de navegación 2 = gestos, como al empezar), giro automático (`accelerometer_rotation` 1, `user_rotation` 0, el sensor virtual de vuelta en vertical), densidad 420, escala de fuente 1,0 y animaciones 1. El interruptor «Bloquear zoom» queda **apagado**. La app real queda con la **tarea nueva de 3 fotos (D 1:2,5, B 3:4, E 1:2,5) como actual** (el grupo de 10 está debajo; «Todas mis tareas» = 2); las fotos de prueba se borraron del emulador.
