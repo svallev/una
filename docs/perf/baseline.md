@@ -255,3 +255,18 @@ Se repite al cerrar cada spec que toque el arranque (003, 007–009, 011, 012) y
 - **Hueco al cambiar de foto:** `adb exec-out screenrecord --output-format=raw-frames --size 360x800 --time-limit 14` (se corta con `pkill -INT screenrecord`) durante 12 swipes; se cuentan los fotogramas en que la zona de la foto enseña el color de la página. 214 fotogramas (~15 fps en el emulador), 181 con movimiento, **0** con fondo → hueco p90 < 1 fotograma (≈ 66 ms; objetivo ≤ 200 ms).
 - **Espacio por tarea** (`adb shell run-as <debug> du -sk files/attachments`): 10 fotos de 6,3 MB → **62 MB**; una foto de 19 MB → 14,5 MB (`full` en dos teselas + `screen`). `storedPhotoEstimate` = 16 MB se mantiene como cota; la regla de ≥ 12 MP del ADR-0024 **no** hace falta.
 - **Importar** 9 fotos de 19 MB: ~0,4 s por foto (la barra "Preparando foto i de n…" se ve a partir del tercer fotograma); 10 de 6 MB, menos de 6 s.
+
+## Bloquear zoom: arranque y memoria (spec 017, T-017-09, CA-017-11)
+
+- **Fecha:** 2026-10-09 · **Dispositivo:** emulador `Pixel_6a` (API 37, arm64, sin GPU; solo compara el ajuste apagado frente a encendido; **[Pendiente]** el Xiaomi, con permiso del propietario) · **Compilación:** `flutter build apk --release --split-per-abi --target-platform android-arm64` (29,0 MB), rama `feat/017-bloquear-zoom`.
+- **Método:** pasadas **alternadas** (apagado, encendido, …) de `tools/measure-cold-start.sh emulator-5554 20`, con calentamiento y 5 s de espera; el ajuste se cambia en la propia pantalla de Ajustes y se lee su estado antes de cada pasada. Una foto de 24 MP (4000 × 6000) y un grupo de 10. Memoria con `dumpsys meminfo` (TOTAL PSS) en reposo y recorriendo las fotos con gestos reales. Detalle en `specs/017-bloquear-zoom/dispositivo.md`.
+
+| Contenido | Bloqueo | p50 de las pasadas (ms) | Media |
+|---|---|---|---|
+| 1 foto | apagado | 440, 436 | 438 |
+| 1 foto | encendido | 430, 443 | 436,5 |
+| grupo de 10 | apagado | 426, 438, 432 | 432 |
+| grupo de 10 | encendido | 441, 444, 442 | 442,3 |
+
+- **[Hecho]** CA-017-11: p50 < 1 s con el ajuste encendido y sin empeorar: con una foto, −1,5 ms (deriva entre pasadas apagadas, 4 ms); con el grupo, +10 ms, dentro de la deriva del apagado (hasta 12 ms), con los mismos mínimos. La reserva del plan §4 (consulta única) no hace falta. Con 10 fotos se cumple CA-016-08 (grupo frente a una foto: −6 ms apagado, +6 ms encendido).
+- **[Hecho]** Memoria (TOTAL PSS): sin diferencia entre encendido y apagado (≤ 0,4 MB en reposo y en la mediana, dentro de la deriva): una foto 83,3-83,7 MB en reposo y pico 87,6-88,3; grupo 77,8-79,4 MB en reposo, mediana 80,2-80,5 y pico 100-106 (**+13 a +18 MB** sobre una foto; CA-016-23: ≤ +50 MB). La suposición de CA-017-11 («no cambia lo que se pinta ni su memoria») queda confirmada.
