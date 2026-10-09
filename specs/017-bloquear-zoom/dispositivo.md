@@ -89,9 +89,62 @@ Con el bloqueo **encendido**: `capture` con **Ajustes arriba** (la fila nueva a 
 ### Casillas que quedan
 
 - **[Pendiente]** (022) Swipe con lápiz y ratón, rueda y *trackpad* reales (no se pueden simular con `adb`; los cubren los tests de widgets de T-017-04).
-- **[Pendiente]** (T-017-10b) TalkBack, teclado, 200 % con tres botones, reducir movimiento y la web de pruebas.
+- **[Hecho]** (T-017-10b) TalkBack, teclado, 200 % con tres botones, reducir movimiento y la web de pruebas: ver la sección siguiente.
 - **[Hallazgo bajo]** La proporción 1:2 de CA-017-07 no es desplazable en una pantalla 1:2,22 (1080 × 2400) a todo el ancho: **cabe**. No es un fallo (el criterio es «una foto más alta que la pantalla»); T-017-10b usa las mismas fotos 1:2,5.
 
 ### Ajustes del emulador
 
 Cambiados y **restaurados**: navegación de tres botones (`threebutton` activado y desactivado; modo de navegación 2 = gestos, como al empezar), giro automático (`accelerometer_rotation` 1, `user_rotation` 0, el sensor virtual de vuelta en vertical), densidad 420, escala de fuente 1,0 y animaciones 1. El interruptor «Bloquear zoom» queda **apagado**. La app real queda con la **tarea nueva de 3 fotos (D 1:2,5, B 3:4, E 1:2,5) como actual** (el grupo de 10 está debajo; «Todas mis tareas» = 2); las fotos de prueba se borraron del emulador.
+
+## T-017-10b: TalkBack, teclado, 200 %, reducir movimiento y la web (2026-10-09)
+
+**Método.** Emulador `Pixel_6a` (API 37, `emulator-5554`, inglés). **No se usó el Xiaomi.** Sin cambios de código ni de la app desde T-017-10a. Capturas, vídeos y volcados, en el directorio temporal de la sesión (no se suben); el `integration_test` temporal y sus fotos de prueba (1:2,5, 3:4 y 1:2,5, generadas con Pillow) se borraron. Ajustes tocados y **restaurados** (comprobado al final): TalkBack (`settings delete` + `accessibility_enabled 0`), densidad 420, `font_scale` 1,0, escalas de animación 1, navegación por gestos, giro automático 1 y rotación 0; «Bloquear zoom» queda **apagado** y la app real, con su tarea de 3 fotos como actual.
+
+### TalkBack (CA-017-04, 14; HU-017-4)
+
+Un `integration_test` **temporal** (APK de depuración, base de datos vacía, repositorio de ajustes que falla a demanda con `Exception('texto-secreto')`, tarea de 3 fotos con texto) lleva la app real por los pasos con **acciones del árbol semántico** (no toques; TalkBack no hace caso de los de `adb`); un guion hace `screencap` al ver cada marca `UNA-STEP` (recuadro verde + panel de voz) y **cuenta las frases** con `GoogleTTSServiceImpl: Synthesis request` de logcat entre marcas (`adb shell log -t UNA-STEP`). Sin volcados de `uiautomator` dentro de las ventanas contadas (cada volcado hace que TalkBack vuelva a leer el foco: 3-5 frases de ruido).
+
+| Casilla | Resultado | |
+|---|---|---|
+| La fila (CA-017-14) | Foco del lector en la fila: el panel dice «Lock zoom, Images only: no zoom or scroll» (nombre primero, luego el subtítulo); en el volcado, un solo nodo `checkable` (un interruptor), sin icono suelto; el orden de Ajustes es título → Idioma → Pantalla siempre activa → **Bloquear zoom** → Información → tres webs → Cerrar | [Hecho] |
+| Estado una vez, sin eco (CA-017-14, CA-015-03) | Encender: «checked» (2 frases: el estado y la pista de la primera vez); apagar: «not checked» (1); volver a encender (con la pista ya dicha): 1. **Ningún anuncio propio de la app** | [Hecho] |
+| Fallo de guardado (CA-017-04) | Con el repositorio que falla el interruptor **no se mueve** y TalkBack dice **solo** «Couldn't save the setting.»: 1 frase al primer fallo y 1 al segundo igual (una por intento); **nunca «checked» y luego «not checked»**. El texto secreto no sale en pantalla | [Hecho] |
+| Un aviso por fila (CA-017-04, P-017-1) | Fallando también «Pantalla siempre activa»: dos avisos, cada uno bajo **su** fila, **1 frase** al aparecer el segundo; al guardar bien «Bloquear zoom» se quita **su** aviso y queda el de la otra fila; al guardar bien la otra se quita; el foco del lector se queda en la fila que se tocó | [Hecho] |
+| La tarea con el bloqueo se lee igual (CA-017-14) | Arranque en frío con TalkBack, la **misma app y la misma tarea** con el ajuste apagado y encendido (repetido 3 veces cada uno, cambiándolo en Ajustes con TalkBack apagado): volcado idéntico (`Current task: 3 photos. Photo 1 of 3`, `scrollable`, menú y botón de completar), **captura idéntica píxel a píxel** (0,00 %, también el panel de voz «Actions available, use Tap with 3 fingers to view») y 4-5 frases al abrir en los dos casos (la lectura inicial de TalkBack; la primera pasada con el bloqueo dio 3 y las demás 4-5). Sin anuncio nuevo al volver de Ajustes (0 frases) | [Hecho] |
+| «Desplazar adelante / atrás» con el bloqueo (CA-017-09) | Con el bloqueo encendido, la acción `scrollUp` («adelante») del nodo de la tarea **mueve la foto** (29,9 % de píxeles distintos) y `scrollDown` la deja como estaba (0,00 %); las acciones `scrollLeft`/`scrollRight` cambian de foto con **1 frase** cada una («Photo 2 of 3», «Photo 1 of 3»). Son las acciones del árbol semántico que enviaría TalkBack, **no su gesto real** | [Hecho] la acción; **[Pendiente]** 022 el gesto real de TalkBack |
+| Foco al cerrar Ajustes | Como en la 015 (aceptado): el recuadro va a «Task menu» y no queda foco perdido; el foco no se pierde al cambiar el ajuste | [Hecho] |
+
+### Teclado real (CA-017-09, 10, 14)
+
+Teclas de un dispositivo del emulador (`adb emu event text`: Tab y Intro) y, ya en modo teclado, `input keyevent` (Espacio, Escape, Av Pág, flechas); lectura con `uiautomator dump` y capturas.
+
+- **[Hecho] Ajustes:** el orden de Tab es Idioma → Pantalla siempre activa → **Bloquear zoom** → Política de privacidad (el encabezado «Información» no es una parada, como antes de la fila) → Licencias → Ayuda → Cerrar → Idioma…; **anillo de foco visible** (recuadro de tinta de 3 px sobre la fila entera, fondo gris); **Intro** enciende (`checked=true`, pomo a la derecha, el foco se queda en la fila) y **Espacio** apaga. **Escape** cierra Ajustes y el foco va al botón del menú.
+- **[Hecho] La tarea con el bloqueo encendido (vertical):** con el foco en la tarea, **Av Pág** desplaza la foto (30,8 %), **Re Pág** la deja como estaba (0,00 %), las **flechas derecha e izquierda** cambian de foto («Photo 2 of 3» y «Photo 1 of 3») y la foto 1 conserva su desplazamiento al volver (0,00 %). Con el foco en el botón del menú, la flecha mueve el foco, no la foto (como siempre).
+- **[Hecho] En horizontal** (`adb emu rotate`): dos Av Pág desplazan (26,8 % y 24,6 %), dos Re Pág la devuelven (24,6 % y 0,00 % frente al principio), las flechas cambian de foto (94,8 %) y vuelven (0,00 %), con el anillo de foco sobre la foto. Vuelto a vertical con tres giros más.
+
+### Texto al 200 % con tres botones (CA-017-15)
+
+`wm density 480` (360 dp), `font_scale 2.0` y `navbar.threebutton`, app reiniciada: con el bloqueo **encendido** la tarea se ve igual que antes (logotipo, menú, puntos y «Press to complete» sobre la foto; la barra translúcida va sobre la foto); el menú con «Settings» sobre la barra; Ajustes: «Keep screen on» y «Lock zoom» pasan a varias líneas **sin cortarse**, la fila crece, el interruptor y el pomo quedan dentro, y al desplazar hasta el final «Help» queda **sobre la barra**; con Tab el foco llega a «Lock zoom» y a las filas de abajo a la vista. **[Hecho]**
+
+### Reducir movimiento (CA-017-15, CA-017-09)
+
+Con `transition_animation_scale`, `animator_duration_scale` y `window_animation_scale` a 0 y la app reiniciada, vídeo de `screenrecord` a 540 × 1200 y recorte por fotograma: el pomo de «Bloquear zoom» **cambia en un fotograma** (2 fotogramas en total: el de antes y el de después; con las animaciones normales, ~10 fotogramas en ~150 ms); un swipe de 700 px sobre el grupo (con el bloqueo) cambia de foto en **un solo salto** tras soltar (fotogramas de arrastre, un salto y nada más; sin la transición de 0,28 s). **[Hecho]**
+
+### Web de pruebas en Chrome (CL-017-9)
+
+`flutter build web --release --no-web-resources-cdn` servido con `python3 -m http.server` y Chrome headless con CDP (script de Node propio, sin dependencias nuevas): se crea una tarea con las 3 fotos por «Subir imágenes» (selector interceptado con `DOM.setFileInputFiles`), se enciende «Bloquear zoom» **con la propia pantalla de Ajustes** (el DOM trae el `switch` con `aria-checked`) y se comparan capturas (500 × 828; se ignora la franja de arriba).
+
+| Gesto | Bloqueo apagado (control) | Bloqueo encendido |
+|---|---|---|
+| Rueda del ratón (±300) | La foto se desplaza (26 %) | **0,00 %** (y la vuelta) |
+| Arrastre táctil vertical y diagonal | Se desplaza (27 %) | **0,00 %** |
+| Arrastre con el ratón vertical | 0,00 % (el ratón no desplaza, como en Flutter) | 0,00 % |
+| Ctrl + rueda (pellizco de *trackpad* en Chrome) | 0,00 % (no se ve efecto) | 0,00 % |
+| Pellizco sintético (táctil y de ratón) | no se puede ver (suelta y vuelve, DEV-43) | 0,00 % |
+| Swipe horizontal con ratón y con dedo | Cambia de foto (90 %) | **Cambia de foto (90 %)** y vuelve |
+
+**[Hecho]** la rueda, el arrastre y el swipe; **[Suposición]** el pellizco y Ctrl + rueda: sin efecto visible incluso con el bloqueo apagado en este Chrome, así que esas dos filas no prueban nada por sí solas (las cubren los tests de widgets de T-017-04a: *trackpad*, rueda, ratón y lápiz).
+
+### Casillas que quedan para la 022
+
+- **[Pendiente]** (022) El gesto real de TalkBack para «desplazar adelante / atrás» y la voz (el panel de voz no enseña el idioma ni la voz); Switch Access (el barrido no se conduce con `adb`); control por voz; lupa del sistema; lápiz, ratón, rueda y *trackpad* reales.
