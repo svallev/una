@@ -44,7 +44,7 @@ Detalle: `specs/017-bloquear-zoom/dispositivo.md`.
 ## Definition of Done (`specs/constitution.md`)
 
 - [x] Criterios de aceptación cumplidos y con tests en verde (los de dispositivo, en la 022)
-- [ ] **CI en verde:** todavía no se ha ejecutado; en Linux **4 pruebas fallan** hasta que se suban los PNG de `settings_lockzoom_{es,en}_x{1.0,2.0}` (hay que poner la etiqueta `actualizar-goldens` en la PR, revisarlos a ojo y subirlos)
+- [ ] **CI en verde:** los 4 PNG de `settings_lockzoom_{es,en}_x{1.0,2.0}` se generaron en CI con la etiqueta `actualizar-goldens` (los otros 86 coinciden con los del repositorio), se revisaron a ojo y se subieron; falta que CI confirme el verde con ellos
 - [x] `format` y `analyze` limpios en local
 - [x] Textos nuevos en ES y EN; ninguno incrustado en el código
 - [x] Sin valores visuales sueltos (todo sale de los tokens; sin tokens nuevos)
