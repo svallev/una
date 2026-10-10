@@ -50,7 +50,7 @@ Detalle: `specs/017-bloquear-zoom/dispositivo.md`.
 - [x] Sin valores visuales sueltos (todo sale de los tokens; sin tokens nuevos)
 - [x] Accesibilidad: semántica, alternativas a gestos (sin excepción nueva a P6), contraste, texto grande, reducir movimiento. **Parcial:** el gesto real de TalkBack, Switch Access y control por voz quedan para la 022
 - [x] Documentación actualizada (spec, plan, glosario, arquitectura, seguridad, DEV-54)
-- [ ] **Rendimiento del arranque:** medido en el emulador (sin degradación); **el Xiaomi sin medir** (con permiso del propietario, en la 022)
+- [x] **Rendimiento del arranque:** medido en el emulador y en el Xiaomi (2026-10-10, perfil): p50 ≈ 370 ms con y sin bloqueo, sin degradación apreciable (una foto +3 ms, grupo +4 ms, dentro de la deriva); PSS sin diferencia
 - [x] Título de la PR en formato Conventional Commits
 
 ## Seguridad ([checklist](../../docs/security/checklist.md))
@@ -66,7 +66,8 @@ Detalle: `specs/017-bloquear-zoom/dispositivo.md`.
 
 - **[Pendiente, CI]** *Goldens* nuevos `settings_lockzoom_{es,en}_x{1.0,2.0}` (4 PNG): etiqueta `actualizar-goldens`, revisarlos a ojo frente al tablero 16 y subirlos. Los 4 PNG de Ajustes nivel 1 regenerados en T-017-05 siguen pasando.
 - **[Decidido por el propietario, 2026-10-10]** La rama lleva el commit `81c15aa` (`chore`: hook `SessionStart` de `.claude/` que instala el Flutter fijado en sesiones en la nube; solo corre con `CLAUDE_CODE_REMOTE=true`, comprueba el SHA-256 contra el manifiesto oficial y no toca la app). **Se queda en esta PR.**
-- **[Pendiente, 022]** Casillas de dispositivo (`docs/PLAN.md`, «Casillas de la 017»): lupa del sistema con el bloqueo (Android 8-11 y 12+, CA-017-13), gesto real de TalkBack para «desplazar adelante/atrás» y voz del idioma de la app, Switch Access y control por voz, lápiz, ratón, rueda y *trackpad* reales, giro con el bloqueo de rotación del sistema y en el móvil, gesto de volver en Android 10+, **arranque y memoria en el Xiaomi**, Android 8 y 12L con `check-recents.sh` (PD-10) y teclado físico en el móvil.
+- **[Pendiente, 022]** Casillas de dispositivo (`docs/PLAN.md`, «Casillas de la 017»): lupa del sistema con el bloqueo (Android 8-11 y 12+, CA-017-13), gesto real de TalkBack para «desplazar adelante/atrás» y voz del idioma de la app, Switch Access y control por voz, lápiz, ratón, rueda y *trackpad* reales, giro con el bloqueo de rotación del sistema y en el móvil, gesto de volver en Android 10+, Android 8 y 12L con `check-recents.sh` (PD-10) y teclado físico en el móvil.
+- **[Hallazgo de la 016, decisión del propietario]** Medido en el Xiaomi (2026-10-10, perfil): el pico de memoria del grupo de 10 fotos (≈ 391 MB, GPU incluida) supera en ≈ +166 MB al de una foto (≈ 222-225 MB); CA-016-23 pedía +50 MB, medido en el emulador sin GPU. Igual con el bloqueo encendido y apagado, no depende de esta PR (`dispositivo.md`, `docs/perf/baseline.md`).
 - **[Pendiente, 018/022]** Hallazgos bajos (mismo apartado de `PLAN.md`): la lupa con signo menos puede leerse como «alejar» (DEV-54, revisar con los iconos de la 018); las pruebas de dispositivo usan fotos 1:2,5 porque una 1:2 cabe en 1080 × 2400.
 - **[Aceptado por el propietario, sin código]** Tras girar, las acciones de lector «desplazar arriba/abajo» no se recalculan hasta que algo desplaza (igual con y sin el bloqueo; Av Pág / Re Pág sí funcionan); un trazo horizontal sobre un grupo puede cambiar de foto; los controles no se ocultan (CL-017-10); girar y volver puede mover la foto.
 

@@ -258,7 +258,7 @@ Se repite al cerrar cada spec que toque el arranque (003, 007–009, 011, 012) y
 
 ## Bloquear zoom: arranque y memoria (spec 017, T-017-09, CA-017-11)
 
-- **Fecha:** 2026-10-09 · **Dispositivo:** emulador `Pixel_6a` (API 37, arm64, sin GPU; solo compara el ajuste apagado frente a encendido; **[Pendiente]** el Xiaomi, con permiso del propietario) · **Compilación:** `flutter build apk --release --split-per-abi --target-platform android-arm64` (29,0 MB), rama `feat/017-bloquear-zoom`.
+- **Fecha:** 2026-10-09 · **Dispositivo:** emulador `Pixel_6a` (API 37, arm64, sin GPU; solo compara el ajuste apagado frente a encendido; **[Hecho el 2026-10-10]** el Xiaomi, abajo) · **Compilación:** `flutter build apk --release --split-per-abi --target-platform android-arm64` (29,0 MB), rama `feat/017-bloquear-zoom`.
 - **Método:** pasadas **alternadas** (apagado, encendido, …) de `tools/measure-cold-start.sh emulator-5554 20`, con calentamiento y 5 s de espera; el ajuste se cambia en la propia pantalla de Ajustes y se lee su estado antes de cada pasada. Una foto de 24 MP (4000 × 6000) y un grupo de 10. Memoria con `dumpsys meminfo` (TOTAL PSS) en reposo y recorriendo las fotos con gestos reales. Detalle en `specs/017-bloquear-zoom/dispositivo.md`.
 
 | Contenido | Bloqueo | p50 de las pasadas (ms) | Media |
@@ -270,3 +270,10 @@ Se repite al cerrar cada spec que toque el arranque (003, 007–009, 011, 012) y
 
 - **[Hecho]** CA-017-11: p50 < 1 s con el ajuste encendido y sin empeorar: con una foto, −1,5 ms (deriva entre pasadas apagadas, 4 ms); con el grupo, +10 ms, dentro de la deriva del apagado (hasta 12 ms), con los mismos mínimos. La reserva del plan §4 (consulta única) no hace falta. Con 10 fotos se cumple CA-016-08 (grupo frente a una foto: −6 ms apagado, +6 ms encendido).
 - **[Hecho]** Memoria (TOTAL PSS): sin diferencia entre encendido y apagado (≤ 0,4 MB en reposo y en la mediana, dentro de la deriva): una foto 83,3-83,7 MB en reposo y pico 87,6-88,3; grupo 77,8-79,4 MB en reposo, mediana 80,2-80,5 y pico 100-106 (**+13 a +18 MB** sobre una foto; CA-016-23: ≤ +50 MB). La suposición de CA-017-11 («no cambia lo que se pinta ni su memoria») queda confirmada.
+
+### Bloquear zoom en el Xiaomi (spec 017, 2026-10-10)
+
+- **Fecha:** 2026-10-10 · **Dispositivo:** Xiaomi 15T Pro (con GPU) · **Compilación:** perfil arm64 (`.profile` aparte, quitada después) · método y tablas en `specs/017-bloquear-zoom/dispositivo.md`.
+- **[Hecho]** Arranque en frío p50 ≈ 370 ms con y sin el bloqueo: una foto de 24 MP 373 ms (apagado) frente a 376 ms (encendido), grupo de 10 370 frente a 374 ms (8 pasadas de 20 arranques; deriva entre pasadas apagadas 6-8 ms). Grupo frente a una foto ≤ −2 ms (CA-016-08, límite +100 ms).
+- **[Hecho]** PSS sin diferencia entre encendido y apagado: grupo de 10 en reposo 239-250 MB, recorriendo 369-371 MB, pico 390,7-392,2 MB (399,5 en la primera pasada); una foto 212-238 MB en reposo, pico 219-240 MB (ruido entre pasadas hasta ~25 MB, más alto al principio).
+- **[Hallazgo, spec 016]** Pico del grupo ≈ +166 MB sobre una foto en el Xiaomi (CA-016-23 pedía +50 MB, medido en el emulador sin GPU): pendiente de decisión del propietario.

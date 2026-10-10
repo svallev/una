@@ -39,7 +39,7 @@ Verificación en el **emulador `Pixel_6a` (Android 16 / API 37, arm64, sin GPU, 
 
 - **[Hecho]** Sin diferencia entre encendido y apagado: ≤ 0,4 MB en reposo y en la mediana, dentro de la deriva entre dos pasadas del mismo estado (0,2-1,1 MB; el pico del grupo varía hasta 4 MB entre pasadas apagadas). **[Suposición] de CA-017-11 («el bloqueo no cambia lo que se pinta ni su memoria») → [Hecho]** en el emulador de API 37.
 - **[Hecho]** CA-016-23: el pico del grupo es **+13 a +18 MB** sobre el de una foto (100-106 frente a 88 MB; límite +50 MB), con el bloqueo apagado o encendido.
-- **[Pendiente]** repetir en el Xiaomi con el permiso del propietario (como en la 016); no hace falta para dar por buena la tarea.
+- **[Hecho el 2026-10-10]** repetido en el Xiaomi con el permiso del propietario (ver «Bloquear zoom en el Xiaomi», más abajo): sin diferencia.
 
 ### Lo que no se midió aquí
 
@@ -148,3 +148,22 @@ Con `transition_animation_scale`, `animator_duration_scale` y `window_animation_
 ### Casillas que quedan para la 022
 
 - **[Pendiente]** (022) El gesto real de TalkBack para «desplazar adelante / atrás» y la voz (el panel de voz no enseña el idioma ni la voz); Switch Access (el barrido no se conduce con `adb`); control por voz; lupa del sistema; lápiz, ratón, rueda y *trackpad* reales.
+
+## Bloquear zoom en el Xiaomi (spec 017, CA-017-11, CA-016-08, CA-016-23)
+
+- **Fecha:** 2026-10-10 · **Dispositivo:** Xiaomi 15T Pro (Android 16 / HyperOS, 120 Hz), con permiso del propietario · **Compilación:** `flutter build apk --profile --split-per-abi --target-platform android-arm64` (39,7 MB), instalada como app **`.profile` aparte** (la app real no se tocó) y desinstalada al acabar; fotos de prueba (10 JPEG de 4000 × 6000, ~4,9 MB) en `/sdcard/Pictures/una017`, borradas después. Sin capturas de pantalla (el árbol de accesibilidad bastó).
+- **Método:** como en el emulador: pasadas **alternadas** de 20 arranques en frío (`am start -W -S`, `TotalTime`; copia del script con el nombre completo de la actividad `invalid.pending.app.MainActivity`, porque con el sufijo `.profile` la ruta relativa no resuelve) y calentamiento de 5 s; el ajuste se cambia en la propia pantalla de Ajustes y su estado se lee (`checked`) antes de cada pasada. Memoria: `dumpsys meminfo` (TOTAL PSS, **incluye la GPU**), 5 lecturas en reposo y lectura continua mientras un guion da gestos reales con `input swipe` (una foto: arrastres verticales y diagonales, 25 rondas; grupo: 9 swipes hacia delante y 9 hacia atrás, 13 rondas).
+
+| Contenido | Bloqueo | p50 de las pasadas (ms) | Media |
+|---|---|---|---|
+| 1 foto de 24 MP | apagado | 376, 370 | 373 |
+| 1 foto de 24 MP | encendido | 375, 377 | 376 |
+| grupo de 10 | apagado | 368, 370, 375, 367 | 370 |
+| grupo de 10 | encendido | 372, 377, 377, 371 | 374,25 |
+
+- **[Hecho]** CA-017-11: p50 < 1 s (≈ 370 ms) con el ajuste encendido y sin empeorar de forma apreciable: con una foto **+3 ms** (deriva entre las dos pasadas apagadas, 6 ms); con el grupo **+4 ms (+1,1 %)**, dentro de la deriva entre pasadas apagadas (8 ms). Con el grupo, el signo del emulador (+10 ms) se repite pero aquí es la mitad y cabe en el ruido; la reserva del plan §4 (consulta única) **no hace falta**. **[Hecho]** CA-016-08: grupo frente a una foto −3 ms (apagado) y −2 ms (encendido), muy por debajo de +100 ms. Nota: es una compilación de perfil, no *release* (la línea base del Xiaomi de 198 ms es de una tarea con texto).
+- **[Hecho]** Memoria (TOTAL PSS, MB; reposo · mediana recorriendo · pico), pasadas en orden:
+  - **1 foto** encendido: 237,9 · 238,6 · 240,0 / 226,3 · 232,1 · 233,3 / 215,6 · 221,0 · 222,7 / 212,2 · 218,1 · 219,4; apagado: 215,8 · 221,8 · 223,1 / 218,4 · 223,8 · 225,0 / 216,9 · 222,7 · 223,9 / 213,7 · 218,9 · 221,1. Las primeras pasadas (justo tras los bucles de arranque) salen más altas y todas bajan con el tiempo; **no hay diferencia sistemática** entre encendido y apagado (un par sale +9 MB a favor del apagado y los dos siguientes, −1,3 y −1,5 MB), pero el ruido entre pasadas del mismo estado llega a ~25 MB: con esta deriva no se detectaría una diferencia menor de ~10 MB. **[Suposición]** que no la hay (la causa física no existe: el ajuste solo quita el desplazamiento).
+  - **Grupo de 10** encendido: 250,4 · 370,7 · 399,5 / 240,3 · 369,4 · 392,2; apagado: 239,3 · 370,8 · 391,9 / 242,5 · 369,2 · 390,7. **Sin diferencia** (medianas 369-371 MB, picos 390,7-392,2 MB; la primera pasada, de calentamiento, 399,5).
+- **[Hallazgo, no es de la 017]** CA-016-23 en el Xiaomi: el pico del grupo (**≈ 391 MB**) supera en **≈ +166 MB** al de una sola foto (≈ 222-225 MB), muy por encima del +50 MB de la spec 016 (que se midió en el emulador sin GPU y estaba marcado **[Suposición, se confirma al medir]**). Aquí el PSS incluye la GPU (Graphics ≈ 87 MB constantes en una foto) y solo se recorrió el grupo con swipes (sin pellizco, que con el bloqueo no existe). Es del carrusel de la 016, igual con el bloqueo encendido y apagado; **lo decide el propietario** (ADR-0024: tope menor de megapíxeles en los grupos, no inferior a 12 MP, o aceptar el valor). La app no se cerró y los 4 *goldens* de Ajustes no cambian.
+- **No medido:** hueco al cambiar de foto y espacio por tarea en el Xiaomi (casillas de la 016, siguen **[Pendiente]**), Android 8 y 12L (PD-10).
