@@ -109,3 +109,4 @@ Si descubres otra que servirá a tareas futuras (de una librería, del emulador,
 ## Lo que devuelves
 
 Un resumen breve en español para el coordinador, que solo lo necesita para decidir lo siguiente: la tarea, qué cambió (archivos clave), resultado real de format/analyze/tests (número de tests), qué se verificó en el emulador, el hash del commit y lo que queda pendiente o las preguntas para el propietario. Si algo falla o no se pudo verificar, dilo tal cual.
+- **Mutar imágenes de un icono (T-018-05):** `python3` (no `-I`) con Pillow 11 vale para crear mutaciones en el scratchpad (`ImageChops.offset`, `resize` + `crop`, `ImageDraw`): copia el original antes y restáuralo tras cada pasada. Un test de coherencia entre versiones se compara con la silueta del original en una rejilla que divida todos los lados (288, 192, 512, 1024, 32 → 32 × 32).

@@ -162,6 +162,15 @@ Resultados y casillas: `specs/017-bloquear-zoom/dispositivo.md`; medidas: `docs/
 - **Web de pruebas en Chrome (CL-017-9)** sin dependencias nuevas: `flutter build web --release --no-web-resources-cdn`, `python3 -m http.server` y Chrome headless con CDP (rueda, arrastre táctil y swipe; el pellizco y Ctrl + rueda no se ven ni con el bloqueo apagado: los cubren los tests de widgets).
 - ***Goldens* de la 017** (`test/goldens/settings_golden_test.dart`: `settings_lockzoom_{es,en}_x{1.0,2.0}` y los de Ajustes de la 015, que cambian al ganar una fila). **[Pendiente]** los 4 nuevos se revisaron a ojo en Linux frente al tablero 16 y **no se subieron** (en el Mac se omiten; en Linux un *golden* sin PNG falla con «non-existent file»): generarlos en CI con la etiqueta `actualizar-goldens`, descargarlos, revisarlos y subirlos en un commit.
 
+## Icono de la app (spec 018)
+
+Es un cambio de recursos, así que los tests miden **los archivos** (`test/icon/`, `test/tool/gen_icons_test.dart`); la apariencia con máscaras reales, iconos con tema y arranque se anota en `specs/018-iconos/dispositivo.md`. Geometría y cómo rehacerlo: `docs/design/app-icon.md`.
+
+- **Sin paquetes y sin el generador.** Los tests decodifican con `dart:ui` (`test/support/icon_image.dart`: IHDR a mano, `decodeRgba`, `measureFigure`, `colorCounts`) y **no** reutilizan `tool/png_lite.dart`, para que un fallo del generador no se esconda a sí mismo. `dart:ui` decodifica premultiplicado: los colores se comparan con alfa ≥ 128.
+- **Qué vigila cada archivo:** `android_adaptive_icon_test.dart` (56 % del círculo de 72 dp, centrada, ≤ 33 dp, colores de los tokens, `<monochrome>`, ≥ 432 px), `android_icon_packaging_test.dart` (manifiesto, sin `ic_launcher.png` de la plantilla —bytes frente a `test/fixtures/flutter_template_icons/`—, nombre desde la identidad, `debug`/`profile` sin recursos), `play_icon_test.dart`, `web_icons_test.dart` e **`icon_coherence_test.dart`** (las cuatro versiones: mismo ancho, caja centrada, mismos colores, dos piezas y silueta igual al original en una rejilla de 32 × 32).
+- **Guardas de CA-018-12 (comprobaciones, no tests):** `git diff main...HEAD -- app/lib app/pubspec.yaml app/pubspec.lock ':(glob)app/android/**/*.gradle*' ':(glob)app/android/**/*.kt'` vacío, y `tools/check-android-permissions.sh` en verde (desde `app/`, tras compilar). `dart run tool/gen_icons.dart --check` falla si un recurso generado no está al día.
+- **Mutaciones útiles:** desplazar el PNG de Play unos píxeles, escalar un icono de la web, añadir un cuadrado o un círculo de tinta, o apuntar `<monochrome>` a otro drawable: todas las detecta `icon_coherence_test.dart`.
+
 ## Pruebas en el móvil del propietario (lecciones aprendidas)
 
 - Las pruebas de integración se instalan como apps aparte: `invalid.pending.app.debug` (debug) e `invalid.pending.app.profile` (profile). Solo esas pueden borrar su base de datos (las pruebas lo comprueban).

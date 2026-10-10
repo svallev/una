@@ -49,5 +49,5 @@ Copiadas del almacén del artefacto el 2026-10-04 a `design/prototype/assets/ico
 |---|---|---|
 | `icon-1024.png` | `/_blob/22eba85446f52b2291880172985f3567` | Original 1024 × 1024, sin transparencia ("u." negra sobre `#FFE55C`); iOS, App Store y base de Play 512 |
 | `adaptive-foreground-432.png` | `/_blob/a67f79f0863b4add0c1517f9012b8898` | Primer plano del icono adaptable de Android (432 × 432 = 108 dp a ×4, con transparencia) |
-| `adaptive-monochrome-432.png` | `/_blob/79181d8889794ed9d3f99036dc082e9a` | Capa monocroma (icono "con tema", Android 13+); no la usa el tablero, pero es la fuente del monocromo |
+| `adaptive-monochrome-432.png` | `/_blob/79181d8889794ed9d3f99036dc082e9a` | Capa monocroma (icono "con tema", Android 13+); no la usa el tablero. **Spec 018: tampoco la usa la app**: difiere del primer plano en 22 píxeles de borde por 1/255 de alfa y CA-018-04 pide alfa idéntica, así que la capa con tema es el mismo recurso que el primer plano (P-018-2; `docs/design/app-icon.md`, §5). Queda aquí como referencia |
 | `themed-preview-432.png` | `/_blob/639256cebcacd4f5c372a3ec8a5f8c5d` | Vista previa del icono con tema (azul) que muestra el tablero |
