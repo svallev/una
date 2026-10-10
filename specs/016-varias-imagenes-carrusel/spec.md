@@ -161,6 +161,7 @@ Que un horario, un mapa o unos pasos fotografiados en **varias fotos** (hasta 10
   - **Dado** una tarea con 10 fotos de 24 MP
   - **Cuando** se recorren todas varias veces, en vertical y en horizontal, con pellizco y desplazamiento
   - **Entonces** la app **no se cierra** y el pico de memoria no supera en más de **50 MB [Suposición, se confirma al medir]** al de una tarea con una sola foto; cambiar de foto no deja ver un hueco más de **200 ms** (p90). El espacio que ocupa se mide y se registra (CA-016-14). Regenerar miniaturas o versiones de pantalla que falten se hace **de una en una**, solo para la foto a la vista y las contiguas, y un fallo de decodificación nunca cierra la app.
+  - **Enmienda (propietario, 2026-10-10; ADR-0024):** medido en el Xiaomi, el pico con 10 fotos es ≈ +166 MB sobre una foto (PSS con GPU; el +50 MB era una **[Suposición]** medida en el emulador sin GPU). **Se acepta**: no se fija ningún tope menor de megapíxeles.
 
 - **CA-016-24 Seguridad de la importación en grupo y sin sorpresas (P5, T-3, T-7, T-8, T-13)**
   - **Dado** la importación de un grupo
