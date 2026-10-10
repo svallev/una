@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono adaptable (spec 018). Sin sufijo -v26: minSdk = 26. El fondo y el primer plano salen de
+     tool/gen_icons.dart (design/prototype/assets/icon/ y tokens). La capa con tema (Android 13+)
+     es el mismo dibujo que el primer plano: la «u.» es tinta maciza y el sistema solo usa su alfa
+     (P-018-2, CA-018-04). -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+    <monochrome android:drawable="@drawable/ic_launcher_foreground"/>
+</adaptive-icon>
