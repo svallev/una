@@ -1,8 +1,8 @@
 # Tareas — Spec 017: Bloquear zoom
 
-- **Estado:** **Aprobadas** (propietario, 2026-10-07), junto con `plan.md`. **Hechas T-017-01 a 12 (2026-10-09): spec y plan Implementada parcialmente; PR sin abrir.**
+- **Estado:** **Aprobadas** (propietario, 2026-10-07), junto con `plan.md`. **Hechas T-017-01 a 12 (2026-10-09): spec y plan Implementada parcialmente; fusionada en `main` el 2026-10-10 (PR svallev/una#43, squash `688ab27`).**
 
-**Siguiente:** ninguna tarea de código. Abrir la PR de la 017 cuando lo confirme el propietario (`pr-description.md`; antes, decidir si el commit `chore` 81c15aa va en ella; en la PR, etiqueta `actualizar-goldens` para los 4 PNG `settings_lockzoom_*`). Después, la 018 (iconos): sesión 1 del flujo SDD. <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** ninguna tarea de código; la 017 está fusionada (PR svallev/una#43; el commit `chore` 81c15aa del hook de la nube fue en ella y los 4 PNG `settings_lockzoom_*` se generaron en CI). La 018 (iconos): sesión 1 del flujo SDD. <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 **Traspaso a local (2026-10-09; el propietario sigue en su máquina, ya no en la nube). Actualización de T-017-11: hechas T-017-09, 10a, 10b y 11; solo queda T-017-12 (cierre).** la rama `feat/017-bloquear-zoom` está subida y al día con `main` (incluye el bump de `drift_dev` 2.35.1, PR #42: haz `git pull` y `flutter pub get` en `app/`). T-017-01 a 08b están hechas; `flutter test` local da 2935 en verde y 4 en rojo, que son los *goldens* `settings_lockzoom_{es,en}_x{1.0,2.0}` sin PNG (**[Pendiente]** generarlos en CI con la etiqueta `actualizar-goldens`; en el Mac se omiten por no ser Linux). **Qué queda, en orden:** T-017-09, 10a y 10b (emulador de API 37 y `adb`; el `integration_test/settings_flow_test.dart` de T-017-08b compila pero **no se ha ejecutado**: córrelo ahí), T-017-11 (documentación) y T-017-12 (cierre). Con Flutter local: sin prefijo `fvm` si no está instalado (versión de `.fvmrc`, 3.47.5); el `export PATH=/opt/flutter-3.47.5/...` de los encargos de la nube **no aplica**. Arranca con `/spec-implement 017` (empieza por T-017-09). **Decisión ya tomada:** el hallazgo de T-017-07 (las acciones «desplazar arriba/abajo» no se recalculan tras girar) se acepta sin código (`docs/PLAN.md`, «Casillas de la 017»); La spec ya está enmendada (CA-017-10 y la nota de orientación): en horizontal no se exigen esas acciones de lector. T-017-10b no debe esperar que esas acciones aparezcan tras girar.
 
@@ -30,7 +30,7 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 ## Cierre
 
 - [x] Todos los CA de la spec tienen test en verde (los de dispositivo: casilla en la 022; faltan en CI los 4 PNG de *goldens*). Tabla CA → prueba en `spec.md` §13.
-- [ ] Definition of Done (`specs/constitution.md`) completa: **no** hasta que CI esté en verde (4 *goldens* sin PNG) y — (el arranque se midió en el Xiaomi el 2026-10-10: sin degradación); el resto, cumplido (`pr-description.md`).
+- [x] Definition of Done (`specs/constitution.md`) completa en lo que cabe en esta spec: CI en verde con los 4 *goldens* subidos y arranque medido en el Xiaomi el 2026-10-10 (sin degradación); lo de dispositivo que queda va a la 022 (**Implementada parcialmente**; `pr-description.md`).
 - [x] Spec marcada como **Implementada parcialmente** (con sus casillas de la 022, `docs/PLAN.md`, «Casillas de la 017»).
 
 ## Estado
