@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-10), junto con `plan.md`. Spec **Aprobada** (2026-10-10).
 
-**Siguiente:** T-018-02 (rama `feat/018-iconos`). <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-018-03 (rama `feat/018-iconos`). <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Una PR puede agrupar varias tareas consecutivas. Tests primero: en T-018-03 y 04 los tests se escriben antes y fallan por la razón esperada (no existen los recursos).
 
@@ -30,3 +30,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 | Tareas | Estado | Commit |
 |---|---|---|
 | T-018-01 | Hecha. 10 fixtures de `HEAD` (`cmp` igual) en `test/fixtures/flutter_template_icons/` (`android-<densidad>`, `web-favicon`, `web-icon-*`, `web-maskable-*`) y `test/support/icon_image.dart` (IHDR, `decodeRgba` con `dart:ui`, `measureFigure`, `colorCounts`, `deviationFromBlend`, `readIconTokens`). 15 tests en verde sobre las fuentes del tablero (x 135–296, y 164–267; 1024: 56,05 %, esquina 33,3 %; primer plano: esquina a 23,9–24,1 dp); `analyze` limpio, suite completa 2876 en verde. Nota: `dart:ui` decodifica premultiplicado (colores con alfa < 64 no sirven para comparar); la distancia máxima usa la esquina exterior del píxel. | ver `git log` (`feat(018): template icon fixtures…`) |
+| T-018-02 | Hecha. `app/tool/png_lite.dart` (decodifica RGB/RGBA de 8 bits sin entrelazar con los 5 filtros y CRC, reduce por promedio de áreas ponderado por alfa, codifica RGBA) y `app/tool/gen_icons.dart [android\|play\|web] [--check] [--out <app>] [--source <repo>]` (`runGenIcons` testeable; sin objetivos = los tres; no ejecutado sobre el árbol). 20 tests en verde (`test/tool/gen_icons_test.dart`: ida y vuelta, igual que `dart:ui` sobre los PNG del tablero, filtro 3, reducción exacta, salida RGBA/dimensiones, `--check`, solo imports `dart:`); 7 mutaciones detectadas; suite 2896 en verde, `analyze` limpio, `pubspec.*` sin cambios. `--check` compara los PNG recodificados por píxeles (zlib varía entre versiones). Los tests se escribieron junto al código, no antes (fallo de proceso, sin consecuencias). | ver `git log` (`feat(018): dependency-free icon generator…`) |
