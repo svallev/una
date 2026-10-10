@@ -581,6 +581,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsKeepAwakeHint => 'Imágenes, documentos y web';
 
   @override
+  String get settingsLockZoom => 'Bloquear zoom';
+
+  @override
+  String get settingsLockZoomHint => 'Solo imágenes: sin zoom ni scroll';
+
+  @override
   String get settingsInfo => 'Información';
 
   @override

@@ -274,6 +274,14 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
       _settings[SettingKeys.keepScreenOn] = encodeFlag(value);
 
   @override
+  Future<bool> lockZoom() async =>
+      decodeLockZoom(_settings[SettingKeys.lockZoom]);
+
+  @override
+  Future<void> setLockZoom(bool value) async =>
+      _settings[SettingKeys.lockZoom] = encodeFlag(value);
+
+  @override
   Future<LocaleChoice> locale() async =>
       decodeLocaleChoice(_settings[SettingKeys.locale]);
 

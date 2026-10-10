@@ -93,6 +93,12 @@ abstract interface class SettingsRepository {
   Future<bool> keepScreenOn();
   Future<void> setKeepScreenOn(bool value);
 
+  /// "Bloquear zoom" (CA-017-03): **apagado por defecto**. Solo es `true` si el
+  /// valor guardado es exactamente el texto `true`; cualquier otra cosa (también
+  /// un valor ilegible de una copia restaurada, CL-017-8) da `false` sin lanzar.
+  Future<bool> lockZoom();
+  Future<void> setLockZoom(bool value);
+
   /// Idioma elegido en Ajustes (CA-015-06, ADR-0023). Por defecto, "Como el
   /// sistema"; un valor que no sea exactamente `system|es|en` también lo da
   /// (CA-015-26).

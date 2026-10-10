@@ -28,12 +28,16 @@ Future<void> openSettings(BuildContext context) =>
 /// **Idioma** · separador · **Pantalla siempre activa** (con su aviso de
 /// guardado) · separador · **Información** (encabezado), Política de privacidad
 /// y Licencias de terceros · **Ayuda** (con el aviso de enlace). Sin
-/// Notificaciones ni Bloquear zoom: llegan con las specs 019 y 017 y la
-/// estructura de bloques las admite (CA-015-01c).
+/// Notificaciones: llega con la spec 019 y la estructura de bloques la admite
+/// (CA-015-01c).
 ///
-/// Las tres filas de web usan la misma función, [openExternalPage]; los avisos
-/// son regiones vivas ([LiveNotice]) y se quitan con la siguiente acción con
-/// éxito sobre cualquier control o al salir del nivel (CA-015-12).
+/// Las tres filas de web usan la misma función, [openExternalPage]. Los avisos
+/// son regiones vivas ([LiveNotice]): **uno por interruptor** (spec 017,
+/// CA-017-04), cada uno bajo su fila, y el de enlace tras Ayuda. El de cada
+/// interruptor se quita cuando esa fila se guarda bien, al salir del nivel o al
+/// abrir una web con éxito; el guardado con éxito de la otra fila **no** lo
+/// quita (P-017-1, ajusta CA-015-12 solo en ese punto). El de enlace se quita
+/// con cualquier acción con éxito (CA-015-12).
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.links = const SettingsLinks()});
 
@@ -56,7 +60,7 @@ class _RowFocus {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late final ExternalPageSession _session = ExternalPageSession(
-    onActionSucceeded: _clearSaveNotice,
+    onActionSucceeded: _clearSaveNotices,
   );
 
   final _language = _RowFocus('language');
@@ -64,10 +68,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _licenses = _RowFocus('licenses');
   final _help = _RowFocus('help');
 
-  /// "No se pudo guardar el ajuste." bajo el interruptor (CA-015-25) y el
-  /// número del intento fallido (clave de `LiveNotice`).
-  bool _saveFailed = false;
-  int _saveAttempt = 0;
+  /// "No se pudo guardar el ajuste." bajo cada interruptor (CA-015-25,
+  /// CA-017-04): el número del intento fallido de cada fila, o `null` si no hay
+  /// aviso. El número es la clave de `LiveNotice` y sale de **un único
+  /// contador** ([_noticeSeq]): los dos avisos son hermanos en la misma columna
+  /// y, con un contador por fila, dos primeros fallos repetirían la clave.
+  int? _keepAwakeNotice;
+  int? _lockZoomNotice;
+  int _noticeSeq = 0;
 
   /// La página de Idioma se está abriendo: otro toque no hace nada (CL-015-1).
   bool _openingLanguage = false;
@@ -82,28 +90,52 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
-  void _clearSaveNotice() {
-    if (_saveFailed && mounted) setState(() => _saveFailed = false);
+  /// Quita los dos avisos de guardado (al salir del nivel o al abrir una web
+  /// con éxito).
+  void _clearSaveNotices() {
+    if (!mounted || (_keepAwakeNotice == null && _lockZoomNotice == null)) {
+      return;
+    }
+    setState(() {
+      _keepAwakeNotice = null;
+      _lockZoomNotice = null;
+    });
   }
 
   /// Cambia "Pantalla siempre activa": guarda primero y el interruptor se mueve
   /// solo si se guardó (CA-015-03). Un fallo da el aviso, sin mover el foco.
-  Future<void> _toggleKeepAwake() async {
-    final controller = ref.read(settingsProvider.notifier);
-    final result = await controller.setKeepScreenOn(
-      !ref.read(settingsProvider).keepScreenOn,
+  Future<void> _toggleKeepAwake() => _toggle(
+    save: (controller, settings) =>
+        controller.setKeepScreenOn(!settings.keepScreenOn),
+    notice: (attempt) => _keepAwakeNotice = attempt,
+  );
+
+  /// Cambia "Bloquear zoom" (spec 017), con las mismas reglas.
+  Future<void> _toggleLockZoom() => _toggle(
+    save: (controller, settings) => controller.setLockZoom(!settings.lockZoom),
+    notice: (attempt) => _lockZoomNotice = attempt,
+  );
+
+  /// El guardado de un interruptor. Si sale bien, quita el aviso de **esa** fila
+  /// (y el de enlace) pero no el de la otra (P-017-1); si falla, lo pone con un
+  /// intento nuevo; si se ignoró (ya se guardaba esa fila), no hace nada.
+  Future<void> _toggle({
+    required Future<SaveResult> Function(SettingsController, AppSettings) save,
+    required void Function(int? attempt) notice,
+  }) async {
+    final result = await save(
+      ref.read(settingsProvider.notifier),
+      ref.read(settingsProvider),
     );
     if (!mounted) return;
     switch (result) {
       case SaveResult.saved:
-        _session.clearNotice();
+        setState(() => notice(null));
+        _session.clearLinkNotice();
       case SaveResult.failed:
-        setState(() {
-          _saveFailed = true;
-          _saveAttempt++;
-        });
+        setState(() => notice(++_noticeSeq));
       case SaveResult.unchanged:
-        // Otro guardado en curso: este toque se ignoró.
+        // Otro guardado de esta fila en curso: este toque se ignoró.
         break;
     }
   }
@@ -112,8 +144,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (_openingLanguage) return;
     _openingLanguage = true;
     // Al salir del nivel, los avisos ya no valen (CA-015-12).
-    _clearSaveNotice();
-    _session.clearNotice();
+    _session.clearNotice(); // Quita los avisos de guardado y el de enlace.
     try {
       await openLanguagePage(
         context,
@@ -167,6 +198,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       left: UnaSpace.xs,
       right: UnaSpace.xs,
     );
+    // El de "Pantalla siempre activa" queda justo sobre la línea de 1 px de la
+    // fila siguiente: un respiro debajo para que no la toque.
+    final saveNoticePadding = noticePadding.copyWith(bottom: UnaSpace.s);
     return SettingsPage(
       title: l10n.settingsTitle,
       root: true,
@@ -191,8 +225,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
             const _BlockSeparator(),
-            // Bloque 2: Pantalla siempre activa (Bloquear zoom irá debajo,
-            // spec 017).
+            // Bloque 2: Pantalla siempre activa y Bloquear zoom (spec 017), cada
+            // una con su aviso de guardado justo debajo. Los avisos son huecos
+            // siempre presentes del mismo tipo ([_SaveNoticeSlot]): ni un `if`
+            // ni un hueco `SizedBox` bastan, porque al pasar de `LiveNotice`
+            // (con clave) a otro tipo, Flutter no casa la fila sin clave de en
+            // medio y la recrea con el foco encima (se perdería el anillo y el
+            // nodo del lector).
             _Block(
               children: [
                 UnaSwitchRow(
@@ -202,12 +241,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   value: settings.keepScreenOn,
                   onToggle: () => unawaited(_toggleKeepAwake()),
                 ),
-                if (_saveFailed)
-                  LiveNotice(
-                    text: l10n.settingsSaveError,
-                    attempt: _saveAttempt,
-                    padding: noticePadding,
-                  ),
+                _SaveNoticeSlot(
+                  attempt: _keepAwakeNotice,
+                  padding: saveNoticePadding,
+                ),
+                UnaSwitchRow(
+                  icon: UnaIcons.magnifierMinus,
+                  label: l10n.settingsLockZoom,
+                  subtitle: l10n.settingsLockZoomHint,
+                  value: settings.lockZoom,
+                  divider: true,
+                  onToggle: () => unawaited(_toggleLockZoom()),
+                ),
+                _SaveNoticeSlot(
+                  attempt: _lockZoomNotice,
+                  padding: saveNoticePadding,
+                ),
               ],
             ),
             const _BlockSeparator(),
@@ -261,6 +310,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// El hueco del aviso de guardado de una fila: [LiveNotice] si hay intento
+/// fallido ([attempt], la clave del aviso) o nada. Es siempre el mismo tipo de
+/// widget: así la fila de interruptor que queda debajo conserva su `State` y su
+/// foco cuando el aviso de arriba (o los dos) se quita.
+class _SaveNoticeSlot extends StatelessWidget {
+  const _SaveNoticeSlot({required this.attempt, required this.padding});
+
+  final int? attempt;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final attempt = this.attempt;
+    if (attempt == null) return const SizedBox.shrink();
+    return LiveNotice(
+      text: AppLocalizations.of(context).settingsSaveError,
+      attempt: attempt,
+      padding: padding,
     );
   }
 }

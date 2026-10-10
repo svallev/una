@@ -21,7 +21,9 @@ import 'package:path_provider/path_provider.dart';
 /// Ajustes de punta a punta en el dispositivo (spec 015, T-015-13): el idioma
 /// elegido y la pantalla siempre activa se guardan y, tras un rearranque (el
 /// proceso nuevo lee los ajustes antes del primer fotograma), la primera
-/// pantalla ya sale en ese idioma (CA-015-08, CA-015-09, CA-015-04).
+/// pantalla ya sale en ese idioma (CA-015-08, CA-015-09, CA-015-04). La spec 017
+/// añade "Bloquear zoom": se enciende, se guarda y sobrevive a un rearranque
+/// (CA-017-03, CA-017-11).
 
 Future<void> _wipeDatabase() async {
   final dir = await getApplicationDocumentsDirectory();
@@ -202,6 +204,58 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(_container(tester).read(settingsProvider).keepScreenOn, isFalse);
+      await _closeAll(tester);
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
+    'CA-017-03/11: "Bloquear zoom" se enciende, se guarda sin tocar los demás '
+    'ajustes y sobrevive a un rearranque',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _firstTask(tester);
+      expect(_container(tester).read(settingsProvider).lockZoom, isFalse);
+
+      await _openSettings(tester);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SettingsScreen),
+          matching: find.text(_l10n(tester).settingsLockZoom),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(_container(tester).read(settingsProvider).lockZoom, isTrue);
+      final repo = _container(
+        tester,
+      ).read(taskRepositoryProvider) as DriftTaskRepository;
+      expect(await repo.lockZoom(), isTrue);
+      // Cada ajuste tiene su clave: los otros no se tocan.
+      expect(await repo.keepScreenOn(), isFalse);
+      expect(await repo.locale(), LocaleChoice.system);
+
+      // Rearranque: el proceso nuevo lee el valor antes del primer fotograma.
+      await _restart(tester);
+      expect(find.byType(CurrentTaskScreen), findsOneWidget);
+      expect(_container(tester).read(settingsProvider).lockZoom, isTrue);
+      expect(_container(tester).read(settingsProvider).keepScreenOn, isFalse);
+
+      // Se apaga otra vez, se guarda y sobrevive a otro rearranque.
+      await _openSettings(tester);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SettingsScreen),
+          matching: find.text(_l10n(tester).settingsLockZoom),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(_container(tester).read(settingsProvider).lockZoom, isFalse);
+      final repo2 = _container(
+        tester,
+      ).read(taskRepositoryProvider) as DriftTaskRepository;
+      expect(await repo2.lockZoom(), isFalse);
+      await _restart(tester);
+      expect(_container(tester).read(settingsProvider).lockZoom, isFalse);
       await _closeAll(tester);
       semantics.dispose();
     },

@@ -1058,6 +1058,18 @@ abstract class AppLocalizations {
   /// **'Imágenes, documentos y web'**
   String get settingsKeepAwakeHint;
 
+  /// Nombre del interruptor que bloquea el zoom y el scroll de la foto de la tarea; el lector lo dice primero. CA-017-01, CA-017-17
+  ///
+  /// In es, this message translates to:
+  /// **'Bloquear zoom'**
+  String get settingsLockZoom;
+
+  /// Subtítulo del interruptor Bloquear zoom; se lee junto al nombre. CA-017-01, CA-017-17
+  ///
+  /// In es, this message translates to:
+  /// **'Solo imágenes: sin zoom ni scroll'**
+  String get settingsLockZoomHint;
+
   /// Encabezado del bloque 3 de Ajustes (no se puede pulsar). CA-015-01b
   ///
   /// In es, this message translates to:

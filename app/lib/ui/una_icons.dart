@@ -80,6 +80,13 @@ abstract final class UnaIcons {
   /// Móvil: "Pantalla siempre activa".
   static const phone = UnaIconData(['M7 2h10v20H7z', 'M11 18h2']);
 
+  /// Lupa con un signo menos: "Bloquear zoom" (spec 017, tablero 16).
+  static const magnifierMinus = UnaIconData([
+    'M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0',
+    'M15 15l6 6',
+    'M7 10h6',
+  ]);
+
   /// Círculo con una "i": encabezado "Información".
   static const info = UnaIconData([
     'M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0',

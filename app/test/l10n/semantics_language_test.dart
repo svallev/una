@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' show Tristate;
 
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
@@ -987,6 +988,47 @@ void main() {
         handle.dispose();
       },
     );
+
+    // Spec 017 (CA-017-01, 15): la fila "Bloquear zoom" lleva el idioma de la
+    // app en el nombre y en el subtítulo, apagada y encendida, aunque el
+    // sistema esté en el otro.
+    for (final on in [false, true]) {
+      testWidgets('CA-015-11 / CA-017-01 (app $app, sistema $system, bloqueo '
+          '${on ? 'encendido' : 'apagado'}): la fila "Bloquear zoom" lleva '
+          '"$app" en el nombre y el subtítulo', (tester) async {
+        final handle = tester.ensureSemantics();
+        final repo = InMemoryTaskRepository();
+        await repo.setLocale(choice);
+        await repo.setLockZoom(on);
+        await pumpUnaApp(
+          tester,
+          repo: repo,
+          locale: Locale(system),
+          tasks: _neutral,
+          screenReader: true,
+          overrides: [linkOpenerProvider.overrideWithValue(_Opener())],
+        );
+        await _openMenu(tester, l10n);
+        await tester.tap(find.text(l10n.menuSettings));
+        await tester.pumpAndSettle();
+        await tester.pump(UnaMotion.sheetOut);
+        expect(find.byType(SettingsScreen), findsOneWidget);
+
+        final row = semanticsLabelled(
+          tester,
+          '${l10n.settingsLockZoom}, ${l10n.settingsLockZoomHint}',
+        );
+        expect(
+          row.flagsCollection.isToggled,
+          on ? Tristate.isTrue : Tristate.isFalse,
+        );
+        expect(localeOfName(row, l10n.settingsLockZoom)?.languageCode, app);
+        expect(localeOfName(row, l10n.settingsLockZoomHint)?.languageCode, app);
+        expect(localeMarksOutsideApp(tester, app), isEmpty);
+        expectNoL10nLeaks(tester, languageCode: app);
+        handle.dispose();
+      });
+    }
   }
 }
 

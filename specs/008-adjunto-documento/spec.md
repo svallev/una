@@ -112,6 +112,7 @@ Es una primera versión: **solo PDF**. Word, Excel, PowerPoint, texto y el resto
   - ~~"Volver a vertical" (≥ 48 dp, con fondo propio para verse sobre cualquier imagen o página) pone la app en vertical aunque el móvil siga en horizontal. Vuelve a girar sola la próxima vez que el móvil pase por vertical y luego a horizontal.~~
   - **Enmienda del propietario (2026-09-28):** sin "Volver a vertical", ni con imagen ni con PDF. La app vuelve a vertical solo cuando el móvil se pone en vertical.
   - Al volver a vertical se conservan la posición y, en el PDF, el zoom.
+  - *Enmienda (spec 017, implementada; en vigor):* con **Bloquear zoom** encendido, la **imagen** en horizontal no tiene pellizco ni desplazamiento por contacto (CA-017-10); el **PDF** no cambia: conserva su zoom y su desplazamiento (CA-017-06, CA-008-10).
   - En horizontal se sigue pudiendo completar o eliminar con las acciones del lector (CA-003-07, CA-004-10), que lleva el adjunto (CA-008-20).
   - **No gira** con "Adjunto no disponible" (CA-008-18, CA-007-19).
   - Si se completa o se elimina en horizontal y la siguiente tarea no tiene PDF ni imagen, la app vuelve a vertical.

@@ -96,12 +96,14 @@ Que un horario, un mapa o unos pasos fotografiados queden **a la vista nada más
     - tocarla no hace nada: no hay visor ni botón "Cerrar";
     - completar y el menú siguen como en cualquier tarea.
   - *Enmienda (spec 016, implementada; en vigor):* cada foto del carrusel se ve entera a lo ancho y se desplaza solo en vertical (CA-016-10).
+  - *Enmienda (spec 017, implementada; en vigor):* con **Bloquear zoom** encendido (Ajustes; apagado por defecto) la imagen sigue al 100 % del ancho y **no se desplaza por contacto** (arrastre, rueda ni *trackpad*, con dedo, lápiz o ratón): se queda con el desplazamiento que tenía y no vuelve arriba. Las órdenes deliberadas (acciones de desplazamiento del lector y del switch, Av Pág / Re Pág) siguen (CA-017-07 a 09; ADR-0022, enmienda 1).
 - **CA-007-10 Zoom de vistazo con el pellizco (DEV-43; propietario, 2026-09-27)**
   - **Dado** la tarea actual con imagen, en vertical o en horizontal
   - **Cuando** pellizca la imagen
   - **Entonces** la imagen se amplía ahí mismo, hasta ×8, siguiendo a los dedos (sin desplazarse mientras hay dos dedos), y **al soltar vuelve al 100 %**: con una animación corta, o al instante con reducir movimiento.
   - No hay zoom que se quede puesto ni acciones de zoom: para ampliar sin gestos, la lupa del sistema (excepción a P6, ADR-0013).
   - *Enmienda (spec 016, implementada; en vigor):* el pellizco de cada foto del carrusel es este (CA-016-10); ADR-0022 amplía la excepción de P6.
+  - *Enmienda (spec 017, implementada; en vigor):* con **Bloquear zoom** encendido **no hay pellizco**: la imagen no se amplía ni un instante y no hay animación de vuelta (CA-017-08). La excepción a P6 de este criterio **no se amplía** y la vía para ampliar sigue siendo la lupa del sistema, que el bloqueo no toca (CA-017-13; ADR-0013).
 - **CA-007-11 Solo gira la tarea actual con imagen (D10 enmendada; DEV-42)**
   - **Dado** la tarea actual con imagen a la vista (sin el menú, el editor ni el listado encima)
   - **Cuando** gira el móvil a horizontal
@@ -275,7 +277,9 @@ Los errores de importación aparecen como aviso sobre el editor (se anuncian sol
 
 - Lectura, foco y anuncios: CA-007-21 y CA-007-22. La miniatura del listado es decorativa. *Enmienda (spec 016, implementada; en vigor):* con un grupo, CA-016-20 y 21; en horizontal con un grupo sí hay un punto de foco (CA-016-12).
 - **Excepción a P6 (propietario, 2026-09-27, ADR-0013):** el pellizco de la tarea actual es un zoom de vistazo que vuelve al soltar y no tiene alternativa en la app para lector, teclado o switch. Incumple WCAG 2.5.1 (gesto de dos dedos sin alternativa). Para ampliar sin gestos se usa la lupa del sistema (ampliación de accesibilidad de Android). **[Suposición]** Que la lupa baste se comprueba en la auditoría de F5; en Android 8–11, moverse por lo ampliado exige dos dedos. Nada esencial depende del zoom: completar y eliminar tienen sus acciones, y el menú está en vertical.
+  - *Enmienda (spec 017, implementada; en vigor):* con **Bloquear zoom** (encendido a propósito; apagado por defecto) no hay pellizco, así que la excepción **no se amplía**; la lupa del sistema funciona igual (CA-017-13, casilla de la 022).
 - Desplazamiento de una imagen alta sin gestos (WCAG 2.1.1): acciones de desplazamiento del lector y de Switch Access en el nodo de la tarea (solo las que se pueden hacer), y Av Pág / Re Pág con teclado; con reducir movimiento, sin animar.
+  - *Enmienda (spec 017, implementada; en vigor):* con Bloquear zoom el desplazamiento **por contacto** se impide, pero estas alternativas **por orden** (acciones del lector y del switch, Av Pág / Re Pág y, con grupo, "desplazar adelante / atrás") **se mantienen**: la frase sigue siendo cierta (CA-017-09; propietario, Q-017-8). En horizontal con el bloqueo no se exigen las acciones de lector "desplazar arriba/abajo" (CA-017-10).
 - Contraste:
   - logotipo y menú con fondo blanco sobre la imagen (como el prototipo);
   - pie blanco sobre negro (18,9:1);

@@ -24,6 +24,7 @@ Future<InMemoryTaskRepository> pumpWithApp(
   double textScale = 1.0,
   EdgeInsets viewInsets = EdgeInsets.zero,
   Size size = const Size(390, 844),
+  bool lockZoom = false,
   List<Override> overrides = const [],
 }) async {
   final r = repo ?? InMemoryTaskRepository();
@@ -40,7 +41,11 @@ Future<InMemoryTaskRepository> pumpWithApp(
         // Color determinista (goldens estables).
         colorPickerProvider.overrideWithValue(ColorPicker(Random(0))),
         bootStateProvider.overrideWithValue(
-          BootState(currentTask: currentTask, firstRunDone: firstRunDone),
+          BootState(
+            currentTask: currentTask,
+            firstRunDone: firstRunDone,
+            lockZoom: lockZoom,
+          ),
         ),
         ...overrides,
       ],

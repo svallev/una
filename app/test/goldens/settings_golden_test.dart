@@ -1,6 +1,7 @@
 // Goldens de Ajustes (spec 015, tablero 16 del prototipo): el nivel 1, los dos
 // estados del interruptor y la página de Idioma, en español e inglés, a ×1,0 y
-// ×2,0. Se generan y comparan solo en Linux (CI); en el Mac, con
+// ×2,0. La spec 017 añade la fila "Bloquear zoom" (en el nivel 1 y suelta en
+// sus dos estados: `settings_lockzoom_*`). Se generan y comparan solo en Linux (CI); en el Mac, con
 // `GOLDENS_ANY_OS=1` (para revisarlos a ojo, no se suben).
 @Tags(['golden'])
 library;
@@ -49,9 +50,13 @@ Future<void> _golden(WidgetTester tester, String name) => expectLater(
   matchesGoldenFile('goldens/$name.png'),
 );
 
-/// Los dos estados del interruptor, uno sobre otro, sobre el papel.
+/// Los dos estados de una fila con interruptor, uno sobre otro, sobre el papel.
+/// Con [lockZoom] es la fila de la spec 017 (icono de la lupa con el menos,
+/// nombre y subtítulo propios); sin él, la de "Pantalla siempre activa".
 class _SwitchStates extends StatelessWidget {
-  const _SwitchStates();
+  const _SwitchStates({this.lockZoom = false});
+
+  final bool lockZoom;
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +73,13 @@ class _SwitchStates extends StatelessWidget {
             children: [
               for (final on in [false, true]) ...[
                 UnaSwitchRow(
-                  icon: UnaIcons.phone,
-                  label: l10n.settingsKeepAwake,
-                  subtitle: l10n.settingsKeepAwakeHint,
+                  icon: lockZoom ? UnaIcons.magnifierMinus : UnaIcons.phone,
+                  label: lockZoom
+                      ? l10n.settingsLockZoom
+                      : l10n.settingsKeepAwake,
+                  subtitle: lockZoom
+                      ? l10n.settingsLockZoomHint
+                      : l10n.settingsKeepAwakeHint,
                   value: on,
                   onToggle: () {},
                 ),
@@ -101,6 +110,18 @@ void main() {
       ) async {
         await _pump(tester, const _SwitchStates(), lang: lang, scale: scale);
         await _golden(tester, 'settings_switch_$name');
+      }, skip: _skip);
+
+      // Spec 017 (CA-017-01, 15): la fila "Bloquear zoom" en sus dos estados.
+      testWidgets('CA-017-01: la fila "Bloquear zoom" en sus dos estados, '
+          '$name', (tester) async {
+        await _pump(
+          tester,
+          const _SwitchStates(lockZoom: true),
+          lang: lang,
+          scale: scale,
+        );
+        await _golden(tester, 'settings_lockzoom_$name');
       }, skip: _skip);
 
       testWidgets('CA-015-07: página de Idioma (nivel 2), $name', (

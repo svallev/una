@@ -72,7 +72,14 @@ class ExternalPageSession extends ChangeNotifier {
   void clearNotice() {
     if (_disposed) return;
     onActionSucceeded?.call();
-    if (!_noApp) return;
+    clearLinkNotice();
+  }
+
+  /// Quita solo el aviso de enlace, sin avisar a la pantalla. Un guardado con
+  /// éxito de un interruptor lo usa: quita el suyo y el de enlace, pero no el
+  /// aviso de guardado de la otra fila (spec 017, P-017-1).
+  void clearLinkNotice() {
+    if (_disposed || !_noApp) return;
     _noApp = false;
     notifyListeners();
   }

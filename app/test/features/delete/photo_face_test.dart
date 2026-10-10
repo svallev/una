@@ -34,6 +34,7 @@ import '../../support/attachments.dart';
 import '../../support/fake_image_importer.dart';
 import '../../support/fonts.dart';
 import '../../support/pump_app.dart';
+import '../../support/screen_fingerprint.dart';
 
 const _frame = Duration(milliseconds: 16);
 const _text = 'Horario del festival';
@@ -117,12 +118,14 @@ void main() {
     List<Task> tasks, {
     bool reduced = false,
     bool screenReader = false,
+    bool lock = false,
     List<Override> overrides = const [],
   }) async {
     final repo = InMemoryTaskRepository();
     for (final t in tasks) {
       await repo.insert(t);
     }
+    if (lock) await repo.setLockZoom(true);
     await pumpUnaApp(
       tester,
       repo: repo,
@@ -475,6 +478,116 @@ void main() {
       expect(store.checks, checks);
       expect(importer.regenerated, isEmpty);
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('CA-017-06, CA-016-19: con Bloquear zoom, la cara es la misma', () {
+    /// Un montaje nuevo (almacén, lecturas y importador) con el grupo de 3
+    /// fotos y la foto 3 a la vista; lo que devuelve [then] lo decide cada
+    /// prueba.
+    Future<
+      ({
+        PhotoFaceSnapshot snapshot,
+        Uint8List bytes,
+        Fingerprint shot,
+        int reads,
+        int checks,
+        int regenerated,
+      })
+    >
+    pass(
+      WidgetTester tester, {
+      required bool lock,
+      required Future<void> Function() start,
+    }) async {
+      store = _CountingStore();
+      images = _SpyImages(store);
+      importer = FakeImageImporter(store);
+      final all = await photos(3);
+      await pumpApp(tester, [groupTask(all)], lock: lock);
+      await goTo(tester, 2);
+      await start();
+      final snapshot = containerOf(tester).read(photoFaceSnapshotProvider);
+      expect(snapshot, isNotNull);
+      final bytes = (await tester.runAsync(snapshot!.image.toByteData))!;
+      return (
+        snapshot: snapshot,
+        bytes: bytes.buffer.asUint8List(),
+        shot: await fingerprintOf(tester),
+        reads: images.reads,
+        checks: store.checks,
+        regenerated: importer.regenerated.length,
+      );
+    }
+
+    testWidgets('completar viendo la foto 3: la captura (mismos píxeles), la '
+        'cara y las lecturas son idénticas con y sin el ajuste', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final off = await pass(
+        tester,
+        lock: false,
+        start: () async {
+          await completeUntilCelebration(tester);
+          await tester.pump(const Duration(milliseconds: 300));
+        },
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+      final on = await pass(
+        tester,
+        lock: true,
+        start: () async {
+          await completeUntilCelebration(tester);
+          await tester.pump(const Duration(milliseconds: 300));
+        },
+      );
+      expect(on.snapshot.index, 2);
+      expect(on.snapshot.index, off.snapshot.index);
+      expect(on.snapshot.landscape, isFalse);
+      expect((on.snapshot.image.width, on.snapshot.image.height), (390, 844));
+      expect(on.bytes.any((b) => b != 0), isTrue, reason: 'no vacía');
+      expect(on.bytes, off.bytes, reason: 'la captura de la foto 3');
+      expectSameFingerprint(off.shot, on.shot, reason: 'la cara');
+      // Ni el disco, ni la salud de los adjuntos, ni regenerar nada.
+      expect(
+        (on.reads, on.checks, on.regenerated),
+        (off.reads, off.checks, off.regenerated),
+      );
+      expect(inOverlay(CelebrationOverlay, ZoomablePhoto), findsNothing);
+      expect(inOverlay(CelebrationOverlay, PhotoCarousel), findsNothing);
+      handle.dispose();
+    });
+
+    testWidgets('eliminar viendo la foto 3: la captura, el arrugado y las '
+        'lecturas son idénticos con y sin el ajuste', (tester) async {
+      final handle = tester.ensureSemantics();
+      Future<void> deleteAndCrumple() async {
+        await tester.tap(find.bySemanticsLabel('Menú de la tarea'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Eliminar'));
+        await tester.pump(_frame);
+        await tester.pump(_frame);
+        await tester.pump(UnaMotion.crumple * 0.5);
+        expect(find.byType(CrumpleOverlay), findsOneWidget);
+      }
+
+      final off = await pass(tester, lock: false, start: deleteAndCrumple);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+      final on = await pass(tester, lock: true, start: deleteAndCrumple);
+      expect(on.snapshot.index, 2);
+      expect(on.bytes.any((b) => b != 0), isTrue, reason: 'no vacía');
+      expect(on.bytes, off.bytes, reason: 'la captura de la foto 3');
+      expectSameFingerprint(off.shot, on.shot, reason: 'el arrugado');
+      expect(
+        (on.reads, on.checks, on.regenerated),
+        (off.reads, off.checks, off.regenerated),
+      );
+      expect(inOverlay(CrumpleOverlay, ZoomablePhoto), findsNothing);
+      expect(inOverlay(CrumpleOverlay, PhotoCarousel), findsNothing);
+      handle.dispose();
     });
   });
 

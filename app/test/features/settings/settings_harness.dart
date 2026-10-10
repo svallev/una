@@ -37,12 +37,16 @@ class FakeOpener implements LinkOpener {
   }
 }
 
-/// Repositorio cuyo guardado de "Pantalla siempre activa" se puede retener
-/// ([gate]) o hacer fallar ([error]). Guarda lo escrito.
+/// Repositorio cuyo guardado de "Pantalla siempre activa" ([gate], [error]) y
+/// el de "Bloquear zoom" ([lockGate], [lockError]) se pueden retener o hacer
+/// fallar por separado. Guarda lo escrito.
 class SettingsRepo extends InMemoryTaskRepository {
   final keepWrites = <bool>[];
+  final lockWrites = <bool>[];
   Completer<void>? gate;
   Object? error;
+  Completer<void>? lockGate;
+  Object? lockError;
 
   @override
   Future<void> setKeepScreenOn(bool value) async {
@@ -51,6 +55,15 @@ class SettingsRepo extends InMemoryTaskRepository {
     if (g != null) await g.future;
     if (error case final e?) throw e;
     await super.setKeepScreenOn(value);
+  }
+
+  @override
+  Future<void> setLockZoom(bool value) async {
+    lockWrites.add(value);
+    final g = lockGate;
+    if (g != null) await g.future;
+    if (lockError case final e?) throw e;
+    await super.setLockZoom(value);
   }
 }
 

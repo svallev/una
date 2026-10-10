@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:app/app/providers.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/task_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/pump_app.dart' show sampleTask;
@@ -30,6 +33,15 @@ class _ThrowingSettings implements SettingsRepository {
       : _inner.keepScreenOn();
 
   @override
+  Future<bool> lockZoom() async {
+    lockZoomReads++;
+    return throwOn.contains('lockZoom') ? _fail('lockZoom') : _inner.lockZoom();
+  }
+
+  /// Cuántas veces se ha leído `lockZoom` (CA-017-11: una en el arranque).
+  int lockZoomReads = 0;
+
+  @override
   Future<LocaleChoice> locale() async =>
       throwOn.contains('locale') ? _fail('locale') : _inner.locale();
 
@@ -38,6 +50,9 @@ class _ThrowingSettings implements SettingsRepository {
 
   @override
   Future<void> setKeepScreenOn(bool value) => _inner.setKeepScreenOn(value);
+
+  @override
+  Future<void> setLockZoom(bool value) => _inner.setLockZoom(value);
 
   @override
   Future<void> setLocale(LocaleChoice choice) => _inner.setLocale(choice);
@@ -87,26 +102,97 @@ void main() {
     expect(boot.hasEverHadTasks, isFalse);
   });
 
-  for (final key in ['locale', 'keepScreenOn']) {
-    test('CL-015-16: un repositorio que lanza al leer `$key` no impide el '
-        'arranque (la tarea actual sí se lee)', () async {
+  for (final key in ['locale', 'keepScreenOn', 'lockZoom']) {
+    test('CL-015-16, CA-017-03: un repositorio que lanza al leer `$key` no '
+        'impide el arranque (la tarea actual sí se lee)', () async {
       final repo = InMemoryTaskRepository();
       await repo.insert(sampleTask());
       await repo.setLocale(LocaleChoice.en);
       await repo.setKeepScreenOn(true);
+      await repo.setLockZoom(true);
       final boot = await readBootState(
         repo,
         _ThrowingSettings(repo, throwOn: {key}),
       );
       expect(boot.currentTask?.id, 't1');
-      // Solo el que falla toma su valor por defecto.
+      // Solo el que falla toma su valor por defecto; los otros dos, el
+      // guardado (aislamiento entre ajustes).
       expect(
         boot.locale,
         key == 'locale' ? LocaleChoice.system : LocaleChoice.en,
       );
       expect(boot.keepScreenOn, key == 'keepScreenOn' ? isFalse : isTrue);
+      expect(boot.lockZoom, key == 'lockZoom' ? isFalse : isTrue);
     });
   }
+
+  test('CA-017-03: sin nada guardado, el bloqueo arranca apagado (también '
+      'el valor por defecto de BootState)', () async {
+    final repo = InMemoryTaskRepository();
+    expect((await readBootState(repo, repo)).lockZoom, isFalse);
+    const defaults = BootState(currentTask: null, firstRunDone: false);
+    expect(defaults.lockZoom, isFalse);
+  });
+
+  test('CA-017-11: el arranque lee el bloqueo guardado', () async {
+    final repo = InMemoryTaskRepository();
+    await repo.setLockZoom(true);
+    expect((await readBootState(repo, repo)).lockZoom, isTrue);
+  });
+
+  test('CA-017-03, CL-017-8: un valor ilegible del bloqueo no impide el '
+      'arranque y deja los otros dos ajustes como estaban', () async {
+    final repo = InMemoryTaskRepository()
+      ..putRawSetting('lockZoom', '[[[[[[[[[[[[[[[[[')
+      ..putRawSetting('keepScreenOn', 'true')
+      ..putRawSetting('locale', '"en"');
+    final boot = await readBootState(repo, repo);
+    expect(boot.lockZoom, isFalse);
+    expect(boot.keepScreenOn, isTrue);
+    expect(boot.locale, LocaleChoice.en);
+  });
+
+  test('CA-017-11: `lockZoom` se lee una sola vez en el arranque, y ninguna '
+      'si la tarea actual no se puede leer', () async {
+    final repo = InMemoryTaskRepository();
+    final counting = _ThrowingSettings(repo);
+    await readBootState(repo, counting);
+    expect(counting.lockZoomReads, 1);
+
+    final broken = _BrokenTasks();
+    final countingBroken = _ThrowingSettings(broken);
+    await expectLater(readBootState(broken, countingBroken), throwsException);
+    expect(countingBroken.lockZoomReads, 0);
+  });
+
+  test('CA-017-03: el texto de un fallo al leer el bloqueo no sale por '
+      'ningún canal (debugPrint, print, FlutterError)', () async {
+    final printed = <String>[];
+    final oldDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+    FlutterErrorDetails? reported;
+    final oldOnError = FlutterError.onError;
+    FlutterError.onError = (details) => reported = details;
+    final repo = InMemoryTaskRepository();
+    final zonePrinted = <String>[];
+    try {
+      await runZoned(
+        () =>
+            readBootState(repo, _ThrowingSettings(repo, throwOn: {'lockZoom'})),
+        zoneSpecification: ZoneSpecification(
+          print: (self, parent, zone, line) => zonePrinted.add(line),
+        ),
+      );
+    } finally {
+      FlutterError.onError = oldOnError;
+      debugPrint = oldDebugPrint;
+    }
+    expect(
+      printed.join() + zonePrinted.join(),
+      isNot(contains('texto-secreto')),
+    );
+    expect(reported, isNull);
+  });
 
   test('CL-015-16: una base de datos inaccesible falla al leer la tarea '
       'actual (pantalla de error de almacenamiento), no se traga', () async {
