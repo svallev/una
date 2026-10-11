@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-10), junto con `plan.md`. Spec **Aprobada** (2026-10-10).
 
-**Siguiente:** T-018-06 (rama `feat/018-iconos`). <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-018-07 (Xiaomi, la hace el coordinador con permiso del propietario; luego T-018-08, el cierre; rama `feat/018-iconos`). <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Una PR puede agrupar varias tareas consecutivas. Tests primero: en T-018-03 y 04 los tests se escriben antes y fallan por la razón esperada (no existen los recursos).
 
