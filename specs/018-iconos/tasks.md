@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-10), junto con `plan.md`. Spec **Aprobada** (2026-10-10).
 
-**Siguiente:** ninguna: la 018 está cerrada (**Implementada parcialmente**, 2026-10-11). Falta, con la confirmación del propietario, `git push` y abrir la PR (`pr-description.md`); rama `feat/018-iconos`. <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** ninguna: la 018 está cerrada (**Implementada parcialmente**, 2026-10-11). **Fusionada en `main`** (PR svallev/una#45, squash `a7b7a88`, 2026-10-11). <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Una PR puede agrupar varias tareas consecutivas. Tests primero: en T-018-03 y 04 los tests se escriben antes y fallan por la razón esperada (no existen los recursos).
 
