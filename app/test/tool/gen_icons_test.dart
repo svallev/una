@@ -460,6 +460,21 @@ void main() {
       }
     });
   });
+
+  test(
+    'CA-018-15: los recursos del árbol están al día con el generador (--check)',
+    () {
+      // Los tests de recursos miden el árbol real; esto vigila que no se desvíe
+      // del generador (CA-018-12 y 15) sin depender de CI.
+      final out = StringBuffer();
+      final err = StringBuffer();
+      expect(
+        runGenIcons(['--check'], out: out, err: err),
+        0,
+        reason: err.toString(),
+      );
+    },
+  );
 }
 
 int _paethPredictor(int a, int b, int c) {

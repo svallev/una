@@ -1,6 +1,6 @@
 # Spec 018: Iconos
 
-- **Estado:** **Aprobada** por el propietario el 2026-10-10 («Aprobada con los últimos comentarios»: amarillo del icono para la web y descripción de plantilla quitada). Revisada por `spec-reviewer` (3 bloqueantes y 10 medios, corregidos); Q-018-1 a 5 respondidas (§9). Plan y tareas **Aprobados** el 2026-10-10.
+- **Estado:** **Implementada parcialmente** (2026-10-11; tabla CA → prueba en el §13; las casillas de dispositivo pendientes pasan a la 022, `docs/PLAN.md`, «Casillas de la 018»). Antes **Aprobada** por el propietario el 2026-10-10 («Aprobada con los últimos comentarios»: amarillo del icono para la web y descripción de plantilla quitada), revisada por `spec-reviewer` (3 bloqueantes y 10 medios, corregidos); Q-018-1 a 5 respondidas (§9). Plan y tareas **Aprobados** el 2026-10-10.
 - **Fase:** F4b Nuevas funcionalidades (plan aprobado por el propietario el 2026-10-04). Quinta de las specs 014–019 (después de la 014, 015, 016 y 017, fusionadas). Tamaño **S**.
 - **Reglas de producto:** R20 (icono de la app, D29), R8 (abrir → tarea actual rápido: el icono es lo primero que se toca para abrirla), **propuesta de valor 2**
 - **Pantallas del prototipo:** 17 «Icono de la app» (`Icono.dc.html`): «u.» en Archivo 900 sobre `#FFE55C`; iOS (1024), Android adaptable (círculo, squircle, gota), con tema (Android 13+) y Google Play 512. Las imágenes están copiadas en `design/prototype/assets/icon/` (ver `docs/design/screen-map.md`, «Imágenes del icono»). **Lo que el prototipo no define** (la web de pruebas: sus iconos y su manifiesto; el icono de las compilaciones de desarrollo) se decide aquí y se registra como **DEV-55** (`docs/design/prototype-deviations.md`).
@@ -198,7 +198,7 @@ Marcadas con **[Pendiente]** y con quién decide. Cada una lleva mi recomendaci�
 - **[Hecho]** El original del tablero 17 (PNG) es la **fuente única** (CA-018-10): usa exactamente `#FFE55C` y `#111111`, y su primer plano (432 px) y su capa monocroma (432 px, punto macizo) tienen la misma caja (x 135–297, y 164–268). **[Suposición]** Se convierten a recursos de Android sin dependencias; el plan decide cómo (CA-018-07 fija solo ≥ 432 px).
 - **[Suposición]** Que el nombre «Una.» es provisional (`CLAUDE.md`) y, si cambia, el icono se rehace (CA-018-15, CL-018-7).
 - **[Suposición]** Que no hace falta icono de baja densidad para Android 7 y anteriores porque el mínimo es Android 8 (D12): **todos** los móviles admitidos pintan iconos adaptables.
-- **[Pendiente, 022]** Casillas C-018-2, 3, 4 y 7 del §3: ver el icono en el Xiaomi (HyperOS), con los iconos con tema en un Android 13+ real y con el tamaño de visualización más grande: se añaden a las casillas de la 022 («Casillas de la 018») al cerrar la spec.
+- **[Pendiente, 022]** Lo que queda de las casillas del §3 (C-018-7 TalkBack, Android 8–12, otra máscara de esquinas casi rectas y el *splash* oscuro en el Xiaomi): `docs/PLAN.md`, «Casillas de la 018». C-018-2 (Xiaomi, a ojo) y C-018-4 (emulador) ya están hechas.
 
 ## 10. Enmiendas a otras specs y documentos (se aplican con la implementación; las marcadas «ahora» se hacen con esta spec)
 
@@ -207,7 +207,7 @@ Marcadas con **[Pendiente]** y con quién decide. Cada una lleva mi recomendaci�
 - **`docs/PLAN.md` (ahora):** R20 → CA-018-01 a 15 (Aprobada); la fila F4b de la 018; y la fila F5, donde «iconos» queda cubierto por la 018. **`CLAUDE.md` (ahora):** la fase actual indica que la spec de la 018 está en Borrador.
 - **`docs/design/prototype-deviations.md`:** **DEV-55** (la web de pruebas lleva el icono nuevo, el color de la app en `theme_color` y `background_color` y sin la descripción de plantilla; el prototipo no la define): **hecho al aprobar la spec (2026-10-10)**.
 - **`docs/architecture.md`** (el icono: dónde viven sus recursos y qué mide cada capa; la nota del *splash* de la §2 sobre el icono) y **`docs/testing.md`** (los tests de recursos y su método): al implementar. **Modelo de amenazas y checklist de seguridad:** sin cambios previstos (CA-018-12).
-- **021 (nota):** «el fondo de arranque coherente con el icono de la 018» parte de que el icono es amarillo (`#FFE55C`) con la «u.» negra y de que el *splash* de Android 12+ lo pinta el sistema.
+- **021 (nota):** «el fondo de arranque coherente con el icono de la 018» parte de que el icono es amarillo (`#FFE55C`) con la «u.» negra. **Medido (T-018-06 y 08):** el *splash* de Android 12+ pinta solo el primer plano sobre el fondo de siempre (blanco en claro; en oscuro el sistema añade un círculo amarillo); no es amarillo. Si la 021 lo quiere amarillo, lo fija ella.
 
 ## 11. Trazabilidad con la constitución
 
@@ -229,3 +229,42 @@ Marcadas con **[Pendiente]** y con quién decide. Cada una lleva mi recomendaci�
 ## 12. Historias de usuario y criterios
 
 Ver la tabla «Trazabilidad HU → CA» del §3.
+
+## 13. Tabla CA → prueba (cierre, 2026-10-11)
+
+**Estado:** **Implementada parcialmente.** Rutas relativas a `app/test/`. «Dispositivo» = `specs/018-iconos/dispositivo.md` (emulador `Pixel_6a` de API 37 y, para el icono a ojo, el Xiaomi de HyperOS el 2026-10-11); lo que sigue sin comprobar en el móvil está en `docs/PLAN.md`, «Casillas de la 018». Abreviaturas: `ic/` = `icon/`. Los tests de recursos leen los PNG con `dart:ui` y no usan el generador (`tool/gen_icons.dart`), de modo que un fallo suyo no se esconde a sí mismo.
+
+| CA / CL | Pruebas | Estado |
+|---|---|---|
+| 01 El icono en el lanzador | `ic/android_adaptive_icon_test.dart` (ancho 56 % ± 1 pp del círculo de 72 dp, caja centrada ± 1 dp), `ic/icon_image_support_test.dart` (las ayudas, sobre las fuentes del tablero); dispositivo (C-018-1 y 2 en el emulador y en el Xiaomi) | Completo |
+| 02 Entero con cualquier máscara | `ic/android_adaptive_icon_test.dart` (todo píxel opaco a ≤ 33 dp; la esquina más lejana a ≈ 24,1 dp; el fondo es un color liso que llena los 108 dp); dispositivo (cinco formas del lanzador de Pixel y la máscara de HyperOS) | Completo; el «cuadrado de esquinas casi rectas» con otro lanzador: 022 |
+| 03 Colores = tokens | `ic/android_adaptive_icon_test.dart` (fondo = `palette.classic.0`; primer plano solo tinta, transparencia y suavizado ±10), `ic/icon_image_support_test.dart`, `ic/icon_coherence_test.dart` | Completo |
+| 04 Icono con tema | `ic/android_adaptive_icon_test.dart` (`<monochrome>` = el mismo drawable que el primer plano, alfa idéntica por construcción, silueta maciza con el punto); dispositivo (C-018-3, estilo Minimal del lanzador de Pixel y Xiaomi) | Completo; Android 13+ real con el fondo de pantalla del usuario: 022 |
+| 05 Sin tema o antes de Android 13 | `ic/android_adaptive_icon_test.dart` (la capa no es un recurso propio); dispositivo (con tema apagado) | Parcial: Android 8–12 sin probar (no hay AVD): 022 |
+| 06 Nada del icono de Flutter | `ic/android_icon_packaging_test.dart` (manifiesto → adaptable, sin `ic_launcher.png` ni con los bytes de la plantilla, sin recursos huérfanos), `test/fixtures/flutter_template_icons/`; dispositivo (C-018-6, APK de *release* con `aapt2` y `unzip -l`) | Completo |
+| 07 Nítido a cualquier densidad | `ic/android_adaptive_icon_test.dart` (≥ 432 px, cuadrado); dispositivo (C-018-4: 48 y 24 dp, tamaño de visualización máximo) | Completo |
+| 08 Icono de Google Play | `ic/play_icon_test.dart` (RGBA de 8 bits, 512 × 512, < 1024 KB, alfa 255, esquinas amarillas, diferencia ≤ 2/255 frente al original reducido, no declarado en `pubspec.yaml` ni en el APK) | Completo |
+| 09 La web de pruebas | `ic/web_icons_test.dart` (32/192/512 y maskable, ninguno de la plantilla, esquinas, esquina más lejana ≤ 40 %, `theme_color` y `background_color` = token, sin `0175C2` ni «A new Flutter», nombre, `start_url`, `display` y `orientation` intactos) | Completo |
+| 10 Un solo dibujo | `ic/icon_coherence_test.dart` (tabla Android, con tema, Play y web: ancho, centrado, altura, colores, dos piezas y silueta igual al original), `tool/gen_icons_test.dart` | Completo |
+| 11 Nombre y accesibilidad | `ic/android_icon_packaging_test.dart` (`@string/app_name` generado de `identity.yaml`; contraste ≈ 14,9 : 1); dispositivo (el nombre bajo el icono) | Completo; TalkBack en el lanzador: 022 |
+| 12 Sin dependencias, permisos ni código | `tool/gen_icons_test.dart` (las herramientas solo importan `dart:` y su vecina); diff `main...HEAD` de `lib/`, `.kt`, manifiesto, `pubspec.*`, Gradle, `drift_schemas/` e `ios/` vacío (T-018-05 y cierre); `tools/check-android-permissions.sh` en verde (T-018-03 y 05) | Completo |
+| 13 El arranque no empeora | Dispositivo (C-018-5: p50 375 → 367,5 ms alternando 4 × 20 con `tools/measure-cold-start.sh`; *splash* con la «u.» entera) | Completo en el emulador |
+| 14 Mismo icono en todas las compilaciones | `ic/android_icon_packaging_test.dart` (`src/debug` y `src/profile` sin recursos de icono); dispositivo (la `.profile` en el Xiaomi lleva el mismo) | Completo |
+| 15 Documentado y reproducible | `ic/icon_coherence_test.dart` (la geometría medida), `tool/gen_icons_test.dart` (`--check` y los comandos), `docs/design/app-icon.md` (revisado frente a las medidas) | Completo |
+| CL-018-1, 2 | Dispositivo (varias máscaras; con tema apagado) | Completo en el emulador y en el Xiaomi |
+| CL-018-3 | Dispositivo (fondo de pantalla del emulador; sin cambio) | Aceptado |
+| CL-018-4, 10 | Dispositivo (24 y 48 dp; «Tamaño de visualización» al máximo) | Completo |
+| CL-018-5, 9 | Sin test: el icono no depende del modo oscuro ni del idioma (ningún recurso de icono tiene variante `-night`; `values-night` solo tiene el tema; ni textos) | Completo |
+| CL-018-6 | Dispositivo (`install -r` desde el de `main`); es del lanzador | Aceptado, sin código |
+| CL-018-7 | `docs/design/app-icon.md` («Qué rehacer si cambia el nombre»); sin test | Documentado |
+| CL-018-8 | `ic/android_icon_packaging_test.dart` (CA-014); dispositivo | Completo |
+
+**Notas de cierre (revisión de `spec-reviewer`, 2026-10-11)**
+
+- **CA-018-01 (cifra):** el 56 % de 72 dp son 40,3 dp; lo medido es **40,5 dp = 56,25 %** (162 px de 432), dentro de la tolerancia de ± 1 punto. `docs/design/app-icon.md` y los tests usan 56,25 %.
+- **CA-018-09 y 10 (favicon):** el favicon de 32 px se mide con ± 3,5 puntos (1 px = 3 puntos); el resto, con ± 1.
+- **CA-018-15 (generador):** el script es **Dart** en `app/tool/` (P-018-1, aprobado con el plan), no shell en `tools/`; lo vigila `tool/gen_icons_test.dart` (`--check` sobre el árbol real).
+- **CA-018-04 y 07 (capa con tema):** la capa monocroma **es el mismo recurso** que el primer plano (P-018-2), así que su alfa es idéntica y su tamaño el mismo por construcción. La maciza se comprueba con el punto y con que solo el borde (a ≤ 3 px de un píxel vacío) es semitransparente.
+- **CA-018-03 (suavizado):** `dart:ui` decodifica premultiplicado, por lo que el RGB de los píxeles con alfa < 128 no es comparable: se comparan los demás; el suavizado de tinta de alfa baja queda cubierto por la igualdad del recurso con el original del tablero (`icon_image_support_test.dart`).
+- **CA-018-12:** además del `git diff main...HEAD` manual del cierre, `--check` sobre el árbol real corre ahora en `flutter test`.
+

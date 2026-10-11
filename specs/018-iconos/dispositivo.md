@@ -71,6 +71,20 @@ Xiaomi 2506BPN68G (HyperOS), por USB. Se instaló solo `invalid.pending.app.prof
 
 - **[Pendiente, 022]** TalkBack en el lanzador (C-018-7) y Android 8–12 (C-018-3); no se midieron aquí el «Tamaño de visualización» máximo ni el cuadrado de esquinas casi rectas con otro lanzador.
 
+## T-018-08: cierre (2026-10-11)
+
+### C-018-5 con el modo oscuro del sistema (hallazgo M1 del `a11y-reviewer`)
+
+El revisor temía que en modo oscuro el *splash* de Android 12+ dejara la «u.» negra (`#111111`) sobre fondo negro. **Comprobado en el emulador de API 37** (`cmd uimode night yes`, arranque en frío con `screenrecord`, fotogramas cada 0,1 s; la compilación *release* instalada; el modo se devolvió a «no»):
+
+- **[Hecho] Modo oscuro:** el sistema pinta la «u.» **sobre un círculo amarillo** (el color del icono) en una ventana negra: se ve entera y con buen contraste. No hay «u.» invisible. Después entra la app.
+- **[Hecho] Modo claro (repetido):** «u.» negra sobre blanco, sin círculo, entera.
+- **[Suposición]** Android 12+ elige el fondo del icono del *splash* según el contraste con la ventana; en otros fabricantes (HyperOS, One UI) puede variar. **[Pendiente, 022]** mirarlo en el Xiaomi con el modo oscuro del sistema. Para la 021 (modo oscuro y arranque): hoy el *splash* depende del sistema y no de la app; si se quiere un aspecto fijo, se fija `windowSplashScreenBackground` / `windowSplashScreenIconBackgroundColor` allí (no se toca aquí).
+
+### Aclaración sobre el resumen de casillas
+
+El Xiaomi se miró solo a ojo (el propietario, sin capturas): icono en el lanzador, en «Ajustes del sistema → Aplicaciones», en la lista de aplicaciones y con iconos con tema. El «Tamaño de visualización» máximo **sí** se hizo (en el emulador, 540 dpi); en el Xiaomi no. Lo que pasa a la 022 está en `docs/PLAN.md`, «Casillas de la 018».
+
 ## Resumen de casillas
 
 | Casilla | Resultado |
@@ -79,6 +93,6 @@ Xiaomi 2506BPN68G (HyperOS), por USB. Se instaló solo `invalid.pending.app.prof
 | C-018-2 | **Hecha** en el emulador y en el Xiaomi (T-018-07) |
 | C-018-3 | **Hecha** con tema encendido y apagado en API 37; **[Pendiente]** Android 8–12 (no hay AVD; 022) |
 | C-018-4 | **Hecha** |
-| C-018-5 | **Hecha**: p50 375 → 367,5 ms; *splash* con la «u.» entera sobre blanco |
+| C-018-5 | **Hecha**: p50 375 → 367,5 ms; *splash* con la «u.» entera sobre blanco y, en modo oscuro, sobre un círculo amarillo (T-018-08); **[Pendiente]** modo oscuro en el Xiaomi (022) |
 | C-018-6 | **Hecha** |
 | C-018-7 | [Pendiente] TalkBack en el Xiaomi (022) |

@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-10), junto con `plan.md`. Spec **Aprobada** (2026-10-10).
 
-**Siguiente:** T-018-08 (cierre, en una sesión nueva; rama `feat/018-iconos`). <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** ninguna: la 018 está cerrada (**Implementada parcialmente**, 2026-10-11). Falta, con la confirmación del propietario, `git push` y abrir la PR (`pr-description.md`); rama `feat/018-iconos`. <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Una PR puede agrupar varias tareas consecutivas. Tests primero: en T-018-03 y 04 los tests se escriben antes y fallan por la razón esperada (no existen los recursos).
 
@@ -19,9 +19,9 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde (los de apariencia, casilla anotada en `dispositivo.md`).
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada** (o **Implementada parcialmente**).
+- [x] Todos los CA de la spec tienen test en verde (los de apariencia, casilla anotada en `dispositivo.md`).
+- [x] Definition of Done (`specs/constitution.md`) completa.
+- [x] Spec marcada como **Implementada** (o **Implementada parcialmente**).
 
 ## Estado
 
@@ -36,3 +36,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 | T-018-05 | Hecha. `test/icon/icon_coherence_test.dart` (20 tests): las 6 imágenes de Android/Play/web (+ el original) con ancho 56 % ± 1 pp (favicon ± 3,5), caja centrada, misma altura, solo colores de los tokens, `<monochrome>` = el mismo drawable, dos piezas ("u." y punto) y silueta igual al original en rejilla de 32 × 32; 5 mutaciones detectadas (Play desplazado, web escalada, cuadrado y círculo añadidos, monocromo distinto). CA-018-12: diff `main...HEAD` de `lib/`, `.kt`, manifiesto, `pubspec.*` y Gradle vacío; `check-android-permissions.sh debug` en verde. Escritos `docs/design/app-icon.md` (geometría medida: 40,5 dp = 56,25 %, esquina 24,1 dp, original 56,05 %/33,3 %) y notas en `architecture.md` (§2 *splash* y §5), `testing.md` y `screen-map.md`. Suite 2955 en verde (90 omitidos), `analyze` limpio, `gen_icons --check` al día. El test pasó en verde a la primera (los recursos ya existían): se validó con mutaciones. | ver `git log` (`docs(018): coherence test…`) |
 | T-018-06 | Hecha (solo emulador API 37; sin cambios de recursos: no hubo fallo de apariencia). `dispositivo.md`: C-018-1 (5 formas del lanzador de Pixel; la imagen no trae «Forma de los iconos»), 2, 4 y 6 hechas; C-018-3 con tema encendido/apagado (Estilo → Minimal) hecha; C-018-5 p50 375 → 367,5 ms (alternando 4 × 20) y *splash* = «u.» negra entera sobre blanco, sin círculo amarillo (decisión de la 021). **[Pendiente]** Android 8–12 (no hay AVD, no se descargó nada), cuadrado de esquinas casi rectas y HyperOS (T-018-07). Deja el emulador en Círculo/Default/420 dpi. | ver `git log` (`docs(018): emulator verification…`) |
 | T-018-07 | Hecha por el coordinador (2026-10-11). App `.profile` instalada en el Xiaomi (HyperOS) y retirada después; la real, intacta; sin capturas ni lanzar la app. El propietario confirmó «ok» el icono en el lanzador, en Ajustes del sistema, en la lista de aplicaciones y con iconos con tema (C-018-2). **[Pendiente, 022]** TalkBack (C-018-7) y Android 8–12. | ver `git log` (`docs(018): Xiaomi icon check`) |
+| T-018-08 | Hecha (2026-10-11). Cierre: `format`, `analyze`, 2957 tests, `gen_icons --check`, tokens e identidad en verde; diff `main...HEAD` de `lib/`, `.kt`, manifiesto, `pubspec.*`, Gradle, esquema e iOS vacío; §13 CA → prueba en la spec; `spec-reviewer` (0 bloqueantes; sus medios, corregidos), `security-reviewer` (0 altos/medios, 4 bajos) y `a11y-reviewer` (0 altos; M1 *splash* oscuro refutado en el emulador); `pr-description.md`, `PLAN.md` («Casillas de la 018», notas para la 019 y 021) y `CLAUDE.md`. `check-release-config.sh` sigue fallando por los huecos de la política (PD-2, F5), como en `main`. | ver `git log` (`docs(018): close…`) |

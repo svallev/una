@@ -156,6 +156,53 @@ void main() {
         expect(image.alpha(x, y), 0, reason: 'fuera de la figura en ($x, $y)');
       }
     });
+
+    test(
+      'CA-018-04: solo el borde es semitransparente (el cuerpo es macizo)',
+      () async {
+        final image = await loadRgba(_foregroundPng);
+        // Todo píxel con alfa parcial está a ≤ 3 px de uno con alfa 0: es el
+        // suavizado del contorno; dentro de la figura no hay manchas.
+        const radius = 3;
+        var partial = 0;
+        var opaque = 0;
+        for (var y = 0; y < image.height; y++) {
+          for (var x = 0; x < image.width; x++) {
+            final a = image.alpha(x, y);
+            if (a == 255) opaque++;
+            if (a == 0 || a == 255) continue;
+            partial++;
+            var nearEmpty = false;
+            for (var dy = -radius; dy <= radius && !nearEmpty; dy++) {
+              for (var dx = -radius; dx <= radius; dx++) {
+                final nx = x + dx;
+                final ny = y + dy;
+                if (nx < 0 ||
+                    ny < 0 ||
+                    nx >= image.width ||
+                    ny >= image.height) {
+                  continue;
+                }
+                if (image.alpha(nx, ny) == 0) {
+                  nearEmpty = true;
+                  break;
+                }
+              }
+            }
+            expect(
+              nearEmpty,
+              isTrue,
+              reason: 'alfa parcial interior en ($x, $y)',
+            );
+          }
+        }
+        expect(
+          opaque,
+          greaterThan(partial),
+          reason: 'la figura es mayormente maciza',
+        );
+      },
+    );
   });
 
   group('CA-018-05: sin tema, o antes de Android 13', () {
