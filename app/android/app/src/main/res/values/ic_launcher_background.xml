@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERADO por tool/gen_icons.dart desde design/tokens.json (palette.classic.0). No editar a mano. -->
+<resources>
+    <color name="ic_launcher_background">#FFE55C</color>
+</resources>
