@@ -65,12 +65,18 @@ Verificación en el **emulador `Pixel_6a` (Android 16 / API 37.2, arm64, `emulat
 - Instalada la compilación *release* nueva (`invalid.pending.app`) con la tarea «Llamar a Marta»; la `.debug` se desinstaló. **Efecto lateral:** al empezar ya había una `invalid.pending.app` instalada (de otra sesión) y se **desinstaló** para instalar la depuración (con sus datos).
 - **Aviso:** un paso del guion del selector del lanzador acabó por error en «Notificaciones en la pantalla de bloqueo» y pudo tocar uno de sus interruptores sin que se notara; los valores actuales (`lock_screen_show_notifications=1`, `…_allow_private_notifications=1`, `…_show_silent_notifications=0`, `…_show_only_unseen_notifications=2`) parecen los de fábrica (el 2 no lo escribe un interruptor), pero no hay forma de comprobarlo contra el original. Sin relación con el icono.
 
+## T-018-07: Xiaomi (2026-10-11)
+
+Xiaomi 2506BPN68G (HyperOS), por USB. Se instaló solo `invalid.pending.app.profile` (`flutter build apk --profile --target-platform android-arm64`); la app real `invalid.pending.app` no se tocó. **Sin capturas y sin lanzar la app** (privacidad del móvil). El propietario miró a ojo y confirmó que está **«ok»** en los cuatro puntos: icono en el lanzador, en «Ajustes del sistema → Aplicaciones», en la lista de aplicaciones y con iconos con tema (CA-018-01, 02; CL-018-1). Terminado, se desinstaló la `.profile` (queda solo la real).
+
+- **[Pendiente, 022]** TalkBack en el lanzador (C-018-7) y Android 8–12 (C-018-3); no se midieron aquí el «Tamaño de visualización» máximo ni el cuadrado de esquinas casi rectas con otro lanzador.
+
 ## Resumen de casillas
 
 | Casilla | Resultado |
 |---|---|
-| C-018-1 | **Hecha** en el emulador (5 formas del lanzador de Pixel, no «Forma de los iconos»; sin el cuadrado de esquinas casi rectas: [Pendiente] Xiaomi/022) |
-| C-018-2 | **Hecha** en el emulador; **[Pendiente]** Xiaomi (T-018-07) |
+| C-018-1 | **Hecha** en el emulador (5 formas del lanzador de Pixel, no «Forma de los iconos»; sin el cuadrado de esquinas casi rectas; la máscara de HyperOS se vio bien en el Xiaomi, T-018-07) |
+| C-018-2 | **Hecha** en el emulador y en el Xiaomi (T-018-07) |
 | C-018-3 | **Hecha** con tema encendido y apagado en API 37; **[Pendiente]** Android 8–12 (no hay AVD; 022) |
 | C-018-4 | **Hecha** |
 | C-018-5 | **Hecha**: p50 375 → 367,5 ms; *splash* con la «u.» entera sobre blanco |
