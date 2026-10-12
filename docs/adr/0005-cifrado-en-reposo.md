@@ -1,6 +1,6 @@
 # ADR-0005: Sin cifrado propio de la base de datos en la v1; protección del sistema
 
-- **Estado:** Aceptado. Se revisará si se añade el bloqueo con biometría (D11) o sincronización.
+- **Estado:** Aceptado; **enmendado por ADR-0025** (su última viñeta: salvo la notificación local de la 019, que muestra la tarea actual y cuya visibilidad con el móvil bloqueado decide el sistema). Se revisará si se añade el bloqueo con biometría (D11) o sincronización.
 - **Fecha:** 2026-09-24
 - **Relacionado:** modelo de amenazas (T-1, T-2), ADR-0004, MASVS-STORAGE-1/2
 

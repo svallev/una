@@ -12,7 +12,7 @@
 
 ## En pocas palabras
 
-[NOMBRE DE LA APP] **no recoge datos tuyos**: no tiene cuentas, ni servidor propio, ni analítica, ni informes de errores propios, ni publicidad. Lo que escribes y lo que adjuntas se guarda en tu móvil. Solo hay dos excepciones, que explicamos abajo: la **tarea web** (la página que decides ver se carga por internet) y las **copias de seguridad de Android** (que hace tu sistema, en tu cuenta de Google).
+[NOMBRE DE LA APP] **no recoge datos tuyos**: no tiene cuentas, ni servidor propio, ni analítica, ni informes de errores propios, ni publicidad. Lo que escribes y lo que adjuntas se guarda en tu móvil. Solo hay tres excepciones, que explicamos abajo: la **tarea web** (la página que decides ver se carga por internet), las **copias de seguridad de Android** (que hace tu sistema, en tu cuenta de Google) y las **notificaciones** (opcionales, desde tu móvil y sin servidor).
 
 ## Quién es el responsable
 
@@ -35,6 +35,15 @@ El desarrollador no recibe nada de esto: no tenemos servidor.
 
 - **No pide permiso de cámara, de fotos ni de almacenamiento.** Para hacer una foto o elegir un archivo, la app abre la cámara o el selector del sistema y solo recibe lo que tú eliges.
 - **Internet:** la app la usa **únicamente** para mostrar una página web cuando tú añades una tarea web.
+- **Notificaciones:** solo si enciendes el ajuste «Notificaciones»; la app te lo pide en ese momento (Android 13 o posterior). También usa el permiso que le permite **reprogramar los avisos al reiniciar el móvil**. No pide alarmas exactas.
+
+## Las notificaciones
+
+Son **opcionales y vienen apagadas**. Si las enciendes, tu móvil te muestra 1, 2 o 3 notificaciones al día con tu **tarea actual** (su texto, o «Foto», «Imagen», «PDF» o el dominio de la página). Todo ocurre **en tu móvil**: no hay servidor ni notificaciones remotas.
+
+- **La notificación enseña tu tarea en la bandeja de notificaciones.** Con el móvil bloqueado, **lo que se ve lo decide tu sistema**: con los ajustes por defecto se ve entera; si ocultas el contenido sensible en los ajustes de tu móvil, se ve «Tienes una tarea pendiente.». La app lo avisa en Ajustes antes de encender. Relojes enlazados, otras apps con acceso a notificaciones y el historial de notificaciones del sistema pueden verla; la app no los controla.
+- La app **no guarda una copia del texto de tu tarea** para los avisos: lo lee de su base de datos cuando llega la hora. Guarda aparte solo los datos para que los avisos sigan tras reiniciar: si están encendidos, cuántos al día, el idioma y la última hora atendida; esos datos no entran en las copias de seguridad.
+- Puedes apagarlos en Ajustes de la app o en los ajustes de notificaciones del sistema.
 
 ## La tarea web
 
@@ -85,7 +94,7 @@ Si algún día la app cambia lo que hace con los datos (por ejemplo, con sincron
 
 ## In short
 
-[APP NAME] **doesn't collect data about you**: it has no accounts, no server of its own, no analytics, no crash reporting of its own and no ads. What you write and attach is stored on your phone. There are only two exceptions, explained below: the **web task** (the page you choose to view is loaded over the internet) and **Android backups** (made by your system, into your Google account).
+[APP NAME] **doesn't collect data about you**: it has no accounts, no server of its own, no analytics, no crash reporting of its own and no ads. What you write and attach is stored on your phone. There are only three exceptions, explained below: the **web task** (the page you choose to view is loaded over the internet), **Android backups** (made by your system, into your Google account) and **notifications** (optional, from your phone and with no server).
 
 ## Who is responsible
 
@@ -108,6 +117,15 @@ The developer receives none of this: we have no server.
 
 - **It doesn't ask for camera, photos or storage permission.** To take a photo or pick a file, the app opens the system camera or picker and only receives what you choose.
 - **Internet:** the app uses it **only** to show a web page when you add a web task.
+- **Notifications:** only if you turn on the "Notifications" setting; the app asks for it at that moment (Android 13 or later). It also uses the permission that lets it **reschedule the reminders after a restart**. It doesn't ask for exact alarms.
+
+## Notifications
+
+They are **optional and off by default**. If you turn them on, your phone shows 1, 2 or 3 notifications a day with your **current task** (its text, or "Photo", "Image", "PDF" or the page's domain). Everything happens **on your phone**: there is no server and no remote notifications.
+
+- **The notification shows your task in the notification shade.** With the phone locked, **what you see is decided by your system**: with the default settings it shows in full; if you hide sensitive content in your phone's settings, it shows "You have a task waiting.". The app tells you in Settings before you turn it on. Linked watches, other apps with notification access and the system's notification history may see it; the app doesn't control them.
+- The app **doesn't keep a copy of your task text** for the reminders: it reads it from its database when the time comes. It keeps separately only what it needs to keep the reminders going after a restart: whether they are on, how many a day, the language and the last time handled; that data isn't included in backups.
+- You can turn them off in the app's Settings or in the system's notification settings.
 
 ## The web task
 

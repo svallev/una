@@ -8,7 +8,7 @@ Formato MADR simplificado ([plantilla](0000-template.md)). Nuevos ADR con la ski
 | [0002](0002-almacenamiento-y-modelo-de-datos.md) | SQLite (drift) tras un repositorio, con migraciones comprobadas | Aceptado; ampliado por ADR-0024 (adjuntos de 1 a N) |
 | [0003](0003-estructura-sdd.md) | SDD con estructura propia ligera, compatible con Spec Kit | Aceptado |
 | [0004](0004-copias-de-seguridad.md) | Incluir los datos en las copias de seguridad del sistema | Aceptado, revisado tras S5 (BackupAgent con presupuesto) |
-| [0005](0005-cifrado-en-reposo.md) | Sin cifrado propio de la BD en la v1 | Aceptado |
+| [0005](0005-cifrado-en-reposo.md) | Sin cifrado propio de la BD en la v1 | Aceptado; enmendado por ADR-0025 (notificación local con la tarea actual) |
 | [0006](0006-eliminacion-y-deshacer.md) | Eliminar: borrado lógico + deshacer 6 s + purga | Sustituido por ADR-0011 |
 | [0007](0007-url-sin-conexion.md) | URL: WebView endurecida + captura de página completa | Aceptado para Android (S4); enmendado por ADR-0016 (sin captura) y ADR-0018 (sin navegación); completado por ADR-0017 |
 | [0008](0008-visor-de-documentos.md) | PDF dentro; el resto, con el visor del sistema | Aceptado para Android (S3); enmendado por ADR-0014 (v1: solo PDF) |
@@ -28,6 +28,7 @@ Formato MADR simplificado ([plantilla](0000-template.md)). Nuevos ADR con la ski
 | [0022](0022-interaccion-con-varias-fotos.md) | Interacción con varias fotos: swipe para cambiar, desplazamiento vertical y pellizco como la imagen única, y puntos solo informativos | Aceptado (2026-10-06; spec 016); enmienda al ADR-0013; excepción a P6 (WCAG 2.5.1 y 2.5.7; constitución 1.9); **enmienda 1 (spec 017, 2026-10-07): Bloquear zoom**, sin ampliar la excepción |
 | [0023](0023-idioma-elegido-en-la-app.md) | Idioma elegido en la app: "Como el sistema", Español o English; con uno elegido la app no mira el sistema y la excepción de voz del ADR-0020 se amplía | Aceptado (2026-10-05; spec 015); sustituye en parte al ADR-0020 (alcance de la excepción a P6); constitución 1.7 |
 | [0024](0024-adjuntos-uno-a-n-con-orden.md) | Adjuntos de 1 a N con orden: una fila por foto, con su posición, y esquema v3 | Aceptado (2026-10-06; spec 016); enmienda al ADR-0002 y al ADR-0012 |
+| [0025](0025-notificaciones-locales-con-la-tarea-actual.md) | Notificaciones locales con la tarea actual: código nativo propio, alarmas inexactas, tarea leída de la BD al llegar la hora y versión genérica de respaldo | Aceptado (2026-10-12; spec 019 y spike S7); enmienda al ADR-0005 y excepción opcional a P4/T-2 (constitución 1.10) |
 | [0026](0026-licencias-de-terceros-en-la-web.md) | Licencias de terceros solo en una web: se retiran las pantallas, los textos siguen dentro del paquete y el archivo de avisos se genera del APK comprobado | Aceptado (2026-10-05; spec 015); sustituye a la parte de licencias de la spec 012; nota en P3 (constitución 1.7) |
 
-El número **0025** queda reservado a las notificaciones (spec 019); el siguiente ADR libre es el 0027. El ADR-0023 y el ADR-0026 los desarrolla la spec 015, ya implementada; su decisión de aceptar el comportamiento de TalkBack al volver del navegador (2026-10-05) es una enmienda de la spec (CA-015-16 y 20h), no un ADR.
+El siguiente ADR libre es el 0027. El ADR-0023 y el ADR-0026 los desarrolla la spec 015, ya implementada; su decisión de aceptar el comportamiento de TalkBack al volver del navegador (2026-10-05) es una enmienda de la spec (CA-015-16 y 20h), no un ADR.
