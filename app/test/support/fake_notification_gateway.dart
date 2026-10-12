@@ -48,6 +48,10 @@ class FakeNotificationGateway implements NotificationGateway {
   /// Si no es nulo, `configure` espera a que se complete (cola, 3 y enseguida 2).
   Completer<void>? configureGate;
 
+  /// Si no es nulo, `canNotify` espera a que se complete (lectura en vuelo,
+  /// CA-019-09).
+  Completer<void>? canNotifyGate;
+
   /// Si no es nulo, `requestPermission` espera a que se complete (petición en
   /// curso, CA-019-09).
   Completer<void>? permissionGate;
@@ -70,7 +74,9 @@ class FakeNotificationGateway implements NotificationGateway {
   @override
   Future<bool> canNotify() async {
     canNotifyCalls++;
-    return allowed;
+    final answer = allowed;
+    await canNotifyGate?.future;
+    return answer;
   }
 
   @override

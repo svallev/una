@@ -135,7 +135,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       case SaveResult.failed:
         setState(() => notice(++_noticeSeq));
       case SaveResult.unchanged:
-        // Otro guardado de esta fila en curso: este toque se ignoró.
+      case SaveResult.blocked:
+        // Otro guardado de esta fila en curso: este toque se ignoró. (`blocked`
+        // es solo de Notificaciones, que tiene su propio bloque: T-019-10.)
         break;
     }
   }
