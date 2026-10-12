@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
+import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/ports/link_opener.dart';
@@ -115,6 +116,16 @@ Future<FakeOpener> openSettingsScreen(
     bottomInset: bottomInset,
     overrides: [linkOpenerProvider.overrideWithValue(o), ...overrides],
   );
+  // Lo que la app hace sola al arrancar con las notificaciones disponibles
+  // (a la vista, quitar el aviso, reconciliar: T-019-12) no cuenta como
+  // llamada de Ajustes.
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(UnaApp)),
+  );
+  if (container.read(notificationsAvailableProvider)) {
+    final gateway = container.read(notificationGatewayProvider);
+    if (gateway is FakeNotificationGateway) gateway.forgetCalls();
+  }
   // Los textos del menú son los del idioma de la app (por defecto, el del
   // sistema).
   final en = (appLanguage ?? locale.languageCode) == 'en';

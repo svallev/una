@@ -67,6 +67,18 @@ class FakeNotificationGateway implements NotificationGateway {
   int cancelDeliveredCalls = 0;
   int openSystemSettingsCalls = 0;
 
+  /// Olvida las llamadas hechas hasta ahora: las del arranque de la app
+  /// (indicador «a la vista», quitar el aviso, reconciliar; T-019-12), para
+  /// que un test de Ajustes cuente solo las suyas.
+  void forgetCalls() {
+    configureCalls.clear();
+    foregroundCalls.clear();
+    canNotifyCalls = 0;
+    requestPermissionCalls = 0;
+    cancelDeliveredCalls = 0;
+    openSystemSettingsCalls = 0;
+  }
+
   final StreamController<void> _open = StreamController<void>.broadcast();
 
   /// Simula que lo nativo acepta la orden de abrir la tarea actual.
