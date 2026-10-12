@@ -7,4 +7,10 @@
     <exclude domain="database" path="."/>
     <exclude domain="sharedpref" path="."/>
     <exclude domain="external" path="."/>
+    <!-- Copia derivada de los avisos (spec 019, CA-019-23): preferencias del almacenamiento «device
+         protected», accesibles antes del primer desbloqueo. Nunca se copian ni se transfieren. -->
+    <exclude domain="device_root" path="."/>
+    <exclude domain="device_file" path="."/>
+    <exclude domain="device_database" path="."/>
+    <exclude domain="device_sharedpref" path="."/>
 </full-backup-content>
