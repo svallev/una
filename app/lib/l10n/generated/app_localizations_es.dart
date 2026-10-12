@@ -687,4 +687,77 @@ class AppLocalizationsEs extends AppLocalizations {
   String a11yPhotoMissing(int index, int total) {
     return 'Foto $index de $total. Foto no disponible';
   }
+
+  @override
+  String get settingsNotifications => 'Notificaciones';
+
+  @override
+  String get settingsNotificationsPerDay => 'Notificaciones al día';
+
+  @override
+  String settingsNotificationsOption(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notificaciones al día',
+      one: '$count notificación al día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String settingsNotificationsHelp1(String time1) {
+    return 'La notificación será a las $time1.';
+  }
+
+  @override
+  String settingsNotificationsHelp2(String time1, String time2) {
+    return 'Las notificaciones serán a las $time1 y a las $time2.';
+  }
+
+  @override
+  String settingsNotificationsHelp3(String time1, String time2, String time3) {
+    return 'Las notificaciones serán a las $time1, a las $time2 y a las $time3.';
+  }
+
+  @override
+  String get settingsNotificationsBlocked =>
+      'Las notificaciones están bloqueadas en los Ajustes del sistema.';
+
+  @override
+  String get settingsNotificationsOpenSystem =>
+      'Abrir los ajustes de notificaciones';
+
+  @override
+  String get settingsNotificationsPrivacy =>
+      'La notificación muestra tu tarea actual. Con el móvil bloqueado también se ve, salvo que ocultes el contenido sensible en los ajustes de tu móvil.';
+
+  @override
+  String get settingsNotificationsOpenError =>
+      'No se pudieron abrir los Ajustes del sistema.';
+
+  @override
+  String get settingsNotificationsEnabledAnnounce =>
+      'Notificaciones activadas.';
+
+  @override
+  String get settingsNotificationsAllowedAnnounce =>
+      'Notificaciones permitidas.';
+
+  @override
+  String get settingsNotificationsAllowedOnAnnounce =>
+      'Notificaciones permitidas y activadas.';
+
+  @override
+  String get notificationChannelName => 'Tarea actual';
+
+  @override
+  String get notificationChannelDescription =>
+      'Te recuerda tu tarea actual 1, 2 o 3 veces al día, según elijas en Ajustes.';
+
+  @override
+  String get notificationTitle => 'Tarea actual';
+
+  @override
+  String get notificationPublic => 'Tienes una tarea pendiente.';
 }

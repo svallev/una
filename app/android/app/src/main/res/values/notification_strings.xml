@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERADO por tool/gen_android_strings.dart desde app_en.arb. No editar a mano. -->
+<resources>
+    <string name="notification_channel_name">Current task</string>
+    <string name="notification_channel_description">Reminds you of your current task 1, 2 or 3 times a day, as set in Settings.</string>
+    <string name="notification_title">Current task</string>
+    <string name="notification_public">You have a task waiting.</string>
+    <string name="attachment_photo">Photo</string>
+    <string name="attachment_image">Image</string>
+    <string name="attachment_pdf">PDF</string>
+</resources>

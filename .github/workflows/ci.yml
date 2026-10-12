@@ -59,12 +59,13 @@ jobs:
       - run: flutter pub get --enforce-lockfile
       - name: Licencias de las dependencias (threat-model §5)
         run: dart run tool/check_licenses.dart
-      - name: Código generado al día (drift, l10n, identidad, tokens, esquema)
+      - name: Código generado al día (drift, l10n, identidad, tokens, textos nativos, esquema)
         run: |
           dart run build_runner build --delete-conflicting-outputs
           flutter gen-l10n
           dart run tool/gen_identity.dart --check
           dart run tool/gen_tokens.dart --check
+          dart run tool/gen_android_strings.dart --check
           git diff --exit-code || (echo "::error::Hay código generado sin actualizar" && exit 1)
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze --fatal-infos

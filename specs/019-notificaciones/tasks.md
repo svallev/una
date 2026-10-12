@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-12), junto con `plan.md`. Revisadas por `security-reviewer`, `a11y-reviewer` y `spec-reviewer`. Spec **Aprobada** (2026-10-12). C-1 (decisión A: sin garantía de hora con la pantalla apagada mucho rato), C-2 (JUnit), P-019-12 (b) y P-019-13 (a) resueltas.
 
-**Siguiente:** **T-019-01** en una sesión de implementación nueva (`/spec-implement 019`), en la rama `feat/019-notificaciones` creada desde `main` actualizado. <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** **T-019-02** (tokens, contraste y campana), en la rama `feat/019-notificaciones`. <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Los textos y los tokens van juntos en una tarea al principio. Una PR puede agrupar varias tareas consecutivas. Tests primero: en cada tarea con código, los tests se escriben antes y fallan por la razón esperada. **Cortes de sesión sugeridos:** tras T-019-03 (Dart de ajustes), tras T-019-08 (nativo y canal completos), tras T-019-12 (Dart completo). T-019-14 y T-019-15 usan emulador y móvil (compilan con `--dart-define=UNA_NOTIFICATIONS=true`): las hace el **coordinador**, nunca un `spec-task` (el Xiaomi, con permiso del propietario y sin capturas de pantalla).
 
@@ -38,3 +38,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-019-01 | **Hecha.** 17 claves del §7 en `app_es/en.arb` (descripción con CA-019, `count` int, `time1..3` String, plural con `{count}`), glosario con las claves, `tool/gen_android_strings.dart` (7 claves → `res/values/` EN y `res/values-es/` `notification_strings.xml`, nombres `snake_case`, escapa `'`, `"`, `&`, `<`, `@`/`?` inicial, falla si hay `{}`; `runGenAndroidStrings`, `--check`, `--out`) y su paso en el trabajo `app` de `ci.yml`. 2 tests nuevos (18 pruebas); `flutter test` completo 2975 en verde, `analyze` limpio, `flutter build apk --debug` compila con los recursos. | (este commit) |
