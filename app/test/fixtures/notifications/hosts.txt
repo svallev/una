@@ -1,0 +1,69 @@
+# Casos compartidos de dominio (spec 019, T-019-05, CA-019-16 y CL-019-13 a 15).
+# Los lee HostDisplayTest.kt (JUnit, el Kotlin que corre con la app cerrada) y
+# test/domain/notification_parity_test.dart (displayHost / webAddressHost de Dart):
+# si una de las dos implementaciones cambia, el otro lado falla.
+#
+# Texto plano, sin JSON (org.json no está implementado en las pruebas JVM de Android).
+# Una línea = un caso, tres columnas separadas por TABULADOR:
+#   tipo <TAB> entrada <TAB> esperado
+# tipo:   host     displayHost(entrada)
+#         hostWww  displayHost(entrada, dropWww: true)
+#         url      webAddressHost(entrada)
+# Escapes en entrada y esperado: \uXXXX (4 cifras hex), \\ , \t, \n, \r.
+# El marcador <null> es null (entrada o esperado). Las líneas con # y las vacías se ignoran.
+
+# --- Sin www. delante en la barra; entero en las confirmaciones (CA-009-14) ---
+host	www.example.com	www.example.com
+hostWww	www.congreso.ejemplo.com	congreso.ejemplo.com
+hostWww	WWW.Example.COM	example.com
+hostWww	m.www.example.com	m.www.example.com
+hostWww	www.com	www.com
+hostWww	www2.example.com	www2.example.com
+hostWww	example.com	example.com
+
+# --- Saneado: sin caracteres de control ni de cambio de dirección ---
+host	exa%E2%80%AEmple.com	example.com
+host	exa\u202Emple\u200F.com\u0007	example.com
+host	%E2%81%A6evil.com%E2%81%A9	evil.com
+host	%zz.com	%zz.com
+host	%4z.com	%4z.com
+host	a%4	a%4
+host	a%	a%
+host	%C3%B1.com	ñ.com
+
+# --- Punycode si mezcla alfabetos; legible si usa uno solo ---
+host	\u0430pple.com	xn--pple-43d.com
+host	%D0%B0pple.com	xn--pple-43d.com
+host	xn--pple-43d.com	xn--pple-43d.com
+host	пример.рф	пример.рф
+host	españa.es	españa.es
+host	日本語.jp	xn--wgv71a119e.jp
+
+# --- Lo que llega en punycode (la WebView da ASCII) se ve legible si usa un solo alfabeto ---
+host	xn--e1afmkfd.xn--p1ai	пример.рф
+hostWww	www.xn--espaa-rta.es	españa.es
+host	XN--BCHER-KVA.example	bücher.example
+
+# --- Punycode mal formado: se queda como llegó ---
+host	xn--a!b.com	xn--a!b.com
+host	xn--.com	xn--.com
+host	xn--ab-zd9k.com	xn--ab-zd9k.com
+host	xn--9999999999999999999999999999999999999999999999999999999999999.com	xn--9999999999999999999999999999999999999999999999999999999999999.com
+
+# --- El dominio de la dirección guardada, como en la barra ---
+url	https://www.example.com/programa?x=1	example.com
+url	https://xn--e1afmkfd.xn--p1ai	пример.рф
+url	https://[2606:4700:4700::1111]/	2606:4700:4700::1111
+url	https://example.com:8443/a	example.com
+url	https://user@example.com/	example.com
+url	HTTPS://WWW.EXAMPLE.COM	example.com
+url	https://example.com	example.com
+url	https://example.com?x=1	example.com
+url	https://example.com#parte	example.com
+url	http://www.com/	www.com
+url	<null>	<null>
+url		<null>
+url	no es una dirección	<null>
+url	https:///ruta	<null>
+url	example.com/sin-esquema	<null>
+url	mailto:alguien@example.com	<null>

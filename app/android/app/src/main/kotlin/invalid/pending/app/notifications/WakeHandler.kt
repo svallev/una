@@ -49,18 +49,11 @@ interface AlarmScheduler {
     fun cancel()
 }
 
-/** Lo que el notificador necesita para dibujar la notificación (el texto lo resuelve T-019-05). */
-data class NotificationRequest(
-    val display: Display,
-    val language: LanguageChoice,
-    val systemLanguageTags: List<String>,
-)
-
 interface Notifier {
     /** ¿Permiso concedido y canal no apagado? (no crea el canal). */
     fun canNotify(): Boolean
 
-    fun show(request: NotificationRequest)
+    fun show(spec: NotificationSpec)
 
     /** Quita la notificación de la bandeja. */
     fun cancelDelivered()
@@ -88,6 +81,7 @@ class WakeHandler(
     private val alarms: AlarmScheduler,
     private val notifier: Notifier,
     private val systemLocale: SystemLocale,
+    private val strings: NotificationStringSource,
 ) {
     /** Atiende un despertar: decide, anota la «última hora atendida», rearma la siguiente y muestra. */
     fun onWake(reason: WakeReason) {
@@ -122,7 +116,8 @@ class WakeHandler(
         outcome.next?.let { alarms.scheduleInexact(it) }
         outcome.display?.let { display ->
             try {
-                notifier.show(NotificationRequest(display, state.config.language, systemLocale.languageTags()))
+                // El texto y el idioma se deciden aquí, al llegar la hora (CA-019-21), no al programar.
+                notifier.show(NotificationSpec.build(display, state.config.language, systemLocale.languageTags(), strings))
             } catch (_: Throwable) {
                 // Sin registro (CA-019-23): la hora ya quedó atendida y la siguiente armada.
             }

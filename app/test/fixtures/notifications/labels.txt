@@ -1,0 +1,74 @@
+# Casos compartidos de la etiqueta de la notificación (spec 019, T-019-05, CA-019-16).
+# Los lee TaskLabelTest.kt (JUnit, el Kotlin que corre con la app cerrada); la prueba de
+# paridad de Dart comprueba que cada dominio esperado coincide con webAddressHost.
+#
+# Texto plano, sin JSON. Una línea = un caso, cuatro columnas separadas por TABULADOR:
+#   nombre <TAB> texto <TAB> adjuntos <TAB> esperado
+# adjuntos: "-" (ninguno) o filas "tipo,origen,dirección" separadas por " | ".
+#           tipo y origen son los de la base (image|pdf|web, camera|gallery|file|url).
+# esperado: none | photo | image | pdf | text:<texto> | domain:<dominio>
+# Escapes: \uXXXX, \\ , \t, \n, \r. El marcador <null> es null (texto o dirección ausentes).
+# Los casos de 120 / 121 letras, 10 000 caracteres y emoji con ZWJ van en TaskLabelTest.kt.
+
+# --- El texto manda sobre cualquier adjunto, también web ---
+solo texto	Llamar a Marta	-	text:Llamar a Marta
+texto con foto	Llamar a Marta	image,camera,	text:Llamar a Marta
+texto con imagen	Llamar a Marta	image,gallery,	text:Llamar a Marta
+texto con pdf	Llamar a Marta	pdf,file,	text:Llamar a Marta
+texto con web	Llamar a Marta	web,url,https://www.example.com/	text:Llamar a Marta
+texto con grupo	Llamar a Marta	image,camera, | image,gallery,	text:Llamar a Marta
+
+# --- Saltos de línea como espacios ---
+salto simple	Pan\nLeche	-	text:Pan Leche
+salto windows	Pan\r\nLeche	-	text:Pan Leche
+saltos seguidos	Pan\n\n\nLeche	-	text:Pan Leche
+salto rodeado de espacios	Pan  \n  Leche	-	text:Pan Leche
+separador de línea unicode	Pan\u2028Leche\u2029Huevos	-	text:Pan Leche Huevos
+tabulacion vertical	Pan\u000BLeche	-	text:Pan Leche
+salto de pagina	Pan\u000CLeche	-	text:Pan Leche
+siguiente linea	Pan\u0085Leche	-	text:Pan Leche
+salto al principio y al final	\nPan\n	-	text:Pan
+espacios al principio y al final	   Pan   	-	text:Pan
+espacios interiores se respetan	Pan  y  leche	-	text:Pan  y  leche
+
+# --- Texto solo de espacios o saltos = sin texto ---
+solo espacios sin adjunto	      	-	none
+solo saltos sin adjunto	\n\r\n\t\n	-	none
+espacio duro sin adjunto	\u00A0\u00A0	-	none
+vacío sin adjunto		-	none
+nulo sin adjunto	<null>	-	none
+solo espacios con foto	   	image,camera,	photo
+solo saltos con pdf	\n\n	pdf,file,	pdf
+solo espacios con web	  	web,url,https://example.com/	domain:example.com
+
+# --- Sin texto: el tipo ---
+foto de la cámara	<null>	image,camera,	photo
+imagen de la galería	<null>	image,gallery,	image
+pdf	<null>	pdf,file,	pdf
+web	<null>	web,url,https://www.example.com/programa?x=1	domain:example.com
+web mayúsculas	<null>	web,url,https://WWW.Example.COM/	domain:example.com
+web con puerto	<null>	web,url,https://example.com:8443/a	domain:example.com
+web internacional en punycode	<null>	web,url,https://xn--e1afmkfd.xn--p1ai	domain:пример.рф
+web con alfabetos mezclados	<null>	web,url,https://\u0430pple.com/	domain:xn--pple-43d.com
+web ip v6	<null>	web,url,https://[2606:4700:4700::1111]/	domain:2606:4700:4700::1111
+
+# --- Grupo, mezcla rara o adjunto desconocido, sin texto: versión genérica (sin etiqueta) ---
+grupo de dos fotos	<null>	image,camera, | image,camera,	none
+grupo de foto e imagen	<null>	image,camera, | image,gallery,	none
+foto y pdf	<null>	image,camera, | pdf,file,	none
+dos pdf	<null>	pdf,file, | pdf,file,	none
+foto y web	<null>	image,camera, | web,url,https://example.com/	none
+tipo desconocido	<null>	docx,file,	none
+tipo ausente	<null>	<null>,file,	none
+origen desconocido	<null>	image,satelite,	none
+origen ausente	<null>	image,<null>,	none
+imagen con origen de archivo	<null>	image,file,	none
+imagen con origen de url	<null>	image,url,	none
+pdf con origen de cámara	<null>	pdf,camera,	none
+web con origen de archivo	<null>	web,file,https://example.com/	none
+web sin dirección	<null>	web,url,<null>	none
+web con dirección vacía	<null>	web,url,	none
+web con dirección ilegible	<null>	web,url,no es una dirección	none
+web sin dominio	<null>	web,url,https:///ruta	none
+tipo en mayúsculas	<null>	IMAGE,camera,	none
+sin texto ni adjunto	<null>	-	none

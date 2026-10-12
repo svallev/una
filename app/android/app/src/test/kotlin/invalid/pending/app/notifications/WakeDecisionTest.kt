@@ -20,7 +20,7 @@ class WakeDecisionTest {
         sinceBoot: Duration = Duration.ofHours(5),
         zone: ZoneId = MADRID,
         on: Boolean = true,
-        read: () -> TaskRead = { TaskRead.Task("Llamar a Marta") },
+        read: () -> TaskRead = { TaskRead.Task(txt("Llamar a Marta")) },
     ) = WakeInput(
         reason = reason,
         sinceBoot = sinceBoot,
@@ -33,7 +33,7 @@ class WakeDecisionTest {
         readTask = read,
     )
 
-    private val full = Display.Full("Llamar a Marta")
+    private val full = Display.Full(txt("Llamar a Marta"))
 
     // --- CA-019-13: que despertares evaluan lo perdido -----------------------------------------
 
@@ -92,7 +92,7 @@ class WakeDecisionTest {
             WakeDecision.decide(
                 input(WakeReason.LOCALE_CHANGED, at(14, 16), lastAttended = at(13, 20)) {
                     reads++
-                    TaskRead.Task("x")
+                    TaskRead.Task(txt("x"))
                 },
             )
         assertNull(out.display)
@@ -217,7 +217,7 @@ class WakeDecisionTest {
         val out = WakeDecision.decide(
             input(WakeReason.LOCKED_BOOT_COMPLETED, at(14, 16), lastAttended = at(13, 20)) {
                 reads++
-                TaskRead.Task("secreto")
+                TaskRead.Task(txt("secreto"))
             },
         )
         assertEquals(Display.Generic, out.display)
@@ -229,7 +229,7 @@ class WakeDecisionTest {
         var reads = 0
         val read = {
             reads++
-            TaskRead.Task("x")
+            TaskRead.Task(txt("x"))
         }
         // sin hora debida
         WakeDecision.decide(input(WakeReason.ALARM, at(14, 9, 10), lastAttended = at(14, 9, 3), read = read))

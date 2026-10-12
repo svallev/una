@@ -22,6 +22,9 @@ fun at(
 ): Instant =
     ZonedDateTime.of(LocalDate.of(year, month, day), LocalTime.of(hour, minute), zone).toInstant()
 
+/** Una etiqueta con el texto del usuario. */
+fun txt(text: String) = TaskLabel.Text(text)
+
 /** Reloj falso: el instante, la zona y el tiempo desde el arranque los mueve la prueba. */
 class FakeClock(
     var now: Instant,
@@ -99,7 +102,7 @@ class FakeScheduler : AlarmScheduler {
 
 class FakeNotifier : Notifier {
     var canNotify = true
-    val shown = mutableListOf<NotificationRequest>()
+    val shown = mutableListOf<NotificationSpec>()
     var delivered = 0
     var cancelDelivered = 0
     var channelRefreshes = 0
@@ -107,9 +110,9 @@ class FakeNotifier : Notifier {
 
     override fun canNotify(): Boolean = canNotify
 
-    override fun show(request: NotificationRequest) {
+    override fun show(spec: NotificationSpec) {
         showFailure?.let { throw it }
-        shown += request
+        shown += spec
         delivered++
     }
 
@@ -132,7 +135,7 @@ class Rig(
     config: NotificationConfig = NotificationConfig(true, 1, LanguageChoice.SYSTEM),
     lastAttended: Instant? = null,
     foregroundAt: Instant? = null,
-    task: TaskRead = TaskRead.Task("Llamar a Marta"),
+    task: TaskRead = TaskRead.Task(txt("Llamar a Marta")),
 ) {
     val clock = FakeClock(now)
     val store = FakeStore(DerivedState(config, lastAttended, foregroundAt))
@@ -140,7 +143,7 @@ class Rig(
     val scheduler = FakeScheduler()
     val notifier = FakeNotifier()
     val locale = FakeLocale()
-    val handler = WakeHandler(clock, store, reader, scheduler, notifier, locale)
+    val handler = WakeHandler(clock, store, reader, scheduler, notifier, locale, ResourceStrings)
 
     fun wake(reason: WakeReason, now: Instant = clock.now) {
         clock.now = now

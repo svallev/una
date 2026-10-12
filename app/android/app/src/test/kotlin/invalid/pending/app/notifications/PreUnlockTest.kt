@@ -12,7 +12,7 @@ class PreUnlockTest {
     private fun locked(
         lang: LanguageChoice = LanguageChoice.SYSTEM,
         failure: Throwable? = null,
-        result: TaskRead = TaskRead.Task("TEXTO-SECRETO"),
+        result: TaskRead = TaskRead.Task(txt("TEXTO-SECRETO")),
     ): Rig =
         Rig(
             at(14, 9),
@@ -72,8 +72,11 @@ class PreUnlockTest {
         rig.locale.tags = listOf("en-US")
         rig.wake(WakeReason.ALARM)
         val shown = rig.notifier.shown.single()
-        assertEquals(LanguageChoice.ES, shown.language)
-        assertEquals(listOf("en-US"), shown.systemLanguageTags)
+        // Español elegido con el sistema en inglés: sale en español, marcado, y el canal en inglés.
+        assertEquals("Tarea actual", shown.text.title.text)
+        assertEquals("Tienes una tarea pendiente.", shown.text.body.text)
+        assertTrue(shown.text.body.marked)
+        assertEquals("Current task", shown.channel.name)
     }
 
     @Test

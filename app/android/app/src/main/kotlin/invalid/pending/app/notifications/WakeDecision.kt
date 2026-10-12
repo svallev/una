@@ -40,7 +40,7 @@ data class NotificationConfig(val on: Boolean, val perDay: Int, val language: La
 /** Resultado de leer la tarea actual al llegar la hora (CA-019-15, 16, 30). */
 sealed interface TaskRead {
     /** Hay tarea actual; [label] es su etiqueta ya calculada o `null` si no tiene (grupo, adjunto raro). */
-    data class Task(val label: String?) : TaskRead
+    data class Task(val label: TaskLabel?) : TaskRead
 
     /** La base se leyó y no queda ninguna tarea pendiente. */
     data object NoTask : TaskRead
@@ -52,7 +52,7 @@ sealed interface TaskRead {
 /** Qué versión de la notificación sale (CA-019-16, 17, 30). */
 sealed interface Display {
     /** La completa, con la etiqueta de la tarea (la pública sigue siendo la genérica). */
-    data class Full(val label: String) : Display
+    data class Full(val label: TaskLabel) : Display
 
     /** «Tarea actual» / «Tienes una tarea pendiente.» sin ninguna parte de la tarea. */
     data object Generic : Display
