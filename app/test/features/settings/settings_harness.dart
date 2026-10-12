@@ -9,9 +9,12 @@ import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/ui/square_icon_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/app_harness.dart';
+import '../../support/fake_notification_gateway.dart';
 
 /// Ayudantes de las pruebas de Ajustes (spec 015): abrir la pantalla desde el
 /// menú de la tarea con la app completa, leer el orden del lector y el foco.
@@ -89,6 +92,7 @@ Future<FakeOpener> openSettingsScreen(
   InMemoryTaskRepository? repo,
   bool keyboard = false,
   String? appLanguage,
+  List<Override> overrides = const [],
 }) async {
   final o = opener ?? FakeOpener();
   if (keyboard) {
@@ -109,7 +113,7 @@ Future<FakeOpener> openSettingsScreen(
     textScale: textScale,
     size: size,
     bottomInset: bottomInset,
-    overrides: [linkOpenerProvider.overrideWithValue(o)],
+    overrides: [linkOpenerProvider.overrideWithValue(o), ...overrides],
   );
   // Los textos del menú son los del idioma de la app (por defecto, el del
   // sistema).
@@ -160,3 +164,23 @@ String? focusedLabel(WidgetTester tester) {
   if (texts.evaluate().isEmpty) return null;
   return tester.widget<Text>(texts.first).data;
 }
+
+/// Lo que enciende la fila de Notificaciones en los tests (spec 019): el
+/// indicador, la plataforma (Android por defecto) y el canal falso. Sin esto la
+/// fila no se ve, como en la app hasta T-019-17.
+List<Override> notificationsOverrides({
+  FakeNotificationGateway? gateway,
+  bool flag = true,
+  bool platform = true,
+}) => [
+  notificationsFlagProvider.overrideWithValue(flag),
+  notificationsPlatformProvider.overrideWithValue(platform),
+  notificationGatewayProvider.overrideWithValue(
+    gateway ?? FakeNotificationGateway(),
+  ),
+];
+
+/// El contenedor de Riverpod de la app montada (para leer o cambiar un
+/// proveedor desde el test).
+ProviderContainer appContainer(WidgetTester tester) =>
+    ProviderScope.containerOf(tester.element(find.byType(SettingsScreen)));

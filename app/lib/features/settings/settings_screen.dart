@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show AttributedString;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/providers.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/locale_choice.dart';
+import '../../domain/entities/notification_settings.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/live_notice.dart';
 import '../../ui/settings_row.dart';
@@ -14,6 +16,8 @@ import '../../ui/una_switch_row.dart';
 import 'external_page.dart';
 import 'language_label.dart';
 import 'language_page.dart';
+import 'notifications_block.dart';
+import 'notifications_state.dart';
 import 'settings_controller.dart';
 import 'settings_page.dart';
 import 'settings_route.dart';
@@ -25,11 +29,11 @@ Future<void> openSettings(BuildContext context) =>
         .push(settingsSheetRoute<void>(context, (_) => const SettingsScreen()));
 
 /// Nivel 1: Ajustes (spec 015, tablero 16 del prototipo). De arriba abajo:
-/// **Idioma** · separador · **Pantalla siempre activa** (con su aviso de
-/// guardado) · separador · **Información** (encabezado), Política de privacidad
-/// y Licencias de terceros · **Ayuda** (con el aviso de enlace). Sin
-/// Notificaciones: llega con la spec 019 y la estructura de bloques la admite
-/// (CA-015-01c).
+/// **Idioma** · **Notificaciones** (spec 019: solo en Android y con el
+/// indicador encendido, con su línea de privacidad y sus opciones; en el mismo
+/// bloque que Idioma) · separador · **Pantalla siempre activa** (con su aviso
+/// de guardado) · separador · **Información** (encabezado), Política de
+/// privacidad y Licencias de terceros · **Ayuda** (con el aviso de enlace).
 ///
 /// Las tres filas de web usan la misma función, [openExternalPage]. Los avisos
 /// son regiones vivas ([LiveNotice]): **uno por interruptor** (spec 017,
@@ -64,6 +68,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   );
 
   final _language = _RowFocus('language');
+  final _notifications = _RowFocus('notifications');
   final _privacy = _RowFocus('privacy');
   final _licenses = _RowFocus('licenses');
   final _help = _RowFocus('help');
@@ -84,6 +89,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void dispose() {
     _session.dispose();
     _language.node.dispose();
+    _notifications.node.dispose();
     _privacy.node.dispose();
     _licenses.node.dispose();
     _help.node.dispose();
@@ -137,9 +143,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       case SaveResult.unchanged:
       case SaveResult.blocked:
         // Otro guardado de esta fila en curso: este toque se ignoró. (`blocked`
-        // es solo de Notificaciones, que tiene su propio bloque: T-019-10.)
+        // es solo de Notificaciones, que tiene su propio bloque.)
         break;
     }
+  }
+
+  /// Enciende o apaga "Notificaciones" (spec 019): el interruptor se ve
+  /// encendido solo con el ajuste guardado **y** el sistema permitiéndolo
+  /// (CA-019-02, 09), así que tocarlo apaga lo que se ve encendido y en
+  /// cualquier otro caso intenta encender. Todo lo demás (permiso, guardado,
+  /// marcha atrás) lo hace el controlador; el interruptor se mueve cuando
+  /// termina.
+  ///
+  /// **[Pendiente, T-019-11]** los avisos de bloqueo y de error: de momento el
+  /// resultado no se dibuja.
+  Future<void> _toggleNotifications() async {
+    final shownOn =
+        ref.read(settingsProvider).notificationsOn &&
+        ref.read(systemAllowsNotificationsProvider) != false;
+    await ref.read(settingsProvider.notifier).setNotificationsOn(!shownOn);
+  }
+
+  /// Cambia cuántas notificaciones al día (CA-019-03); gana la última si hay
+  /// varios toques seguidos. Los avisos, en T-019-11.
+  Future<void> _pickNotificationsPerDay(NotificationsPerDay value) async {
+    await ref.read(settingsProvider.notifier).setNotificationsPerDay(value);
   }
 
   Future<void> _openLanguage() async {
@@ -210,7 +238,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Bloque 1: Idioma (Notificaciones irá debajo, spec 019).
+            // Bloque 1: Idioma y, debajo, Notificaciones (spec 019). Sin la
+            // fila (web, iOS o indicador apagado) el bloque queda como en la
+            // 017: ni separador ni hueco de más.
             _Block(
               top: UnaSpace.m + UnaSpace.xxs,
               children: [
@@ -224,6 +254,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   semanticsKey: _language.key,
                   onTap: () => unawaited(_openLanguage()),
                 ),
+                if (ref.watch(notificationsAvailableProvider))
+                  NotificationsBlock(
+                    focusNode: _notifications.node,
+                    semanticsKey: _notifications.key,
+                    onToggle: () => unawaited(_toggleNotifications()),
+                    onPick: (value) =>
+                        unawaited(_pickNotificationsPerDay(value)),
+                  ),
               ],
             ),
             const _BlockSeparator(),
