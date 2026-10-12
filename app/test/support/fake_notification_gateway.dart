@@ -42,6 +42,10 @@ class FakeNotificationGateway implements NotificationGateway {
   /// Si `openSystemSettings` encuentra a dónde ir.
   bool openSettingsResult = true;
 
+  /// Si no es nulo, `openSystemSettings` espera a que se complete (toques
+  /// seguidos mientras abre, CA-019-08).
+  Completer<void>? openSettingsGate;
+
   /// Si no es nulo, `configure` lo lanza (tras esperar [configureGate]).
   NotificationGatewayException? configureFailure;
 
@@ -118,6 +122,7 @@ class FakeNotificationGateway implements NotificationGateway {
   @override
   Future<bool> openSystemSettings() async {
     openSystemSettingsCalls++;
+    await openSettingsGate?.future;
     return openSettingsResult;
   }
 }

@@ -7,9 +7,12 @@ import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/notification_settings.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/focus_ring.dart';
+import '../../ui/live_notice.dart';
 import '../../ui/live_region_announcer.dart';
 import '../../ui/radio_row.dart';
+import '../../ui/request_focus.dart';
 import '../../ui/una_icons.dart';
+import '../../ui/una_sheet.dart';
 import '../../ui/una_switch_row.dart';
 import 'notifications_state.dart';
 import 'settings_controller.dart';
@@ -38,6 +41,15 @@ import 'settings_controller.dart';
 /// un [LiveRegionNode] de 1 × 1, nacido vacío, hermano del texto de la ayuda
 /// (que es un `Text` normal, parada del lector pero no de Tab). Desplegar el
 /// acordeón no anuncia nada.
+///
+/// Tras la ayuda, si [blocked], el **aviso de bloqueo** (CA-019-08 y 09): un
+/// `Text` estático (no es una región viva: se anuncia por el mismo anunciador,
+/// solo tras un intento rechazado, vía [NotificationsBlockState.announce]) con
+/// un [UnaLinkButton] que abre los ajustes del sistema; si no hay a dónde ir,
+/// [openError] pone el aviso «No se pudieron abrir los Ajustes del sistema.».
+/// Al final, el aviso de error de guardado del bloque ([saveError], CA-019-06).
+/// Cuando el aviso de bloqueo se quita con el foco en su botón, o se pliega la
+/// opción que lo tenía, el foco pasa al interruptor.
 class NotificationsBlock extends ConsumerStatefulWidget {
   const NotificationsBlock({
     super.key,
@@ -45,6 +57,10 @@ class NotificationsBlock extends ConsumerStatefulWidget {
     required this.semanticsKey,
     required this.onToggle,
     required this.onPick,
+    this.blocked = false,
+    this.onOpenSystemSettings,
+    this.openError,
+    this.saveError,
   });
 
   /// La marca de selección de la opción elegida (para los tests).
@@ -65,8 +81,21 @@ class NotificationsBlock extends ConsumerStatefulWidget {
   /// Se llama al tocar una opción distinta de la marcada.
   final ValueChanged<NotificationsPerDay> onPick;
 
+  /// ¿Se ve el aviso de bloqueo con su botón? (Lo decide la pantalla.)
+  final bool blocked;
+
+  /// Se llama al tocar «Abrir los ajustes de notificaciones».
+  final VoidCallback? onOpenSystemSettings;
+
+  /// El número del intento fallido de abrir los ajustes del sistema, o `null`
+  /// si no hay aviso (es la clave del `LiveNotice`).
+  final int? openError;
+
+  /// El número del intento fallido de guardar, o `null` si no hay aviso.
+  final int? saveError;
+
   @override
-  ConsumerState<NotificationsBlock> createState() => _NotificationsBlockState();
+  ConsumerState<NotificationsBlock> createState() => NotificationsBlockState();
 }
 
 /// La sangría de lo que cuelga de la fila: debajo del nombre (icono + hueco +
@@ -76,7 +105,7 @@ const _indent = UnaSpace.xs + UnaSizes.icon + UnaSpace.m;
 /// El hueco entre el encabezado, las opciones y la ayuda (prototipo: 10).
 const _gap = UnaSpace.s + UnaSpace.xxs;
 
-class _NotificationsBlockState extends ConsumerState<NotificationsBlock> {
+class NotificationsBlockState extends ConsumerState<NotificationsBlock> {
   /// Un foco por opción: viven con el bloque (no con el acordeón, que se
   /// desmonta plegado) para poder preguntar si una tenía el foco al plegarse.
   final _options = {
@@ -84,12 +113,50 @@ class _NotificationsBlockState extends ConsumerState<NotificationsBlock> {
       v: FocusNode(debugLabel: 'notifications per day ${v.count}'),
   };
 
-  /// La frase de la ayuda al cambiar de opción (región viva, CA-019-04).
+  /// Lo que se anuncia: la ayuda al cambiar de opción (CA-019-04) y los avisos
+  /// del permiso (CA-019-07 a 09). Región viva de 1 × 1, nacida vacía.
   final _announcer = LiveRegionAnnouncer();
+
+  /// El foco y la clave del botón del aviso de bloqueo.
+  final _openFocus = FocusNode(debugLabel: 'notifications open system');
+  final _openKey = GlobalKey();
+
+  /// ¿Estaban desplegadas las opciones en la última construcción? Para saber
+  /// si una opción con el foco se pliega por el bloqueo.
+  bool? _wasShownOn;
+
+  /// Dice [message] (en el idioma de la app, al decirlo) con la región viva y
+  /// la cadencia de los demás avisos: tras el antirrebote
+  /// ([DebouncedAnnouncer.debounce], que es lo que se espera tras mover el
+  /// foco, `UnaMotion.announceAfterFocus`), con la última frase si hay varias
+  /// seguidas.
+  void announce(String Function(AppLocalizations l10n) message) {
+    _announcer.announce(
+      () => mounted ? message(AppLocalizations.of(context)) : '',
+    );
+  }
+
+  @override
+  void didUpdateWidget(NotificationsBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // El aviso se quita con el foco en su botón: el botón desaparece y el foco
+    // pasa al interruptor (CA-019-08). Se mira ahora, con el botón aún montado.
+    if (oldWidget.blocked && !widget.blocked && _openFocus.hasFocus) {
+      _focusSwitch();
+    }
+  }
+
+  void _focusSwitch() => requestFocusAfter(
+    after: Duration.zero,
+    isMounted: () => mounted,
+    node: widget.focusNode,
+    semantics: widget.semanticsKey,
+  );
 
   @override
   void dispose() {
     _announcer.dispose();
+    _openFocus.dispose();
     for (final node in _options.values) {
       node.dispose();
     }
@@ -119,6 +186,14 @@ class _NotificationsBlockState extends ConsumerState<NotificationsBlock> {
     // `null` = aún sin leer: se ve el valor guardado (CA-019-09).
     final systemAllows = ref.watch(systemAllowsNotificationsProvider);
     final shownOn = on && systemAllows != false;
+    // Una opción con el foco se pliega porque el sistema bloquea: el foco pasa
+    // al interruptor (se mira antes de que el acordeón se pliegue).
+    if (_wasShownOn == true &&
+        !shownOn &&
+        _options.values.any((node) => node.hasFocus)) {
+      _focusSwitch();
+    }
+    _wasShownOn = shownOn;
     // Cambiar de opción anuncia la ayuda nueva, una sola vez y con el último
     // cambio si hay varios seguidos. Desplegar no cambia la cantidad: no dice
     // nada.
@@ -194,6 +269,16 @@ class _NotificationsBlockState extends ConsumerState<NotificationsBlock> {
                 ),
               ),
             ),
+            // Los dos avisos son huecos siempre presentes del mismo tipo: al
+            // ponerse o quitarse no recrean las filas de debajo ni su foco.
+            _BlockedSlot(
+              blocked: widget.blocked,
+              focusNode: _openFocus,
+              semanticsKey: _openKey,
+              onOpen: widget.onOpenSystemSettings ?? () {},
+              openError: widget.openError,
+            ),
+            _ErrorSlot(attempt: widget.saveError),
           ],
         ),
         // 1 × 1 en la esquina: no ocupa sitio ni es parada de foco.
@@ -203,6 +288,85 @@ class _NotificationsBlockState extends ConsumerState<NotificationsBlock> {
           child: LiveRegionNode(announcer: _announcer),
         ),
       ],
+    );
+  }
+}
+
+/// El respiro de un aviso de error bajo el bloque (como los de las demás
+/// filas de Ajustes).
+const _noticePadding = EdgeInsets.only(
+  top: UnaSpace.m,
+  left: UnaSpace.xs,
+  right: UnaSpace.xs,
+  bottom: UnaSpace.s,
+);
+
+/// El hueco del aviso de bloqueo: nada, o el texto estático, el botón que abre
+/// los ajustes del sistema y, si no hay a dónde ir, su aviso de error.
+class _BlockedSlot extends StatelessWidget {
+  const _BlockedSlot({
+    required this.blocked,
+    required this.focusNode,
+    required this.semanticsKey,
+    required this.onOpen,
+    required this.openError,
+  });
+
+  final bool blocked;
+  final FocusNode focusNode;
+  final GlobalKey semanticsKey;
+  final VoidCallback onOpen;
+  final int? openError;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!blocked) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final openError = this.openError;
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: _indent,
+        right: UnaSpace.xs,
+        bottom: UnaSpace.s,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Texto estático: lo anuncia el anunciador tras un intento
+          // rechazado, no al aparecer (CA-019-09).
+          Text(l10n.settingsNotificationsBlocked, style: _smallText),
+          UnaLinkButton(
+            label: l10n.settingsNotificationsOpenSystem,
+            onPressed: onOpen,
+            focusNode: focusNode,
+            semanticsKey: semanticsKey,
+          ),
+          if (openError != null)
+            LiveNotice(
+              text: l10n.settingsNotificationsOpenError,
+              attempt: openError,
+              padding: const EdgeInsets.only(top: UnaSpace.xs),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// El hueco del aviso de error de guardado del bloque (CA-019-06).
+class _ErrorSlot extends StatelessWidget {
+  const _ErrorSlot({required this.attempt});
+
+  final int? attempt;
+
+  @override
+  Widget build(BuildContext context) {
+    final attempt = this.attempt;
+    if (attempt == null) return const SizedBox.shrink();
+    return LiveNotice(
+      text: AppLocalizations.of(context).settingsSaveError,
+      attempt: attempt,
+      padding: _noticePadding,
     );
   }
 }

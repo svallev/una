@@ -56,6 +56,14 @@ class SystemAllowsNotifications extends Notifier<bool?> {
     return before == false && allowed && !requestInFlight;
   }
 
+  /// Olvida lo leído (al salir de Ajustes): la siguiente apertura vuelve a
+  /// empezar «sin leer», así que su primera lectura no anuncia nada aunque el
+  /// valor anterior fuera «bloqueadas» (CA-019-09).
+  void forget() {
+    if (!ref.mounted) return;
+    state = null;
+  }
+
   /// Anota lo que sabe el flujo de encender (sin anunciar): la lectura del
   /// sistema que acaba de hacer o la respuesta del diálogo.
   void setAllowed(bool allowed) {
