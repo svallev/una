@@ -41,3 +41,20 @@
 ## Decisiones del propietario que condicionan los resultados
 
 Q-019-2 (el interruptor refleja lo que permite el sistema), Q-019-3 (tocar la notificación lleva siempre a la tarea actual), Q-019-7 (un grupo de fotos sin texto sale con «Tienes una tarea pendiente.») y Q-019-8 (las notificaciones perdidas se notifican igual salvo que se superpongan con la siguiente): ya están en la spec. **Queda Q-019-6** (línea de privacidad bajo las opciones): el hallazgo 8 la hace más necesaria.
+
+## Medición C-1 del plan de la 019 (2026-10-12, Xiaomi 15T Pro, HyperOS 3)
+
+Pedida por CA-019-11 antes de aprobar el plan. Mismo código desechable (`spikes/s7_notifications/`, ya desinstalado del móvil), con el móvil bloqueado y el propietario sin tocarlo. **Resultado: no cumple W = 15 min.**
+
+| Ronda | Llamada | Condición | Retrasos |
+|---|---|---|---|
+| 1 (13:55) | `setAndAllowWhileIdle` | Pantalla encendida y cargando | 79 s |
+| 1 (14:10–14:55) | ídem | Bloqueado | **Cuatro alarmas desaparecieron de la cola sin entregarse** (causa sin determinar) |
+| 2 (15:32–16:20) | ídem | App abierta en Recientes, bloqueado con `adb` | **3149–6029 s**; las cinco juntas al coger el móvil |
+| 3 (17:35–18:05) | `setWindow`, 10 min | ídem | **2821–4621 s**; juntas al coger el móvil |
+| 4 (19:20–20:05) | `setWindow`, 10 min | **App deslizada fuera de Recientes** (condición de S7), bloqueado con el botón | **599–2399 s** (19:20, 19:35 y 19:50 juntas a las 19:59:59, al encender la pantalla; 20:05 a las 20:19:40, también al encender); un encendido breve a las 19:35 no las liberó |
+
+- El móvil estaba cargando (`mCharging=true`) en todo momento: no era reposo profundo de Android. `dumpsys alarm` no mostraba ninguna política que las retuviera (`device_idle`, `battery_saver`, `power_pending` sin retraso): las retiene la gestión de energía de HyperOS.
+- Las ventanas de `setAndAllowWhileIdle` con alarmas lejanas quedan en 1 h (`window=+1h`), por encima de W.
+- Las medidas de S7 (≤ 600 s) fueron con ventanas de pocos minutos, a menudo con el móvil cargando y en periodos bloqueados más cortos; **no hay que fiarse de ellas para periodos largos de pantalla apagada**.
+- Consecuencia: en este móvil, con la pantalla apagada más de ~30 minutos, una alarma inexacta de la app **se entrega al encender la pantalla**, no a su hora. Decisión del propietario pendiente (plan 019, §0, C-1).
