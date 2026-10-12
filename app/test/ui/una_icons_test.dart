@@ -1,4 +1,6 @@
 import 'package:app/ui/una_icons.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -28,6 +30,7 @@ void main() {
     'licenseFile': UnaIcons.licenseFile,
     'openWeb': UnaIcons.openWeb,
     'chevronRight': UnaIcons.chevronRight,
+    'bell': UnaIcons.bell,
   };
 
   test('P12: los iconos del prototipo se dibujan dentro de su caja de 24', () {
@@ -62,6 +65,66 @@ void main() {
       expect((minus.left, minus.right, minus.top), (7, 13, 10));
     },
   );
+
+  test(
+    'CA-019-26: la campana es la del tablero 16 y cabe en la caja de 24',
+    () {
+      expect(UnaIcons.bell.paths, [
+        'M6 17V11a6 6 0 0 1 12 0v6l2 2H4z',
+        'M10 22h4',
+      ]);
+      expect(UnaIcons.bell.circles, isEmpty);
+      // El badajo llega a y = 22 y el cuerpo ocupa de x = 4 a x = 20.
+      final body = parseSvgPath('M6 17V11a6 6 0 0 1 12 0v6l2 2H4z').getBounds();
+      expect((body.left, body.right, body.bottom), (4, 20, 19));
+      expect(body.top, closeTo(5, 0.01));
+      final clapper = parseSvgPath('M10 22h4').getBounds();
+      expect((clapper.left, clapper.right, clapper.top), (10, 14, 22));
+    },
+  );
+
+  testWidgets('CA-019-26: la campana es decorativa (sin nodo ni etiqueta)', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(child: UnaIcon(UnaIcons.bell)),
+      ),
+    );
+    expect(find.byType(UnaIcon), findsOneWidget);
+    // La caja se dibuja pero ningún nodo semántico cuelga de ella.
+    final root = tester
+        .binding
+        .renderViews
+        .first
+        .owner!
+        .semanticsOwner!
+        .rootSemanticsNode!;
+    final labelled = <String>[];
+    void walk(SemanticsNode n) {
+      final data = n.getSemanticsData();
+      if (data.label.isNotEmpty || data.hint.isNotEmpty) {
+        labelled.add(data.label);
+      }
+      n.visitChildren((c) {
+        walk(c);
+        return true;
+      });
+    }
+
+    walk(root);
+    expect(labelled, isEmpty);
+    expect(
+      find.descendant(
+        of: find.byType(UnaIcon),
+        matching: find.byType(ExcludeSemantics),
+      ),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
 
   test('comandos relativos y arcos', () {
     final plus = parseSvgPath('M12 4v16M4 12h16').getBounds();

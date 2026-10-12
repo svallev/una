@@ -116,6 +116,13 @@ abstract final class UnaIcons {
     'M18 14v6H4V6h6',
   ]);
 
+  /// Campana: "Notificaciones" (spec 019, tablero 16; `Main.dc.html`, fila
+  /// «Notificaciones»). Decorativa: el nombre lo pone el interruptor.
+  static const bell = UnaIconData([
+    'M6 17V11a6 6 0 0 1 12 0v6l2 2H4z',
+    'M10 22h4',
+  ]);
+
   /// Chevron: la fila abre otro nivel ("Idioma").
   static const chevronRight = UnaIconData(['M9 5l7 7-7 7']);
 }
