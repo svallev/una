@@ -48,34 +48,37 @@ class ResourceStrings(private val context: Context) : NotificationStringSource {
 }
 
 /**
- * Marcador hasta T-019-07 (lector de la base): ninguna tarea se lee todavía. Con
- * [PendingNotifier] no se muestra nada, así que da igual lo que devuelva.
+ * Las letras completas de un texto con ICU de Android (`android.icu`, API 24): un emoji con ZWJ, una
+ * letra con su acento o una bandera son una. La partición real se mira en el emulador (T-019-14);
+ * las pruebas JVM usan un doble (`TestGraphemeSplitter`).
  */
-object PendingTaskReader : TaskReader {
-    override fun read(): TaskRead = TaskRead.Unreadable
-}
-
-/** Marcador hasta T-019-07 (`NotificationPoster`): no puede notificar, así que cada hora sale como saltada. */
-object PendingNotifier : Notifier {
-    override fun canNotify(): Boolean = false
-
-    override fun show(spec: NotificationSpec) = Unit
-
-    override fun cancelDelivered() = Unit
-
-    override fun refreshChannel() = Unit
+object IcuGraphemeSplitter : GraphemeSplitter {
+    override fun boundaries(text: String): IntArray {
+        val iterator = android.icu.text.BreakIterator.getCharacterInstance(Locale.ROOT)
+        iterator.setText(text)
+        val out = ArrayList<Int>()
+        out += iterator.first()
+        var next = iterator.next()
+        while (next != android.icu.text.BreakIterator.DONE) {
+            out += next
+            next = iterator.next()
+        }
+        return out.toIntArray()
+    }
 }
 
 /** Arma el orquestador con los adaptadores de Android. */
 object WakeRuntime {
-    fun create(context: Context): WakeHandler =
-        WakeHandler(
+    fun create(context: Context): WakeHandler {
+        val strings = ResourceStrings(context)
+        return WakeHandler(
             clock = AndroidClock,
             store = DerivedStores.open(context),
-            taskReader = PendingTaskReader,
+            taskReader = BoundedTaskReader({ SqliteRowSource(context) }, IcuGraphemeSplitter),
             alarms = AlarmArm(context),
-            notifier = PendingNotifier,
+            notifier = NotificationPoster(context, strings, AndroidSystemLocale),
             systemLocale = AndroidSystemLocale,
-            strings = ResourceStrings(context),
+            strings = strings,
         )
+    }
 }

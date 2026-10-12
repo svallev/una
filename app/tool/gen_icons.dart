@@ -1,6 +1,7 @@
 // Genera los recursos del icono de la app a partir del tablero 17 (spec 018, CA-018-10 y 15).
 //
-//   dart run tool/gen_icons.dart [android] [play] [web]   → escribe los archivos (sin objetivos, los tres)
+//   dart run tool/gen_icons.dart [android] [play] [web] [notification]
+//                                                         → escribe los archivos (sin objetivos, los cuatro)
 //   dart run tool/gen_icons.dart --check [objetivos]      → falla si alguno no está al día
 //   --out <carpeta>     la carpeta de la app (por defecto `.`); así se prueba sin tocar el árbol
 //   --source <carpeta>  la raíz del repositorio, con `design/` (por defecto `..`)
@@ -14,6 +15,8 @@
 //             res/values/ic_launcher_background.xml (el color del token)
 //   play    → ../store/google-play/icon-512.png (el original a 512, RGBA con alfa 255)
 //   web     → web/favicon.png (32) y web/icons/Icon-{192,512}.png y Icon-maskable-{192,512}.png
+//   notification → android/app/src/main/res/drawable-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_stat_una.png
+//             (spec 019, P-019-7: el icono pequeño de la notificación, de 24 dp)
 //
 // El XML adaptable (`mipmap-anydpi/ic_launcher.xml`), el manifiesto de la web y `index.html` se
 // escriben a mano: no los toca este generador.
@@ -23,7 +26,7 @@ import 'dart:typed_data';
 
 import 'png_lite.dart';
 
-const _targets = ['android', 'play', 'web'];
+const _targets = ['android', 'play', 'web', 'notification'];
 
 final _usage =
     'Uso: dart run tool/gen_icons.dart [--check] [--out <carpeta de la app>] '
@@ -212,7 +215,98 @@ List<_Output> _build(String source, List<String> targets) {
       ..add(_Output.png('web/icons/Icon-maskable-192.png', i192))
       ..add(_Output.png('web/icons/Icon-maskable-512.png', i512));
   }
+
+  if (targets.contains('notification')) {
+    outputs.addAll(_notificationIcons('$iconDir/adaptive-foreground-432.png'));
+  }
   return outputs;
+}
+
+/// Las cinco densidades del icono pequeño de la notificación (24 dp: 24, 36, 48, 72 y 96 px).
+const _notificationDensities = {
+  'mdpi': 24,
+  'hdpi': 36,
+  'xhdpi': 48,
+  'xxhdpi': 72,
+  'xxxhdpi': 96,
+};
+
+/// Lado del icono pequeño en dp y margen que se deja por cada lado: la «u.» ocupa 22 dp de ancho.
+const _notificationDp = 24;
+const _notificationMarginDp = 1;
+
+/// El icono pequeño de la notificación (spec 019, P-019-7): **la silueta de la «u.»** del primer
+/// plano del icono adaptable (la caja de su alfa, recortada), solo con alfa y en blanco (Android
+/// ignora el color de un icono pequeño y lo pinta de gris o con el acento), centrada en 24 dp con
+/// 1 dp de margen. La capa monocroma de 432 px dibuja la «u.» al 56 % del círculo: a 24 dp
+/// saldría minúscula y pesada.
+List<_Output> _notificationIcons(String foregroundPath) {
+  final foreground = readPngFile(foregroundPath);
+  var minX = foreground.width;
+  var minY = foreground.height;
+  var maxX = -1;
+  var maxY = -1;
+  for (var y = 0; y < foreground.height; y++) {
+    for (var x = 0; x < foreground.width; x++) {
+      if (foreground.rgba[(y * foreground.width + x) * 4 + 3] == 0) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < 0) {
+    throw const FormatException(
+      'adaptive-foreground-432.png no tiene ningún píxel visible',
+    );
+  }
+  final cropWidth = maxX - minX + 1;
+  final cropHeight = maxY - minY + 1;
+  // La figura recortada, en blanco y con su alfa.
+  final crop = Uint8List(cropWidth * cropHeight * 4);
+  for (var y = 0; y < cropHeight; y++) {
+    for (var x = 0; x < cropWidth; x++) {
+      final from = ((minY + y) * foreground.width + minX + x) * 4;
+      final to = (y * cropWidth + x) * 4;
+      crop[to] = 255;
+      crop[to + 1] = 255;
+      crop[to + 2] = 255;
+      crop[to + 3] = foreground.rgba[from + 3];
+    }
+  }
+  final silhouette = PngImage(cropWidth, cropHeight, crop);
+
+  return [
+    for (final MapEntry(key: density, value: side)
+        in _notificationDensities.entries)
+      _Output.png(
+        'android/app/src/main/res/drawable-$density/ic_stat_una.png',
+        encodePng(_centered(silhouette, side)),
+      ),
+  ];
+}
+
+/// [silhouette] reducida al ancho de contenido (22 dp) y centrada sobre un lienzo transparente
+/// de [side] x [side] px. En hdpi (1,5 px por dp) el contenido pierde un píxel para que los
+/// márgenes sean iguales en los dos lados.
+PngImage _centered(PngImage silhouette, int side) {
+  var width =
+      side * (_notificationDp - 2 * _notificationMarginDp) ~/ _notificationDp;
+  if ((side - width).isOdd) width--;
+  final height = (width * silhouette.height / silhouette.width).round();
+  final scaled = resizeArea(silhouette, width, height);
+  final canvas = Uint8List(side * side * 4);
+  final left = (side - width) ~/ 2;
+  final top = (side - height) ~/ 2;
+  for (var y = 0; y < height; y++) {
+    canvas.setRange(
+      ((top + y) * side + left) * 4,
+      ((top + y) * side + left + width) * 4,
+      scaled.rgba,
+      y * width * 4,
+    );
+  }
+  return PngImage(side, side, canvas);
 }
 
 /// `palette.classic.0` de [tokensPath] como `#RRGGBB` en mayúsculas.
