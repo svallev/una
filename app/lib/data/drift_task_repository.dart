@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../domain/entities/attachment.dart';
 import '../domain/entities/locale_choice.dart';
+import '../domain/entities/notification_settings.dart';
 import '../domain/entities/rank.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/clock.dart';
@@ -314,6 +315,24 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<void> setLockZoom(bool value) => _setFlag(SettingKeys.lockZoom, value);
+
+  @override
+  Future<bool> notificationsOn() async =>
+      decodeNotificationsOn(await _raw(SettingKeys.notificationsOn));
+
+  @override
+  Future<void> setNotificationsOn(bool value) =>
+      _setFlag(SettingKeys.notificationsOn, value);
+
+  @override
+  Future<NotificationsPerDay> notificationsPerDay() async =>
+      decodeNotificationsPerDay(await _raw(SettingKeys.notificationsPerDay));
+
+  @override
+  Future<void> setNotificationsPerDay(NotificationsPerDay value) => _setRaw(
+    SettingKeys.notificationsPerDay,
+    encodeNotificationsPerDay(value),
+  );
 
   @override
   Future<LocaleChoice> locale() async =>

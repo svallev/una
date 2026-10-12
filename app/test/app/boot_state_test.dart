@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app/app/providers.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/locale_choice.dart';
+import 'package:app/domain/entities/notification_settings.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/task_repository.dart';
 import 'package:flutter/foundation.dart';
@@ -40,6 +41,25 @@ class _ThrowingSettings implements SettingsRepository {
 
   /// Cuántas veces se ha leído `lockZoom` (CA-017-11: una en el arranque).
   int lockZoomReads = 0;
+
+  @override
+  Future<bool> notificationsOn() async => throwOn.contains('notificationsOn')
+      ? _fail('notificationsOn')
+      : _inner.notificationsOn();
+
+  @override
+  Future<NotificationsPerDay> notificationsPerDay() async =>
+      throwOn.contains('notificationsPerDay')
+      ? _fail('notificationsPerDay')
+      : _inner.notificationsPerDay();
+
+  @override
+  Future<void> setNotificationsOn(bool value) =>
+      _inner.setNotificationsOn(value);
+
+  @override
+  Future<void> setNotificationsPerDay(NotificationsPerDay value) =>
+      _inner.setNotificationsPerDay(value);
 
   @override
   Future<LocaleChoice> locale() async =>
@@ -179,6 +199,107 @@ void main() {
       await runZoned(
         () =>
             readBootState(repo, _ThrowingSettings(repo, throwOn: {'lockZoom'})),
+        zoneSpecification: ZoneSpecification(
+          print: (self, parent, zone, line) => zonePrinted.add(line),
+        ),
+      );
+    } finally {
+      FlutterError.onError = oldOnError;
+      debugPrint = oldDebugPrint;
+    }
+    expect(
+      printed.join() + zonePrinted.join(),
+      isNot(contains('texto-secreto')),
+    );
+    expect(reported, isNull);
+  });
+
+  test('CA-019-05: sin nada guardado, las notificaciones arrancan apagadas y '
+      'en 1 al día (también los valores por defecto de BootState)', () async {
+    final repo = InMemoryTaskRepository();
+    final boot = await readBootState(repo, repo);
+    expect(boot.notificationsOn, isFalse);
+    expect(boot.notificationsPerDay, NotificationsPerDay.one);
+    const defaults = BootState(currentTask: null, firstRunDone: false);
+    expect(defaults.notificationsOn, isFalse);
+    expect(defaults.notificationsPerDay, NotificationsPerDay.one);
+  });
+
+  test('CA-019-05: el arranque lee el interruptor y la cantidad '
+      'guardados', () async {
+    final repo = InMemoryTaskRepository();
+    await repo.setNotificationsOn(true);
+    await repo.setNotificationsPerDay(NotificationsPerDay.three);
+    final boot = await readBootState(repo, repo);
+    expect(boot.notificationsOn, isTrue);
+    expect(boot.notificationsPerDay, NotificationsPerDay.three);
+  });
+
+  test('CA-019-05: la cantidad se conserva con el ajuste apagado', () async {
+    final repo = InMemoryTaskRepository();
+    await repo.setNotificationsOn(false);
+    await repo.setNotificationsPerDay(NotificationsPerDay.two);
+    final boot = await readBootState(repo, repo);
+    expect(boot.notificationsOn, isFalse);
+    expect(boot.notificationsPerDay, NotificationsPerDay.two);
+  });
+
+  test('CA-019-05: valores ilegibles no impiden el arranque ni se ven como '
+      'error', () async {
+    final repo = InMemoryTaskRepository()
+      ..putRawSetting('notificationsOn', '"true"')
+      ..putRawSetting('notificationsPerDay', '2.0')
+      ..putRawSetting('lockZoom', 'true');
+    final boot = await readBootState(repo, repo);
+    expect(boot.notificationsOn, isFalse);
+    expect(boot.notificationsPerDay, NotificationsPerDay.one);
+    expect(boot.lockZoom, isTrue);
+  });
+
+  for (final key in ['notificationsOn', 'notificationsPerDay']) {
+    test('CA-019-05: un repositorio que lanza al leer `$key` no impide el '
+        'arranque, y el otro ajuste conserva lo guardado', () async {
+      final repo = InMemoryTaskRepository();
+      await repo.insert(sampleTask());
+      await repo.setNotificationsOn(true);
+      await repo.setNotificationsPerDay(NotificationsPerDay.three);
+      await repo.setLockZoom(true);
+      final boot = await readBootState(
+        repo,
+        _ThrowingSettings(repo, throwOn: {key}),
+      );
+      expect(boot.currentTask?.id, 't1');
+      expect(boot.notificationsOn, key == 'notificationsOn' ? isFalse : isTrue);
+      expect(
+        boot.notificationsPerDay,
+        key == 'notificationsPerDay'
+            ? NotificationsPerDay.one
+            : NotificationsPerDay.three,
+      );
+      expect(boot.lockZoom, isTrue);
+      expect(boot.keepScreenOn, isFalse);
+    });
+  }
+
+  test('CA-019-05: el texto de un fallo al leer las notificaciones no sale '
+      'por ningún canal (debugPrint, print, FlutterError)', () async {
+    final printed = <String>[];
+    final oldDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+    FlutterErrorDetails? reported;
+    final oldOnError = FlutterError.onError;
+    FlutterError.onError = (details) => reported = details;
+    final repo = InMemoryTaskRepository();
+    final zonePrinted = <String>[];
+    try {
+      await runZoned(
+        () => readBootState(
+          repo,
+          _ThrowingSettings(
+            repo,
+            throwOn: {'notificationsOn', 'notificationsPerDay'},
+          ),
+        ),
         zoneSpecification: ZoneSpecification(
           print: (self, parent, zone, line) => zonePrinted.add(line),
         ),

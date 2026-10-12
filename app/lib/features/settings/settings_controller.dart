@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../domain/entities/locale_choice.dart';
+import '../../domain/entities/notification_settings.dart';
 import '../../domain/ports/task_repository.dart';
 
 /// Los ajustes de la app que se ven en Ajustes (spec 015).
@@ -14,6 +15,8 @@ class AppSettings {
     required this.locale,
     required this.keepScreenOn,
     required this.lockZoom,
+    required this.notificationsOn,
+    required this.notificationsPerDay,
   });
 
   /// Idioma elegido (CA-015-06): "Como el sistema" por defecto.
@@ -25,14 +28,25 @@ class AppSettings {
   /// "Bloquear zoom" (CA-017-02): apagado por defecto.
   final bool lockZoom;
 
+  /// "Notificaciones" (CA-019-05): apagadas por defecto.
+  final bool notificationsOn;
+
+  /// Notificaciones al día (CA-019-05): 1 por defecto; se conserva con el
+  /// ajuste apagado.
+  final NotificationsPerDay notificationsPerDay;
+
   AppSettings copyWith({
     LocaleChoice? locale,
     bool? keepScreenOn,
     bool? lockZoom,
+    bool? notificationsOn,
+    NotificationsPerDay? notificationsPerDay,
   }) => AppSettings(
     locale: locale ?? this.locale,
     keepScreenOn: keepScreenOn ?? this.keepScreenOn,
     lockZoom: lockZoom ?? this.lockZoom,
+    notificationsOn: notificationsOn ?? this.notificationsOn,
+    notificationsPerDay: notificationsPerDay ?? this.notificationsPerDay,
   );
 
   @override
@@ -40,10 +54,18 @@ class AppSettings {
       other is AppSettings &&
       other.locale == locale &&
       other.keepScreenOn == keepScreenOn &&
-      other.lockZoom == lockZoom;
+      other.lockZoom == lockZoom &&
+      other.notificationsOn == notificationsOn &&
+      other.notificationsPerDay == notificationsPerDay;
 
   @override
-  int get hashCode => Object.hash(locale, keepScreenOn, lockZoom);
+  int get hashCode => Object.hash(
+    locale,
+    keepScreenOn,
+    lockZoom,
+    notificationsOn,
+    notificationsPerDay,
+  );
 }
 
 /// Resultado de guardar un ajuste: lo que la pantalla dibuja (aviso o no).
@@ -81,6 +103,8 @@ class SettingsController extends Notifier<AppSettings> {
       locale: boot.locale,
       keepScreenOn: boot.keepScreenOn,
       lockZoom: boot.lockZoom,
+      notificationsOn: boot.notificationsOn,
+      notificationsPerDay: boot.notificationsPerDay,
     );
   }
 

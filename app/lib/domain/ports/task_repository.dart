@@ -1,5 +1,6 @@
 import '../entities/attachment.dart';
 import '../entities/locale_choice.dart';
+import '../entities/notification_settings.dart';
 import '../entities/task.dart';
 
 /// Puerto de persistencia de tareas (ADR-0002). La UI y los casos de uso
@@ -98,6 +99,17 @@ abstract interface class SettingsRepository {
   /// un valor ilegible de una copia restaurada, CL-017-8) da `false` sin lanzar.
   Future<bool> lockZoom();
   Future<void> setLockZoom(bool value);
+
+  /// "Notificaciones" (CA-019-05): **apagadas por defecto**. Solo es `true` si
+  /// el valor guardado es exactamente el texto `true`; cualquier otra cosa (o un
+  /// fallo al leer) es apagado, sin lanzar por un valor ilegible.
+  Future<bool> notificationsOn();
+  Future<void> setNotificationsOn(bool value);
+
+  /// Notificaciones al día (CA-019-05): **1 por defecto**; solo valen los
+  /// textos exactos `1`, `2` y `3`. Se conserva con el ajuste apagado.
+  Future<NotificationsPerDay> notificationsPerDay();
+  Future<void> setNotificationsPerDay(NotificationsPerDay value);
 
   /// Idioma elegido en Ajustes (CA-015-06, ADR-0023). Por defecto, "Como el
   /// sistema"; un valor que no sea exactamente `system|es|en` también lo da

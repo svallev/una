@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -14,6 +15,7 @@ import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
 import '../domain/entities/locale_choice.dart';
+import '../domain/entities/notification_settings.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/accessibility_timeouts.dart';
 import '../domain/ports/attachment_store.dart';
@@ -33,6 +35,7 @@ import '../domain/usecases/import_image.dart';
 import '../domain/usecases/import_pdf.dart';
 import '../domain/usecases/reorder_task.dart';
 import '../domain/usecases/restore_deleted_task.dart';
+import 'feature_flags.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
 final taskRepositoryProvider = Provider<TaskRepository>(
@@ -133,6 +136,27 @@ final webDataJanitorProvider = Provider<WebDataJanitor>(
 /// CA-009-15). La web de pruebas no gira (CL-008-12, CL-009-5): con la ventana
 /// apaisada se ve como en vertical.
 final attachmentRotatesProvider = Provider<bool>((ref) => !kIsWeb);
+
+/// Indicador de función `notifications` (P10, plan P-019-9): apagado durante
+/// el desarrollo de la 019. Un proveedor para sobrescribirlo en los tests.
+final notificationsFlagProvider = Provider<bool>(
+  (ref) => FeatureFlags.notifications,
+);
+
+/// ¿La plataforma admite las notificaciones locales de la app? Solo Android
+/// (CA-019-28): no hay permiso ni programador en la web de pruebas (ADR-0010)
+/// ni en iOS (D17).
+final notificationsPlatformProvider = Provider<bool>(
+  (ref) => !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
+);
+
+/// ¿Se ofrece la fila de Notificaciones en Ajustes? Plataforma admitida **y**
+/// indicador encendido (CA-019-28); con uno solo, Ajustes queda como en la 017.
+final notificationsAvailableProvider = Provider<bool>(
+  (ref) =>
+      ref.watch(notificationsPlatformProvider) &&
+      ref.watch(notificationsFlagProvider),
+);
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".
 final bootStateProvider = Provider<BootState>(
@@ -318,8 +342,8 @@ class FirstRunController extends Notifier<bool> {
 ///
 /// La tarea actual se lee **primero**: una base de datos inaccesible
 /// falla ahí y sale la pantalla de error de almacenamiento (CL-015-16). Los
-/// tres ajustes de Ajustes (idioma, pantalla siempre activa y bloquear zoom)
-/// se leen después, cada uno en su propio `try/catch`: si no se puede leer,
+/// cinco ajustes de Ajustes (idioma, pantalla siempre activa, bloquear zoom y
+/// las dos claves de notificaciones) se leen después, cada uno en su propio `try/catch`: si no se puede leer,
 /// vale su valor por defecto y el arranque sigue (CA-015-26, CA-017-03).
 Future<BootState> readBootState(
   TaskRepository tasks,
@@ -333,6 +357,11 @@ Future<BootState> readBootState(
     keepScreenOn: await _orDefault(settings.keepScreenOn, false),
     locale: await _orDefault(settings.locale, LocaleChoice.system),
     lockZoom: await _orDefault(settings.lockZoom, false),
+    notificationsOn: await _orDefault(settings.notificationsOn, false),
+    notificationsPerDay: await _orDefault(
+      settings.notificationsPerDay,
+      NotificationsPerDay.defaultValue,
+    ),
   );
 }
 
@@ -355,6 +384,8 @@ class BootState {
     this.keepScreenOn = false,
     this.locale = LocaleChoice.system,
     this.lockZoom = false,
+    this.notificationsOn = false,
+    this.notificationsPerDay = NotificationsPerDay.one,
   });
   final Task? currentTask;
   final bool firstRunDone;
@@ -370,6 +401,15 @@ class BootState {
   /// Ajuste "Bloquear zoom" (CA-017-03): apagado por defecto. Leído aquí para
   /// que la primera construcción de la foto ya salga bloqueada (CA-017-11).
   final bool lockZoom;
+
+  /// Ajuste "Notificaciones" (CA-019-05): apagado por defecto. Leído aquí
+  /// (dos lecturas más antes del primer fotograma, CA-019-24); cada una en su
+  /// propio `try/catch`, sin error visible ante un valor ilegible.
+  final bool notificationsOn;
+
+  /// Cuántas notificaciones al día (CA-019-05): 1 por defecto; se conserva con
+  /// el ajuste apagado.
+  final NotificationsPerDay notificationsPerDay;
 }
 
 class UuidV7Ids implements IdGenerator {
