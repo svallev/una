@@ -11,6 +11,7 @@ import '../data/attachments/memory_attachment_store.dart';
 import '../data/links/native_link_opener.dart';
 import '../data/links/new_tab.dart';
 import '../data/platform/accessibility_timeouts.dart';
+import '../data/platform/notification_gateway.dart';
 import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
 import '../domain/entities/color_picker.dart';
@@ -23,6 +24,7 @@ import '../domain/ports/clock.dart';
 import '../domain/ports/id_generator.dart';
 import '../domain/ports/image_importer.dart';
 import '../domain/ports/link_opener.dart';
+import '../domain/ports/notification_gateway.dart';
 import '../domain/ports/pdf_importer.dart';
 import '../domain/ports/task_repository.dart';
 import '../domain/services/attachment_janitor.dart';
@@ -157,6 +159,18 @@ final notificationsAvailableProvider = Provider<bool>(
       ref.watch(notificationsPlatformProvider) &&
       ref.watch(notificationsFlagProvider),
 );
+
+/// El canal de las notificaciones de la tarea actual (spec 019, plan §3.5):
+/// `una/notifications` en Android; en la web de pruebas y en iOS (D17), uno
+/// sin efecto. Se crea al primer uso (nunca antes del primer fotograma, P2).
+final notificationGatewayProvider = Provider<NotificationGateway>((ref) {
+  if (!ref.watch(notificationsPlatformProvider)) {
+    return const UnsupportedNotificationGateway();
+  }
+  final gateway = ChannelNotificationGateway();
+  ref.onDispose(gateway.dispose);
+  return gateway;
+});
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".
 final bootStateProvider = Provider<BootState>(

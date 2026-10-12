@@ -66,4 +66,18 @@ class ActivationNonceTest {
         ActivationNonce.clear()
         assertFalse(ActivationNonce.consume(nonce))
     }
+
+    @Test
+    fun `CA-019-20 accept pide la accion exacta y el nonce vigente`() {
+        val nonce = ActivationNonce.issue()
+        // Otra accion (o ninguna) con el nonce bueno: se ignora y no gasta el vigente.
+        assertFalse(ActivationNonce.accept(null, nonce))
+        assertFalse(ActivationNonce.accept("android.intent.action.MAIN", nonce))
+        assertFalse(ActivationNonce.accept(ActivationNonce.ACTION.uppercase(), nonce))
+        assertFalse(ActivationNonce.accept(ActivationNonce.ACTION, "otro"))
+        assertFalse(ActivationNonce.accept(ActivationNonce.ACTION, null))
+        assertTrue(ActivationNonce.accept(ActivationNonce.ACTION, nonce))
+        // Un solo uso.
+        assertFalse(ActivationNonce.accept(ActivationNonce.ACTION, nonce))
+    }
 }

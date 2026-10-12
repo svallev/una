@@ -47,6 +47,13 @@ object ActivationNonce {
         }
     }
 
+    /**
+     * ¿Es esta intención la orden de abrir la tarea actual? Pide la acción **exacta** y el `nonce`
+     * vigente (se gasta al aceptarlo). Cualquier otra intención —otra acción, sin `nonce` o con uno
+     * ajeno— se rechaza **sin gastar** el vigente y sin registrar nada (CA-019-20, acota T-8).
+     */
+    fun accept(action: String?, candidate: String?): Boolean = action == ACTION && consume(candidate)
+
     /** Al quitar la notificación, apagar o aceptarlo: ya no vale ninguno. */
     fun clear() {
         synchronized(lock) { current = null }
