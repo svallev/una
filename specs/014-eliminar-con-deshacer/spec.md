@@ -62,6 +62,7 @@ Eliminar una tarea con un solo paso, sin preguntar, y poder arrepentirse durante
   - **Cuando** se muestra
   - **Entonces** la etiqueta es el texto de la tarea, con los saltos de línea como espacios; si no tiene texto, la misma que usaba la confirmación: "Foto" o "Imagen" (CA-007-20), el nombre del PDF (spec 008) o el dominio (CA-009-14).
   - *Enmienda (spec 016, implementada; en vigor):* con un grupo la etiqueta es "{n} fotos" (CA-016-19).
+  - *Nota (spec 019, implementada; en vigor):* la etiqueta de la **notificación** (CA-019-16) es otra, a propósito (D25): el texto recortado a 120 letras, «Foto» o «Imagen», **«PDF»** (no el nombre del archivo, que puede revelar más que el texto) o el dominio; un grupo de fotos sin texto sale con la versión genérica «Tienes una tarea pendiente.». Pasar a segundo plano sigue haciendo definitiva la eliminación (CL-019-5).
 - **CA-014-05 Qué se oculta mientras se ve**
   - **Dado** la card visible
   - **Cuando** se mira la pantalla de debajo
