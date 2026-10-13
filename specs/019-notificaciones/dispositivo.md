@@ -1,0 +1,92 @@
+# Spec 019: pruebas en el dispositivo
+
+Verificación en el **emulador `Pixel_6a` (Android 16 / API 37, arm64, sin GPU, `emulator-5554`, idioma del sistema en inglés)** con la compilación *release* (`flutter build apk --release --split-per-abi --target-platform android-arm64 --dart-define=UNA_NOTIFICATIONS=true`, 29,1 MB, app real `invalid.pending.app`) sobre la rama `feat/019-notificaciones` (HEAD `82d321e`). **Sin tocar el Xiaomi** (T-019-15 lo hará con el permiso del propietario). Capturas en el directorio temporal de la sesión (no se suben). El reloj del emulador se movió con `adb shell cmd alarm set-time` (con `auto_time` apagado) y se restauró al final.
+
+## T-019-14: emulador (2026-10-13)
+
+### Manifiesto (CA-019-25)
+
+- **[Hecho]** `tools/check-android-permissions.sh release` (desde `app/`, tras compilar): «Permisos y componentes de release correctos (4 permisos revisados)».
+- **[Hecho]** Difusiones a un receptor **no exportado** desde `adb shell` (uid 2000): `BOOT_COMPLETED`, `TIME_SET` y `LOCKED_BOOT_COMPLETED` a `WakeReceiver` → `Permission Denial: not allowed to send broadcast … uid=2000` (acciones protegidas del sistema). La acción **propia** `invalid.pending.app.action.NOTIFICATION_ALARM`, enviada con el componente explícito, por paquete o implícita, con el proceso **muerto** (`pidof` vacío antes y después): el proceso **no arranca** y no sale ninguna notificación. El receptor no es alcanzable desde fuera.
+
+### El permiso y los avisos (CA-019-06 a 10 y relacionadas)
+
+Permiso reiniciado con `pm reset-permissions` (`granted=false`).
+
+| Paso | Resultado |
+|---|---|
+| 1.er toque al interruptor | Diálogo del sistema («Allow Una. to send you notifications?»). **Don't allow** → el interruptor sigue **apagado** y aparece el aviso estático «Notifications are blocked in your system settings.» con el botón «Open notification settings» |
+| 2.º toque | **Otro diálogo** (Android permite preguntar una segunda vez). **Don't allow** → `USER_SET\|USER_FIXED`, mismo aviso |
+| 3.er toque | **Ya no sale diálogo** (`USER_FIXED`); el aviso se queda; la pantalla de entrada sigue como estaba (`ResumedActivity` = `MainActivity`) |
+| «Open notification settings» | Abre `Settings$AppNotificationSettingsActivity` de la app (interruptor «All Una. notifications» apagado) |
+| Conceder en el sistema y volver con «atrás» | El aviso **desaparece** al volver y el interruptor de la app **sigue apagado** (no se enciende solo) |
+| Encender el interruptor | Se enciende con **1·2·3** (1 marcado), línea «The notification will be at 08:55.»; alarma `*walarm*:invalid.pending.app.action.NOTIFICATION_ALARM` programada (`RTC_WAKEUP`, 14/10 08:55, **ventana +1 h, sin `exactAllowReason`**: inexacta) |
+
+### Entrega real con la app cerrada (CA-019-11, 14, 18)
+
+- **[Hecho]** Proceso muerto (`am kill` tras HOME; `pidof` vacío), reloj a 08:54:00 → la notificación llegó a las **08:55:44** (retraso 44 s; el sistema agrupa la alarma inexacta): título «Current task», texto «Llamar a Marta», `category=reminder`, `flags=AUTO_CANCEL|LOCAL_ONLY`, `vis=PRIVATE` con `publicVersion` (CA-019-17), canal **único** `current_task` (importancia 3, `mShowBadge=false`, `mVibrationEnabled=false`, sin luces ni patrón propios; nombre «Current task» en el idioma del sistema, CA-019-22), `timeout=PT72H`.
+- **[Hecho]** Dos horas seguidas (3 al día): la de las 13:55 llega con la app en segundo plano; la de las 18:55 la **sustituye** (`id=1`, una sola notificación; `when` 18:55:44).
+- **[Hecho]** Tocar la notificación: **con la app cerrada** → se abre en la tarea actual y la notificación se quita; **con la app en segundo plano y la segunda notificación** (la primera ya sustituida) → abre en la tarea actual; **con el editor abierto en segundo plano** → vuelve a la tarea actual (el editor se descarta, consecuencia aceptada de CA-019-19b).
+- **[Hecho]** `nonce` (T-8): con el editor abierto (captura antes y después idéntica salvo el cursor), `am start -a invalid.pending.app.action.OPEN_CURRENT_TASK` **con un nonce inventado**, **sin nonce** y con una **acción desconocida** + nonce no cambian nada: el editor se queda donde estaba.
+- **[No repetido aquí]** Que con la app a la vista a la hora del aviso no se notifique (CA-019-19a) lo cubren los tests; en el dispositivo no se aisló. **[Suposición, no comprobada]** la primera prueba de estrés, de ráfagas sin sincronizar (la app pasaba casi todo el tiempo a la vista y la lectura de la notificación era muy breve), no mostró ninguna notificación en cuatro «días»; puede deberse a eso, pero no se separó de la ventana de lectura del propio guion.
+
+### Pantalla de bloqueo (CA-019-17, 30)
+
+| Situación | Resultado |
+|---|---|
+| PIN, `lock_screen_allow_private_notifications=1` (por defecto) | La pantalla de bloqueo enseña **«Current task» / «Llamar a Marta»** y la pantalla se enciende sola |
+| PIN, preferencia a `0` («ocultar contenido sensible»; se lee al instante, sin nueva notificación) | Enseña **«Current task» / «You have a task waiting.»** (sin ninguna parte de la tarea) |
+| **Sin bloqueo seguro** (`locksettings clear`) y preferencia a `0` | No hay pantalla de bloqueo (`isKeyguardShowing=false`); la bandeja (clara y oscura) enseña la completa |
+| **Reinicio con PIN, antes del primer desbloqueo** (`adb reboot`; `am get-started-user-state 0` = `RUNNING_LOCKED`) | El receptor arrancó el proceso (12:53:14, `LOCKED_BOOT_COMPLETED`) y la alarma estaba **reprogramada** (13:55) sin desbloquear; con el reloj a 13:54 la notificación llegó a las 13:55 **aún bloqueado**, con la **versión genérica de respaldo** («Current task» / «You have a task waiting.», CA-019-30). Tras desbloquear con el PIN la notificación se queda genérica, el usuario sigue `RUNNING_UNLOCKED` y la siguiente alarma (18:55) está programada |
+
+### Reprogramaciones del sistema (CA-019-13)
+
+- **[Hecho]** **Huso:** Madrid (siguiente 14/10 08:55) → Tokio (14/10 08:55 **hora de Tokio**) → Nueva York (13/10 13:55, la siguiente de ese día) → Madrid (14/10 08:55): las mismas horas locales; un cambio de huso o de hora **no recupera** horas (regla 3 de CA-019-14: tras `set-time` a una hora ya pasada no salió nada y se programó la siguiente).
+- **[Hecho]** **Actualizar la app** (`adb install -r` del mismo APK): tras 4 s la alarma estaba reprogramada (14/10 08:55).
+- **[Hecho]** **Apagar el interruptor** cancela la alarma (0 pendientes; el volcado de `dumpsys alarm` lista las cancelaciones `pi_cancelled`, también las de cada arranque, que cancelan y reprograman al reconciliar); **encenderlo** la reprograma.
+- **[Hecho, caso aceptado por la spec]** `am force-stop` (el que hace al final `tools/measure-cold-start.sh`) cancela la alarma: no llega ninguna notificación hasta que la app vuelve a arrancar (lo previsto: «lo que el usuario fuerza a parar» no se recupera).
+
+### Idioma (CA-019-20, 21, 22)
+
+- **[Hecho]** Sistema en inglés y app en **Español** (Ajustes → Idioma): la notificación sale con `android.title=SpannableString (Tarea actual)` (con la marca de idioma) y `android.text=String (Llamar a Marta)` (el texto de la tarea no se marca); el **canal** se queda en el idioma del sistema («Current task»).
+- **[Pendiente, 022]** La **voz** de TalkBack con `LocaleSpan` (S7 la comprobó a oído en el Xiaomi); el cambio de **idioma del sistema** (`LOCALE_CHANGED`) y el canal recreado: el emulador no cambia el idioma del sistema con `adb` sin pasar por los ajustes.
+
+### Arranque (CA-019-24, CA-001-09)
+
+`tools/measure-cold-start.sh emulator-5554 20` (am start -W -S; `TotalTime`), compilación *release*, una tarea de texto, alternando:
+
+| Pasada | Notificaciones | mín | **p50** | p90 | máx (ms) |
+|---|---|---|---|---|---|
+| 1 | encendido (3 al día) | 349 | **369** | 389 | 447 |
+| 2 | apagado | 344 | **370** | 420 | 455 |
+| 3 | apagado | 343 | **363** | 387 | 402 |
+| 4 | encendido | 339 | **372** | 414 | 432 |
+| 5 | encendido | 345 | **369** | 382 | 416 |
+
+- **[Hecho]** p50 encendido 369, 372 y 369 (media 370) frente a apagado 370 y 363 (media 366,5): **+3,5 ms**, dentro de la deriva entre pasadas del mismo estado (7 ms). p50 < 1 s con un 37 % del presupuesto (CA-001-09 y CA-019-24).
+- **[Hecho]** Arranque **desde la notificación** con el proceso muerto (`ActivityTaskManager: Displayed invalid.pending.app/.MainActivity … +406ms`, `+403ms`, `+408ms`; 3 muestras): ≈ 406 ms, también < 1 s.
+
+### Privacidad en el registro del sistema (CA-019-23)
+
+- **[Hecho]** Tarea con el texto `Llamar a MartaTareaSECRETAzx9`, ciclo completo (editar, HOME, `am kill`, alarma, notificación completa con ese texto, toque): `adb logcat -d` completo (8643 líneas, del `logcat -c` previo al ciclo hasta después del toque) → **0 coincidencias** con `SECRETA` y con `zx9`. (La notificación sí lleva el texto: `dumpsys notification --noredact` lo muestra, pero ese comando lo consulta al sistema, no sale en el registro.)
+
+### Estrés de P-019-12 (dos copias de SQLite en el proceso)
+
+**Método.** Compilación de **depuración** con el indicador (`invalid.pending.app.debug`; mismo código nativo y misma Drift; la *release* no permite `run-as`), base de datos recién creada con una tarea «EstresUno», 1 al día. Script de pruebas (no versionado): para cada «día» se pone el reloj a 08:54:30 con `cmd alarm set-time` (la alarma salta ≈ +22 s después de las 08:55:00), se espera a un segundo objetivo del 08:55:16 al 08:55:25 (barrido de 10 desfases), se lanza una **ráfaga de 5 escrituras** (los interruptores «Pantalla siempre activa» y «Bloquear zoom» de Ajustes, cada uno es un guardado en la base de datos) con **HOME inmediato**, y 12 s después se lee la notificación publicada.
+
+- **[Hecho]** 10 pasadas: **ninguna lectura fallida**: en las 8 en que la ráfaga acabó antes del disparo salió la notificación **completa** («EstresUno») y no la genérica de respaldo; en 2 (días 3 y 5) un fallo del propio guion (lee `%S` y `%M` en instantes distintos y se adelanta al cambio de minuto) lanzó la ráfaga a las 08:55:00, antes de la alarma, y la lectura a los 12 s fue previa al disparo (≈ :22): sin dato válido.
+- **[Hecho]** **`PRAGMA integrity_check` = `ok`** (copia de `una.sqlite`, `-wal` y `-shm` sacada con `run-as`; modo `wal`, `user_version` 3, `notificationsOn=true`, `keepScreenOn=false`, `lockZoom=true`, 1 tarea).
+- **[Límite]** El caso real (la app a la vista escribe y la alarma salta justo al pasar a segundo plano) tiene una ventana de milisegundos: se ejercitó a ≈ 0-6 s antes del disparo, no dentro de la misma décima de segundo. Con un solo escritor y la lectura de solo lectura (`query_only`) no se observó ninguna corrupción ni lectura inconsistente; no se puede descartar con esta prueba. Sigue la decisión de P-019-12 (b) del propietario.
+
+### Icono pequeño
+
+- **[Hecho]** El icono pequeño (la «u.» de la app, teñida por el sistema) se ve en la barra de estado con el tema claro y, en la cortina, con el tema oscuro (`cmd uimode night yes`); en la pantalla de bloqueo con PIN se ve junto a la tarjeta de la notificación.
+
+### Sin diferencias de comportamiento con la hora real
+
+Al restaurar la hora real del emulador (después de simular hasta el 10/12) la app programó la siguiente alarma (18:55 de ese día) y no recuperó nada: la «última hora» futura se ignora (CA-019-14).
+
+## Pendiente de esta tarea (T-019-14)
+
+- **[Pendiente]** voz de TalkBack con `LocaleSpan` y cambio del **idioma del sistema** con el canal recreado (no hay forma fiable con `adb` en el emulador; S7 ya comprobó la voz en el Xiaomi). Va a la 022.
+- **[Pendiente]** App **a la vista** a la hora del aviso (CA-019-19a) en el dispositivo; lo cubren los tests.
