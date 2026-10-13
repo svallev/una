@@ -42,7 +42,7 @@ Detalle: `specs/019-notificaciones/dispositivo.md`.
 ## Definition of Done (`specs/constitution.md`)
 
 - [x] Criterios de aceptación cumplidos y con tests en verde (los de dispositivo, en la 022)
-- [x] **Goldens:** los 16 PNG `settings_notifications_*` y los 4 `settings_{es,en}_x{1.0,2.0}` (Ajustes nivel 1, que ganan la fila) se generaron en CI con la etiqueta `actualizar-goldens`, se revisaron a ojo frente al tablero 16 y se subieron; falta que CI confirme el verde con ellos
+- [x] **Goldens:** los 16 PNG `settings_notifications_*` y los 4 `settings_{es,en}_x{1.0,2.0}` (Ajustes nivel 1, que ganan la fila) se generaron en CI con la etiqueta `actualizar-goldens`, se revisaron a ojo frente al tablero 16 y se subieron; CI en verde con ellos
 - [x] `format` y `analyze` limpios en local
 - [x] Textos nuevos en ES y EN; ninguno incrustado en el código
 - [x] Sin valores visuales sueltos (todo sale de los tokens)
