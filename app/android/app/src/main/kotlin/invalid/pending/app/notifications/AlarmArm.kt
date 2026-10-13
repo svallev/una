@@ -25,19 +25,24 @@ class AlarmArm(private val context: Context) : AlarmScheduler {
 
     override fun cancel() {
         try {
-            context.getSystemService(AlarmManager::class.java)?.cancel(pendingIntent())
+            // Sin crear nada: si no hay alarma programada, no hay nada que cancelar.
+            val existing = pendingIntent(PendingIntent.FLAG_NO_CREATE) ?: return
+            context.getSystemService(AlarmManager::class.java)?.cancel(existing)
         } catch (_: Throwable) {
             // Sin registro (CA-019-23): la defensa de CA-019-02 no muestra nada si el ajuste está apagado.
         }
     }
 
-    private fun pendingIntent(): PendingIntent {
+    private fun pendingIntent(): PendingIntent =
+        pendingIntent(PendingIntent.FLAG_UPDATE_CURRENT) ?: error("PendingIntent")
+
+    private fun pendingIntent(mode: Int): PendingIntent? {
         val intent = Intent(context, WakeReceiver::class.java).setAction(WakeActions.ALARM)
         return PendingIntent.getBroadcast(
             context,
             REQUEST_CODE,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            mode or PendingIntent.FLAG_IMMUTABLE,
         )
     }
 

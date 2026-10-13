@@ -174,7 +174,16 @@ class NotificationsChannel(
     /** La orden de abrir la tarea actual: solo si la intención trae la acción exacta y el `nonce` vigente. */
     fun onNewIntent(intent: Intent?) {
         if (intent == null) return
-        if (!ActivationNonce.accept(intent.action, intent.getStringExtra(ActivationNonce.EXTRA))) return
+        // La actividad está exportada: se mira la acción antes de tocar los extras, y unos extras que
+        // no se puedan leer (un `Parcelable` ajeno) se ignoran en vez de tumbar el proceso.
+        if (intent.action != ActivationNonce.ACTION) return
+        val accepted =
+            try {
+                ActivationNonce.accept(intent.action, intent.getStringExtra(ActivationNonce.EXTRA))
+            } catch (_: Throwable) {
+                false
+            }
+        if (!accepted) return
         channel.invokeMethod("openCurrentTask", null)
     }
 
