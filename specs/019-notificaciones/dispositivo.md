@@ -86,6 +86,39 @@ Permiso reiniciado con `pm reset-permissions` (`granted=false`).
 
 Al restaurar la hora real del emulador (después de simular hasta el 10/12) la app programó la siguiente alarma (18:55 de ese día) y no recuperó nada: la «última hora» futura se ignora (CA-019-14).
 
+## T-019-15: Xiaomi 15T Pro (HyperOS 3, Android 16) (2026-10-13)
+
+**Método.** Con el permiso del propietario (que estuvo presente), **sin capturas de pantalla** (la interfaz se leyó con `uiautomator dump`, solo texto y límites de nuestra app, comprobando antes con `dumpsys window` que estaba delante). Compilación **profile** con el indicador (`flutter build apk --profile --split-per-abi --target-platform android-arm64 --dart-define=UNA_NOTIFICATIONS=true`, 39,8 MB) como app aparte `invalid.pending.app.profile`, **sin tocar la app real ni el reloj del móvil**. Una tarea de texto «Prueba 019», 3 al día. El móvil estaba **cargando** (`AC powered`). Estado inicial de «Pantalla siempre activa» (`stay_on_while_plugged_in`) restaurado al acabar los arranques (`svc power stayon false` → 0).
+
+### Entrega con el móvil bloqueado e inactivo (CA-019-11, 17)
+
+- **[Hecho]** Muestra 1 (13:49:59 móvil bloqueado y con la pantalla apagada; el proceso seguía en segundo plano, HyperOS no lo mata con `am kill`; alarma de las 13:55 con **ventana hasta ≈ 13:59**, `dumpsys alarm`: `window=+4m4s`): la notificación llegó a las **13:55:21** (**+21 s**). Título «Tarea actual», texto «Prueba 019».
+- **[Hecho]** Pantalla de bloqueo con PIN y la preferencia de «contenido sensible» **por defecto** (`lock_screen_allow_private_notifications=1`): el propietario vio **«Tarea actual / Prueba 019»** (la completa), como en S7 (CA-019-17).
+- **[Hecho]** Reinicio del móvil (por el propietario, 14:19; al volver se comprobó con la app **sin abrir**, `pidof` vacío y la pantalla de inicio delante): la alarma estaba **reprogramada** a las 18:55 (`RTC_WAKEUP`, ventana +1 h) por el aviso de arranque del sistema, sin haber abierto la app (CA-019-13).
+- **[Pendiente al cierre de este documento]** muestra con la app **cerrada** y la preferencia en **oculto** (`lock_screen_allow_private_notifications=0`, puesta a las 14:12; **restaurar a 1**): alarma real de las 18:55 (ventana +1 h), y que el propietario toque la notificación para medir el arranque desde ella (`Displayed … +NNN ms` en `logcat`). Si no se hace, a la 022.
+
+### Arranque en frío (CA-019-24, CA-001-09)
+
+`am start -W -S` (copia de `tools/measure-cold-start.sh` con el nombre completo de la actividad para la app `.profile`), 20 arranques por pasada, alternando el ajuste (comprobado cada vez con `uiautomator`):
+
+| Orden | Notificaciones | mín | **p50** | p90 | máx (ms) |
+|---|---|---|---|---|---|
+| 1 | encendido | 356 | **374** | 388 | 409 |
+| 2 | apagado | 344 | **362** | 387 | 394 |
+| 3 | apagado | 352 | **363** | 377 | 391 |
+| 4 | encendido | 319 | **369** | 373 | 379 |
+| 5 | encendido | 355 | **370** | 388 | 396 |
+| 6 | apagado | 343 | **366** | 382 | 385 |
+| 7 | apagado | 347 | **366** | 381 | 386 |
+| 8 | encendido | 359 | **391** | 408 | 411 |
+| 9 | encendido | 362 | **390** | 409 | 428 |
+| 10 | apagado | 366 | **388** | 401 | 405 |
+| 11 | apagado | 358 | **383** | 397 | 406 |
+
+- **[Hecho]** p50 < 1 s en todas (CA-001-09; ≈ 38 % del presupuesto). Medias: encendido **378,8** (374, 369, 370, 391, 390) y apagado **371,3** (362, 363, 366, 366, 388, 383): **+7,5 ms (+2 %)**.
+- **[Hecho]** La diferencia está **dentro de la deriva del propio móvil**: hubo una deriva monótona de ≈ +25 ms a lo largo de la hora (el móvil, cargando y recién reiniciado con carga alta, `load average` ≈ 19-20 y 36,9 °C), y las pasadas **apagadas** de al final (388, 383) son tan lentas como las **encendidas** del medio (391, 390). Comparando pares adyacentes la diferencia es +11, +6,5, +4, +24,5 y +4,5 ms: sin un patrón que dependa del ajuste. Criterio de CA-019-24 cumplido con ese margen (no es una prueba estadística; un solo móvil).
+- **[Nota]** Los tres primeros arranques justo tras el reinicio medían 473-799 ms (el móvil aún arrancando procesos); no cuentan.
+
 ## Pendiente de esta tarea (T-019-14)
 
 - **[Pendiente]** voz de TalkBack con `LocaleSpan` y cambio del **idioma del sistema** con el canal recreado (no hay forma fiable con `adb` en el emulador; S7 ya comprobó la voz en el Xiaomi). Va a la 022.
