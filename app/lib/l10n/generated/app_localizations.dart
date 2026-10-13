@@ -1177,6 +1177,108 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Foto {index} de {total}. Foto no disponible'**
   String a11yPhotoMissing(int index, int total);
+
+  /// Nombre del interruptor de la fila de notificaciones en Ajustes; el lector lo dice primero. CA-019-01, CA-019-26, CA-019-27
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones'**
+  String get settingsNotifications;
+
+  /// Encabezado del grupo de opciones 1, 2 y 3 (en mayúsculas por estilo) y nombre del grupo para el lector. CA-019-03, CA-019-26
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones al día'**
+  String get settingsNotificationsPerDay;
+
+  /// Lectura de cada opción de cantidad; el texto visible es solo el número y el nombre lo contiene (WCAG 2.5.3). CA-019-03, CA-019-26
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{count} notificación al día} other{{count} notificaciones al día}}'**
+  String settingsNotificationsOption(int count);
+
+  /// Ayuda con las horas de la opción 1; las horas llegan ya formateadas y siempre en 24 h. CA-019-04, CA-019-27
+  ///
+  /// In es, this message translates to:
+  /// **'La notificación será a las {time1}.'**
+  String settingsNotificationsHelp1(String time1);
+
+  /// Ayuda con las horas de la opción 2; las horas llegan ya formateadas y siempre en 24 h. CA-019-04, CA-019-27
+  ///
+  /// In es, this message translates to:
+  /// **'Las notificaciones serán a las {time1} y a las {time2}.'**
+  String settingsNotificationsHelp2(String time1, String time2);
+
+  /// Ayuda con las horas de la opción 3; las horas llegan ya formateadas y siempre en 24 h. CA-019-04, CA-019-27
+  ///
+  /// In es, this message translates to:
+  /// **'Las notificaciones serán a las {time1}, a las {time2} y a las {time3}.'**
+  String settingsNotificationsHelp3(String time1, String time2, String time3);
+
+  /// Aviso de que el sistema bloquea las notificaciones de la app (permiso rechazado, notificaciones o canal apagados). CA-019-08, CA-019-09
+  ///
+  /// In es, this message translates to:
+  /// **'Las notificaciones están bloqueadas en los Ajustes del sistema.'**
+  String get settingsNotificationsBlocked;
+
+  /// Botón de enlace del aviso de bloqueo; abre los ajustes de notificaciones de esta app. CA-019-08
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir los ajustes de notificaciones'**
+  String get settingsNotificationsOpenSystem;
+
+  /// Línea de privacidad siempre visible bajo la fila; dice que la tarea se ve en la bandeja, también con el móvil bloqueado. CA-019-29
+  ///
+  /// In es, this message translates to:
+  /// **'La notificación muestra tu tarea actual. Con el móvil bloqueado también se ve, salvo que ocultes el contenido sensible en los ajustes de tu móvil.'**
+  String get settingsNotificationsPrivacy;
+
+  /// Aviso si el botón del aviso de bloqueo no tiene a dónde ir. CA-019-08
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron abrir los Ajustes del sistema.'**
+  String get settingsNotificationsOpenError;
+
+  /// Anuncio educado al terminar con éxito el flujo del permiso. CA-019-07
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones activadas.'**
+  String get settingsNotificationsEnabledAnnounce;
+
+  /// Anuncio al volver del sistema con las notificaciones permitidas y el ajuste guardado apagado. CA-019-08
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones permitidas.'**
+  String get settingsNotificationsAllowedAnnounce;
+
+  /// Anuncio al volver del sistema con las notificaciones permitidas y el ajuste guardado encendido. CA-019-09
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones permitidas y activadas.'**
+  String get settingsNotificationsAllowedOnAnnounce;
+
+  /// Nombre del canal en los Ajustes del sistema, en el idioma del sistema (se copia a un recurso de Android). CA-019-21, CA-019-22
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea actual'**
+  String get notificationChannelName;
+
+  /// Descripción del canal en los Ajustes del sistema (se copia a un recurso de Android). CA-019-21, CA-019-22
+  ///
+  /// In es, this message translates to:
+  /// **'Te recuerda tu tarea actual 1, 2 o 3 veces al día, según elijas en Ajustes.'**
+  String get notificationChannelDescription;
+
+  /// Título de la notificación completa, en el idioma de la app (se copia a un recurso de Android). CA-019-16, CA-019-21
+  ///
+  /// In es, this message translates to:
+  /// **'Tarea actual'**
+  String get notificationTitle;
+
+  /// Versión genérica para la pantalla de bloqueo, sin ninguna parte de la tarea (se copia a un recurso de Android). CA-019-17, CA-019-21
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes una tarea pendiente.'**
+  String get notificationPublic;
 }
 
 class _AppLocalizationsDelegate

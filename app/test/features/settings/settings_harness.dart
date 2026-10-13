@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app/app/providers.dart';
 import 'package:app/app/theme/tokens.g.dart';
+import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/ports/link_opener.dart';
@@ -9,9 +10,12 @@ import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/ui/square_icon_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/app_harness.dart';
+import '../../support/fake_notification_gateway.dart';
 
 /// Ayudantes de las pruebas de Ajustes (spec 015): abrir la pantalla desde el
 /// menú de la tarea con la app completa, leer el orden del lector y el foco.
@@ -89,6 +93,10 @@ Future<FakeOpener> openSettingsScreen(
   InMemoryTaskRepository? repo,
   bool keyboard = false,
   String? appLanguage,
+  // Sin `overrides`, las pruebas de la 015 y la 017 describen Ajustes **sin** la
+  // fila de Notificaciones (CA-019-28: con el indicador apagado queda como en
+  // la 017); la fila y su orden se prueban con `notificationsOverrides`.
+  List<Override>? overrides,
 }) async {
   final o = opener ?? FakeOpener();
   if (keyboard) {
@@ -109,8 +117,21 @@ Future<FakeOpener> openSettingsScreen(
     textScale: textScale,
     size: size,
     bottomInset: bottomInset,
-    overrides: [linkOpenerProvider.overrideWithValue(o)],
+    overrides: [
+      linkOpenerProvider.overrideWithValue(o),
+      ...(overrides ?? [notificationsFlagProvider.overrideWithValue(false)]),
+    ],
   );
+  // Lo que la app hace sola al arrancar con las notificaciones disponibles
+  // (a la vista, quitar el aviso, reconciliar: T-019-12) no cuenta como
+  // llamada de Ajustes.
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(UnaApp)),
+  );
+  if (container.read(notificationsAvailableProvider)) {
+    final gateway = container.read(notificationGatewayProvider);
+    if (gateway is FakeNotificationGateway) gateway.forgetCalls();
+  }
   // Los textos del menú son los del idioma de la app (por defecto, el del
   // sistema).
   final en = (appLanguage ?? locale.languageCode) == 'en';
@@ -160,3 +181,23 @@ String? focusedLabel(WidgetTester tester) {
   if (texts.evaluate().isEmpty) return null;
   return tester.widget<Text>(texts.first).data;
 }
+
+/// Lo que enciende la fila de Notificaciones en los tests (spec 019): el
+/// indicador, la plataforma (Android por defecto) y el canal falso. Sin esto la
+/// fila no se ve, como en la app hasta T-019-17.
+List<Override> notificationsOverrides({
+  FakeNotificationGateway? gateway,
+  bool flag = true,
+  bool platform = true,
+}) => [
+  notificationsFlagProvider.overrideWithValue(flag),
+  notificationsPlatformProvider.overrideWithValue(platform),
+  notificationGatewayProvider.overrideWithValue(
+    gateway ?? FakeNotificationGateway(),
+  ),
+];
+
+/// El contenedor de Riverpod de la app montada (para leer o cambiar un
+/// proveedor desde el test).
+ProviderContainer appContainer(WidgetTester tester) =>
+    ProviderScope.containerOf(tester.element(find.byType(SettingsScreen)));

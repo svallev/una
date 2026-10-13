@@ -1,7 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Único permiso de la app (spec 009, ADR-0016): la WebView de la tarea web carga la
-         página que el usuario ha pedido ver (P4). Todo lo demás funciona sin red. -->
+    <!-- INTERNET (spec 009, ADR-0016): la WebView de la tarea web carga la página que el
+         usuario ha pedido ver (P4). Todo lo demás funciona sin red. Los otros dos permisos
+         son los de las notificaciones (spec 019, abajo). -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Notificaciones de la tarea actual (spec 019, ADR-0025). POST_NOTIFICATIONS (Android 13+)
+         se pide al encender el interruptor, nunca al arrancar (P5). RECEIVE_BOOT_COMPLETED
+         reprograma la alarma tras reiniciar, también antes del primer desbloqueo. Ninguno de
+         alarmas exactas (CA-019-11). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
@@ -45,6 +52,23 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/import_paths" />
         </provider>
+        <!-- Despertares de las notificaciones (spec 019, CA-019-13, 25): un solo receptor, NO
+             exportado (T-8) y con arranque directo (funciona antes del primer desbloqueo). Solo
+             difusiones protegidas del sistema; la alarma propia llega por un PendingIntent
+             explícito y no está en ningún filtro. -->
+        <receiver
+            android:name=".notifications.WakeReceiver"
+            android:directBootAware="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.TIME_SET"/>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
+                <action android:name="android.intent.action.LOCALE_CHANGED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
         <!-- La WebView no envía métricas de uso ni diagnósticos a Google (P4; spec 009,
              T-009-01). Safe Browsing sigue activado (decisión del propietario, 2026-09-28). -->
         <meta-data

@@ -204,6 +204,7 @@ abstract final class UnaLetterSpacing {
   static const double tight = -0.02;
   static const double snug = -0.01;
   static const double tagWide = 0.08;
+  static const double groupLabel = 0.06;
 }
 
 /// Longitud del texto (caracteres) a partir de la cual la nota usa un tamaño menor.
@@ -312,6 +313,7 @@ abstract final class UnaBorders {
   static const double noneRadius = 0.0;
   static const double switchTrackRadius = 8.0;
   static const double switchKnobRadius = 4.0;
+  static const double optionGroupRadius = 8.0;
 }
 
 abstract final class UnaShadows {
@@ -482,6 +484,9 @@ abstract final class UnaMotion {
 
   /// La pista del interruptor de Ajustes cambia de color (prototipo: background .12s). Con reducir movimiento, 0 ms. CA-015-01d, CA-015-03
   static const Duration switchTrack = Duration(milliseconds: 120);
+
+  /// Las opciones de Notificaciones se despliegan y pliegan (prototipo: grid-template-rows .24s con la curva sheet; la opacidad .2s se une a esta). Sin ninguna animación con reducir movimiento. CA-019-03
+  static const Duration accordion = Duration(milliseconds: 240);
 
   /// Transición de una foto a otra del carrusel, con la curva photoSwipe (prototipo: transform .28s). Sin transición con reducir movimiento. CA-016-09, CA-016-22
   static const Duration photoSwipe = Duration(milliseconds: 280);

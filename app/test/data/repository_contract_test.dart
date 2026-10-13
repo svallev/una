@@ -8,6 +8,7 @@ import 'package:app/data/drift_task_repository.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/locale_choice.dart';
+import 'package:app/domain/entities/notification_settings.dart';
 import 'package:app/domain/entities/rank.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/ports/task_repository.dart';
@@ -996,6 +997,101 @@ void _contract(
       expect(await settings.lockZoom(), isFalse);
     });
 
+    test('CA-019-05: las notificaciones están apagadas y en 1 al día por '
+        'defecto, y se guardan', () async {
+      expect(await settings.notificationsOn(), isFalse);
+      expect(await settings.notificationsPerDay(), NotificationsPerDay.one);
+      await settings.setNotificationsOn(true);
+      expect(await settings.notificationsOn(), isTrue);
+      for (final value in [
+        NotificationsPerDay.three,
+        NotificationsPerDay.two,
+        NotificationsPerDay.one,
+      ]) {
+        await settings.setNotificationsPerDay(value);
+        expect(await settings.notificationsPerDay(), value);
+      }
+      await settings.setNotificationsOn(false);
+      expect(await settings.notificationsOn(), isFalse);
+    });
+
+    test('CA-019-05: la cantidad se conserva con el ajuste apagado', () async {
+      await settings.setNotificationsOn(true);
+      await settings.setNotificationsPerDay(NotificationsPerDay.three);
+      await settings.setNotificationsOn(false);
+      expect(await settings.notificationsOn(), isFalse);
+      expect(await settings.notificationsPerDay(), NotificationsPerDay.three);
+    });
+
+    test(
+      'CA-019-05: cada ajuste escribe solo su clave (aislamiento)',
+      () async {
+        await settings.setNotificationsOn(true);
+        await settings.setNotificationsPerDay(NotificationsPerDay.two);
+        expect(await settings.keepScreenOn(), isFalse);
+        expect(await settings.lockZoom(), isFalse);
+        expect(await settings.locale(), LocaleChoice.system);
+        await settings.setKeepScreenOn(true);
+        await settings.setLockZoom(true);
+        await settings.setLocale(LocaleChoice.en);
+        expect(await settings.notificationsOn(), isTrue);
+        expect(await settings.notificationsPerDay(), NotificationsPerDay.two);
+      },
+    );
+
+    test('CA-019-05: lo guardado en otras claves no enciende nada', () async {
+      await putRaw('keepScreenOn', 'true');
+      await putRaw('lockZoom', 'true');
+      await putRaw('locale', '"en"');
+      expect(await settings.notificationsOn(), isFalse);
+      expect(await settings.notificationsPerDay(), NotificationsPerDay.one);
+    });
+
+    for (final raw in <String>[
+      '',
+      ' ',
+      'false',
+      'null',
+      'TRUE',
+      '"true"',
+      '[true]',
+      'true ',
+      '0',
+      '4',
+      '-1',
+      '1.5',
+      '2.0',
+      '"2"',
+      '[2]',
+      '[[[[[[[[[[[[[[[[[',
+      '{"a":',
+      'x' * 100000,
+    ]) {
+      final shown = raw.length > 20 ? '${raw.substring(0, 20)}…' : raw;
+      test('CA-019-05: `notificationsOn` guardado como `$shown` es apagado '
+          'y no lanza', () async {
+        await putRaw('notificationsOn', raw);
+        expect(await settings.notificationsOn(), isFalse);
+      });
+
+      test('CA-019-05: `notificationsPerDay` guardado como `$shown` es 1 '
+          'y no lanza', () async {
+        await putRaw('notificationsPerDay', raw);
+        expect(await settings.notificationsPerDay(), NotificationsPerDay.one);
+      });
+    }
+
+    test('CA-019-05: los valores exactos válidos se leen', () async {
+      await putRaw('notificationsOn', 'true');
+      expect(await settings.notificationsOn(), isTrue);
+      await putRaw('notificationsPerDay', '1');
+      expect(await settings.notificationsPerDay(), NotificationsPerDay.one);
+      await putRaw('notificationsPerDay', '2');
+      expect(await settings.notificationsPerDay(), NotificationsPerDay.two);
+      await putRaw('notificationsPerDay', '3');
+      expect(await settings.notificationsPerDay(), NotificationsPerDay.three);
+    });
+
     test(
       'CA-015-06: el idioma es "Como el sistema" por defecto y se guarda',
       () async {
@@ -1370,6 +1466,31 @@ void main() {
       await dir.delete(recursive: true);
     },
   );
+
+  test('CA-019-05: el interruptor y la cantidad persisten entre dos arranques '
+      '(BD en disco, también tras morir el proceso)', () async {
+    final dir = await Directory.systemTemp.createTemp('una_db');
+    final file = File('${dir.path}/app.sqlite');
+    var db = openAppDatabaseFile(file);
+    var repo = DriftTaskRepository(db);
+    expect(await repo.notificationsOn(), isFalse);
+    expect(await repo.notificationsPerDay(), NotificationsPerDay.one);
+    await repo.setNotificationsOn(true);
+    await repo.setNotificationsPerDay(NotificationsPerDay.three);
+    await db.close();
+
+    db = openAppDatabaseFile(file);
+    repo = DriftTaskRepository(db);
+    expect(await repo.notificationsOn(), isTrue);
+    expect(await repo.notificationsPerDay(), NotificationsPerDay.three);
+    final rows = {
+      for (final r in await db.select(db.settingEntries).get()) r.key: r.value,
+    };
+    expect(rows, {'notificationsOn': 'true', 'notificationsPerDay': '3'});
+    expect(db.schemaVersion, 3, reason: 'sin esquema nuevo (CA-019-05)');
+    await db.close();
+    await dir.delete(recursive: true);
+  });
 
   test(
     'CA-001-10: los datos persisten al cerrar y reabrir la BD en disco',

@@ -1,6 +1,6 @@
 # Spec 019: Notificaciones
 
-- **Estado:** **Aprobada** (propietario, 2026-10-12). Spike **S7** hecho (2026-10-12; `docs/spikes/S7-notificaciones-resultados.md`) y aplicado; **ADR-0025 Aceptado** el mismo día; Q-019-1 a 10 respondidas (Q-019-6: línea de privacidad siempre a la vista; Q-019-10: texto de D25 y horas siempre en 24 h; canal en el idioma del sistema). Revisada dos veces por `spec-reviewer` y `a11y-reviewer` (2026-10-11 y 12), con todos los hallazgos aplicados. **Enmienda del 2026-10-12 (C-1 del plan, propietario):** CA-019-11 deja de prometer W = 15 min en un móvil con la pantalla apagada mucho rato (medido en el Xiaomi); ver CA-019-11, CL-019-10 y `docs/spikes/S7-notificaciones-resultados.md`. **Siguiente:** implementar el plan (aprobado). Lo que S7 no probó queda en las casillas de la 022 (§9).
+- **Estado:** **Implementada parcialmente** (2026-10-13; rama `feat/019-notificaciones`, T-019-01 a 17; las casillas de dispositivo, pendientes: ver el §13). Aprobada por el propietario el 2026-10-12. Spike **S7** hecho (2026-10-12; `docs/spikes/S7-notificaciones-resultados.md`) y aplicado; **ADR-0025 Aceptado** el mismo día; Q-019-1 a 10 respondidas (Q-019-6: línea de privacidad siempre a la vista; Q-019-10: texto de D25 y horas siempre en 24 h; canal en el idioma del sistema). Revisada dos veces por `spec-reviewer` y `a11y-reviewer` (2026-10-11 y 12), con todos los hallazgos aplicados. **Enmienda del 2026-10-12 (C-1 del plan, propietario):** CA-019-11 deja de prometer W = 15 min en un móvil con la pantalla apagada mucho rato (medido en el Xiaomi); ver CA-019-11, CL-019-10 y `docs/spikes/S7-notificaciones-resultados.md`. **Cierre hecho** (T-019-17). Lo que S7 no probó queda en las casillas de la 022 (§9).
 - **Fase:** F4b Nuevas funcionalidades (plan aprobado por el propietario el 2026-10-04). Sexta y última de las specs 014–019. Tamaño **L**.
 - **Reglas de producto:** R19 (notificaciones), R18 (Ajustes), R15 (idioma de la app), R8 (abrir → tarea actual rápido), **propuesta de valor 2**
 - **Pantallas del prototipo:** 16 "Ajustes" (`Ajustes.dc.html`, `Main.dc.html`: la fila «Notificaciones», `toggleNotif`, `notifCount`, `notifOpts`, `notifHelp`). **Sin diseño:** el aviso de «bloqueadas por el sistema» (se hace con `UnaLinkButton`, PD-5), la **propia notificación** (la define el sistema) y la marca del segundo estado de las opciones 1/2/3 (CA-019-03). Registrado como **DEV-56** (`docs/design/prototype-deviations.md`, a escribir al aprobar). Ver `docs/design/screen-map.md`
@@ -285,7 +285,7 @@ Que la app **te acuerde de tu tarea actual** sin que tengas que abrirla: un ajus
 | Estado | Cuándo | Qué ve el usuario |
 |---|---|---|
 | Sin tareas | Llega una hora de notificación y no queda nada | Nada: no se notifica (CA-019-15) |
-| Bloqueadas al encender | Rechaza el permiso, o el sistema las bloquea | Interruptor apagado y «Las notificaciones están bloqueadas en los Ajustes del sistema.» + «Abrir Ajustes del sistema» (CA-019-08) |
+| Bloqueadas al encender | Rechaza el permiso, o el sistema las bloquea | Interruptor apagado y «Las notificaciones están bloqueadas en los Ajustes del sistema.» + «Abrir los ajustes de notificaciones» (CA-019-08) |
 | El sistema bloquea con el ajuste guardado encendido | El usuario las bloquea después, o una copia restaurada sin permiso | Interruptor apagado, ajuste guardado intacto y el mismo aviso (CA-019-09) |
 | No se pudo guardar o programar | Falla el guardado o la programación | El interruptor o la marca no cambian y bajo el bloque, «No se pudo guardar el ajuste.» (CA-019-06) |
 | Valor guardado ilegible | Al arrancar o leerlo | Nada: se usa «apagado» y «1» (CA-019-05) |
@@ -395,4 +395,41 @@ Ver la tabla «Trazabilidad HU → CA» del §3.
 
 ## 13. Tabla CA → prueba
 
-Se rellena al cerrar la implementación.
+Abreviaturas: `D:` = `app/test/…` (Dart); `K:` = `app/android/app/src/test/kotlin/invalid/pending/app/notifications/…` (JUnit); `disp.` = `dispositivo.md`. Revisado por `spec-reviewer` el 2026-10-13 (sin hallazgos altos). **«Pendiente 022»** = casilla de dispositivo en «Casillas de la 019» de `docs/PLAN.md`.
+
+| CA | Prueba | Estado |
+|---|---|---|
+| 01 | D: `features/settings/notifications_row_test.dart`, `notifications_a11y_test.dart` (guías táctiles) | Automatizada |
+| 02 | D: `notifications_row_test.dart`, `notifications_controller_test.dart`, `data/notification_gateway_test.dart`, `goldens/settings_golden_test.dart`; K: `DerivedStoreTest` | Automatizada. *Golden*: generado en CI y subido |
+| 03 | D: `notifications_row_test.dart`, `notifications_a11y_test.dart` (marca ≥ 3:1, también en grises), `notifications_controller_test.dart`, `tool/validate_tokens_test.dart`, *golden* | Automatizada. *Golden*: generado en CI y subido |
+| 04 | D: `notifications_row_test.dart` (12 h/24 h, ES/EN, un anuncio al cambiar, ninguno al desplegar), `domain/notification_settings_test.dart`, `l10n/spec_019_strings_test.dart` | Automatizada. TalkBack real: pendiente 022 |
+| 05 | D: `domain/settings_codec_test.dart`, `data/repository_contract_test.dart`, `app/boot_state_test.dart`, `settings_controller_test.dart`; K: `DerivedStoreTest`, `ChannelArgumentsTest`, `SlotsTest` | Automatizada |
+| 06 | D: `notifications_blocked_test.dart`, `notifications_controller_test.dart` | Automatizada. Aviso con TalkBack: pendiente 022 |
+| 07 | D: `notifications_blocked_test.dart`, `notifications_controller_test.dart`, `data/notification_gateway_test.dart`; K: `PermissionRequestsTest`; disp. | Automatizada y dispositivo (emulador). Recuadro de TalkBack: pendiente 022 |
+| 08 | D: `notifications_blocked_test.dart`, `notifications_controller_test.dart`, `data/notification_gateway_test.dart`; disp. | Automatizada y dispositivo (emulador) |
+| 08b | D: `notifications_controller_test.dart` (las 4 filas), `data/notification_gateway_test.dart`; K: `PermissionRequestsTest`; disp. | Automatizada y dispositivo (emulador) |
+| 09 | D: `notifications_blocked_test.dart`, `notifications_controller_test.dart`, `notifications_row_test.dart` | Automatizada. Voz y vuelta del sistema con TalkBack: pendiente 022 |
+| 10 | K: `SlotsTest`, `WakeHandlerTest`; D: `domain/notification_settings_test.dart`, `domain/notification_parity_test.dart`; disp. | Automatizada y dispositivo |
+| 11 | K: `WakeHandlerTest` + `Fakes.kt`; D: `app/manifest_notifications_test.dart`, `tool/check_android_permissions_test.dart`; disp. (emulador +44 s; Xiaomi +21 s) | Automatizada y dispositivo. W = 15 min no es criterio de paso; la medición con la pantalla encendida y apagada poco rato se rehace en la 022 |
+| 12 | K: `WakeHandlerTest`; D: `notifications_controller_test.dart`; disp. | Automatizada y dispositivo |
+| 13 | K: `WakeHandlerTest`, `WakeDecisionTest`, `WakeActionsTest`; D: `app/manifest_notifications_test.dart`, `app/notifications_lifecycle_test.dart`; disp. | Automatizada y dispositivo. Cambio real de hora y huso en el Xiaomi: pendiente 022 |
+| 14 | K: `SlotsTest`, `WakeDecisionTest`, `WakeHandlerTest`, `PreUnlockTest`, `DerivedStoreTest` | Automatizada |
+| 15 | K: `WakeDecisionTest`, `WakeHandlerTest`, `TaskQueryTest`, `PreUnlockTest` | Automatizada |
+| 16 | K: `TaskLabelTest`, `TaskQueryTest`, `HostDisplayTest`, `NotificationTextTest`, `WakeHandlerTest`; D: `data/native_task_query_contract_test.dart`, `domain/notification_parity_test.dart` | Automatizada. **Residual:** los tests usan `TestGraphemeSplitter`; el `IcuGraphemeSplitter` de producción (`android.icu.text.BreakIterator`) solo se probó a mano con «Llamar a Marta»; texto largo con emoji ZWJ y acentos: pendiente 022 |
+| 17 | K: `NotificationSpecTest`, `NotificationTextTest`, `WakeHandlerTest`; disp. | Automatizada y dispositivo. Xiaomi con contenido oculto: pendiente 022 |
+| 18 | K: `NotificationSpecTest`, `WakeHandlerTest`; disp. | Automatizada y dispositivo |
+| 19a | K: `ForegroundTrackerTest`, `WakeDecisionTest`, `WakeHandlerTest`, `DerivedStoreTest`, `ChannelArgumentsTest`; D: `app/main_activity_notifications_test.dart`, `app/notifications_lifecycle_test.dart` | Automatizada. Sin aislar en dispositivo: pendiente 022 |
+| 19b | D: `app/notifications_lifecycle_test.dart`, `data/notification_gateway_test.dart`; K: `ActivationNonceTest`, `WakeHandlerTest`; disp. | Automatizada y dispositivo |
+| 20 | D: `app/notifications_lifecycle_test.dart`, `app/main_activity_notifications_test.dart`, `data/notification_gateway_test.dart`; K: `ActivationNonceTest`; disp. | Automatizada y dispositivo. Probado a los 5 min (editor); los 11 min, pendiente 022 |
+| 21 | K: `LanguageTest`, `NotificationTextTest`, `WakeHandlerTest`, `PreUnlockTest`, `NotificationSpecTest`, `ChannelArgumentsTest`; D: `notifications_controller_test.dart`, `tool/gen_android_strings_test.dart`; disp. | Automatizada y dispositivo. Voz con otros lectores, `LOCALE_CHANGED`: pendiente 022 |
+| 22 | K: `NotificationSpecTest`; D: `tool/gen_icons_test.dart`; disp. | Automatizada y dispositivo |
+| 23 | K: `DerivedStoreTest`, `WakeHandlerTest`, `PreUnlockTest`, `ForegroundTrackerTest`; D: `app/native_no_logging_test.dart`, `app/backup_rules_test.dart`, `app/manifest_notifications_test.dart`, `app/main_activity_notifications_test.dart`; disp. (logcat con texto secreto: 0 coincidencias); `security-reviewer` | Automatizada y dispositivo |
+| 24 | D: `app/notifications_lifecycle_test.dart`; disp. (emulador p50 369-372 ms con el ajuste encendido y 363-370 apagado, ≈ 406 desde la notificación; Xiaomi 378,8 frente a 371,3) | Automatizada y dispositivo. Xiaomi abriendo desde la notificación: pendiente 022 |
+| 25 | D: `app/manifest_notifications_test.dart`, `tool/check_android_permissions_test.dart`, `tool/check_apk_no_test_classes_test.dart`; disp. | Automatizada y dispositivo. «Sin paquetes con red nuevos» por revisión del diff (sin dependencias nuevas) |
+| 26 | D: `notifications_a11y_test.dart`, `notifications_blocked_test.dart`, `ui/una_icons_test.dart`, `tool/validate_tokens_test.dart`, *golden* | Automatizada. *Golden*: generado en CI y subido. TalkBack, teclado físico, Switch Access, Voice Access: pendiente 022 |
+| 27 | D: `l10n/spec_019_strings_test.dart`, `tool/gen_android_strings_test.dart`, `l10n/semantics_language_test.dart` (CA-015-11 / CA-019-27: bloque desplegado y bloqueado, app ≠ sistema) | Automatizada |
+| 28 | D: `app/feature_flags_test.dart`, `notifications_row_test.dart`, `data/notification_gateway_test.dart`, `app/notifications_lifecycle_test.dart`, `settings_screen_test.dart` | Automatizada. iOS compila en CI |
+| 29 | D: `notifications_a11y_test.dart`, `notifications_row_test.dart`, `tool/validate_tokens_test.dart` | Automatizada |
+| 30 | K: `PreUnlockTest`, `WakeDecisionTest`, `TaskQueryTest`; D: `data/native_task_query_contract_test.dart`; disp. | Automatizada y dispositivo (emulador). Xiaomi: pendiente 022 |
+
+**Cierre (T-019-17, 2026-10-13):** el indicador `notifications` queda encendido por defecto; los *goldens* de Ajustes de la 015 y la 017 siguen sin la fila (el *harness* fija el indicador apagado: CA-019-28) y los 16 PNG nuevos `settings_notifications_*` y los 4 de Ajustes nivel 1 (que ganan la fila) se generaron en CI con la etiqueta `actualizar-goldens`, se revisaron a ojo y se subieron (PR #50, CI en verde). Nota para el §6: el sistema (Android 16) pone a la notificación un `timeout` de 72 h que la app no pide (`dispositivo.md`); no es de la app.

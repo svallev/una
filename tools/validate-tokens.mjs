@@ -122,6 +122,23 @@ for (let g = 0; g <= 255; g++) {
 }
 if (worstGray < 3) errors.push(`Contraste no textual insuficiente de los puntos sobre un gris: ${worstGray.toFixed(2)} (< 3)`);
 
+// 4d. Notificaciones en Ajustes (spec 019, CA-019-26 y CA-019-03). Sin token nuevo: se declaran
+//     aquí los pares que ya existían para que un cambio de color los rompa con su nombre.
+//     Texto (≥ 4,5:1): la línea de privacidad, la ayuda con las horas y el aviso de bloqueo van
+//     en textMuted sobre el papel (como CA-017-15); el botón de enlace («Abrir los ajustes de
+//     notificaciones») y el número de la opción marcada son tinta (este sobre el amarillo del
+//     relleno, `switchOn`, que no cuenta para distinguir el estado: ≈ 1,2:1 contra el papel).
+//     No textual (≥ 3:1, WCAG 1.4.1 y 1.4.11): la marca de selección (la misma de Idioma, tinta)
+//     contra los dos fondos posibles, el relleno amarillo de la marcada y el papel de las demás.
+const textMuted = hex(C.textMuted.$value);
+checks.push(["notificaciones/línea de privacidad (textMuted/paper)", textMuted, paper]);
+checks.push(["notificaciones/ayuda con las horas (textMuted/paper)", textMuted, paper]);
+checks.push(["notificaciones/aviso de bloqueo (textMuted/paper)", textMuted, paper]);
+checks.push(["notificaciones/botón de enlace (ink/paper)", ink, paper]);
+checks.push(["notificaciones/número de la opción marcada (ink/switchOn)", ink, switchOn]);
+nonTextChecks.push(["opciones al día/marca de selección (ink) / relleno de la opción marcada (switchOn)", ink, switchOn]);
+nonTextChecks.push(["opciones al día/marca de selección (ink) / papel de las demás opciones", ink, paper]);
+
 for (const [name, fg, bg] of checks) {
   const r = ratio(fg, bg);
   if (r < 4.5) errors.push(`Contraste insuficiente ${name}: ${r.toFixed(2)} (< 4.5)`);

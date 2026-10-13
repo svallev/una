@@ -63,10 +63,12 @@ class _UnaAppState extends ConsumerState<UnaApp> {
         // eliminación es definitiva, sin card (CA-014-11).
         ref.read(deletionProvider.notifier).finishNow();
         ref.read(undoProvider.notifier).appHidden();
+        _tellNativeVisible(false);
       },
       onShow: _onShow,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startNotifications();
       // Datos de páginas que quedaron si la app se cerró sin borrarlos
       // (CA-009-13): solo con la marca, y sin retrasar el primer fotograma.
       unawaited(ref.read(webDataJanitorProvider).clearAfterLaunch());
@@ -83,32 +85,92 @@ class _UnaAppState extends ConsumerState<UnaApp> {
 
   Timer? _sweep;
 
+  // Notificaciones (spec 019). Todo ocurre después del primer fotograma
+  // (CA-019-24) y solo si la plataforma y el indicador lo admiten
+  // (CA-019-28): si no, no se toca el canal.
+  StreamSubscription<void>? _openRequests;
+
+  bool get _notificationsAvailable => ref.read(notificationsAvailableProvider);
+
+  /// Primer fotograma ya dibujado (se llama una sola vez por arranque): la app
+  /// está a la vista, se quita la notificación que hubiera, se reconcilia lo
+  /// programado con los ajustes (CA-019-13) y se escucha la orden de abrir la tarea
+  /// actual (CA-019-20).
+  void _startNotifications() {
+    if (!mounted || !_notificationsAvailable) return;
+    final gateway = ref.read(notificationGatewayProvider);
+    _openRequests = gateway.openCurrentTaskRequests.listen(
+      (_) => _onOpenCurrentTask(),
+    );
+    _tellNativeVisible(true);
+    final settings = ref.read(settingsProvider);
+    unawaited(_reconcile(settings));
+  }
+
+  Future<void> _reconcile(AppSettings settings) async {
+    try {
+      await ref
+          .read(notificationGatewayProvider)
+          .configure(
+            on: settings.notificationsOn,
+            perDay: settings.notificationsPerDay,
+            language: settings.locale,
+          );
+    } on Object {
+      // Sin registrar nada (CA-019-23): el siguiente arranque lo reintenta.
+    }
+  }
+
+  /// Dice a lo nativo si la app está a la vista (CA-019-19a) y, al pasar a la
+  /// vista, quita la notificación de la bandeja (CA-019-19b). Ninguna de las
+  /// dos llamadas lanza.
+  void _tellNativeVisible(bool visible) {
+    if (!mounted || !_notificationsAvailable) return;
+    final gateway = ref.read(notificationGatewayProvider);
+    unawaited(gateway.setForeground(visible));
+    if (visible) unawaited(gateway.cancelDelivered());
+  }
+
+  /// El usuario tocó la notificación con la app viva (CA-019-20): siempre la
+  /// tarea actual, sea cual sea la pantalla y el tiempo pasado.
+  void _onOpenCurrentTask() {
+    if (!mounted) return;
+    unawaited(ref.read(notificationGatewayProvider).cancelDelivered());
+    _goHome();
+  }
+
   void _onShow() {
+    _tellNativeVisible(true);
     final hiddenAt = _hiddenAt;
     _hiddenAt = null;
     if (hiddenAt == null) return;
     if (ref.read(clockProvider).now().difference(hiddenAt) >=
         UnaApp.resetAfter) {
-      // Con alguna pantalla encima (Ajustes, el editor, el listado), la tarea
-      // vuelve con el foco en el botón de menú (CA-015-16). Quien se monte con
-      // la petición pendiente la toma; si no hay botón, se retira tras el
-      // fotograma.
-      if (_navigatorKey.currentState?.canPop() ?? false) {
-        ref.read(menuFocusProvider.notifier).request();
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => ref.read(menuFocusProvider.notifier).clear(),
-        );
-      }
-      _navigatorKey.currentState?.popUntil((r) => r.isFirst);
-      setState(
-        () => _resetGeneration++,
-      ); // descarta lo que hubiera en el editor
+      _goHome();
     }
+  }
+
+  /// Vuelve a la raíz (la tarea actual o, sin tareas, el editor de la primera)
+  /// y descarta lo que hubiera en el editor.
+  void _goHome() {
+    // Con alguna pantalla encima (Ajustes, el editor, el listado), la tarea
+    // vuelve con el foco en el botón de menú (CA-015-16). Quien se monte con
+    // la petición pendiente la toma; si no hay botón, se retira tras el
+    // fotograma.
+    if (_navigatorKey.currentState?.canPop() ?? false) {
+      ref.read(menuFocusProvider.notifier).request();
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ref.read(menuFocusProvider.notifier).clear(),
+      );
+    }
+    _navigatorKey.currentState?.popUntil((r) => r.isFirst);
+    setState(() => _resetGeneration++); // descarta lo que hubiera en el editor
   }
 
   @override
   void dispose() {
     _sweep?.cancel();
+    unawaited(_openRequests?.cancel());
     _lifecycle.dispose();
     super.dispose();
   }

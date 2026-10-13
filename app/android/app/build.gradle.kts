@@ -63,4 +63,9 @@ dependencies {
     // ImageImport.kt usa FileProvider. Se declara con la misma versión que ya llegaba de forma
     // transitiva con Flutter, para que un cambio de versión no pase inadvertido (threat-model §5, B4).
     implementation("androidx.core:core:1.13.1")
+
+    // Pruebas JVM del núcleo de notificaciones (spec 019, P-019-1; aceptada por el propietario como
+    // única dependencia de pruebas, threat-model §5). Solo `testImplementation`: no entra en el APK
+    // (lo vigila tools/check-apk-no-test-classes.sh en CI). Hamcrest 1.3 llega transitivo de JUnit.
+    testImplementation("junit:junit:4.13.2")
 }

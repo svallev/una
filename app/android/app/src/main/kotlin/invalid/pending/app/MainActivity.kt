@@ -4,11 +4,13 @@ import android.content.Intent
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import invalid.pending.app.notifications.NotificationsChannel
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var images: ImageImport? = null
     private var rotation: AttachmentRotation? = null
+    private var notifications: NotificationsChannel? = null
     private val recents = RecentsPrivacy(this)
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
@@ -27,6 +29,8 @@ class MainActivity : FlutterActivity() {
         // "Tiempo para actuar" del sistema para la card de deshacer (spec 014).
         MethodChannel(messenger, AccessibilityTimeouts.CHANNEL)
             .setMethodCallHandler(AccessibilityTimeouts(applicationContext))
+        // Notificaciones de la tarea actual (spec 019): permiso, programación y "a la vista".
+        notifications = NotificationsChannel(this, messenger)
         // Endurecimiento y limpieza de la WebView de la tarea web (spec 009). Como
         // plugin, para pedir la WebView al de `webview_flutter` (ya registrado).
         flutterEngine.plugins.add(WebViewHardening())
@@ -62,6 +66,38 @@ class MainActivity : FlutterActivity() {
         super.onResume()
         recents.onResume()
         rotation?.resume()
+        notifications?.onResume()
+    }
+
+    // Spec 019, CA-019-19a: la app deja de estar a la vista en `onStop` (pantalla apagada, otra app
+    // o inicio), no en `onPause`: el diálogo del permiso y la cortina de notificaciones pausan la
+    // actividad sin sacar la app de la vista.
+    override fun onStop() {
+        notifications?.onStop()
+        super.onStop()
+    }
+
+    // Spec 019, CA-019-20: tocar la notificación con la app viva. Solo cuenta la intención con la
+    // acción exacta y el `nonce` vigente; cualquier otra se ignora sin efecto.
+    override fun onNewIntent(intent: Intent) {
+        notifications?.onNewIntent(intent)
+        super.onNewIntent(intent)
+    }
+
+    // Spec 019, P-019-14: un cambio de foco entre pedir el permiso y su respuesta es la señal de que
+    // salió el diálogo del sistema.
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        notifications?.onWindowFocusChanged(hasFocus)
+        super.onWindowFocusChanged(hasFocus)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        if (notifications?.onPermissionResult(requestCode, grantResults) == true) return
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     @Deprecated("startActivityForResult: sin androidx.activity (sin dependencias nuevas)")
@@ -77,6 +113,8 @@ class MainActivity : FlutterActivity() {
         images = null
         rotation?.follow(false)
         rotation = null
+        notifications?.dispose()
+        notifications = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

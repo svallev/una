@@ -66,6 +66,7 @@ Que alguien que abre la app por primera vez cree su primera tarea en segundos y 
   - **Cuando** el usuario abre la app
   - **Entonces** lo primero que ve tras la pantalla de lanzamiento es la tarea actual, sin animaciones de entrada que la retrasen, en **< 1 s (p50)** en el dispositivo Android de referencia (compilación *release*).
   - *Enmienda (spec 016, implementada; en vigor):* con un grupo, el primer fotograma pinta la primera foto y no espera a ninguna otra (CA-016-08).
+  - *Nota (spec 019, implementada; en vigor):* el criterio vale también con el ajuste de notificaciones encendido y **abriendo la app desde la notificación con el proceso muerto**: medido en el emulador de API 37 (p50 369-372 ms con el ajuste encendido y 363-370 con el apagado; ≈ 406 ms desde la notificación) y en el Xiaomi (378,8 frente a 371,3 ms, dentro de la deriva); la comprobación de lo programado, `setForeground` y quitar la notificación van después del primer fotograma (CA-019-24).
 - **CA-001-10 Persistencia**
   - **Dado** que el usuario creó tareas
   - **Cuando** cierra la app (o el sistema la mata) y la reabre, incluso en modo avión
@@ -147,6 +148,7 @@ Posición de las tareas nuevas (002), completar (003), menú (005), adjuntos (00
   - **Cuando** vuelve a primer plano
   - **Entonces** si pasaron menos de 10 minutos se ve la misma pantalla; si pasaron 10 minutos o más, se ve la tarea actual (o el editor de la primera tarea si no hay ninguna).
   - *Enmienda (spec 014, aprobada 2026-10-04; se implementa con ella):* pasar a segundo plano hace definitiva una eliminación que aún se podía deshacer: al volver no hay card (CA-014-11, CL-014-15).
+  - *Excepción (spec 019, implementada; en vigor):* **tocar una notificación lleva siempre a la tarea actual** (o al editor de la primera tarea si no hay ninguna), aunque pasaran menos de 10 minutos y estuviera la app en el listado, en Ajustes o en el editor (CA-019-20): comparte con el reinicio de 10 min la misma vuelta a la raíz (`_goHome`) y, si estaba el editor con un texto sin guardar, se pierde (consecuencia aceptada por el propietario, Q-019-3). Volver a primer plano por cualquier vía quita la notificación de la bandeja (CA-019-19b).
 
 ## 11. Ajustes durante la implementación (aprobados por el propietario el 2026-09-24)
 

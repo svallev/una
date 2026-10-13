@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../domain/entities/attachment.dart';
 import '../domain/entities/locale_choice.dart';
+import '../domain/entities/notification_settings.dart';
 import '../domain/entities/rank.dart';
 import '../domain/entities/task.dart';
 import '../domain/ports/task_repository.dart';
@@ -280,6 +281,24 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   @override
   Future<void> setLockZoom(bool value) async =>
       _settings[SettingKeys.lockZoom] = encodeFlag(value);
+
+  @override
+  Future<bool> notificationsOn() async =>
+      decodeNotificationsOn(_settings[SettingKeys.notificationsOn]);
+
+  @override
+  Future<void> setNotificationsOn(bool value) async =>
+      _settings[SettingKeys.notificationsOn] = encodeFlag(value);
+
+  @override
+  Future<NotificationsPerDay> notificationsPerDay() async =>
+      decodeNotificationsPerDay(_settings[SettingKeys.notificationsPerDay]);
+
+  @override
+  Future<void> setNotificationsPerDay(NotificationsPerDay value) async =>
+      _settings[SettingKeys.notificationsPerDay] = encodeNotificationsPerDay(
+        value,
+      );
 
   @override
   Future<LocaleChoice> locale() async =>

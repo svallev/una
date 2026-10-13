@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../entities/locale_choice.dart';
+import '../entities/notification_settings.dart';
 
 /// Claves de la tabla `settings` (las mismas en Drift y en memoria).
 abstract final class SettingKeys {
@@ -9,6 +10,8 @@ abstract final class SettingKeys {
   static const keepScreenOn = 'keepScreenOn';
   static const lockZoom = 'lockZoom';
   static const locale = 'locale';
+  static const notificationsOn = 'notificationsOn';
+  static const notificationsPerDay = 'notificationsPerDay';
 }
 
 /// Más largo que esto no puede ser un ajuste válido (`"system"` son 8
@@ -48,6 +51,21 @@ bool decodeKeepScreenOn(String? raw) => _decode(raw) == true;
 /// `jsonDecode`: ` true`, `true\n` o `"true"` son basura y dan apagado.
 bool decodeLockZoom(String? raw) => raw == encodeFlag(true);
 
+/// "Notificaciones" (CA-019-05): encendido solo si el texto guardado es
+/// **exactamente** `true` (como [decodeLockZoom], sin `jsonDecode`).
+bool decodeNotificationsOn(String? raw) => raw == encodeFlag(true);
+
+/// Cantidad al día (CA-019-05): solo los textos `1`, `2` y `3` exactos; `0`,
+/// `4`, `-1`, `1.5`, `2.0`, `"2"`, listas o un valor ilegible dan 1. Una
+/// comparación de texto, sin `jsonDecode` ni `int.parse` (que aceptarían
+/// `02` o ` 2`).
+NotificationsPerDay decodeNotificationsPerDay(String? raw) {
+  for (final value in NotificationsPerDay.values) {
+    if (raw == encodeNotificationsPerDay(value)) return value;
+  }
+  return NotificationsPerDay.defaultValue;
+}
+
 /// Marcas de un solo uso (`firstRunDone`, `hasEverHadTasks`): `true` exacto;
 /// lo demás falla cerrado a `false`.
 bool decodeFlag(String? raw) => _decode(raw) == true;
@@ -55,3 +73,5 @@ bool decodeFlag(String? raw) => _decode(raw) == true;
 String encodeLocaleChoice(LocaleChoice choice) => jsonEncode(choice.code);
 
 String encodeFlag(bool value) => jsonEncode(value);
+
+String encodeNotificationsPerDay(NotificationsPerDay value) => '${value.count}';

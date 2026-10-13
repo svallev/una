@@ -688,4 +688,74 @@ class AppLocalizationsEn extends AppLocalizations {
   String a11yPhotoMissing(int index, int total) {
     return 'Photo $index of $total. Photo unavailable';
   }
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsNotificationsPerDay => 'Notifications per day';
+
+  @override
+  String settingsNotificationsOption(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications per day',
+      one: '$count notification per day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String settingsNotificationsHelp1(String time1) {
+    return 'The notification will be at $time1.';
+  }
+
+  @override
+  String settingsNotificationsHelp2(String time1, String time2) {
+    return 'The notifications will be at $time1 and $time2.';
+  }
+
+  @override
+  String settingsNotificationsHelp3(String time1, String time2, String time3) {
+    return 'The notifications will be at $time1, $time2 and $time3.';
+  }
+
+  @override
+  String get settingsNotificationsBlocked =>
+      'Notifications are blocked in your system settings.';
+
+  @override
+  String get settingsNotificationsOpenSystem => 'Open notification settings';
+
+  @override
+  String get settingsNotificationsPrivacy =>
+      'The notification shows your current task. It also shows when your phone is locked, unless you hide sensitive content in your phone\'s settings.';
+
+  @override
+  String get settingsNotificationsOpenError =>
+      'Couldn\'t open system settings.';
+
+  @override
+  String get settingsNotificationsEnabledAnnounce => 'Notifications on.';
+
+  @override
+  String get settingsNotificationsAllowedAnnounce => 'Notifications allowed.';
+
+  @override
+  String get settingsNotificationsAllowedOnAnnounce =>
+      'Notifications allowed and turned on.';
+
+  @override
+  String get notificationChannelName => 'Current task';
+
+  @override
+  String get notificationChannelDescription =>
+      'Reminds you of your current task 1, 2 or 3 times a day, as set in Settings.';
+
+  @override
+  String get notificationTitle => 'Current task';
+
+  @override
+  String get notificationPublic => 'You have a task waiting.';
 }

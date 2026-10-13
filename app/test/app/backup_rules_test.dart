@@ -200,6 +200,63 @@ void main() {
     });
   });
 
+  group('CA-019-23: la copia derivada de los avisos queda fuera de todo', () {
+    // Preferencias del almacenamiento «device protected» (`una_notifications`),
+    // accesibles antes del primer desbloqueo: nunca en una copia de seguridad ni
+    // en la transferencia a otro móvil (CL-019-9: se rehace al abrir la app).
+    const derived = [
+      (domain: 'device_sharedpref', path: 'una_notifications.xml'),
+      (domain: 'device_root', path: 'x'),
+      (domain: 'device_file', path: 'x'),
+      (domain: 'device_database', path: 'x'),
+    ];
+
+    late List<_Rule> v26, v28, cloud, transfer;
+    setUpAll(() {
+      v26 = _rules(_read('xml/backup_rules.xml'));
+      v28 = _rules(_read('xml-v28/backup_rules.xml'));
+      final extraction = _read('xml/data_extraction_rules.xml');
+      cloud = _rules(extraction, 'cloud-backup');
+      transfer = _rules(extraction, 'device-transfer');
+    });
+
+    test('no se copia en ninguno de los cuatro contextos', () {
+      for (final (name, rules) in [
+        ('Android 8', v26),
+        ('Android 9–11', v28),
+        ('nube 12+', cloud),
+        ('transferencia', transfer),
+      ]) {
+        for (final f in derived) {
+          expect(_copies(rules, f.domain, f.path), isFalse, reason: name);
+        }
+      }
+    });
+
+    test(
+      'Android 8 la excluye de forma explícita (copia todo salvo lo excluido)',
+      () {
+        for (final f in derived) {
+          expect(
+            v26.any(
+              (r) =>
+                  r.tag == 'exclude' && r.domain == f.domain && r.path == '.',
+            ),
+            isTrue,
+            reason: f.domain,
+          );
+        }
+      },
+    );
+
+    test('ninguna regla incluye un dominio device_* (el lint de Android '
+        'rechaza un <exclude> fuera de un <include>)', () {
+      for (final rules in [v28, cloud, transfer]) {
+        expect(rules.where((r) => r.domain.startsWith('device_')), isEmpty);
+      }
+    });
+  });
+
   test('el manifiesto usa estas reglas', () {
     final manifest = File('android/app/src/main/AndroidManifest.xml')
         .readAsStringSync();

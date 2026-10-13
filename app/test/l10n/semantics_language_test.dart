@@ -12,6 +12,7 @@ import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/attachment.dart';
 import 'package:app/domain/entities/link_target.dart';
 import 'package:app/domain/entities/locale_choice.dart';
+import 'package:app/domain/entities/notification_settings.dart';
 import 'package:app/domain/entities/staged_attachment.dart';
 import 'package:app/domain/entities/task.dart';
 import 'package:app/domain/entities/web_load_failure.dart';
@@ -45,10 +46,12 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../integration_test/fixtures/pdf_fixtures.g.dart';
+import '../features/settings/settings_harness.dart' show notificationsOverrides;
 import '../features/task_list/list_harness.dart';
 import '../support/app_harness.dart';
 import '../support/attachments.dart';
 import '../support/fake_image_importer.dart';
+import '../support/fake_notification_gateway.dart';
 import '../support/fake_pdf_importer.dart';
 import '../support/fake_pdf_view.dart';
 import '../support/fake_web_page_driver.dart';
@@ -988,6 +991,51 @@ void main() {
         handle.dispose();
       },
     );
+
+    // Spec 019 (CA-019-27): el bloque de Notificaciones, desplegado y con el
+    // aviso de bloqueo, lleva el idioma de la app aunque el sistema esté en el
+    // otro (la fila, las opciones, la ayuda, la línea de privacidad y el aviso).
+    for (final blocked in [false, true]) {
+      testWidgets('CA-015-11 / CA-019-27 (app $app, sistema $system, '
+          '${blocked ? 'bloqueadas' : 'desplegado'}): el bloque de '
+          'Notificaciones lleva "$app" en todos sus nodos', (tester) async {
+        final handle = tester.ensureSemantics();
+        final repo = InMemoryTaskRepository();
+        await repo.setLocale(choice);
+        await repo.setNotificationsOn(true);
+        await repo.setNotificationsPerDay(NotificationsPerDay.three);
+        final gateway = FakeNotificationGateway()..allowed = !blocked;
+        await pumpUnaApp(
+          tester,
+          repo: repo,
+          locale: Locale(system),
+          tasks: _neutral,
+          screenReader: true,
+          overrides: [
+            linkOpenerProvider.overrideWithValue(_Opener()),
+            ...notificationsOverrides(gateway: gateway),
+          ],
+        );
+        await _openMenu(tester, l10n);
+        await tester.tap(find.text(l10n.menuSettings));
+        await tester.pumpAndSettle();
+        await tester.pump(UnaMotion.sheetOut);
+        expect(find.byType(SettingsScreen), findsOneWidget);
+
+        expect(find.text(l10n.settingsNotifications), findsOneWidget);
+        expect(find.text(l10n.settingsNotificationsPrivacy), findsOneWidget);
+        if (blocked) {
+          expect(find.text(l10n.settingsNotificationsBlocked), findsOneWidget);
+          expect(
+            find.text(l10n.settingsNotificationsOpenSystem),
+            findsOneWidget,
+          );
+        }
+        expect(localeMarksOutsideApp(tester, app), isEmpty);
+        expectNoL10nLeaks(tester, languageCode: app);
+        handle.dispose();
+      });
+    }
 
     // Spec 017 (CA-017-01, 15): la fila "Bloquear zoom" lleva el idioma de la
     // app en el nombre y en el subtítulo, apagada y encendida, aunque el

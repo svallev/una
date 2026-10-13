@@ -36,7 +36,7 @@ Un icono adaptable de Android es un lienzo de **108 dp** (aquí, 432 px) con fon
 Sin dependencias: ni `flutter_launcher_icons` ni el paquete `image`. Un generador propio, `app/tool/gen_icons.dart` (+ `app/tool/png_lite.dart`: lee PNG RGB/RGBA de 8 bits, reduce por promedio de áreas y escribe RGBA con `ZLibCodec`). Solo `dart:`; **no está en `lib/` ni se empaqueta**. Desde `app/`:
 
 ```bash
-dart run tool/gen_icons.dart [android] [play] [web]   # sin objetivos, los tres
+dart run tool/gen_icons.dart [android] [play] [web] [notification]   # sin objetivos, los cuatro
 dart run tool/gen_icons.dart --check [objetivos]       # falla si algo no está al día
 ```
 
@@ -45,6 +45,7 @@ dart run tool/gen_icons.dart --check [objetivos]       # falla si algo no está 
 | **Android** (`android`) | `android/app/src/main/res/drawable-nodpi/ic_launcher_foreground.png` (copia exacta del primer plano de 432; `nodpi` porque el sistema lo estira a los 108 dp) y `res/values/ic_launcher_background.xml` (`<color>` del token, cabecera «GENERADO») | `res/mipmap-anydpi/ic_launcher.xml` (`<adaptive-icon>`: fondo, primer plano y `<monochrome>`; sin sufijo `-v26` porque `minSdk` = 26). El manifiesto no cambia: `android:icon="@mipmap/ic_launcher"` |
 | **Con tema** (Android 13+) | Nada: es el mismo drawable (§5) | La línea `<monochrome>` del XML |
 | **Google Play** (`play`) | `store/google-play/icon-512.png` (raíz del repo, fuera de `app/`): el original de 1024 reducido a 512 por promedio 2 × 2, RGBA con alfa 255, a sangre, sin esquinas redondeadas ni sombra. **No se empaqueta** | — |
+| **Icono pequeño de la notificación** (`notification`, spec 019, P-019-7) | `android/app/src/main/res/drawable-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_stat_una.png` (24, 36, 48, 72 y 96 px): la **silueta** de la «u.» (la caja del alfa del primer plano de 432, recortada), solo alfa y en blanco (Android ignora el color de un icono pequeño), de 22 dp de ancho centrada en 24 dp con 1 dp de margen (en hdpi, 2 px por lado). El acento de la notificación es el mismo `ic_launcher_background` (`palette.classic.0`). **[Hecho, T-019-14]** visto en el emulador de API 37: la «u.» se distingue en la barra de estado con el tema claro, en la cortina con el oscuro y junto a la tarjeta de la pantalla de bloqueo. La capa monocroma de 432 no sirve: la «u.» ocupa el 56 % del círculo y a 24 dp saldría minúscula | — |
 | **Web de pruebas** (`web`) | `app/web/favicon.png` (32), `icons/Icon-192.png`, `Icon-512.png` y los dos `Icon-maskable-*` (iguales a los anteriores: el original a sangre ya cabe en la zona segura) | `manifest.json` (`theme_color` y `background_color` = `#FFE55C`, sin `description`) e `index.html` (sin `<meta name="description">`) |
 
 Las compilaciones `debug`, `profile` y `release` llevan el mismo icono (no hay recursos en `src/debug` ni `src/profile`). **iOS queda fuera** (D17, sin Xcode): `ios/Runner/Assets.xcassets/AppIcon.appiconset` sigue siendo el de la plantilla; la fuente para F-iOS es `icon-1024.png`.
@@ -54,7 +55,7 @@ Las compilaciones `debug`, `profile` y `release` llevan el mismo icono (no hay r
 La «u.» es un **dibujo**, no un texto de la app: cambiar `displayName` o el `wordmark` **no actualiza el icono**. Para rehacerlo:
 
 1. Dibujar el nuevo original en el prototipo (tablero 17) y exportar los PNG a `design/prototype/assets/icon/` con los mismos nombres: `icon-1024.png` (RGB, solo `ink` y `palette.classic.0` más el suavizado) y `adaptive-foreground-432.png` (RGBA, solo tinta y alfa, figura a ≤ 33 dp del centro).
-2. `dart run tool/gen_icons.dart` (los tres objetivos) desde `app/`; confirmar con `--check`.
+2. `dart run tool/gen_icons.dart` (los cuatro objetivos) desde `app/`; confirmar con `--check`.
 3. `flutter test test/icon test/tool/gen_icons_test.dart`: los tests miden el resultado (56 % ± 1 pp, caja centrada, 33 dp, solo los colores de los tokens, dos piezas). Si el dibujo nuevo tiene otra proporción, se cambia **a la vez** el 56 % de la spec 018 (CA-018-01 y 10), los tests y este documento.
 4. Revisar la ficha de Google Play (`store/google-play/icon-512.png`) y la spec 023 antes de F6, y el icono de iOS cuando toque F-iOS.
 

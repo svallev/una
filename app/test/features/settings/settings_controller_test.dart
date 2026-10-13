@@ -6,6 +6,7 @@ import 'package:app/data/db/open_database_native.dart';
 import 'package:app/data/drift_task_repository.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/locale_choice.dart';
+import 'package:app/domain/entities/notification_settings.dart';
 import 'package:app/features/settings/settings_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -111,6 +112,43 @@ void main() {
       '"Como el sistema")', () {
     expect(state().keepScreenOn, isFalse);
     expect(state().locale, LocaleChoice.system);
+  });
+
+  test('CA-019-05: el estado de Ajustes arranca con las notificaciones '
+      'apagadas y en 1 al día, y toma lo guardado', () async {
+    expect(state().notificationsOn, isFalse);
+    expect(state().notificationsPerDay, NotificationsPerDay.one);
+
+    final other = _ControlledSettings();
+    await other.setNotificationsOn(true);
+    await other.setNotificationsPerDay(NotificationsPerDay.three);
+    final c = ProviderContainer(
+      overrides: [
+        settingsRepositoryProvider.overrideWithValue(other),
+        bootStateProvider.overrideWithValue(await readBootState(other, other)),
+      ],
+    );
+    addTearDown(c.dispose);
+    expect(c.read(settingsProvider).notificationsOn, isTrue);
+    expect(
+      c.read(settingsProvider).notificationsPerDay,
+      NotificationsPerDay.three,
+    );
+  });
+
+  test('CA-019-05: `AppSettings` compara y copia los dos campos nuevos', () {
+    final base = state();
+    final on = base.copyWith(notificationsOn: true);
+    expect(on, isNot(base));
+    expect(on.notificationsOn, isTrue);
+    expect(on.notificationsPerDay, base.notificationsPerDay);
+    final two = base.copyWith(notificationsPerDay: NotificationsPerDay.two);
+    expect(two, isNot(base));
+    expect(two.notificationsPerDay, NotificationsPerDay.two);
+    expect(two.notificationsOn, base.notificationsOn);
+    expect(base.copyWith(), base);
+    expect(base.copyWith().hashCode, base.hashCode);
+    expect(on.hashCode, isNot(base.hashCode));
   });
 
   test('CA-015-10: con un idioma y la pantalla guardados, el estado sale '
@@ -273,6 +311,8 @@ void main() {
         locale: LocaleChoice.system,
         keepScreenOn: false,
         lockZoom: false,
+        notificationsOn: false,
+        notificationsPerDay: NotificationsPerDay.one,
       );
       final b = a.copyWith(lockZoom: true);
       expect(b.lockZoom, isTrue);

@@ -5,20 +5,26 @@ import '../app/theme/tokens.g.dart';
 import 'focus_ring.dart';
 import 'una_icons.dart';
 
-/// Grupo de selección única de la página de Idioma (CA-015-07): rol de grupo de
-/// botones de radio **sin etiqueta propia**. El título de la página ya lo
-/// nombra; un nodo con etiqueta sería una parada de foco más (y repetiría
-/// "Idioma" tras el título), justo lo que prohíbe la spec.
+/// Grupo de selección única (página de Idioma, CA-015-07; opciones «al día» de
+/// Notificaciones, CA-019-26): rol de grupo de botones de radio. En Idioma va
+/// **sin etiqueta propia**: el título de la página ya lo nombra; un nodo con
+/// etiqueta sería una parada de foco más (y repetiría "Idioma" tras el
+/// título), justo lo que prohíbe la spec. Donde no hay un título que lo
+/// nombre, [label] le da el nombre («Notificaciones al día»): el nodo no es
+/// enfocable ni tiene acciones (**[Pendiente, 022]** comprobar con TalkBack
+/// real que no crea una parada).
 class UnaRadioGroup extends StatelessWidget {
-  const UnaRadioGroup({super.key, required this.child});
+  const UnaRadioGroup({super.key, required this.child, this.label});
 
   final Widget child;
+  final String? label;
 
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
     explicitChildNodes: true,
     role: SemanticsRole.radioGroup,
+    label: label,
     child: child,
   );
 }

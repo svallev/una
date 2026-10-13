@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show AttributedString;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/providers.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/locale_choice.dart';
+import '../../domain/entities/notification_settings.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/live_notice.dart';
 import '../../ui/settings_row.dart';
@@ -14,6 +16,8 @@ import '../../ui/una_switch_row.dart';
 import 'external_page.dart';
 import 'language_label.dart';
 import 'language_page.dart';
+import 'notifications_block.dart';
+import 'notifications_state.dart';
 import 'settings_controller.dart';
 import 'settings_page.dart';
 import 'settings_route.dart';
@@ -25,11 +29,11 @@ Future<void> openSettings(BuildContext context) =>
         .push(settingsSheetRoute<void>(context, (_) => const SettingsScreen()));
 
 /// Nivel 1: Ajustes (spec 015, tablero 16 del prototipo). De arriba abajo:
-/// **Idioma** · separador · **Pantalla siempre activa** (con su aviso de
-/// guardado) · separador · **Información** (encabezado), Política de privacidad
-/// y Licencias de terceros · **Ayuda** (con el aviso de enlace). Sin
-/// Notificaciones: llega con la spec 019 y la estructura de bloques la admite
-/// (CA-015-01c).
+/// **Idioma** · **Notificaciones** (spec 019: solo en Android y con el
+/// indicador encendido, con su línea de privacidad y sus opciones; en el mismo
+/// bloque que Idioma) · separador · **Pantalla siempre activa** (con su aviso
+/// de guardado) · separador · **Información** (encabezado), Política de
+/// privacidad y Licencias de terceros · **Ayuda** (con el aviso de enlace).
 ///
 /// Las tres filas de web usan la misma función, [openExternalPage]. Los avisos
 /// son regiones vivas ([LiveNotice]): **uno por interruptor** (spec 017,
@@ -58,15 +62,23 @@ class _RowFocus {
   final key = GlobalKey();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
+    with WidgetsBindingObserver {
   late final ExternalPageSession _session = ExternalPageSession(
     onActionSucceeded: _clearSaveNotices,
   );
 
   final _language = _RowFocus('language');
+  final _notifications = _RowFocus('notifications');
   final _privacy = _RowFocus('privacy');
   final _licenses = _RowFocus('licenses');
   final _help = _RowFocus('help');
+
+  /// El bloque de Notificaciones, para decirle qué anunciar.
+  final _notificationsBlock = GlobalKey<NotificationsBlockState>();
+
+  /// Lo que permite el sistema (se olvida al salir).
+  late final SystemAllowsNotifications _system;
 
   /// "No se pudo guardar el ajuste." bajo cada interruptor (CA-015-25,
   /// CA-017-04): el número del intento fallido de cada fila, o `null` si no hay
@@ -77,13 +89,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int? _lockZoomNotice;
   int _noticeSeq = 0;
 
+  /// El bloque de Notificaciones cuenta como una fila de la cola (CA-019-06):
+  /// un solo aviso de error, aparte del de bloqueo.
+  int? _notificationsNotice;
+
+  /// Un intento de encender rechazado por el sistema (CA-019-08): el aviso de
+  /// bloqueo se ve hasta salir de Ajustes, encender con éxito o volver con las
+  /// notificaciones permitidas. (Con el ajuste guardado encendido, el aviso
+  /// sale solo del reflejo del sistema, CA-019-09.)
+  bool _blockedAttempt = false;
+
+  /// El aviso de que no se pudieron abrir los ajustes del sistema.
+  int? _openSystemError;
+  bool _openingSystem = false;
+
   /// La página de Idioma se está abriendo: otro toque no hace nada (CL-015-1).
   bool _openingLanguage = false;
 
   @override
+  void initState() {
+    super.initState();
+    _system = ref.read(systemAllowsNotificationsProvider.notifier);
+    WidgetsBinding.instance.addObserver(this);
+    // Lo que permite el sistema se lee al abrir Ajustes y cada vez que la app
+    // vuelve a primer plano con Ajustes abierto (CA-019-09); nunca antes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_refreshSystem());
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_refreshSystem());
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Al salir, lo leído ya no vale: la próxima apertura empieza sin leer.
+    final system = _system;
+    scheduleMicrotask(system.forget);
     _session.dispose();
     _language.node.dispose();
+    _notifications.node.dispose();
     _privacy.node.dispose();
     _licenses.node.dispose();
     _help.node.dispose();
@@ -93,12 +141,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   /// Quita los dos avisos de guardado (al salir del nivel o al abrir una web
   /// con éxito).
   void _clearSaveNotices() {
-    if (!mounted || (_keepAwakeNotice == null && _lockZoomNotice == null)) {
+    if (!mounted ||
+        (_keepAwakeNotice == null &&
+            _lockZoomNotice == null &&
+            _notificationsNotice == null)) {
       return;
     }
     setState(() {
       _keepAwakeNotice = null;
       _lockZoomNotice = null;
+      _notificationsNotice = null;
     });
   }
 
@@ -135,9 +187,136 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       case SaveResult.failed:
         setState(() => notice(++_noticeSeq));
       case SaveResult.unchanged:
+      case SaveResult.blocked:
+        // Otro guardado de esta fila en curso: este toque se ignoró. (`blocked`
+        // es solo de Notificaciones, que tiene su propio bloque.)
+        break;
+    }
+  }
+
+  /// ¿Se ve el aviso de bloqueo? Tras un intento rechazado, o con el ajuste
+  /// guardado encendido y el sistema bloqueando (CA-019-08, 09).
+  bool _blockedVisible() =>
+      _blockedAttempt ||
+      (ref.read(settingsProvider).notificationsOn &&
+          ref.read(systemAllowsNotificationsProvider) == false);
+
+  /// Quita el aviso de bloqueo y el de que no se pudo abrir el sistema.
+  void _clearBlocked() {
+    _blockedAttempt = false;
+    _openSystemError = null;
+  }
+
+  /// Enciende o apaga "Notificaciones" (spec 019): el interruptor se ve
+  /// encendido solo con el ajuste guardado **y** el sistema permitiéndolo
+  /// (CA-019-02, 09), así que tocarlo apaga lo que se ve encendido y en
+  /// cualquier otro caso intenta encender. Todo lo demás (permiso, guardado,
+  /// marcha atrás) lo hace el controlador; el interruptor se mueve cuando
+  /// termina. Aquí se dibuja el resultado:
+  ///
+  /// - **bloqueado** (CA-019-08): aviso con su botón, que se anuncia (cada
+  ///   intento);
+  /// - **guardado**: quita los avisos (el de bloqueo, el de error y el de
+  ///   enlace); si el sistema mostró su diálogo se anuncia «Notificaciones
+  ///   activadas.» (el lector no habría dicho el cambio, CA-019-07);
+  /// - **fallo**: el aviso de error del bloque (CA-019-06).
+  Future<void> _toggleNotifications() async {
+    final shownOn =
+        ref.read(settingsProvider).notificationsOn &&
+        ref.read(systemAllowsNotificationsProvider) != false;
+    final (result, :dialogShown) = await ref
+        .read(settingsProvider.notifier)
+        .setNotificationsOn(!shownOn);
+    if (!mounted) return;
+    switch (result) {
+      case SaveResult.saved:
+        setState(() {
+          _clearBlocked();
+          _notificationsNotice = null;
+        });
+        _session.clearLinkNotice();
+        if (!shownOn && dialogShown) {
+          _notificationsBlock.currentState?.announce(
+            (l10n) => l10n.settingsNotificationsEnabledAnnounce,
+          );
+        }
+      case SaveResult.failed:
+        setState(() {
+          // Si ahora el sistema deja notificar, el aviso de bloqueo ya no es
+          // verdad.
+          if (ref.read(systemAllowsNotificationsProvider) == true) {
+            _clearBlocked();
+          }
+          _notificationsNotice = ++_noticeSeq;
+        });
+      case SaveResult.blocked:
+        setState(() => _blockedAttempt = true);
+        _notificationsBlock.currentState?.announce(
+          (l10n) => l10n.settingsNotificationsBlocked,
+        );
+      case SaveResult.unchanged:
         // Otro guardado de esta fila en curso: este toque se ignoró.
         break;
     }
+  }
+
+  /// Cambia cuántas notificaciones al día (CA-019-03); gana la última si hay
+  /// varios toques seguidos. Un fallo pone el aviso de error del bloque; un
+  /// guardado correcto lo quita.
+  Future<void> _pickNotificationsPerDay(NotificationsPerDay value) async {
+    final result = await ref
+        .read(settingsProvider.notifier)
+        .setNotificationsPerDay(value);
+    if (!mounted) return;
+    switch (result) {
+      case SaveResult.saved:
+        setState(() => _notificationsNotice = null);
+        _session.clearLinkNotice();
+      case SaveResult.failed:
+        setState(() => _notificationsNotice = ++_noticeSeq);
+      case SaveResult.unchanged:
+      case SaveResult.blocked:
+        break;
+    }
+  }
+
+  /// Lee lo que permite el sistema (al abrir y al volver a primer plano). Si el
+  /// aviso de bloqueo se veía y ahora las notificaciones están permitidas, se
+  /// quita y se anuncia «permitidas» (o «permitidas y activadas» si el ajuste
+  /// guardado está encendido y vuelve a verse encendido); el foco pasa al
+  /// interruptor si lo tenía el botón (lo hace el bloque). La primera lectura
+  /// y las de una petición de permiso en curso no anuncian (CA-019-09).
+  Future<void> _refreshSystem() async {
+    if (!ref.read(notificationsAvailableProvider)) return;
+    final announce = await _system.refresh();
+    if (!mounted || !announce) return;
+    final on = ref.read(settingsProvider).notificationsOn;
+    // La transición «bloqueadas → permitidas» solo se anuncia con el aviso a
+    // la vista: tras un intento rechazado o con el ajuste guardado encendido.
+    if (!_blockedAttempt && !on) return;
+    setState(_clearBlocked);
+    _notificationsBlock.currentState?.announce(
+      (l10n) => on
+          ? l10n.settingsNotificationsAllowedOnAnnounce
+          : l10n.settingsNotificationsAllowedAnnounce,
+    );
+  }
+
+  /// Abre los ajustes de notificaciones de esta app en el sistema (una petición
+  /// por toque); si no hay a dónde ir, avisa (CA-019-08).
+  Future<void> _openSystemSettings() async {
+    if (_openingSystem) return;
+    _openingSystem = true;
+    var opened = false;
+    try {
+      opened = await ref.read(notificationGatewayProvider).openSystemSettings();
+    } on Object {
+      // Sin texto del error (CA-019-23).
+    } finally {
+      _openingSystem = false;
+    }
+    if (!mounted) return;
+    setState(() => _openSystemError = opened ? null : ++_noticeSeq);
   }
 
   Future<void> _openLanguage() async {
@@ -189,6 +368,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final settings = ref.watch(settingsProvider);
+    // Para que el aviso de bloqueo siga lo que permite el sistema.
+    ref.watch(systemAllowsNotificationsProvider);
     final (languageValue, languageLabel) = _languageValue(
       l10n,
       settings.locale,
@@ -208,7 +389,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Bloque 1: Idioma (Notificaciones irá debajo, spec 019).
+            // Bloque 1: Idioma y, debajo, Notificaciones (spec 019). Sin la
+            // fila (web, iOS o indicador apagado) el bloque queda como en la
+            // 017: ni separador ni hueco de más.
             _Block(
               top: UnaSpace.m + UnaSpace.xxs,
               children: [
@@ -222,6 +405,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   semanticsKey: _language.key,
                   onTap: () => unawaited(_openLanguage()),
                 ),
+                if (ref.watch(notificationsAvailableProvider))
+                  NotificationsBlock(
+                    key: _notificationsBlock,
+                    focusNode: _notifications.node,
+                    semanticsKey: _notifications.key,
+                    onToggle: () => unawaited(_toggleNotifications()),
+                    onPick: (value) =>
+                        unawaited(_pickNotificationsPerDay(value)),
+                    blocked: _blockedVisible(),
+                    onOpenSystemSettings: () =>
+                        unawaited(_openSystemSettings()),
+                    openError: _openSystemError,
+                    saveError: _notificationsNotice,
+                  ),
               ],
             ),
             const _BlockSeparator(),

@@ -4,7 +4,10 @@
      toda la copia, spike S5). Solo si va cifrada de extremo a extremo (bloqueo de pantalla).
      Transferencia entre dispositivos: todo, adjuntos incluidos. La caché no se copia nunca.
      Nada de la WebView de la tarea web (CA-009-13): su perfil (app_webview/) y su caché quedan
-     fuera, y se excluyen sus dos preferencias (una guarda resúmenes de los orígenes visitados). -->
+     fuera, y se excluyen sus dos preferencias (una guarda resúmenes de los orígenes visitados).
+     La copia derivada de los avisos (spec 019, CA-019-23) vive en los dominios device_*
+     (almacenamiento «device protected»): ninguna de las dos secciones los incluye, así que ni la
+     nube ni la transferencia la llevan. El lint rechaza un <exclude> fuera de un <include>. -->
 <data-extraction-rules>
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="root" path="app_flutter/"/>

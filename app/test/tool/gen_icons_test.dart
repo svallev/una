@@ -323,9 +323,139 @@ void main() {
       }
     });
 
-    test('CA-018-10: sin objetivos, genera los tres', () {
+    test('CA-018-10: sin objetivos, genera los cuatro (el de la notificación '
+        'de la 019 incluido)', () {
       expect(run([]), 0, reason: stderrBuf.toString());
-      expect(filesUnderTmp(), hasLength(8));
+      expect(filesUnderTmp(), hasLength(13));
+    });
+
+    // Spec 019, T-019-07, P-019-7: el icono pequeño de la notificación, la silueta de la «u.» del
+    // primer plano recortada y sin color propio (Android solo mira el alfa).
+    const densities = {
+      'mdpi': 24,
+      'hdpi': 36,
+      'xhdpi': 48,
+      'xxhdpi': 72,
+      'xxxhdpi': 96,
+    };
+    String statPath(String density) =>
+        '$outDir/android/app/src/main/res/drawable-$density/ic_stat_una.png';
+
+    test('CA-019-22: notification escribe la silueta en las cinco densidades, '
+        'RGBA de 8 bits y de 24 dp', () async {
+      expect(run(['notification']), 0, reason: stderrBuf.toString());
+      expect(
+        filesUnderTmp(),
+        [
+          for (final d in densities.keys)
+            'app/android/app/src/main/res/drawable-$d/ic_stat_una.png',
+        ]..sort(),
+      );
+      for (final MapEntry(key: density, value: side) in densities.entries) {
+        final header = readPngHeader(File(statPath(density)).readAsBytesSync());
+        expect(
+          [header.width, header.height, header.bitDepth, header.colorType],
+          [side, side, 8, 6],
+          reason: density,
+        );
+      }
+    });
+
+    test(
+      'CA-019-22: la silueta es la «u.» del primer plano: solo alfa (blanca), '
+      'esquinas transparentes, 1 dp de margen, centrada, mismas '
+      'proporciones y misma cobertura',
+      () async {
+        expect(run(['notification']), 0, reason: stderrBuf.toString());
+        final source = await loadRgba('$_iconDir/adaptive-foreground-432.png');
+        final sourceBox = measureFigure(source);
+        var sourceCoverage = 0.0;
+        for (var y = 0; y < source.height; y++) {
+          for (var x = 0; x < source.width; x++) {
+            sourceCoverage += source.alpha(x, y) / 255;
+          }
+        }
+        for (final MapEntry(key: density, value: side) in densities.entries) {
+          final scale = side / 24;
+          final image = await loadRgba(statPath(density));
+          final box = measureFigure(image);
+          // Solo importa el alfa; el color es blanco donde se ve.
+          for (var y = 0; y < side; y++) {
+            for (var x = 0; x < side; x++) {
+              if (image.alpha(x, y) >= 128) {
+                expect(image.rgb(x, y), 0xFFFFFF, reason: '$density $x,$y');
+              }
+            }
+          }
+          for (final (x, y) in [
+            (0, 0),
+            (side - 1, 0),
+            (0, side - 1),
+            (side - 1, side - 1),
+          ]) {
+            expect(image.alpha(x, y), 0, reason: '$density esquina $x,$y');
+          }
+          // 1 dp de margen por cada lado.
+          final margin = scale.round();
+          expect(box.minX, greaterThanOrEqualTo(margin), reason: density);
+          expect(box.minY, greaterThanOrEqualTo(margin), reason: density);
+          expect(
+            box.maxX,
+            lessThanOrEqualTo(side - 1 - margin),
+            reason: density,
+          );
+          expect(
+            box.maxY,
+            lessThanOrEqualTo(side - 1 - margin),
+            reason: density,
+          );
+          // El ancho llena los 22 dp de contenido.
+          expect(box.boxWidth, closeTo(22 * scale, 1.01), reason: density);
+          // Centrada.
+          expect(box.offsetX.abs(), lessThanOrEqualTo(1.0), reason: density);
+          expect(box.offsetY.abs(), lessThanOrEqualTo(1.0), reason: density);
+          // Mismas proporciones que la caja de la figura de origen.
+          expect(
+            box.boxHeight,
+            closeTo(
+              box.boxWidth * sourceBox.boxHeight / sourceBox.boxWidth,
+              1.51,
+            ),
+            reason: density,
+          );
+          // Misma cobertura (no un rectángulo): el área, reescalada, coincide con el 3 %.
+          var coverage = 0.0;
+          for (var y = 0; y < side; y++) {
+            for (var x = 0; x < side; x++) {
+              coverage += image.alpha(x, y) / 255;
+            }
+          }
+          final factor = box.boxWidth / sourceBox.boxWidth;
+          expect(
+            coverage,
+            closeTo(
+              sourceCoverage * factor * factor,
+              sourceCoverage * factor * factor * 0.05,
+            ),
+            reason: density,
+          );
+        }
+      },
+    );
+
+    test('CA-019-22: --check de notification falla si falta o difiere una '
+        'densidad, y pasa tras generar', () {
+      expect(run(['notification', '--check']), 1);
+      expect(stderrBuf.toString(), contains('drawable-xxhdpi/ic_stat_una.png'));
+      expect(run(['notification']), 0);
+      expect(run(['notification', '--check']), 0, reason: stderrBuf.toString());
+      final file = File(statPath('hdpi'));
+      final changed = decodePng(Uint8List.fromList(file.readAsBytesSync()));
+      changed.rgba[3] = 255 - changed.rgba[3];
+      file.writeAsBytesSync(encodePng(changed));
+      stderrBuf.clear();
+      expect(run(['notification', '--check']), 1);
+      expect(stderrBuf.toString(), contains('drawable-hdpi/ic_stat_una.png'));
     });
 
     test('CA-018-15: --check sobre un árbol sin generar falla y lista lo '

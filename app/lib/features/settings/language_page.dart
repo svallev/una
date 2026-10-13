@@ -134,6 +134,7 @@ class _LanguagePageState extends ConsumerState<LanguagePage>
           _attempt++;
         });
       case SaveResult.unchanged:
+      case SaveResult.blocked: // Solo de Notificaciones: aquí no ocurre.
         // Otro guardado en curso: este toque se ignoró, sin avisos ni vuelta.
         break;
     }
