@@ -42,7 +42,7 @@ Detalle: `specs/019-notificaciones/dispositivo.md`.
 ## Definition of Done (`specs/constitution.md`)
 
 - [x] Criterios de aceptación cumplidos y con tests en verde (los de dispositivo, en la 022)
-- [ ] **CI en verde:** los PNG `settings_notifications_*` se generan en CI con la etiqueta `actualizar-goldens` y se revisan a ojo antes de subirlos
+- [x] **Goldens:** los 16 PNG `settings_notifications_*` y los 4 `settings_{es,en}_x{1.0,2.0}` (Ajustes nivel 1, que ganan la fila) se generaron en CI con la etiqueta `actualizar-goldens`, se revisaron a ojo frente al tablero 16 y se subieron; falta que CI confirme el verde con ellos
 - [x] `format` y `analyze` limpios en local
 - [x] Textos nuevos en ES y EN; ninguno incrustado en el código
 - [x] Sin valores visuales sueltos (todo sale de los tokens)
@@ -61,6 +61,5 @@ Detalle: `specs/019-notificaciones/dispositivo.md`.
 
 ## Pendiente antes o después de fusionar
 
-- **[Pendiente, CI]** *Goldens* `settings_notifications_*`: etiqueta `actualizar-goldens`, revisarlos frente al tablero 16 y subirlos.
 - **[Pendiente, 022]** Muestra de las 18:55 del 2026-10-13 en el Xiaomi y el resto de casillas de dispositivo (`docs/PLAN.md`, «Casillas de la 019»), incluidos los hallazgos de los revisores de cierre.
 - **[Pendiente]** Revisión legal y política de privacidad antes de llegar a testers (020/023).
