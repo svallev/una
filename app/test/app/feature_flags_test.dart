@@ -7,13 +7,13 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   tearDown(() => debugDefaultTargetPlatformOverride = null);
 
-  test('CA-019-28: el indicador `notifications` está apagado por defecto '
-      '(P10, durante el desarrollo)', () {
-    expect(FeatureFlags.notifications, isFalse);
+  test('CA-019-28: el indicador `notifications` está encendido por defecto '
+      '(T-019-17) y en Android la fila se ofrece', () {
+    expect(FeatureFlags.notifications, isTrue);
     final container = ProviderContainer();
     addTearDown(container.dispose);
-    expect(container.read(notificationsFlagProvider), isFalse);
-    expect(container.read(notificationsAvailableProvider), isFalse);
+    expect(container.read(notificationsFlagProvider), isTrue);
+    expect(container.read(notificationsAvailableProvider), isTrue);
   });
 
   test('CA-019-28: solo Android admite las notificaciones; iOS y otras '

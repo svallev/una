@@ -277,7 +277,7 @@ void main() {
     );
 
     testWidgets(
-      'CA-015-01c / CA-017-01: no hay Notificaciones en esta versión (llega con la 019)',
+      'CA-015-01c / CA-017-01 / CA-019-28: con el indicador `notifications` apagado no hay Notificaciones (Ajustes como en la 017)',
       (tester) async {
         for (final (locale, texts) in [
           (const Locale('es'), ['Notificaciones']),

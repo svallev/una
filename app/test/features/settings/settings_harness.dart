@@ -93,7 +93,10 @@ Future<FakeOpener> openSettingsScreen(
   InMemoryTaskRepository? repo,
   bool keyboard = false,
   String? appLanguage,
-  List<Override> overrides = const [],
+  // Sin `overrides`, las pruebas de la 015 y la 017 describen Ajustes **sin** la
+  // fila de Notificaciones (CA-019-28: con el indicador apagado queda como en
+  // la 017); la fila y su orden se prueban con `notificationsOverrides`.
+  List<Override>? overrides,
 }) async {
   final o = opener ?? FakeOpener();
   if (keyboard) {
@@ -114,7 +117,10 @@ Future<FakeOpener> openSettingsScreen(
     textScale: textScale,
     size: size,
     bottomInset: bottomInset,
-    overrides: [linkOpenerProvider.overrideWithValue(o), ...overrides],
+    overrides: [
+      linkOpenerProvider.overrideWithValue(o),
+      ...(overrides ?? [notificationsFlagProvider.overrideWithValue(false)]),
+    ],
   );
   // Lo que la app hace sola al arrancar con las notificaciones disponibles
   // (a la vista, quitar el aviso, reconciliar: T-019-12) no cuenta como

@@ -139,8 +139,8 @@ final webDataJanitorProvider = Provider<WebDataJanitor>(
 /// apaisada se ve como en vertical.
 final attachmentRotatesProvider = Provider<bool>((ref) => !kIsWeb);
 
-/// Indicador de función `notifications` (P10, plan P-019-9): apagado durante
-/// el desarrollo de la 019. Un proveedor para sobrescribirlo en los tests.
+/// Indicador de función `notifications` (P10, plan P-019-9): encendido por
+/// defecto desde T-019-17. Un proveedor para sobrescribirlo en los tests.
 final notificationsFlagProvider = Provider<bool>(
   (ref) => FeatureFlags.notifications,
 );

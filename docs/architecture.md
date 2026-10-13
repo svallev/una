@@ -358,7 +358,7 @@ Estado: **[Hecho]** en Android 13+ (verificado en el emulador de API 37 y, para 
 ## 6. Feature flags
 
 `FeatureFlags` (constantes en compilación con `--dart-define`, sobrescribibles en desarrollo desde un menú oculto de debug):
-`paletteThemes` (off), `historyScreen` (off), `dueDates` (off), `bulkCreate` (off), `imports` (off), `notifications` (off hasta T-019-17; `--dart-define=UNA_NOTIFICATIONS=true`, `lib/app/feature_flags.dart`: con él apagado la fila de Ajustes no se ve en ninguna plataforma, CA-019-28), `biometricLock` (off), `homeWidget` (off).
+`paletteThemes` (off), `historyScreen` (off), `dueDates` (off), `bulkCreate` (off), `imports` (off), `notifications` (**on** desde T-019-17; se apaga con `--dart-define=UNA_NOTIFICATIONS=false`, `lib/app/feature_flags.dart`: con él apagado la fila de Ajustes no se ve en ninguna plataforma, CA-019-28), `biometricLock` (off), `homeWidget` (off).
 Regla: nada detrás de un flag llega a producción sin su spec aprobada.
 
 ## 7. Presupuestos de rendimiento y tamaño
