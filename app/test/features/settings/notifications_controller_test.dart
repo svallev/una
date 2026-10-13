@@ -331,7 +331,7 @@ void main() {
       expect(state().notificationsOn, isTrue);
     });
 
-    test('CA-019-11: apagar con el ajuste ya apagado no hace nada', () async {
+    test('CA-019-02: apagar con el ajuste ya apagado no hace nada', () async {
       await start();
       final result = (await controller().setNotificationsOn(false)).$1;
       expect(result, SaveResult.unchanged);

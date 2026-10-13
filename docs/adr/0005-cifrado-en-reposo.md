@@ -22,7 +22,7 @@
 **Opción 1.**
 - iOS: clase `NSFileProtectionCompleteUntilFirstUserAuthentication` (la de por defecto), para la BD y los adjuntos. `Complete` impediría que los widgets de bloqueo lean los datos.
 - Android: almacenamiento interno privado (`filesDir`/`databases`), nunca almacenamiento externo compartido. `android:allowBackup` según ADR-0004.
-- Nada de datos de tareas en logs, portapapeles automático, notificaciones con contenido ni capturas del selector de apps (ver la nota de privacidad en el modelo de amenazas).
+- Nada de datos de tareas en logs, portapapeles automático, notificaciones con contenido (salvo la notificación local de la spec 019, opcional y con consentimiento: ADR-0025) ni capturas del selector de apps (ver la nota de privacidad en el modelo de amenazas).
 
 ## Motivos
 
