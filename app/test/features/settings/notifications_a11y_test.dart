@@ -2,6 +2,7 @@ import 'dart:ui' show CheckedState, Tristate;
 
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/domain/entities/notification_settings.dart';
+import 'package:app/domain/ports/notification_gateway.dart';
 import 'package:app/features/settings/notifications_block.dart';
 import 'package:app/features/settings/notifications_state.dart';
 import 'package:app/ui/live_region_announcer.dart';
@@ -31,6 +32,9 @@ class _Lang {
     required this.privacy,
     required this.help3,
     required this.next,
+    required this.saveError,
+    required this.blocked,
+    required this.openSystem,
   });
 
   final String code;
@@ -43,6 +47,11 @@ class _Lang {
 
   /// La fila que sigue al bloque.
   final String next;
+
+  /// Los avisos: error de guardado, bloqueo y el botón que abre el sistema.
+  final String saveError;
+  final String blocked;
+  final String openSystem;
 
   Locale get locale => Locale(code);
 }
@@ -63,6 +72,9 @@ const _es = _Lang(
       'móvil.',
   help3: 'Las notificaciones serán a las 08:55, a las 13:55 y a las 18:55.',
   next: 'Pantalla siempre activa',
+  saveError: 'No se pudo guardar el ajuste.',
+  blocked: 'Las notificaciones están bloqueadas en los Ajustes del sistema.',
+  openSystem: 'Abrir los ajustes de notificaciones',
 );
 
 const _en = _Lang(
@@ -80,6 +92,9 @@ const _en = _Lang(
       "is locked, unless you hide sensitive content in your phone's settings.",
   help3: 'The notifications will be at 08:55, 13:55 and 18:55.',
   next: 'Keep screen on',
+  saveError: "Couldn't save the setting.",
+  blocked: 'Notifications are blocked in your system settings.',
+  openSystem: 'Open notification settings',
 );
 
 const _langs = [_es, _en];
@@ -121,6 +136,50 @@ Future<void> _open(
     size: size,
     overrides: notificationsOverrides(gateway: gateway),
   );
+}
+
+/// El aviso de bloqueo: el diálogo se rechaza al encender.
+Future<void> _rejectPermission(WidgetTester tester) async {
+  await tester.tap(_inBlock(find.byType(UnaSwitchRow)));
+  await _settle(tester);
+}
+
+/// El aviso de error: con el ajuste encendido, cambiar de opción falla al
+/// programar (la cantidad guardada se queda).
+Future<void> _failSave(
+  WidgetTester tester,
+  FakeNotificationGateway gateway,
+) async {
+  gateway.configureFailure = const NotificationGatewayException();
+  // Con el texto al 200 % la opción puede estar bajo el borde.
+  await tester.ensureVisible(_option(NotificationsPerDay.two));
+  await tester.pumpAndSettle();
+  await tester.tap(_option(NotificationsPerDay.two));
+  await _settle(tester);
+}
+
+/// Cada parada de Tab hasta [label], con un tope (un `while` se colgaría si el
+/// foco no llegara).
+Future<void> _tabUntil(WidgetTester tester, String label) async {
+  for (var i = 0; i < 12 && focusedLabel(tester) != label; i++) {
+    await _tab(tester);
+    await tester.pumpAndSettle();
+  }
+  expect(focusedLabel(tester), label);
+}
+
+/// El foco de teclado actual está entero dentro de la zona que se desplaza.
+void _expectFocusInView(WidgetTester tester) {
+  final viewport = tester.getRect(
+    inSettings(find.byType(SingleChildScrollView)).first,
+  );
+  final focused = tester.getRect(
+    find.byElementPredicate(
+      (e) => identical(e, FocusManager.instance.primaryFocus!.context),
+    ),
+  );
+  expect(focused.top, greaterThanOrEqualTo(viewport.top - 0.5));
+  expect(focused.bottom, lessThanOrEqualTo(viewport.bottom + 0.5));
 }
 
 /// Todos los nodos del árbol de accesibilidad, en el orden del lector.
@@ -482,6 +541,168 @@ void main() {
         expect(option.bottom, lessThanOrEqualTo(viewport.bottom));
         expect(option.left, greaterThanOrEqualTo(viewport.left));
         expect(option.right, lessThanOrEqualTo(viewport.right));
+      });
+
+      testWidgets('CA-019-26: las guías de la 015 (Android, iOS, etiquetas y '
+          'contraste) se cumplen con la fila, con el aviso de bloqueo y su '
+          'botón, y con el aviso de error', (tester) async {
+        final handle = tester.ensureSemantics();
+        final gateway = FakeNotificationGateway(FakePermission.dialogDenied);
+        await _open(
+          tester,
+          lang: lang,
+          on: false,
+          gateway: gateway,
+          screenReader: true,
+        );
+        Future<void> guidelines() async {
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+        }
+
+        await guidelines();
+        await _rejectPermission(tester);
+        expect(readingOrder(tester), contains(lang.blocked));
+        expect(readingOrder(tester), contains(lang.openSystem));
+        await guidelines();
+
+        // El sistema vuelve a permitirlas y la cantidad no se guarda: sale el
+        // aviso de error con las opciones a la vista.
+        appContainer(tester)
+            .read(systemAllowsNotificationsProvider.notifier)
+            .setAllowed(true);
+        gateway.allowed = true;
+        await tester.tap(_inBlock(find.byType(UnaSwitchRow)));
+        await _settle(tester);
+        await _failSave(tester, gateway);
+        expect(readingOrder(tester), contains(lang.saveError));
+        await guidelines();
+        handle.dispose();
+      });
+
+      testWidgets('CA-019-26: con el teclado y al 200 % a 360 dp, el bloque '
+          'desplegado con la opción 3, la línea de privacidad y el aviso de '
+          'error se recorre con Tab sin salir de la vista y sin pisarse', (
+        tester,
+      ) async {
+        final gateway = FakeNotificationGateway();
+        await _open(
+          tester,
+          lang: lang,
+          gateway: gateway,
+          textScale: 2,
+          size: const Size(360, 640),
+          keyboard: true,
+        );
+        await _failSave(tester, gateway);
+        expect(tester.takeException(), isNull);
+        // El aviso de error entra entre la ayuda y la fila siguiente.
+        final stack = [
+          tester.getRect(_inBlock(find.byType(UnaSwitchRow))),
+          tester.getRect(_inBlock(find.text(lang.privacy))),
+          tester.getRect(_inBlock(find.text(lang.heading))),
+          tester.getRect(_option(NotificationsPerDay.one)),
+          tester.getRect(_inBlock(find.text(lang.help3))),
+          tester.getRect(_inBlock(find.text(lang.saveError))),
+        ];
+        for (var i = 1; i < stack.length; i++) {
+          expect(
+            stack[i].top,
+            greaterThanOrEqualTo(stack[i - 1].bottom - 1),
+            reason: 'el elemento $i está sobre el anterior',
+          );
+        }
+        final scroll = tester.getRect(
+          inSettings(find.byType(SingleChildScrollView)).first,
+        );
+        for (final text in [lang.privacy, lang.help3, lang.saveError]) {
+          final r = tester.getRect(_inBlock(find.text(text)));
+          expect(r.left, greaterThanOrEqualTo(scroll.left), reason: text);
+          expect(r.right, lessThanOrEqualTo(scroll.right), reason: text);
+        }
+
+        // Tab: interruptor, 1, 2, 3 y la fila siguiente; ni la privacidad, ni
+        // la ayuda, ni el aviso son paradas; cada parada queda a la vista.
+        tester
+            .widget<UnaSwitchRow>(_inBlock(find.byType(UnaSwitchRow)))
+            .focusNode!
+            .requestFocus();
+        await tester.pumpAndSettle();
+        expect(focusedLabel(tester), lang.row);
+        _expectFocusInView(tester);
+        for (final stop in ['1', '2', '3', lang.next]) {
+          await _tab(tester);
+          await tester.pumpAndSettle();
+          expect(focusedLabel(tester), stop);
+          _expectFocusInView(tester);
+        }
+        // Mayús+Tab da la vuelta por las mismas paradas, también a la vista.
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        for (final stop in ['3', '2', '1', lang.row]) {
+          await _tab(tester);
+          await tester.pumpAndSettle();
+          expect(focusedLabel(tester), stop);
+          _expectFocusInView(tester);
+        }
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('CA-019-26: con el teclado y al 200 % a 360 dp, el aviso de '
+          'bloqueo tiene su botón como parada tras el interruptor, a la vista '
+          'y sin recortar', (tester) async {
+        final gateway = FakeNotificationGateway(FakePermission.dialogDenied);
+        await _open(
+          tester,
+          lang: lang,
+          on: false,
+          gateway: gateway,
+          textScale: 2,
+          size: const Size(360, 640),
+          keyboard: true,
+        );
+        await _rejectPermission(tester);
+        expect(tester.takeException(), isNull);
+        final scroll = tester.getRect(
+          inSettings(find.byType(SingleChildScrollView)).first,
+        );
+        final privacy = tester.getRect(_inBlock(find.text(lang.privacy)));
+        final blocked = tester.getRect(_inBlock(find.text(lang.blocked)));
+        final button = tester.getRect(_inBlock(find.text(lang.openSystem)));
+        expect(blocked.top, greaterThanOrEqualTo(privacy.bottom - 1));
+        expect(button.top, greaterThanOrEqualTo(blocked.bottom - 1));
+        for (final r in [privacy, blocked, button]) {
+          expect(r.left, greaterThanOrEqualTo(scroll.left));
+          expect(r.right, lessThanOrEqualTo(scroll.right));
+        }
+        expect(
+          _lines(tester, _inBlock(find.text(lang.blocked))),
+          greaterThan(1),
+        );
+
+        tester
+            .widget<UnaSwitchRow>(_inBlock(find.byType(UnaSwitchRow)))
+            .focusNode!
+            .requestFocus();
+        await tester.pumpAndSettle();
+        expect(focusedLabel(tester), lang.row);
+        // Con el sistema bloqueando no hay opciones: la siguiente parada es
+        // el botón y después la fila siguiente.
+        await _tab(tester);
+        await tester.pumpAndSettle();
+        expect(focusedLabel(tester), lang.openSystem);
+        _expectFocusInView(tester);
+        final focused = tester.getRect(
+          find.byElementPredicate(
+            (e) => identical(e, FocusManager.instance.primaryFocus!.context),
+          ),
+        );
+        expect(focused.height, greaterThanOrEqualTo(UnaSizes.minTouchTarget));
+        await _tabUntil(tester, lang.next);
+        _expectFocusInView(tester);
+        expect(tester.takeException(), isNull);
       });
 
       testWidgets('CA-019-26: las guías de la plataforma se cumplen con el '

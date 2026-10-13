@@ -337,6 +337,8 @@ class _BlockedSlot extends StatelessWidget {
           Text(l10n.settingsNotificationsBlocked, style: _smallText),
           UnaLinkButton(
             label: l10n.settingsNotificationsOpenSystem,
+            // Zona táctil de 48 dp (CA-019-08, androidTapTargetGuideline).
+            height: kMinInteractiveDimension,
             onPressed: onOpen,
             focusNode: focusNode,
             semanticsKey: semanticsKey,
