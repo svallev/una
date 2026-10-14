@@ -213,7 +213,7 @@ Que **nada se pueda publicar ni entregar a testers sin haber pasado, de forma au
   - **Cuando** se descarga Gradle (en local y en CI)
   - **Entonces**:
     - la distribución se comprueba con su **suma SHA-256** fijada en el propio archivo (la que publica Gradle para esa versión), y una suma que no coincide hace fallar la compilación;
-    - el `gradle-wrapper.jar` del repositorio, que es lo que se ejecuta, coincide con una de las sumas que publica Gradle;
+    - ~~el `gradle-wrapper.jar` del repositorio, que es lo que se ejecuta, coincide con una de las sumas que publica Gradle;~~ *Enmienda (P-020-2 a, aprobada con el plan; aplicada en T-020-15):* el `gradle-wrapper.jar` **que se ejecuta** coincide con una de las sumas que publica Gradle. No está en el repositorio (`app/android/.gitignore`): lo copia la herramienta de Flutter al compilar, así que se comprueba **después de compilar**, contra las sumas fijadas en `tools/gradle-wrapper.lock` con su fuente. **Límite anotado** (`threat-model.md` §5): la comprobación detecta un jar alterado después de que se haya ejecutado, no impide que se ejecute; y Gradle comprueba la distribución con su suma solo al descargarla (no una ya instalada en `~/.gradle`);
     - la CI comprueba las dos cosas, también después de que una actualización de Flutter reescriba el archivo y la suma desaparezca (CL-020-18).
 
     El residual «sin *lockfile* de Gradle» (`threat-model.md` §5) **sigue fuera de alcance**, anotado.
@@ -457,3 +457,5 @@ Sin textos nuevos en la app (ARB sin cambios). Los mensajes de las herramientas 
   - en los cierres de la 015, 016, 018 y 019, los hallazgos que recoge esta spec pasan a corregidos o a su destino.
 - **Skill `/release-checklist`:** desaparece «Revisar a mano las frases [Suposición]» (la puerta las detecta, CA-020-11), y cambian el orden y la condición de publicación (CA-020-26).
 - **Glosario:** «Puerta de publicación» pasa a ser el trabajo entero y se añaden los términos de la Nomenclatura (hecho en el borrador).
+
+**[Hecho] Aplicadas en T-020-15 (2026-10-14):** spec 015 (CA-015-13b y CA-015-26, como enmiendas marcadas), `docs/PLAN.md` (fila F6, hallazgos de la 012 y cierres de la 014 a la 019), la skill `/release-checklist` y el glosario; además, la frase de CA-020-14 sobre el `gradle-wrapper.jar` (P-020-2 a).
