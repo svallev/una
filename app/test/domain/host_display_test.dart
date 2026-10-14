@@ -70,6 +70,38 @@ void main() {
     });
   });
 
+  group('CA-020-27: una dirección mal codificada no lanza', () {
+    // Escapes que no son UTF-8 válido (`%C3`, `%E2%82`) o ni siquiera son
+    // hexadecimales (`%`, `%ZZ`): el dominio se muestra tal cual (en
+    // minúsculas), sin excepción y sin decodificar a medias.
+    test('CA-020-27: displayHost con %C3, %, %ZZ y %E2%82', () {
+      expect(displayHost('%C3.es'), '%c3.es');
+      expect(displayHost('%.es'), '%.es');
+      expect(displayHost('%ZZ.es'), '%zz.es');
+      expect(displayHost('%E2%82.es'), '%e2%82.es');
+      expect(displayHost('a.%C3'), 'a.%c3');
+      expect(displayHost('%E2%82', dropWww: true), '%e2%82');
+      // Un escape válido junto a uno roto: nada se decodifica a medias.
+      expect(displayHost('%C3%B1%C3.es'), '%c3%b1%c3.es');
+    });
+
+    test('CA-020-27: webAddressHost con el escape en el dominio', () {
+      expect(webAddressHost('https://%C3.es/'), '%c3.es');
+      expect(webAddressHost('https://%E2%82.es/'), '%e2%82.es');
+      expect(webAddressHost('https://www.%C3.es/x'), '%c3.es');
+      // `Uri.host` da `%25` para el `%` suelto: se decodifica a `%`.
+      expect(webAddressHost('https://%/'), '%');
+      expect(webAddressHost('https://%ZZ.es/'), '%zz.es');
+    });
+
+    test('CA-020-27: webAddressHost con el escape en la ruta', () {
+      expect(webAddressHost('https://dominio.es/%C3'), 'dominio.es');
+      expect(webAddressHost('https://dominio.es/%'), 'dominio.es');
+      expect(webAddressHost('https://dominio.es/%ZZ'), 'dominio.es');
+      expect(webAddressHost('https://dominio.es/%E2%82?q=%C3#%'), 'dominio.es');
+    });
+  });
+
   group('Punycode (RFC 3492)', () {
     test('ida y vuelta', () {
       for (final label in [

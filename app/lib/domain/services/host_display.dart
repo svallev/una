@@ -32,10 +32,16 @@ String? webAddressHost(String? url) {
   return host.isEmpty ? null : host;
 }
 
+/// Los `%XX` como UTF-8. Si está mal formado, el texto **sin decodificar**
+/// (nunca uno a medio decodificar): `decodeComponent` lanza `ArgumentError`
+/// con un `%` que no va seguido de dos cifras hexadecimales y `FormatException`
+/// con bytes que no son UTF-8 válido (`%C3`, `%E2%82`; CA-020-27).
 String _decodePercent(String s) {
   try {
     return Uri.decodeComponent(s);
   } on ArgumentError {
+    return s;
+  } on FormatException {
     return s;
   }
 }

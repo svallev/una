@@ -9,8 +9,19 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * Canal `una/links` (spec 008, CA-008-12; spec 012, CA-012-04): abre un enlace
- * ya comprobado y confirmado en Dart (`LinkPolicy`) y dice antes si hay app que
- * lo abra. Solo tres intents, y solo si hay una app que los atienda (I-7: si no,
+ * ya comprobado en Dart y dice antes si hay app que lo abra. Por aquí pasan hoy
+ * dos caminos, y no son iguales (CA-020-18):
+ * - **Ajustes** (política, licencias, ayuda): **sin** confirmación (CA-015-12a);
+ *   las direcciones son constantes de compilación y la regla `https` sin usuario
+ *   (`privacyLink`) vive solo en Dart; repetirla aquí es un residual aceptado
+ *   (012-S1).
+ * - **Enlaces del PDF**: **sí** se confirman antes (`LinkPolicy`, CA-008-12) y
+ *   admiten `http(s)`, `mailto:` y `tel:` (T-5).
+ *
+ * (Además, «Abrir en el navegador» de la tarea web manda aquí la dirección
+ * guardada de la propia tarea, sin confirmar: spec 009 §5.)
+ *
+ * Solo tres intents, y solo si hay una app que los atienda (I-7: si no,
  * Android mostraría un selector vacío y en inglés):
  * - `web`: `ACTION_VIEW` + `BROWSABLE`, solo `http`/`https`;
  * - `mail`: `ACTION_SENDTO` con el `mailto:` rehecho (sin adjuntos ni copias);

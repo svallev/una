@@ -67,3 +67,18 @@ url	no es una dirección	<null>
 url	https:///ruta	<null>
 url	example.com/sin-esquema	<null>
 url	mailto:alguien@example.com	<null>
+
+# --- Escapes mal formados (CA-020-27): el texto tal cual, en minúsculas, sin lanzar ---
+host	%C3.es	%c3.es
+host	%.es	%.es
+host	%ZZ.es	%zz.es
+host	%E2%82.es	%e2%82.es
+host	%C3%B1%C3.es	%c3%b1%c3.es
+url	https://%C3.es/	%c3.es
+url	https://%E2%82.es/	%e2%82.es
+url	https://%/	%
+url	https://%ZZ.es/	%zz.es
+url	https://dominio.es/%C3	dominio.es
+url	https://dominio.es/%	dominio.es
+url	https://dominio.es/%ZZ	dominio.es
+url	https://dominio.es/%E2%82	dominio.es
