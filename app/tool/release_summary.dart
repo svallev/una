@@ -449,10 +449,18 @@ SummaryReport buildSummary({
     }
   }
 
-  // Ordena por comprobación (el orden de la lista) y conserva el de cada JSON.
+  // Ordena por comprobación (el orden de la lista) y conserva el de cada JSON. Un hallazgo idéntico
+  // (comprobación, gravedad, paquete y motivo) sale una sola vez; los distintos se conservan todos.
   final order = ['results.tsv', ...releaseStepOnlyIds, ...releaseCheckIds];
+  final seen = <String>{};
   final sorted = <Finding>[
-    for (final c in order) ...findings.where((f) => f.check == c),
+    for (final c in order)
+      for (final f in findings.where((f) => f.check == c))
+        if (seen.add(
+          '${f.check}\n${f.severity.name}\n${f.strictWarning}\n'
+          '${f.subject}\n${f.message}',
+        ))
+          f,
   ];
 
   final results = <String, Severity>{};

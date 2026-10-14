@@ -51,3 +51,22 @@ Conocido y sin cambios: Android 17 concede `ACCESS_LOCAL_NETWORK` a las apps con
 ## Estado del emulador al terminar
 
 Restaurados: `auto_time` = 1, transporte de copia de GMS, `backup_local_transport_parameters` borrado, `private_dns_mode` borrado, `svc power stayon false`, escalas de animación a 1 y reglas de `iptables` quitadas. Quedan la app instalada (rama) con tareas de prueba y los archivos `zq*` en `Download/` (útiles para la 022). `screen_off_timeout` quedó en 30 min.
+
+## Ejecuciones reales del trabajo de publicación (T-020-16, tras fusionar)
+
+### Primer intento, 2026-10-14, sobre `c971abb` (PR #53)
+
+Con permiso del propietario. La CI y Security de `main` en verde sobre ese commit antes de lanzar.
+
+| Modo | Ejecución | Resultado | Lo esperado |
+|---|---|---|---|
+| Testers (a mano desde `main`) | [38622477635](https://github.com/svallev/una/actions/runs/38622477635) | **Rojo**: `signature` en fallo en los tres APK | Verde con avisos |
+| Estricto (etiqueta `v0.1.0` de prueba, borrada después) | [38622517952](https://github.com/svallev/una/actions/runs/38622517952) | Rojo: `identity`, `package-name` y `signature` | Rojo |
+
+- **En verde en los dos:** `mode`, `build`, `ci-runs`, `lockfile`, `native-strings`, `permissions`, `test-classes`, `pdfium`, `licenses`, `size` y `mastg-static`. `tag`: aviso en testers («no hay etiqueta») y ok en estricto.
+- **Avisos de testers, los esperados:** las tres direcciones `example.com`, los huecos y las marcas de la política (ES y EN), el *package name* provisional `invalid.pending.app` (tres APK y el AAB) y el AAB firmado con el certificado de depuración.
+- **Estricto:** los mismos, como fallos, más la falta de `upload-cert.sha256` (**[Pendiente, F6]**).
+- **Artefactos:** solo `release-summary` y `third-party-notices`; ningún `.apk` ni `.aab` (CA-020-06).
+- **Fallo real (F-1):** las *build-tools* más nuevas del runner son la **37.0.0**, cuyo `apksigner verify --print-certs` escribe `V2 Signer: certificate DN: …` en vez de `Signer #1 certificate DN: …` (la 36, la de este Mac). El parser fallaba cerrado («ningún firmante legible»): sin falso verde, pero sin entrega a testers posible. **Corregido** en `fix/020-apksigner-37` (`c0e1f94`): entiende los dos formatos, cuenta una vez la misma clave en varios esquemas, ignora Source Stamp y sigue fallando cerrado ante lo demás; fixture real `apksigner37_debug.txt`.
+
+**[Pendiente]** repetir los dos modos tras fusionar el arreglo (con permiso) y anotarlos aquí; entonces la spec pasa a **Implementada**.
