@@ -74,6 +74,12 @@ final _sha256 = RegExp(r'^[0-9a-f]{64}$');
 bool isDebugDn(String dn) =>
     RegExp(r'(^|,\s*)CN=Android Debug(\s*,|\s*$)').hasMatch(dn);
 
+/// Una línea de certificado de un firmante de `apksigner verify --print-certs`: la etiqueta del
+/// firmante, `DN` o `SHA-256 digest`, y el valor.
+final _apksignerCertLine = RegExp(
+  r'^(?:(Signer #\d+)|(V\d+(?:\.\d+)? Signer(?: #\d+)?):) certificate (DN|SHA-256 digest): (.*)$',
+);
+
 /// Interpreta la salida de `apksigner verify --print-certs` ([exitCode] es su código).
 SignatureResult parseApksigner(String output, int exitCode) {
   final lines = const LineSplitter().convert(output);
@@ -98,25 +104,37 @@ SignatureResult parseApksigner(String output, int exitCode) {
       'apksigner terminó con el código $exitCode${detail.isEmpty ? '' : ': ${_clip(detail)}'}',
     );
   }
+  // Los firmantes, por su etiqueta completa: `Signer #N` (build-tools ≤ 36) o `<esquema> Signer[ #N]`
+  // (`V2 Signer`, `V3.1 Signer #2`…; build-tools 37). Las líneas de `Source Stamp` no son firmantes.
   final dns = <String, String>{};
   final shas = <String, String>{};
+  var ambiguous = false;
   for (final l in lines) {
-    final dn = RegExp(r'^Signer #(\d+) certificate DN: (.*)$').firstMatch(l);
-    if (dn != null) dns[dn.group(1)!] = dn.group(2)!.trim();
-    final sha = RegExp(
-      r'^Signer #(\d+) certificate SHA-256 digest: ([0-9A-Fa-f:]+)\s*$',
-    ).firstMatch(l);
-    if (sha != null) shas[sha.group(1)!] = _hex(sha.group(2)!);
+    final m = _apksignerCertLine.firstMatch(l);
+    if (m == null) continue;
+    final label = m.group(1) ?? m.group(2)!;
+    final isDn = m.group(3) == 'DN';
+    final value = m.group(4)!.trim();
+    final target = isDn ? dns : shas;
+    final v = isDn ? value : _hex(value);
+    if (target.containsKey(label) && target[label] != v) ambiguous = true;
+    target[label] = v;
   }
-  final signers = [
-    for (final MapEntry(:key, :value) in dns.entries)
-      if (_sha256.hasMatch(shas[key] ?? '')) Signer(value, shas[key]!),
-  ];
-  if (signers.isEmpty || signers.length != dns.length) {
+  final labels = {...dns.keys, ...shas.keys};
+  final complete = labels.every(
+    (k) => dns.containsKey(k) && _sha256.hasMatch(shas[k] ?? ''),
+  );
+  if (ambiguous || labels.isEmpty || !complete) {
     return const InvalidSignature(
       'apksigner no dio ningún firmante legible (salida que no se entiende)',
     );
   }
+  // El mismo certificado en varios esquemas (v2 + v3) o etiquetas es un solo firmante.
+  final seen = <String>{};
+  final signers = [
+    for (final k in labels)
+      if (seen.add('${dns[k]}\n${shas[k]}')) Signer(dns[k]!, shas[k]!),
+  ];
   return SignedPackage(signers);
 }
 
@@ -408,10 +426,15 @@ List<ClassedIssue> _checkOne(
       }
   }
   // Un fallo y un aviso del mismo paquete: todo es fallo (CL-020-20).
-  if (issues.any((i) => i.kind == 'fault')) {
-    return [for (final i in issues) issue('fault', i.message)];
-  }
-  return issues;
+  final anyFault = issues.any((i) => i.kind == 'fault');
+  // Una sola línea por paquete y motivo: el mismo certificado en dos firmantes (keytool) o en dos
+  // esquemas no se repite.
+  final seen = <String>{};
+  return [
+    for (final i in issues)
+      if (seen.add('${anyFault ? 'fault' : i.kind}\n${i.message}'))
+        anyFault ? issue('fault', i.message) : i,
+  ];
 }
 
 const _usage =

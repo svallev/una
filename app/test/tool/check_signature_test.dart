@@ -205,6 +205,143 @@ Certificate fingerprints:
       expect(parseApksigner(text, 0), isA<InvalidSignature>());
     });
 
+    group('CA-020-03, CA-020-05: el formato de apksigner 37 '
+        '(«V2 Signer: certificate …»)', () {
+      // La salida real de las build-tools 37.0.0 (las del runner ubuntu-24.04).
+      String v37() => _read('apksigner37_debug.txt');
+
+      /// Las líneas de firmante del fixture real, con otra etiqueta (`V3 Signer`, `V2 Signer #2`…).
+      String relabel(String label, {String? cn, String? sha}) => v37()
+          .split('\n')
+          .where((l) => l.startsWith('V2 Signer: '))
+          .map(
+            (l) => l
+                .replaceFirst('V2 Signer: ', '$label: ')
+                .replaceAll('CN=Android Debug', 'CN=${cn ?? 'Android Debug'}')
+                .replaceAll(_debugSha, sha ?? _debugSha),
+          )
+          .join('\n');
+
+      test('CA-020-05: el fixture real de la 37 da el firmante de depuración, '
+          'como el de la 36', () {
+        final r = parseApksigner(v37(), 0);
+        expect(r, isA<SignedPackage>());
+        final signers = (r as SignedPackage).signers;
+        expect(signers, hasLength(1));
+        expect(signers.single.dn, 'C=US, O=Android, CN=Android Debug');
+        expect(signers.single.sha256, _debugSha);
+        expect(isDebugDn(signers.single.dn), isTrue);
+        final old = parseApksigner(_read('apksigner_debug.txt'), 0);
+        expect(
+          (old as SignedPackage).signers.map((s) => '$s'),
+          signers.map((s) => '$s'),
+        );
+      });
+
+      test('CA-020-03: v2 + v3 (y v3.1) con la misma clave: un solo '
+          'firmante', () {
+        final text = [
+          v37(),
+          relabel('V3 Signer'),
+          relabel('V3.1 Signer'),
+        ].join('\n');
+        final r = parseApksigner(text, 0);
+        expect((r as SignedPackage).signers, hasLength(1));
+        expect(r.signers.single.sha256, _debugSha);
+      });
+
+      test('CA-020-03: dos firmantes distintos (V2 Signer #1 y #2): dos', () {
+        final text = [
+          relabel('V2 Signer #1'),
+          relabel('V2 Signer #2', cn: 'Otro', sha: _ownSha),
+        ].join('\n');
+        final r = parseApksigner(text, 0);
+        expect((r as SignedPackage).signers.map((s) => s.sha256), [
+          _debugSha,
+          _ownSha,
+        ]);
+        expect(r.signers.last.dn, contains('CN=Otro'));
+      });
+
+      test('CA-020-03: el formato viejo con dos firmantes iguales: uno', () {
+        final old = _read('apksigner_debug.txt');
+        final text = [old, old.replaceAll('Signer #1', 'Signer #2')].join('\n');
+        final r = parseApksigner(text, 0);
+        expect((r as SignedPackage).signers, hasLength(1));
+      });
+
+      test('CA-020-03: las líneas de Source Stamp no cuentan como '
+          'firmante', () {
+        final stamp = relabel(
+          'Source Stamp Signer',
+          cn: 'Stamp',
+          sha: _ownSha,
+        ).replaceAll('Source Stamp Signer: ', 'Source Stamp Signer ');
+        final r = parseApksigner('${v37()}\n$stamp\n', 0);
+        expect((r as SignedPackage).signers, hasLength(1));
+        expect(r.signers.single.sha256, _debugSha);
+        // Con solo el sello no hay firmante: falla cerrada.
+        expect(parseApksigner(stamp, 0), isA<InvalidSignature>());
+      });
+
+      test('CA-020-03: un firmante con DN y sin SHA-256 (o al revés) no '
+          'verifica, aunque otro esté completo', () {
+        final dnOnly = relabel(
+          'V2 Signer #2',
+          cn: 'Otro',
+          sha: _ownSha,
+        ).split('\n').where((l) => !l.contains('SHA-256')).join('\n');
+        final shaOnly = relabel(
+          'V3 Signer',
+          cn: 'Otro',
+          sha: _ownSha,
+        ).split('\n').where((l) => !l.contains(' DN: ')).join('\n');
+        expect(
+          parseApksigner('${relabel('V2 Signer #1')}\n$dnOnly', 0),
+          isA<InvalidSignature>(),
+        );
+        expect(
+          parseApksigner('${v37()}\n$shaOnly', 0),
+          isA<InvalidSignature>(),
+        );
+      });
+
+      test('CA-020-03: un SHA-256 mal formado no verifica', () {
+        for (final bad in [
+          _debugSha.substring(2),
+          '${_debugSha}00',
+          _debugSha.replaceFirst('d3', 'zz'),
+          '',
+        ]) {
+          expect(
+            parseApksigner(v37().replaceAll(_debugSha, bad), 0),
+            isA<InvalidSignature>(),
+            reason: '«$bad»',
+          );
+        }
+      });
+
+      test('CA-020-03: el mismo firmante con dos DN o dos huellas distintas '
+          'no verifica (ambiguo)', () {
+        final twoDn = '${v37()}\nV2 Signer: certificate DN: CN=Otro\n';
+        expect(parseApksigner(twoDn, 0), isA<InvalidSignature>());
+      });
+
+      test('CA-020-03: código ≠ 0, DOES NOT VERIFY o sin firmantes: no '
+          'verifica', () {
+        expect(parseApksigner(v37(), 1), isA<InvalidSignature>());
+        expect(
+          parseApksigner('DOES NOT VERIFY\nERROR: algo\n${v37()}', 0),
+          isA<InvalidSignature>(),
+        );
+        final noSigners = v37()
+            .split('\n')
+            .where((l) => !l.startsWith('V2 Signer'))
+            .join('\n');
+        expect(parseApksigner(noSigners, 0), isA<InvalidSignature>());
+      });
+    });
+
     test('CA-020-03: keytool sin firmantes: lista vacía', () {
       expect(parseKeytool('Not a signed jar file\n'), isEmpty);
       expect(parseKeytool(''), isEmpty);
@@ -339,6 +476,50 @@ Certificate fingerprints:
       },
       skip: skip,
     );
+
+    test('CA-020-05: un APK con la salida de apksigner 37: aviso `debug`, no '
+        'fallo', () {
+      final r = run([
+        ...tools(apksigner: _read('apksigner37_debug.txt')),
+        apk(),
+      ]);
+      expect(r.code, 1, reason: '${r.out}${r.err}');
+      expect(kinds(r.json), {'debug'});
+      expect(issuesOf(r.json), hasLength(1));
+    }, skip: skip);
+
+    test('CA-020-05: el mismo certificado en dos firmantes del AAB (keytool) '
+        'da una sola línea por paquete y motivo', () {
+      final one = _read('keytool_debug.txt');
+      final keytool = [
+        one,
+        one.replaceFirst('Signer #1:', 'Signer #2:'),
+      ].join('\n');
+      final r = run([
+        '--mode',
+        'strict',
+        '--upload-cert',
+        '${tmp.path}/no-existe.sha256',
+        ...tools(keytool: keytool),
+        aab(),
+        apk(),
+      ]);
+      expect(r.code, 1, reason: '${r.out}${r.err}');
+      final lines = issuesOf(r.json)
+          .map((i) => '${i['kind']}|${i['subject']}|${i['message']}')
+          .toList();
+      expect(lines.toSet(), hasLength(lines.length), reason: lines.join('\n'));
+      expect(lines.where((l) => l.startsWith('debug|app.aab|')), hasLength(1));
+      expect(lines.where((l) => l.startsWith('debug|app.apk|')), hasLength(1));
+      expect(
+        lines.where((l) => l.startsWith('uploadCertMissing|')),
+        hasLength(1),
+      );
+      expect(
+        r.out.split('\n').where((l) => l.contains('app.aab: firmado')),
+        hasLength(1),
+      );
+    }, skip: skip);
 
     test('CA-020-03: jarsigner dice que verifica pero keytool no encuentra '
         'ningún firmante: fallo (falla cerrada)', () {

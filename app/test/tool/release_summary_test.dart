@@ -246,6 +246,31 @@ void main() {
       },
     );
 
+    test('CA-020-03, CA-020-05: un hallazgo repetido en el JSON sale una sola vez por paquete y motivo; los distintos se conservan', () {
+      for (final mode in ReleaseMode.values) {
+        final w = _World();
+        w.codes['signature'] = 1;
+        w.jsons['signature'] = _json('signature', [
+          _issue('debug', 'app-release.aab', 'CN=Android Debug, SHA-256 aa'),
+          _issue('debug', 'app-release.aab', 'CN=Android Debug, SHA-256 aa'),
+          _issue('debug', 'app-release.aab', 'CN=Android Debug, SHA-256 bb'),
+          _issue(
+            'debug',
+            'app-x86_64-release.apk',
+            'CN=Android Debug, SHA-256 aa',
+          ),
+        ]);
+        final r = w.build(mode);
+        final lines = r.markdown
+            .split('\n')
+            .where((l) => l.startsWith('- ') && l.contains('signature'))
+            .toList();
+        expect(lines, hasLength(3), reason: lines.join('\n'));
+        expect(lines.toSet(), hasLength(3));
+        expect(r.findings.where((f) => f.check == 'signature'), hasLength(3));
+      }
+    });
+
     test('CA-020-05: el aviso de la huella de subida solo existe en estricto (fallo allí, fallo en testers)', () {
       for (final mode in ReleaseMode.values) {
         final w = _World();
