@@ -122,10 +122,36 @@ if ! grep -q '<manifest\b' "$MANIFEST"; then
 fi
 PKG="$(tr '\n' ' ' < "$MANIFEST" | grep -oE '<manifest[^>]*' | grep -oE 'package="[^"]*"' | head -n1 | sed 's/package="\(.*\)"/\1/')"
 
+# Falla cerrada: la lista de permisos se vuelca primero a un archivo temporal y se comprueba el
+# código de `perl` (desde una sustitución de proceso, un `perl` que moría dejaba la cuenta a 0 y el
+# resultado en verde).
+PERMS_FILE="$(mktemp "${TMPDIR:-/tmp}/check-perms.XXXXXX")"
+if [ -n "$AAB" ]; then
+  trap 'rm -f "$MANIFEST" "$PERMS_FILE"' EXIT
+else
+  trap 'rm -f "$PERMS_FILE"' EXIT
+fi
+
 status=0
 count=0
 # Todas las formas de pedir un permiso (<uses-permission>, -sdk-23, -sdk-m…), sin los comentarios y
 # aunque la etiqueta ocupe varias líneas. Salida: "etiqueta TAB nombre" (nombre vacío = ilegible).
+if ! perl -0777 -e '
+  open(my $fh, "<", $ARGV[0]) or die "no se puede leer $ARGV[0]";
+  my $xml = do { local $/; <$fh> };
+  $xml =~ s/<!--.*?-->//gs;
+  my %seen;
+  while ($xml =~ m{<(uses-permission[\w-]*)\b([^>]*)>}gs) {
+    my ($tag, $attrs) = ($1, $2);
+    my ($n1, $n2) = $attrs =~ /android:name\s*=\s*(?:"([^"]*)"|\x27([^\x27]*)\x27)/;
+    my $name = defined $n1 ? $n1 : (defined $n2 ? $n2 : "");
+    my $line = "$tag\t$name";
+    print "$line\n" unless $seen{$line}++;
+  }
+' "$MANIFEST" >"$PERMS_FILE"; then
+  echo "::error::No se pudieron leer los permisos del manifiesto de $MODE ($MANIFEST)" >&2
+  exit 1
+fi
 while IFS=$'\t' read -r tag perm; do
   [ -z "$tag" ] && continue
   count=$((count + 1))
@@ -142,19 +168,12 @@ while IFS=$'\t' read -r tag perm; do
     echo "::error::Permiso no permitido en el manifiesto de $MODE: $perm (<$tag>)"
     status=1
   fi
-done < <(perl -0777 -e '
-  open(my $fh, "<", $ARGV[0]) or die "no se puede leer $ARGV[0]";
-  my $xml = do { local $/; <$fh> };
-  $xml =~ s/<!--.*?-->//gs;
-  my %seen;
-  while ($xml =~ m{<(uses-permission[\w-]*)\b([^>]*)>}gs) {
-    my ($tag, $attrs) = ($1, $2);
-    my ($n1, $n2) = $attrs =~ /android:name\s*=\s*(?:"([^"]*)"|\x27([^\x27]*)\x27)/;
-    my $name = defined $n1 ? $n1 : (defined $n2 ? $n2 : "");
-    my $line = "$tag\t$name";
-    print "$line\n" unless $seen{$line}++;
-  }
-' "$MANIFEST")
+done < "$PERMS_FILE"
+# El manifiesto de release declara al menos INTERNET: ninguno quiere decir que no se ha leído bien.
+if [ "$count" -lt 1 ]; then
+  echo "::error::El manifiesto de $MODE sin ningún <uses-permission> (debería pedir al menos INTERNET)"
+  status=1
+fi
 
 # Ningún <provider> exportado (T-8): el FileProvider de la cámara (spec 007) da permisos
 # puntuales con grantUriPermissions, nunca acceso general.

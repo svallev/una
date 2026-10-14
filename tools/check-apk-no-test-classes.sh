@@ -24,6 +24,12 @@ fi
 PATTERN_ENTRY='(^|/)(org/junit|org/hamcrest|junit/framework)(/|$)'
 PATTERN_DEX='L(org/junit|org/hamcrest|junit/framework)/'
 
+# Falla cerrada: nada de leer el paquete por una tubería (con `pipefail`, un `unzip` que falla dentro
+# de un `if` o tras `|| true` dejaba en verde un paquete ilegible o sin dex). El listado y cada dex
+# se leen antes, comprobando el código de `unzip`, y se busca en lo leído.
+DEX_FILE="$(mktemp "${TMPDIR:-/tmp}/check-apk-dex.XXXXXX")"
+trap 'rm -f "$DEX_FILE"' EXIT
+
 status=0
 for apk in "$@"; do
   apk_status=0
@@ -32,19 +38,34 @@ for apk in "$@"; do
     status=1
     continue
   fi
-  # Sin `grep -q` en las tuberías: con `pipefail`, un grep que encuentra pronto y sale corta a `unzip`
-  # (SIGPIPE, estado 141) y el `if` daba por no encontrado lo que sí estaba (comprobado en T-020-07).
-  if unzip -Z1 "$apk" | grep -E "$PATTERN_ENTRY" >/dev/null; then
+  if ! listing="$(unzip -Z1 "$apk" 2>/dev/null)"; then
+    echo "::error::$apk: no se puede listar (no es un zip legible)"
+    status=1
+    continue
+  fi
+  # Sin `grep -q` (ni tuberías): ver T-020-07 (SIGPIPE con `pipefail`).
+  if grep -E "$PATTERN_ENTRY" <<<"$listing" >/dev/null; then
     echo "::error::$apk lleva entradas de JUnit/Hamcrest (org/junit, org/hamcrest, junit/framework)"
     apk_status=1
   fi
+  dexes="$(grep -E '^(base/dex/)?classes[0-9]*\.dex$' <<<"$listing" || true)"
+  if [ -z "$dexes" ]; then
+    echo "::error::$apk sin ningún classes*.dex (ni en la raíz ni en base/dex/): no se puede revisar"
+    status=1
+    continue
+  fi
   while IFS= read -r dex; do
     [ -z "$dex" ] && continue
-    if unzip -p "$apk" "$dex" | LC_ALL=C grep -aE "$PATTERN_DEX" >/dev/null; then
+    if ! unzip -p "$apk" "$dex" >"$DEX_FILE" 2>/dev/null; then
+      echo "::error::$apk: no se puede extraer $dex"
+      apk_status=1
+      continue
+    fi
+    if LC_ALL=C grep -aE "$PATTERN_DEX" "$DEX_FILE" >/dev/null; then
       echo "::error::$apk: $dex lleva clases de JUnit/Hamcrest"
       apk_status=1
     fi
-  done < <(unzip -Z1 "$apk" | grep -E '^(base/dex/)?classes[0-9]*\.dex$' || true)
+  done <<<"$dexes"
   if [ "$apk_status" -eq 0 ]; then
     echo "OK: $apk sin clases de pruebas (org/junit, org/hamcrest)"
   else

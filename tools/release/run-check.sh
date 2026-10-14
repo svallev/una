@@ -30,7 +30,7 @@ shift
 [ "$1" = "--" ] || usage
 shift
 [ $# -ge 1 ] || usage
-if ! printf '%s' "$id" | grep -qE '^[a-z][a-z-]*$'; then
+if ! grep -E '^[a-z][a-z-]*$' <<<"$id" >/dev/null; then
   echo "::error::run-check: el id «${id}» no es válido (minúsculas y guiones)" >&2
   exit 2
 fi

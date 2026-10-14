@@ -189,6 +189,53 @@ void main() {
     });
   });
 
+  // Falla cerrada (cierre de la 020, security-reviewer): si el `perl` que lista los permisos
+  // fallaba, la cuenta se quedaba en 0 y el resultado era verde.
+  group('CA-020-13: falla cerrada al listar los permisos', () {
+    test('CA-020-13: un manifiesto sin ningún <uses-permission> falla', () {
+      final noPermissions = _manifest(permissions: const [])
+          .replaceAll(RegExp(r'\s*<uses-permission [^>]*/>'), '');
+      expect(noPermissions, isNot(contains('uses-permission')));
+      expectFileFails(noPermissions, contains('sin ningún <uses-permission>'));
+    });
+
+    test(
+      'CA-020-13: si el perl que lista los permisos falla, el script falla',
+      () {
+        final realPerl = (Process.runSync('which', ['perl']).stdout as String)
+            .trim();
+        expect(realPerl, isNotEmpty);
+        // Un `perl` de mentira que solo falla en la lista de permisos (el programa que busca
+        // `uses-permission`); el resto (componentes) usa el real.
+        final bin = Directory('${tmp.path}/bin')..createSync();
+        final fake = File('${bin.path}/perl')
+          ..writeAsStringSync(
+            '#!/bin/sh\n'
+            'case "\$*" in *uses-permission*) echo "perl roto" >&2; exit 1 ;; esac\n'
+            'exec "$realPerl" "\$@"\n',
+          );
+        Process.runSync('chmod', ['+x', fake.path]);
+        final file = File('${tmp.path}/AndroidManifest.test.xml')
+          ..writeAsStringSync(_manifest());
+        final r = Process.runSync(
+          'bash',
+          [File(_script).absolute.path, 'release', '--manifest', file.path],
+          workingDirectory: tmp.path,
+          environment: {
+            ...Platform.environment,
+            'PATH': '${bin.path}:${Platform.environment['PATH']}',
+          },
+        );
+        expect(r.exitCode, isNot(0), reason: '${r.stdout}${r.stderr}');
+        expect(
+          '${r.stdout}${r.stderr}',
+          contains('No se pudieron leer los permisos'),
+        );
+        expect(r.stdout, isNot(contains('correctos')));
+      },
+    );
+  });
+
   group('CA-020-13: todas las formas de pedir un permiso', () {
     test(
       'CA-020-13: <uses-permission-sdk-23> y -sdk-m de más fallan nombrándolos',

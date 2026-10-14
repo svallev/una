@@ -9,3 +9,4 @@ main-data.xml	<data>
 main-browsable.xml	android.intent.category.BROWSABLE
 main-default.xml	android.intent.category.DEFAULT
 main-extra-action.xml	android.intent.action.VIEW
+permission-none.xml	sin ningún <uses-permission>

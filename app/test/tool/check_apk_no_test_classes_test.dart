@@ -104,6 +104,23 @@ void main() {
       }
     });
 
+    test('CA-020-07: ningún script con pipefail canaliza nada a un grep -q '
+        '(docs/security/checklist.md)', () {
+      final scripts = [
+        ...Directory('../tools').listSync().whereType<File>(),
+        ...Directory('../tools/release').listSync().whereType<File>(),
+      ].where((f) => f.path.endsWith('.sh'));
+      final bad = RegExp(r'\|\s*(LC_ALL=C\s+)?grep\s+-[a-zA-Z]*q');
+      var checked = 0;
+      for (final f in scripts) {
+        final text = f.readAsStringSync();
+        if (!text.contains('pipefail')) continue;
+        checked++;
+        expect(bad.hasMatch(text), isFalse, reason: f.path);
+      }
+      expect(checked, greaterThanOrEqualTo(3));
+    });
+
     test('una clase de JUnit al principio de un dex de 3 MB se detecta', () {
       final apk = _apk(tmp, 'bigdex', {
         'classes.dex': _dex('Lorg/junit/Test; ${'x' * (3 * 1024 * 1024)}'),
@@ -181,6 +198,52 @@ void main() {
       }
     },
   );
+
+  // Falla cerrada (cierre de la 020, security-reviewer): con `pipefail`, un `unzip` que fallaba dentro
+  // del `if` o de la lista de dex (`|| true`) dejaba en verde un paquete ilegible o sin dex.
+  group('CA-020-02: falla cerrada con un paquete ilegible', () {
+    test('CA-020-02: un archivo que no es zip falla nombrando el motivo', () {
+      final f = File('${tmp.path}/not-a-zip.apk')
+        ..writeAsStringSync('esto no es un zip');
+      final r = _run([f.path]);
+      expect(r.exitCode, 1, reason: '${r.stdout}${r.stderr}');
+      expect('${r.stdout}${r.stderr}', contains('no se puede listar'));
+      expect(r.stdout, isNot(contains('OK')));
+    }, skip: skip);
+
+    test(
+      'CA-020-02: un zip sin ningún classes*.dex falla nombrando el motivo',
+      () {
+        final apk = _apk(tmp, 'nodex', {
+          'AndroidManifest.xml': utf8.encode('<manifest/>'),
+          'res/raw/a.txt': utf8.encode('a'),
+        });
+        final r = _run([apk]);
+        expect(r.exitCode, 1, reason: '${r.stdout}${r.stderr}');
+        expect('${r.stdout}${r.stderr}', contains('sin ningún classes*.dex'));
+        expect(r.stdout, isNot(contains('OK')));
+      },
+      skip: skip,
+    );
+
+    test('CA-020-02: un dex que no se puede extraer falla nombrándolo', () {
+      final apk = _apk(tmp, 'baddex', {'classes.dex': _dex('Lfoo/Bar;')});
+      // Estropea los datos comprimidos del dex (el directorio central sigue legible):
+      // `unzip -Z1` lo lista, pero `unzip -p` falla por el CRC.
+      final bytes = File(apk).readAsBytesSync();
+      // Un solo archivo: sus datos acaban justo antes del directorio central (PK 1 2).
+      final central = latin1.decode(bytes).indexOf('PK\x01\x02');
+      expect(central, greaterThan(0));
+      bytes[central - 1] ^= 0xff;
+      File(apk).writeAsBytesSync(bytes);
+      final r = _run([apk]);
+      expect(r.exitCode, 1, reason: '${r.stdout}${r.stderr}');
+      expect(
+        '${r.stdout}${r.stderr}',
+        contains('no se puede extraer classes.dex'),
+      );
+    }, skip: skip);
+  });
 
   test('CA-019-25: un APK que no existe falla; sin argumentos, uso (2)', () {
     expect(_run(['${tmp.path}/no-existe.apk']).exitCode, 1);
