@@ -301,16 +301,16 @@ class ImageImport(private val activity: Activity) : MethodChannel.MethodCallHand
         if (data == null) return null
         val clip = data.clipData
         val total: Int
-        val tokens = ArrayList<String>(max)
+        val tokens: List<String>
         if (clip != null && clip.itemCount > 0) {
             total = clip.itemCount
-            for (i in 0 until minOf(total, max)) {
-                clip.getItemAt(i).uri?.let { tokens.add(it.toString()) }
-            }
+            // El tope vive en `PickedItems` (probado en la JVM, CA-020-21): solo se pide
+            // `getItemAt` para los primeros `max`.
+            tokens = PickedItems.firstItems(total, max) { i -> clip.getItemAt(i).uri?.toString() }
         } else {
             val uri = data.data ?: return null
             total = 1
-            tokens.add(uri.toString())
+            tokens = listOf(uri.toString())
         }
         if (tokens.isEmpty()) return null
         return mapOf("tokens" to tokens, "total" to total)

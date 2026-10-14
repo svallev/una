@@ -119,27 +119,19 @@ class NotificationPoster(
     }
 
     /**
-     * Tocarla abre la app: `PendingIntent` **explícito** a `MainActivity`, acción fija y un `nonce`
-     * nuevo. `UPDATE_CURRENT` es necesario: la igualdad de un `PendingIntent` ignora los extras, y
-     * sin ello el sistema reutilizaría el anterior con el `nonce` viejo. `IMMUTABLE`: nadie puede
-     * cambiarlo. Sin datos de la tarea ni otros parámetros (CA-019-20).
+     * Tocarla abre la app. La descripción (destino explícito, acción fija, `nonce`, *flags*
+     * inmutables) viene de [IntentSpecs.openCurrentTask], probada en la JVM (CA-020-28); aquí solo
+     * se traduce a objetos del sistema, con un `nonce` nuevo. Sin datos de la tarea ni otros
+     * parámetros (CA-019-20).
      */
     private fun contentIntent(): PendingIntent {
+        val spec = IntentSpecs.openCurrentTask()
+        require(spec.kind == PendingKind.ACTIVITY && spec.target == PendingTarget.MAIN_ACTIVITY) { "destino" }
         val intent =
             Intent(context, MainActivity::class.java)
-                .setAction(ActivationNonce.ACTION)
-                .putExtra(ActivationNonce.EXTRA, ActivationNonce.issue())
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        return PendingIntent.getActivity(
-            context,
-            REQUEST_CODE,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-    }
-
-    private companion object {
-        /** Distinto del de la alarma (1): son `PendingIntent` de otro tipo, pero así no hay duda. */
-        const val REQUEST_CODE = 2
+                .setAction(spec.action)
+                .putExtra(requireNotNull(spec.nonceExtra), ActivationNonce.issue())
+                .addFlags(spec.intentFlags)
+        return PendingIntent.getActivity(context, spec.requestCode, intent, spec.flags)
     }
 }

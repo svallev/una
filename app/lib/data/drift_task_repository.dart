@@ -268,14 +268,33 @@ class DriftTaskRepository implements TaskRepository, SettingsRepository {
     return true;
   });
 
-  /// Texto guardado de [key], tal cual (null si no hay fila). Lo decodifica
-  /// siempre `settings_codec.dart`, que no lanza (CA-015-26).
-  Future<String?> _raw(String key) async {
-    final row = await (db.select(
-      db.settingEntries,
-    )..where((s) => s.key.equals(key))).getSingleOrNull();
-    return row?.value;
+  /// La lectura de un ajuste (CA-020-16): solo llega a Dart un **texto** de
+  /// [settingMaxRawLength] caracteres o menos (y de [settingMaxRawBytes] bytes
+  /// o menos: `length()` de SQLite se detiene en un NUL). Un valor largo, un
+  /// entero, un BLOB o un `NULL` dan `NULL`: no se cargan en memoria y la app
+  /// los trata como ilegibles. La clave va como parámetro.
+  static const rawSettingSql =
+      'SELECT CASE WHEN typeof(value) = \'text\' '
+      'AND length(value) <= $settingMaxRawLength '
+      'AND length(CAST(value AS BLOB)) <= $settingMaxRawBytes '
+      'THEN value END AS v FROM settings WHERE key = ?';
+
+  /// Texto guardado de [key] acotado por [rawSettingSql] (null si no hay fila
+  /// o es ilegible). Lo decodifica siempre `settings_codec.dart`, que no
+  /// lanza (CA-015-26).
+  @visibleForTesting
+  Future<String?> readRawSetting(String key) async {
+    final row = await db
+        .customSelect(
+          rawSettingSql,
+          variables: [Variable.withString(key)],
+          readsFrom: {db.settingEntries},
+        )
+        .getSingleOrNull();
+    return row?.read<String?>('v');
   }
+
+  Future<String?> _raw(String key) => readRawSetting(key);
 
   Future<void> _setRaw(String key, String value) => db
       .into(db.settingEntries)

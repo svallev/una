@@ -5,7 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** CA-019-13 y 25: el receptor solo atiende una lista blanca de acciones; cualquier otra se ignora. */
+/** CA-019-13 y 25; CA-020-28 (el receptor descarta cualquier acción fuera de su lista blanca): el receptor solo atiende una lista blanca de acciones; cualquier otra se ignora. */
 class WakeActionsTest {
     @Test
     fun `CA-019-13 cada difusion del sistema y la alarma propia tienen su motivo`() {
@@ -19,7 +19,7 @@ class WakeActionsTest {
     }
 
     @Test
-    fun `CA-025 cualquier otra accion se ignora sin evaluar nada`() {
+    fun `CA-020-28 CA-019-25 cualquier otra accion se ignora sin evaluar nada`() {
         val others =
             listOf(
                 null,
@@ -39,7 +39,7 @@ class WakeActionsTest {
     }
 
     @Test
-    fun `CA-025 las difusiones del manifiesto son seis y la alarma propia no es una de ellas`() {
+    fun `CA-020-28 CA-019-25 las difusiones del manifiesto son seis y la alarma propia no es una de ellas`() {
         assertEquals(6, WakeActions.SYSTEM_BROADCASTS.size)
         assertTrue(WakeActions.ALARM !in WakeActions.SYSTEM_BROADCASTS)
         for (action in WakeActions.SYSTEM_BROADCASTS) assertTrue(action, WakeActions.reasonFor(action) != null)

@@ -140,7 +140,10 @@ void main() {
     });
 
     test('el PendingIntent es explícito e inmutable', () {
-      expect(code(), contains('FLAG_IMMUTABLE'));
+      // Los *flags* (FLAG_IMMUTABLE) y el destino salen de `IntentSpecs`, que prueba la JVM
+      // (CA-020-28, `IntentSpecsTest`); aquí, que el adaptador los usa tal cual.
+      expect(code(), contains('IntentSpecs.wakeAlarm'));
+      expect(code(), contains('spec.flags'));
       expect(code(), contains('WakeReceiver::class.java'));
       expect(code(), contains('getBroadcast'));
     });

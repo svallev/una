@@ -97,33 +97,74 @@ class SettingEntries extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
+  /// Filas que lee cada página de la migración v2 → v3 (spec 020, CA-020-20).
+  static const _migrationPageSize = 500;
+
   /// v2 → v3: numera `position` solo en las tareas con más de una fila (el
-  /// resto se queda con el 0 por defecto). Un único recorrido **lineal** sobre
-  /// `ORDER BY task_id, created_at, id`; una subconsulta correlacionada por
-  /// fila sería O(n²) y una BD manipulada bloquearía el arranque (plan 016 §3).
-  /// Corre dentro de la transacción de `onUpgrade`.
+  /// resto se queda con el 0 por defecto). Recorre `attachments` **por páginas**
+  /// con paginación por clave (*keyset*) sobre `ORDER BY task_id, created_at, id`
+  /// (orden total: `id` es la clave primaria): cada página empieza justo después
+  /// de la última fila de la anterior, así que la memoria no crece con el número
+  /// de filas y el contador por tarea se lleva de una página a la siguiente. Una
+  /// subconsulta correlacionada por fila para numerar sería O(n²) y una BD
+  /// manipulada bloquearía el arranque (plan 016 §3). Corre dentro de la
+  /// transacción de `onUpgrade`: si una página falla, no queda nada cambiado.
+  ///
+  /// Sin un índice por `(task_id, created_at, id)` cada página recorriría y
+  /// ordenaría todas las filas (O(n) por página, O(n²/500) en total): se crea
+  /// uno **temporal** (SQLite no admite `TEMP INDEX` sobre una tabla normal) y
+  /// se borra al terminar, dentro de la misma transacción, así que el esquema
+  /// final es el de la captura v3 y, si algo falla, el rollback también lo quita.
   Future<void> _numberMultiRowTasks() async {
-    final rows = await customSelect(
-      'SELECT id, task_id FROM attachments WHERE task_id IN ('
-      'SELECT task_id FROM attachments GROUP BY task_id HAVING COUNT(*) > 1) '
-      'ORDER BY task_id, created_at, id',
-    ).get();
+    await customStatement(
+      'CREATE INDEX tmp_attachments_numbering '
+      'ON attachments (task_id, created_at, id)',
+    );
+    await _numberPages();
+    await customStatement('DROP INDEX tmp_attachments_numbering');
+  }
+
+  Future<void> _numberPages() async {
     String? current;
     var next = 0;
-    for (final row in rows) {
-      final taskId = row.read<String>('task_id');
-      if (taskId != current) {
-        current = taskId;
-        next = 0;
-      }
-      await customUpdate(
-        'UPDATE attachments SET position = ? WHERE id = ?',
+    (String, int, String)? last;
+    while (true) {
+      final rows = await customSelect(
+        'SELECT id, task_id, created_at FROM attachments AS a WHERE EXISTS ('
+        'SELECT 1 FROM attachments AS b WHERE b.task_id = a.task_id '
+        'AND b.id <> a.id)'
+        '${last == null ? '' : ' AND (task_id, created_at, id) > (?, ?, ?)'} '
+        'ORDER BY task_id, created_at, id LIMIT $_migrationPageSize',
         variables: [
-          Variable.withInt(next++),
-          Variable.withString(row.read<String>('id')),
+          if (last != null) ...[
+            Variable.withString(last.$1),
+            Variable.withInt(last.$2),
+            Variable.withString(last.$3),
+          ],
         ],
-        updates: {attachments},
-        updateKind: UpdateKind.update,
+      ).get();
+      for (final row in rows) {
+        final taskId = row.read<String>('task_id');
+        if (taskId != current) {
+          current = taskId;
+          next = 0;
+        }
+        await customUpdate(
+          'UPDATE attachments SET position = ? WHERE id = ?',
+          variables: [
+            Variable.withInt(next++),
+            Variable.withString(row.read<String>('id')),
+          ],
+          updates: {attachments},
+          updateKind: UpdateKind.update,
+        );
+      }
+      if (rows.length < _migrationPageSize) return;
+      final tail = rows.last;
+      last = (
+        tail.read<String>('task_id'),
+        tail.read<int>('created_at'),
+        tail.read<String>('id'),
       );
     }
   }

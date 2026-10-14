@@ -551,6 +551,132 @@ void main() {
       expect(favicon.readAsBytesSync(), other);
     });
 
+    group('escritura sin enlaces (CA-020-15)', () {
+      late Directory outside;
+
+      setUp(() {
+        outside = Directory('${tmp.path}/fuera')..createSync();
+      });
+
+      /// Lo que hay bajo [dir] (rutas relativas), para ver que no se escribió nada.
+      List<String> under(Directory dir) => [
+        for (final e in dir.listSync(recursive: true))
+          e.path.substring(dir.path.length + 1),
+      ]..sort();
+
+      void expectNoTrace(String text) {
+        expect(text, isNot(contains('Unhandled exception')));
+        expect(text, isNot(contains('#0 ')));
+        expect(text, isNot(contains('.dart:')));
+        expect(text, isNot(contains('FileSystemException')));
+      }
+
+      test('CA-020-15: si --out es un enlace, falla con la ruta y el motivo y '
+          'no escribe nada, ni en el destino del enlace', () {
+        final link = '${tmp.path}/enlace';
+        Link(link).createSync(outside.path);
+        final code = runGenIcons(
+          ['web', '--out', link, '--source', '..'],
+          out: stdoutBuf,
+          err: stderrBuf,
+        );
+        expect(code, 1);
+        expect(stderrBuf.toString(), contains(link));
+        expect(stderrBuf.toString(), contains('enlace'));
+        expectNoTrace(stderrBuf.toString());
+        expect(under(outside), isEmpty);
+      });
+
+      test('CA-020-15: si una carpeta del camino es un enlace, falla y no '
+          'escribe nada en ningún objetivo', () {
+        Link('$outDir/web').createSync(outside.path);
+        final code = run([]); // los cuatro objetivos
+        expect(code, 1);
+        expect(stderrBuf.toString(), contains('$outDir/web'));
+        expect(stderrBuf.toString(), contains('enlace'));
+        expectNoTrace(stderrBuf.toString());
+        expect(under(outside), isEmpty);
+        // Antes de escribir nada se comprueban todos los destinos: tampoco hay
+        // medio árbol generado.
+        expect(Directory('$outDir/android').existsSync(), isFalse);
+        expect(Directory('${tmp.path}/store').existsSync(), isFalse);
+      });
+
+      test('CA-020-15: si una carpeta de más arriba de --out por «..» es un '
+          'enlace (store/), falla', () {
+        Link('${tmp.path}/store').createSync(outside.path);
+        final code = run(['play']);
+        expect(code, 1);
+        expect(stderrBuf.toString(), contains('store'));
+        expect(stderrBuf.toString(), contains('enlace'));
+        expect(under(outside), isEmpty);
+      });
+
+      test('CA-020-15: si el archivo de destino es un enlace (también uno '
+          'roto), no se escribe a través de él', () {
+        Directory('$outDir/web').createSync();
+        final target = File('${outside.path}/favicon-original.png')
+          ..writeAsStringSync('NO TOCAR');
+        Link('$outDir/web/favicon.png').createSync(target.path);
+        final code = run(['web']);
+        expect(code, 1);
+        expect(stderrBuf.toString(), contains('$outDir/web/favicon.png'));
+        expect(target.readAsStringSync(), 'NO TOCAR');
+        expectNoTrace(stderrBuf.toString());
+
+        // Un enlace roto: escribir a través de él crearía el archivo de fuera.
+        target.deleteSync();
+        expect(run(['web']), 1);
+        expect(target.existsSync(), isFalse);
+      });
+
+      test('CA-020-15: con --check un enlace no cambia el resultado (solo '
+          'se lee)', () {
+        expect(run(['web']), 0);
+        // Un árbol al día, con una carpeta que pasa a ser enlace a una copia idéntica.
+        final copy = Directory('${outside.path}/web')..createSync();
+        for (final f in Directory('$outDir/web').listSync(recursive: true)) {
+          if (f is File) {
+            final rel = f.path.substring('$outDir/web/'.length);
+            File('${copy.path}/$rel')
+              ..parent.createSync(recursive: true)
+              ..writeAsBytesSync(f.readAsBytesSync());
+          }
+        }
+        Directory('$outDir/web').deleteSync(recursive: true);
+        Link('$outDir/web').createSync(copy.path);
+        expect(run(['--check', 'web']), 0, reason: stderrBuf.toString());
+      });
+
+      test('CA-020-15: un error de escritura (una carpeta que es un archivo) '
+          'termina con la ruta y el motivo, código 1 y sin traza', () {
+        File('$outDir/web').writeAsStringSync('no soy una carpeta');
+        final code = run(['web']);
+        expect(code, 1);
+        final text = stderrBuf.toString();
+        expect(text, contains('$outDir/web'));
+        expect(text, contains('escribir'));
+        expectNoTrace(text);
+        expect(stdoutBuf.toString(), isNot(contains('generados')));
+      });
+
+      test('CA-020-15: un destino que es una carpeta también sale con '
+          'mensaje y código 1', () {
+        Directory('$outDir/web/favicon.png').createSync(recursive: true);
+        final code = run(['web']);
+        expect(code, 1);
+        expect(stderrBuf.toString(), contains('$outDir/web/favicon.png'));
+        expectNoTrace(stderrBuf.toString());
+      });
+
+      test('CA-020-15: sin enlaces, escribe como siempre (--out relativo y '
+          'bajo un directorio temporal que cuelga de enlaces)', () {
+        // En macOS /var es un enlace: solo cuentan --out y lo que cuelga de él.
+        expect(run(['web']), 0, reason: stderrBuf.toString());
+        expect(File('$outDir/web/favicon.png').existsSync(), isTrue);
+      });
+    });
+
     test('CA-018-12: un objetivo o una opción desconocidos fallan con el uso '
         'y no escriben nada', () {
       expect(run(['ios']), 2);

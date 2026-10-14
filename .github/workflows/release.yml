@@ -1,0 +1,186 @@
+name: Release
+
+# El trabajo de publicación (spec 020, CA-020-01 a 08; plan §3.2): compila lo que se entregaría (los
+# APK por ABI y el AAB) y le pasa todas las comprobaciones de seguridad y privacidad del proyecto.
+# Aparte de la CI de las PR (`ci.yml`), que no cambia.
+#
+# Se lanza SOLO de dos formas, nunca con una PR ni con un push a una rama:
+#   - al subir una etiqueta `v*` -> modo ESTRICTO: ningún marcador, ningún aviso de identidad.
+#   - a mano desde GitHub (solo desde `main`) -> modo TESTERS: los avisos de identidad (CA-020-05) no
+#     lo paran, se listan en el resumen con la frase «Esta versión no se puede publicar.».
+#
+# Cada comprobación va por `tools/release/run-check.sh`, que anota su código en un `results.tsv` (fuera
+# del workspace) sin cortar el trabajo; el paso lleva `continue-on-error`, así que su `outcome` en
+# GitHub es el verdadero y `app/tool/release_summary.dart` lo cruza con esa línea. Falla cerrada: una
+# comprobación que no aparece, aparece dos veces o no casa es un fallo. La compilación (`build`) y el
+# modo (`mode`) no pasan por el envoltorio. Sin firma ni credenciales hasta F6: no hay nada que
+# firmar y no se sube ni un APK ni un AAB (Q-020-5).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read # solo para leer las ejecuciones de la CI del commit (comprobación 0, P-020-3)
+
+concurrency:
+  group: release-${{ github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Trabajo de publicación
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MODE: ${{ github.event_name == 'push' && 'strict' || 'testers' }}
+      # Las entradas exactas de cada comprobación sobre paquetes: nada de globs que puedan quedar vacíos.
+      APKS: ${{ github.workspace }}/app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ${{ github.workspace }}/app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ${{ github.workspace }}/app/build/app/outputs/flutter-apk/app-x86_64-release.apk
+      AAB: ${{ github.workspace }}/app/build/app/outputs/bundle/release/app-release.aab
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # la historia de main y las etiquetas anteriores (CA-020-03 d, CL-020-17)
+
+      - name: Modo y referencia (rojo al empezar, antes de compilar)
+        id: mode
+        if: ${{ !cancelled() }}
+        env:
+          REF: ${{ github.ref }}
+        run: bash tools/release/check-tag.sh --early --mode "$MODE" --ref "$REF"
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        if: ${{ !cancelled() }}
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Flutter verificado y lockfile obligatorio
+        id: lockfile
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: >-
+          bash tools/release/run-check.sh lockfile -- bash -c
+          'bash tools/install-flutter.sh
+          && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          && export PATH="$HOME/flutter/bin:$PATH"
+          && cd app && flutter pub get --enforce-lockfile'
+
+      - name: (0) CI y Security del commit en verde
+        id: ci-runs
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/release/run-check.sh ci-runs -- bash tools/release/check-ci-runs.sh --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA"
+
+      - name: Puerta de la identidad (direcciones, política, lo generado)
+        id: identity
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh identity -- bash tools/check-release-config.sh --json '{json}'
+
+      - name: Textos nativos al día
+        id: native-strings
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh native-strings -- bash -c 'cd app && dart run tool/gen_android_strings.dart --check'
+
+      - name: Compilar los APK por ABI y el AAB de release
+        id: build
+        if: ${{ !cancelled() && steps.mode.outcome == 'success' && steps.lockfile.outcome == 'success' }}
+        working-directory: app
+        run: |
+          flutter build apk --release --split-per-abi
+          flutter build appbundle --release
+
+      - name: Permisos y componentes del manifiesto (APK y AAB)
+        id: permissions
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        working-directory: app
+        run: >-
+          bash ../tools/release/run-check.sh permissions -- bash -c
+          'rc=0;
+          bash ../tools/check-android-permissions.sh release || rc=1;
+          bash ../tools/check-android-permissions.sh release --aab "$AAB" || rc=1;
+          exit $rc'
+
+      - name: Ninguna clase de pruebas en el paquete
+        id: test-classes
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh test-classes -- bash tools/check-apk-no-test-classes.sh $APKS "$AAB"
+
+      - name: PDFium fijado
+        id: pdfium
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh pdfium -- bash tools/check-pdfium.sh $APKS "$AAB"
+
+      - name: Licencias completas y archivo de avisos
+        id: licenses
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        working-directory: app
+        run: >-
+          bash ../tools/release/run-check.sh licenses -- bash -c
+          'bash ../tools/check-licenses.sh && bash ../tools/check-licenses.sh --negative'
+
+      - name: Tamaño de descarga (< 25 MB por ABI)
+        id: size
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh size -- bash tools/check-size.sh $APKS
+
+      - name: Estática MASTG del paquete
+        id: mastg-static
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh mastg-static -- bash tools/check-package.sh $APKS "$AAB"
+
+      - name: Package name (ni provisional ni reservado)
+        id: package-name
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh package-name -- bash tools/check-package.sh --package-name --json '{json}' $APKS "$AAB"
+
+      - name: Firma del paquete
+        id: signature
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh signature -- bash tools/release/check-signature.sh --mode "$MODE" --json '{json}' $APKS "$AAB"
+
+      - name: Etiqueta (forma, versión, main y versionCode)
+        id: tag
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh tag -- bash tools/release/check-tag.sh --mode "$MODE" --ref "$GITHUB_REF" --json '{json}'
+
+      - name: Archivo de avisos de terceros (el de esta compilación; caduca a los 90 días)
+        if: ${{ !cancelled() && steps.licenses.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: third-party-notices
+          path: app/build/third-party-notices.txt
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Resumen (todas las comprobaciones, con su resultado)
+        id: summary
+        if: ${{ !cancelled() }}
+        working-directory: app
+        env:
+          RELEASE_STEPS_JSON: ${{ toJSON(steps) }}
+        run: dart run tool/release_summary.dart --mode "$MODE" --results "$RUNNER_TEMP/release/results.tsv" --out build/release/summary.md
+
+      - name: Resumen como artefacto
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-summary
+          path: app/build/release/summary.md
+          if-no-files-found: warn
+          retention-days: 90

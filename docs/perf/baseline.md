@@ -235,6 +235,21 @@ adb -s $S install -r /tmp/app-profile.apk
 - **[Hecho]** CA-015-23: p50 de 418-421 ms (< 1 s) y la nueva no es más lenta que la base (media 423,5 ms la base y 419,5 ms la nueva: −4 ms; la diferencia entre las dos pasadas de la base es 3 ms). **[Pendiente]** ~~repetirlo en el Xiaomi~~ hecho el 2026-10-05, abajo.
 - **Xiaomi 15T Pro (2026-10-05, con permiso del propietario; app real, `adb install -r`, datos intactos):** las mismas dos compilaciones, ocho pasadas alternadas (base, nueva, …) de 20 arranques con `tools/measure-cold-start.sh`, calentamiento y 5 s de espera antes de cada una. p50 base **210, 213, 224, 222** ms (media 217) y nueva **208, 236, 228, 220** ms (media 223); p90 219-307 ms. **[Hecho]** CA-015-23: p50 < 1 s con un margen enorme (≈ 22 % del presupuesto) y **sin diferencia** entre las dos (+6 ms, dentro de la deriva: la base varía 14 ms entre pasadas; la pasada 4 de la nueva tuvo un p90 de 307 ms y un arranque sin dato). Queda instalada la compilación de la rama.
 
+## Arranque en frío con la 020 (ajustes acotados y arranque tolerante, T-020-14, CA-020-25)
+
+- **Fecha:** 2026-10-14 · **Rama:** `feat/020-seguridad-y-puerta` (`bec03b5`, con T-020-01 a 13) · **Línea base:** `main` (`c70296a`), en un `git worktree` temporal. Las dos, `flutter build apk --release --split-per-abi --target-platform android-arm64` (29 143 660 B cada una).
+- **Dispositivo:** emulador `Pixel_6a_api37_root` (API 37, arm64, sin GPU), `emulator-5554`; **solo compara** las dos compilaciones. App real `invalid.pending.app` con una tarea de texto creada a mano; ajustes por defecto (CA-020-16 y 17 tocan la lectura de los ajustes y de `firstRunDone`/`hasEverHadTasks` antes del primer fotograma).
+- **Método:** cuatro pasadas **alternadas** (base, rama, base, rama) con `tools/measure-cold-start.sh emulator-5554 20`; antes de cada una, `adb install -r` (datos intactos) y un arranque de calentamiento más 5 s de espera.
+
+| Pasada | Compilación | mín | **p50** | p90 | máx |
+|---|---|---|---|---|---|
+| 1 | base (`main`) | 392 | **453** | 549 | 759 |
+| 2 | rama (020) | 384 | **422** | 466 | 569 |
+| 3 | base (`main`) | 370 | **430** | 775 | 1476 |
+| 4 | rama (020) | 382 | **420** | 540 | 1395 |
+
+- **[Hecho]** CA-020-25: la deriva entre las dos series de `main` es de **23 ms** (453 frente a 430); la rama queda en 422 y 420 ms (media 421, frente a 441,5 de `main`: **−20,5 ms**), dentro de la deriva y sin empeorar. Los máximos de 1,4 s de las pasadas 3 y 4 son arranques sueltos del emulador sin GPU (los mínimos son iguales). No se ha medido en el Xiaomi (la 020 no lo usa, Q-020-4).
+
 ## Cómo repetir la medición
 
 ```bash

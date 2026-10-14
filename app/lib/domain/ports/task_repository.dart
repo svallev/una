@@ -61,14 +61,16 @@ abstract interface class TaskRepository {
   });
 
   /// Ids de todos los adjuntos guardados en la BD (todos son de tareas
-  /// pendientes), para el barrido de archivos huérfanos (CA-007-16). **Sin
-  /// tope**: la lectura de una tarea muestra como mucho 10 fotos, pero los
-  /// archivos de las demás filas no se barren (spec 016, CA-016-25).
+  /// pendientes). **Sin tope** y **no es para el barrido**: carga todas las
+  /// filas, así que el barrido de archivos huérfanos (CA-007-16) usa
+  /// [existingAttachmentIds] por lotes de 500 (spec 020, CA-020-19). Queda
+  /// para los tests de contrato y como lectura completa de la BD (spec 016,
+  /// CA-016-25).
   Future<Set<String>> attachmentIds();
 
   /// De los [ids] dados, los que tienen fila en la BD, en una sola consulta
-  /// por lote (spec 016, plan §4): el barrido pregunta por sus candidatos sin
-  /// cargar [attachmentIds] entero por cada uno.
+  /// por lote (spec 016, plan §4): el barrido pregunta por sus candidatos, de
+  /// 500 en 500, sin cargar [attachmentIds] entero (CA-020-19).
   Future<Set<String>> existingAttachmentIds(Iterable<String> ids);
 
   /// Borra de la BD la tarea pendiente [id] y las filas de sus adjuntos, en

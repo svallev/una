@@ -69,10 +69,31 @@ class HostDisplayTest {
 
     @Test
     fun `CL-019-15 un escape porcentual con UTF-8 mal formado se deja como llego`() {
-        // Dart lanzaria FormatException aqui (hallazgo anotado); el Kotlin que corre con la app
-        // cerrada nunca debe lanzar: devuelve el texto tal cual (en minusculas).
+        // El Kotlin que corre con la app cerrada nunca debe lanzar: devuelve el texto tal cual (en
+        // minusculas). Dart hace lo mismo desde CA-020-27.
         assertEquals("%c3.com", HostDisplay.displayHost("%C3.com"))
         assertEquals("%e2%80.com", HostDisplay.displayHost("%E2%80.com"))
+    }
+
+    @Test
+    fun `CA-020-27 escapes mal formados en el dominio - el texto tal cual y en minusculas`() {
+        assertEquals("%c3.es", HostDisplay.displayHost("%C3.es"))
+        assertEquals("%.es", HostDisplay.displayHost("%.es"))
+        assertEquals("%zz.es", HostDisplay.displayHost("%ZZ.es"))
+        assertEquals("%e2%82.es", HostDisplay.displayHost("%E2%82.es"))
+        // Un escape valido junto a uno roto: nada se decodifica a medias.
+        assertEquals("%c3%b1%c3.es", HostDisplay.displayHost("%C3%B1%C3.es"))
+        assertEquals("%c3.es", HostDisplay.webAddressHost("https://%C3.es/"))
+        assertEquals("%e2%82.es", HostDisplay.webAddressHost("https://%E2%82.es/"))
+        assertEquals("%", HostDisplay.webAddressHost("https://%/"))
+        assertEquals("%zz.es", HostDisplay.webAddressHost("https://%ZZ.es/"))
+    }
+
+    @Test
+    fun `CA-020-27 escapes mal formados en la ruta - el dominio no cambia`() {
+        for (path in listOf("%C3", "%", "%ZZ", "%E2%82", "%E2%82?q=%C3#%")) {
+            assertEquals(path, "dominio.es", HostDisplay.webAddressHost("https://dominio.es/$path"))
+        }
     }
 
     @Test

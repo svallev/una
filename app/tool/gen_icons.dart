@@ -18,6 +18,9 @@
 //   notification → android/app/src/main/res/drawable-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_stat_una.png
 //             (spec 019, P-019-7: el icono pequeño de la notificación, de 24 dp)
 //
+// Al escribir no sigue enlaces simbólicos (`--out`, sus carpetas ni el archivo) y un error de
+// archivo sale con la ruta y el motivo y código 1, sin traza (spec 020, CA-020-15).
+//
 // El XML adaptable (`mipmap-anydpi/ic_launcher.xml`), el manifiesto de la web y `index.html` se
 // escriben a mano: no los toca este generador.
 import 'dart:convert';
@@ -83,20 +86,44 @@ int runGenIcons(List<String> args, {StringSink? out, StringSink? err}) {
     return 1;
   }
 
-  final stale = <String>[];
-  for (final output in outputs) {
-    final file = File('$outDir/${output.path}');
-    if (output.matches(file)) continue;
-    stale.add(output.path);
-    if (!check) {
-      file.parent.createSync(recursive: true);
-      file.writeAsBytesSync(output.bytes);
+  final stale = <_Output>[];
+  try {
+    for (final output in outputs) {
+      if (!output.matches(File('$outDir/${output.path}'))) stale.add(output);
+    }
+  } on FileSystemException catch (e) {
+    stderrSink.writeln(_fileError('leer', e, '$outDir/'));
+    return 1;
+  }
+
+  if (!check && stale.isNotEmpty) {
+    // Antes de escribir nada se comprueba que ningún destino pasa por un enlace simbólico
+    // (CA-020-15): así un fallo no deja medio árbol generado.
+    for (final output in stale) {
+      final link = _linkOnPath(outDir, output.path);
+      if (link != null) {
+        stderrSink.writeln(
+          'No se escribe en $link: es un enlace simbólico y esta herramienta '
+          'no escribe a través de enlaces (destino: ${output.path}).',
+        );
+        return 1;
+      }
+    }
+    for (final output in stale) {
+      final file = File('$outDir/${output.path}');
+      try {
+        file.parent.createSync(recursive: true);
+        file.writeAsBytesSync(output.bytes);
+      } on FileSystemException catch (e) {
+        stderrSink.writeln(_fileError('escribir', e, file.path));
+        return 1;
+      }
     }
   }
 
   if (check && stale.isNotEmpty) {
     stderrSink.writeln(
-      'Iconos desactualizados. Ejecuta `dart run tool/gen_icons.dart`:\n - ${stale.join('\n - ')}',
+      'Iconos desactualizados. Ejecuta `dart run tool/gen_icons.dart`:\n - ${stale.map((o) => o.path).join('\n - ')}',
     );
     return 1;
   }
@@ -106,6 +133,31 @@ int runGenIcons(List<String> args, {StringSink? out, StringSink? err}) {
         : 'Iconos generados (${stale.length} archivos actualizados).',
   );
   return 0;
+}
+
+/// El primer enlace simbólico en el camino a [relative] bajo [outDir]: la propia carpeta de la
+/// app, cada carpeta que cuelga de ella y el archivo. Solo cuentan los componentes desde `--out`
+/// hacia dentro (un enlace más arriba, como `/var` en macOS, es del sistema, no del destino). Los
+/// `..` y `.` no son enlaces. `null` si no hay ninguno.
+String? _linkOnPath(String outDir, String relative) {
+  var current = outDir;
+  if (FileSystemEntity.isLinkSync(current)) return current;
+  for (final segment in relative.split('/')) {
+    if (segment.isEmpty || segment == '.') continue;
+    current = '$current/$segment';
+    if (segment == '..') continue;
+    if (FileSystemEntity.isLinkSync(current)) return current;
+  }
+  return null;
+}
+
+/// El mensaje «No se puede [verb] RUTA: MOTIVO» para un error de archivo, sin traza.
+String _fileError(String verb, FileSystemException e, String fallbackPath) {
+  final path = (e.path == null || e.path!.isEmpty) ? fallbackPath : e.path;
+  final reason = e.osError?.message.isNotEmpty ?? false
+      ? e.osError!.message
+      : e.message;
+  return 'No se puede $verb $path: $reason.';
 }
 
 /// Un archivo que debe existir con este contenido.

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:app/domain/entities/link_target.dart';
@@ -5,7 +6,23 @@ import 'package:app/domain/services/privacy_link.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yaml/yaml.dart';
 
-import '../../tool/check_release_config.dart';
+import '../../tool/check_release_config.dart' as gate;
+import '../../tool/check_release_config.dart' show GateIssueKind;
+
+// Las comprobaciones de la puerta devuelven errores con clase (`GateIssue`); casi todos los tests
+// de aquí miran solo su texto (`<clave>: <motivo>`), y los de la clase usan `gate.` directamente.
+List<String> checkAddress(String key, Object? value) => [
+  for (final i in gate.checkAddress(key, value)) i.line,
+];
+List<String> checkAddresses(Map<String, Object?> values) => [
+  for (final i in gate.checkAddresses(values)) i.line,
+];
+List<String> checkIdentity(Object? root) => [
+  for (final i in gate.checkIdentity(root)) i.line,
+];
+List<String> checkPolicyText(String text) => [
+  for (final i in gate.checkPolicyText(text)) i.line,
+];
 
 /// Una política sin huecos (mínima, con las dos partes y las notas al final).
 const _cleanPolicy = '''
@@ -266,6 +283,511 @@ void main() {
     });
   });
 
+  group('CA-020-09: la ruta de una dirección, restringida', () {
+    /// Los caracteres invisibles o de dirección que la spec rechaza.
+    final invisible = <int>[
+      0x200B,
+      0x200E,
+      0x200F,
+      for (var c = 0x202A; c <= 0x202E; c++) c,
+      for (var c = 0x2066; c <= 0x2069; c++) c,
+    ];
+
+    for (final path in [
+      '',
+      '/',
+      '/privacy',
+      '/Privacy',
+      '/privacy/',
+      '/a/b-c_d.e~f/',
+      '/es/privacidad.html',
+      '/.well-known',
+      '/a..b',
+      '/...',
+    ]) {
+      test('CA-020-09: la ruta "$path" es válida', () {
+        for (final key in _keys) {
+          expect(
+            checkAddress(key, 'https://una-app.dev$path'),
+            isEmpty,
+            reason: '$key $path',
+          );
+        }
+      });
+    }
+
+    for (final c in invisible) {
+      final hex = c.toRadixString(16).toUpperCase();
+      test('CA-020-09: falla con el carácter invisible U+$hex en la ruta', () {
+        final address = 'https://una-app.dev/pri${String.fromCharCode(c)}vacy';
+        for (final key in _keys) {
+          final issues = gate.checkAddress(key, address);
+          expect(issues, isNotEmpty, reason: '$key U+$hex');
+          expect(issues.map((i) => i.kind), everyElement(GateIssueKind.fault));
+          expect(issues.map((i) => i.line).join('\n'), contains('invisible'));
+          expect(issues.every((i) => i.subject == key), isTrue);
+        }
+      });
+    }
+
+    test('CA-020-09: el invisible al final de la ruta tampoco se cuela', () {
+      final address =
+          'https://una-app.dev/privacy${String.fromCharCode(0x200B)}';
+      expect(checkAddress('helpUrl', address), isNotEmpty);
+    });
+
+    for (final (path, reason) in <(String, String)>[
+      ('/%2e', '%2e (un punto)'),
+      ('/%2E', '%2E'),
+      ('/%2f', '%2f (una barra)'),
+      ('/%5c', '%5c (una barra invertida)'),
+      ('/%00', '%00 (un nulo)'),
+      ('/a%20b', '%20 (un espacio)'),
+      ('/%', 'un % suelto'),
+      ('/privacy%', 'un % al final'),
+    ]) {
+      test('CA-020-09: falla con $reason en la ruta', () {
+        for (final key in _keys) {
+          final issues = gate.checkAddress(key, 'https://una-app.dev$path');
+          expect(issues, isNotEmpty, reason: '$key $path');
+          expect(issues.map((i) => i.kind), everyElement(GateIssueKind.fault));
+          expect(issues.map((i) => i.line).join('\n'), contains('`%`'));
+        }
+      });
+    }
+
+    for (final path in ['/.', '/..', '/a/./b', '/a/../b', '/a/..', '/./a']) {
+      test('CA-020-09: falla con el segmento . o .. en "$path"', () {
+        for (final key in _keys) {
+          final issues = gate.checkAddress(key, 'https://una-app.dev$path');
+          expect(issues, isNotEmpty, reason: '$key $path');
+          expect(issues.map((i) => i.kind), everyElement(GateIssueKind.fault));
+          expect(issues.map((i) => i.line).join('\n'), contains('segmento'));
+        }
+      });
+    }
+
+    for (final path in ['//', '//privacy', '/a//b', '/a//', '///']) {
+      test('CA-020-09: falla con la barra doble en "$path"', () {
+        for (final key in _keys) {
+          final issues = gate.checkAddress(key, 'https://una-app.dev$path');
+          expect(issues, isNotEmpty, reason: '$key $path');
+          expect(issues.map((i) => i.kind), everyElement(GateIssueKind.fault));
+          expect(issues.map((i) => i.line).join('\n'), contains('//'));
+        }
+      });
+    }
+
+    // Todo lo que no sea letra ASCII, cifra, `. _ ~ - /` se rechaza, aunque `Uri` lo admita.
+    for (final ch in [
+      'ñ',
+      ':',
+      "'",
+      '@',
+      ';',
+      ',',
+      '(',
+      ')',
+      '+',
+      '=',
+      '&',
+      '!',
+      '*',
+      r'$',
+      '"',
+      '<',
+      '|',
+      '^',
+      '`',
+      '[',
+      '{',
+    ]) {
+      test('CA-020-09: falla con "$ch" en la ruta (solo ASCII permitido)', () {
+        for (final key in _keys) {
+          final issues = gate.checkAddress(key, 'https://una-app.dev/a${ch}b');
+          expect(issues, isNotEmpty, reason: '$key $ch');
+          expect(issues.map((i) => i.kind), everyElement(GateIssueKind.fault));
+        }
+      });
+    }
+
+    test('CA-020-09: las reglas de hoy se mantienen (https, sin usuario ni '
+        'puerto, sin ? # ni barra invertida)', () {
+      for (final address in [
+        'http://una-app.dev/privacy',
+        'https://user@una-app.dev/privacy',
+        'https://una-app.dev:8443/privacy',
+        'https://una-app.dev/privacy?x=1',
+        'https://una-app.dev/privacy#x',
+        r'https://una-app.dev/pri\vacy',
+        'https://ñandú.es/privacy',
+      ]) {
+        final issues = gate.checkAddress('privacyPolicyUrl', address);
+        expect(issues, isNotEmpty, reason: address);
+        expect(issues.map((i) => i.kind), everyElement(GateIssueKind.fault));
+      }
+    });
+
+    test('CA-020-09: la puerta no es más permisiva que privacyLink con las '
+        'rutas restringidas', () {
+      for (final path in [
+        '/privacy',
+        '/a/./b',
+        '/a/../b',
+        '//x',
+        '/%2e',
+        '/a%2fb',
+        '/a b',
+        '/ñ',
+        '/a@b',
+      ]) {
+        final address = 'https://una-app.dev$path';
+        if (checkAddress('helpUrl', address).isEmpty) {
+          expect(privacyLink(address), isA<WebLink>(), reason: address);
+        }
+      }
+    });
+  });
+
+  group('CA-020-10: dominios reservados completos y con fuente', () {
+    for (final suffix in [
+      'alt',
+      'home',
+      'corp',
+      'mail',
+      'intranet',
+      'private',
+      'arpa',
+    ]) {
+      for (final (host, reason) in [
+        ('foo.$suffix', 'en minúsculas'),
+        ('FOO.${suffix.toUpperCase()}', 'en mayúsculas'),
+        ('foo.$suffix.', 'con punto final'),
+        ('Foo.${suffix.toUpperCase()}.', 'en mayúsculas y con punto final'),
+        ('a.b.$suffix', 'con subdominios'),
+      ]) {
+        test('CA-020-10: rechaza el sufijo .$suffix ($reason)', () {
+          for (final key in _keys) {
+            final issues = gate.checkAddress(key, 'https://$host/privacy');
+            expect(issues, isNotEmpty, reason: '$key $host');
+            expect(
+              issues.map((i) => i.kind),
+              everyElement(GateIssueKind.placeholderAddress),
+              reason: '$key $host',
+            );
+          }
+        });
+      }
+    }
+
+    test('CA-020-10: los de hoy también aguantan mayúsculas y punto final', () {
+      for (final host in [
+        'FOO.EXAMPLE.',
+        'Foo.Test.',
+        'foo.INVALID.',
+        'foo.LOCALHOST.',
+        'Foo.Local.',
+        'foo.INTERNAL.',
+        'foo.LAN.',
+        'foo.LOCALDOMAIN.',
+        'foo.ONION.',
+        'EXAMPLE.COM.',
+        'Www.Example.Net.',
+        'x.EXAMPLE.ORG.',
+        'YOURDOMAIN.COM.',
+        'HOME.ARPA.',
+      ]) {
+        expect(
+          gate.checkAddress('helpUrl', 'https://$host/privacy'),
+          isNotEmpty,
+          reason: host,
+        );
+      }
+    });
+
+    test(
+      'CA-020-10: un dominio que solo contiene el sufijo no se confunde',
+      () {
+        for (final host in [
+          'altitud.es',
+          'homes.es',
+          'mi-home.com',
+          'corporacion.com',
+          'mailing.org',
+          'intranets.net',
+          'private-app.dev',
+          'arpanet.com',
+          'mail.com',
+        ]) {
+          expect(
+            checkAddress('helpUrl', 'https://$host/help'),
+            isEmpty,
+            reason: host,
+          );
+        }
+      },
+    );
+
+    test('CA-020-10: la fuente y la fecha de la lista IDN constan en el '
+        'código y la [Suposición] ha desaparecido', () {
+      expect(gate.idnTestTldsSource, startsWith('https://www.iana.org/'));
+      expect(gate.idnTestTldsCheckedOn, matches(r'^\d{4}-\d{2}-\d{2}$'));
+      final source = File('tool/check_release_config.dart').readAsStringSync();
+      expect(source, isNot(contains('escrita de memoria')));
+      expect(source, isNot(contains('pendiente de contrastar')));
+      expect(source, contains(gate.idnTestTldsSource));
+      expect(source, contains(gate.idnTestTldsCheckedOn));
+    });
+
+    // Los 11 TLD de «Test IDN top-level domains» de IANA (2026-10-14), con las mayúsculas y el punto.
+    for (final tld in [
+      'xn--kgbechtv',
+      'xn--hgbk6aj7f53bba',
+      'xn--0zwm56d',
+      'xn--g6w251d',
+      'xn--80akhbyknj4f',
+      'xn--11b5bs3a9aj6g',
+      'xn--jxalpdlp',
+      'xn--9t4b11yi5a',
+      'xn--deba0ad',
+      'xn--zckzah',
+      'xn--hlcj6aya9esc7a',
+    ]) {
+      test('CA-020-10: el TLD de prueba IDN $tld se rechaza', () {
+        for (final host in ['foo.$tld', 'FOO.${tld.toUpperCase()}.']) {
+          final issues = gate.checkAddress('helpUrl', 'https://$host/help');
+          expect(issues, isNotEmpty, reason: host);
+          expect(
+            issues.map((i) => i.kind),
+            everyElement(GateIssueKind.placeholderAddress),
+            reason: host,
+          );
+        }
+      });
+    }
+
+    test('CL-020-8: un punycode que no es de prueba se admite', () {
+      for (final host in [
+        'xn--e1afmkfd.xn--p1ai',
+        'xn--nding-0ra.es',
+        'una.xn--80asehdb',
+        'xn--mgbaam7a8h.example-app.ae',
+      ]) {
+        expect(
+          checkAddress('helpUrl', 'https://$host/help'),
+          isEmpty,
+          reason: host,
+        );
+      }
+    });
+  });
+
+  group('CL-020-6 a 8: direcciones válidas y su normalización', () {
+    test('CL-020-6: un dominio propio sin ruta o con "/" es válido', () {
+      for (final key in _keys) {
+        expect(checkAddress(key, 'https://dominio-propio.es'), isEmpty);
+        expect(checkAddress(key, 'https://dominio-propio.es/'), isEmpty);
+      }
+    });
+
+    test('CL-020-7: el dominio en mayúsculas es válido y las rutas distinguen '
+        'mayúsculas', () {
+      for (final key in _keys) {
+        expect(checkAddress(key, 'https://DOMINIO-PROPIO.ES/Privacy'), isEmpty);
+      }
+      // El mismo dominio con rutas que solo difieren en mayúsculas no son la misma dirección.
+      expect(
+        checkAddresses({
+          'privacyPolicyUrl': 'https://dominio-propio.es/Privacy',
+          'thirdPartyLicensesUrl': 'https://DOMINIO-PROPIO.ES/privacy',
+          'helpUrl': 'https://dominio-propio.es/help',
+        }),
+        isEmpty,
+      );
+    });
+
+    test(
+      'CL-020-7: pero el dominio reservado en mayúsculas sigue fallando',
+      () {
+        expect(
+          checkAddress('helpUrl', 'https://EXAMPLE.COM/Privacy'),
+          isNotEmpty,
+        );
+      },
+    );
+  });
+
+  group('CA-020-05 (a): la clase de cada error de una dirección', () {
+    GateIssueKind kindOf(String address, {String key = 'helpUrl'}) {
+      final issues = gate.checkAddress(key, address);
+      expect(issues, isNotEmpty, reason: address);
+      final kinds = issues.map((i) => i.kind).toSet();
+      expect(kinds, hasLength(1), reason: '$address $kinds');
+      return kinds.single;
+    }
+
+    for (final address in [
+      'https://example.com/help',
+      'https://www.EXAMPLE.net/help',
+      'https://example.org/help',
+      'https://yourdomain.com/help',
+      'https://home.arpa/help',
+      'https://foo.example/help',
+      'https://foo.test/help',
+      'https://foo.invalid/help',
+      'https://foo.localhost/help',
+      'https://localhost/help',
+      'https://foo.local/help',
+      'https://foo.internal/help',
+      'https://foo.lan/help',
+      'https://foo.localdomain/help',
+      'https://foo.onion/help',
+      'https://foo.corp/help',
+      'https://foo.xn--zckzah/help',
+    ]) {
+      test('CA-020-05: $address es un marcador o dominio reservado', () {
+        expect(kindOf(address), GateIssueKind.placeholderAddress);
+      });
+    }
+
+    for (final address in [
+      'http://una-app.dev/help',
+      'ftp://una-app.dev/help',
+      'una-app.dev/help',
+      '',
+      'https://',
+      'https://user@una-app.dev/help',
+      'https://una-app.dev:8443/help',
+      'https://192.168.1.10/help',
+      'https://[2001:db8::1]/help',
+      'https://intranet/help',
+      'https://una-app.dev/help?x=1',
+      'https://una-app.dev/help#x',
+      'https://una-app.dev/a/../help',
+      'https://una-app.dev/%2e',
+      'https://ñandú.es/help',
+      'https://una%2eapp.dev/help',
+    ]) {
+      test('CA-020-05: "$address" es un fallo, no un aviso', () {
+        expect(kindOf(address), GateIssueKind.fault);
+      });
+    }
+
+    for (final value in <Object?>[
+      null,
+      42,
+      true,
+      <String>['a'],
+    ]) {
+      test('CA-020-05: la clave con $value es un fallo', () {
+        final issues = gate.checkAddress('helpUrl', value);
+        expect(issues, hasLength(1));
+        expect(issues.single.kind, GateIssueKind.fault);
+        expect(issues.single.subject, 'helpUrl');
+      });
+    }
+
+    test('CL-020-20: un aviso y un fallo a la vez en la misma dirección son '
+        'todos fallos (https://example.com/%2e)', () {
+      for (final key in _keys) {
+        final issues = gate.checkAddress(key, 'https://example.com/%2e');
+        expect(issues.length, greaterThanOrEqualTo(2), reason: key);
+        expect(
+          issues.map((i) => i.kind),
+          everyElement(GateIssueKind.fault),
+          reason: '$key: sin ningún aviso suelto',
+        );
+        expect(issues.map((i) => i.line).join('\n'), contains('example.com'));
+      }
+    });
+
+    test(
+      'CL-020-20: lo mismo con una dirección http de un dominio reservado',
+      () {
+        final issues = gate.checkAddress('helpUrl', 'http://foo.test/help');
+        expect(issues.map((i) => i.kind), everyElement(GateIssueKind.fault));
+      },
+    );
+
+    test('CA-020-05: el error nombra la clave y cada GateIssue la lleva como '
+        'subject', () {
+      final issues = gate.checkAddress(
+        'privacyPolicyUrl',
+        'https://example.com/x',
+      );
+      expect(issues.single.subject, 'privacyPolicyUrl');
+      expect(issues.single.line, startsWith('privacyPolicyUrl: '));
+      expect(issues.single.toJson(), {
+        'kind': 'placeholderAddress',
+        'subject': 'privacyPolicyUrl',
+        'message': issues.single.message,
+      });
+    });
+
+    test('CA-020-05: dos direcciones iguales son un fallo; si además eran '
+        'marcadores, sus avisos pasan a fallo', () {
+      final same = gate.checkAddresses({
+        'privacyPolicyUrl': 'https://una-app.dev/web',
+        'thirdPartyLicensesUrl': 'https://una-app.dev/web/',
+        'helpUrl': 'https://una-app.dev/help',
+      });
+      expect(same, hasLength(1));
+      expect(same.single.kind, GateIssueKind.fault);
+
+      final markers = gate.checkAddresses({
+        'privacyPolicyUrl': 'https://example.com/web',
+        'thirdPartyLicensesUrl': 'https://example.com/web/',
+        'helpUrl': 'https://example.com/help',
+      });
+      final byKey = {
+        for (final key in _keys)
+          key: markers.where((i) => i.line.contains(key)).toList(),
+      };
+      expect(markers.map((i) => i.kind).toSet(), contains(GateIssueKind.fault));
+      for (final key in ['privacyPolicyUrl', 'thirdPartyLicensesUrl']) {
+        expect(
+          byKey[key]!.map((i) => i.kind),
+          everyElement(GateIssueKind.fault),
+          reason: key,
+        );
+      }
+      // La tercera no está repetida: su aviso sigue siendo un aviso.
+      expect(
+        markers.where((i) => i.subject == 'helpUrl').map((i) => i.kind),
+        everyElement(GateIssueKind.placeholderAddress),
+      );
+    });
+
+    test('CA-020-05: un yaml sin las tres claves da fallos; los marcadores de '
+        'hoy dan avisos', () {
+      final missing = gate.checkIdentity(<String, Object?>{});
+      expect(missing.map((i) => i.kind), everyElement(GateIssueKind.fault));
+      expect(
+        gate.checkIdentity('no es un mapa').single.kind,
+        GateIssueKind.fault,
+      );
+      final today = gate.checkIdentity(
+        loadYaml(File('identity.yaml').readAsStringSync()),
+      );
+      expect(
+        today.map((i) => i.kind),
+        everyElement(GateIssueKind.placeholderAddress),
+      );
+    });
+
+    test('CA-020-05: la política con huecos es policyGap y sin las dos partes '
+        'es un fallo', () {
+      final gaps = gate.checkPolicyText(
+        _cleanPolicy.replaceFirst('30 de septiembre de 2026', '[FECHA]'),
+      );
+      expect(gaps.single.kind, GateIssueKind.policyGap);
+      expect(
+        gate.checkPolicyText('# Otra cosa').single.kind,
+        GateIssueKind.fault,
+      );
+    });
+  });
+
   group('CA-015-13b: las tres direcciones a la vez (checkAddresses)', () {
     Map<String, Object?> three({
       Object? privacy = 'https://una-app.dev/privacy',
@@ -492,6 +1014,381 @@ void main() {
     );
   });
 
+  group('CA-020-11: las marcas de documento de la política', () {
+    /// La política mínima con [text] en lugar de `Escribe a hola@ejemplo.org.` (parte ES) o de
+    /// `Write to hello@sample.org.` (parte EN).
+    String inEs(String text) =>
+        _cleanPolicy.replaceFirst('Escribe a hola@ejemplo.org.', text);
+    String inEn(String text) =>
+        _cleanPolicy.replaceFirst('Write to hello@sample.org.', text);
+
+    List<gate.GateIssue> marks(String policy) => [
+      for (final i in gate.checkPolicyText(policy))
+        if (i.kind == GateIssueKind.policyMark) i,
+    ];
+
+    int lineOf(String policy, String needle) =>
+        policy.split('\n').indexWhere((l) => l.contains(needle)) + 1;
+
+    final nfd = 'Suposicio${String.fromCharCode(0x301)}n';
+    final zeroWidth = String.fromCharCode(0x200B);
+
+    final variants = <String>[
+      '[Suposición]',
+      '[SUPOSICIÓN]',
+      '[suposición]',
+      '[Suposicion]',
+      '[ Suposición ]',
+      '[\tSuposición\t]',
+      '[Suposición, PD-9]',
+      '[Suposición PD-9: comprobar]',
+      '[$nfd]',
+      '[$zeroWidth Suposición]',
+      '[Pendiente]',
+      '[PENDIENTE]',
+      '[ pendiente ]',
+      '[Pendiente PD-2]',
+      '[Assumption]',
+      '[ASSUMPTION]',
+      '[assumption]',
+      '[ Assumption ]',
+      '[Assumption, PD-9]',
+      '[Pending]',
+      '[PENDING]',
+      '[ pending ]',
+      '[Pending PD-2]',
+    ];
+
+    for (final mark in variants) {
+      test('CA-020-11: ${mark.replaceAll(zeroWidth, '<ZWSP>')} cuenta en la '
+          'parte española y en la inglesa, con su línea', () {
+        for (final (label, build, marker)
+            in <(String, String Function(String), String)>[
+              ('ES', inEs, 'Escribe aquí'),
+              ('EN', inEn, 'Write here'),
+            ]) {
+          final policy = build('$marker $mark fin.');
+          final found = marks(policy);
+          expect(found, hasLength(1), reason: '$label $mark');
+          expect(found.single.subject, 'política ($label)');
+          expect(
+            found.single.message,
+            contains('línea ${lineOf(policy, marker)}'),
+          );
+        }
+      });
+    }
+
+    test(
+      'CA-020-11: [Hecho] no cuenta (ni con texto detrás ni en mayúsculas)',
+      () {
+        for (final ok in [
+          '[Hecho]',
+          '[HECHO]',
+          '[Hecho, PD-1]',
+          '[ Hecho ]',
+          'Suposición sin corchetes y pendiente sin corchetes',
+          'assumption pending',
+          '[Done]',
+        ]) {
+          expect(gate.checkPolicyText(inEs('A $ok B.')), isEmpty, reason: ok);
+          expect(gate.checkPolicyText(inEn('A $ok B.')), isEmpty, reason: ok);
+        }
+      },
+    );
+
+    test('CA-020-11: una marca en la cabecera o en las notas de revisión '
+        '(fuera de las partes publicadas) no cuenta', () {
+      final withNotes = _cleanPolicy.replaceFirst(
+        '1. Rellenar',
+        '1. [Suposición] [Assumption] [Pendiente] [Pending] Rellenar',
+      );
+      expect(withNotes, contains('[Assumption] [Pendiente]'));
+      expect(gate.checkPolicyText(withNotes), isEmpty);
+      final header = _cleanPolicy.replaceFirst(
+        '> Los huecos',
+        '> [Suposición] [Pending] Los huecos',
+      );
+      expect(header, contains('[Suposición] [Pending]'));
+      expect(gate.checkPolicyText(header), isEmpty);
+    });
+
+    test('CA-020-11: cada marca es una entrada, también varias en la misma '
+        'línea, con el número de línea de cada una', () {
+      final policy = _cleanPolicy
+          .replaceFirst(
+            'Escribe a hola@ejemplo.org.',
+            'Uno [Suposición] y dos [Pendiente PD-2].\n\nTres [Suposición].',
+          )
+          .replaceFirst(
+            'Write to hello@sample.org.',
+            'Four [Assumption].\n\nFive [Pending].',
+          );
+      final found = marks(policy);
+      expect(found, hasLength(5));
+      expect(found.map((i) => i.subject), [
+        'política (ES)',
+        'política (ES)',
+        'política (ES)',
+        'política (EN)',
+        'política (EN)',
+      ]);
+      final lines = [
+        lineOf(policy, 'Uno'),
+        lineOf(policy, 'Uno'),
+        lineOf(policy, 'Tres'),
+        lineOf(policy, 'Four'),
+        lineOf(policy, 'Five'),
+      ];
+      for (var i = 0; i < 5; i++) {
+        expect(found[i].message, contains('línea ${lines[i]}'), reason: '$i');
+      }
+      expect(found[1].message, contains('[Pendiente PD-2]'));
+    });
+
+    test('CL-020-9: dentro de un bloque de código, de código en línea o de un '
+        'comentario HTML cuenta igual', () {
+      for (final wrapped in [
+        '```\n[Suposición]\n```',
+        '`[Pendiente]`',
+        '<!-- [Assumption] -->',
+        '<!--\n[Pending]\n-->',
+        '~~~\n[Suposición PD-9]\n~~~',
+      ]) {
+        expect(marks(inEs(wrapped)), hasLength(1), reason: wrapped);
+        expect(marks(inEn(wrapped)), hasLength(1), reason: wrapped);
+      }
+    });
+
+    test('CA-020-11: una marca y un hueco a la vez salen con su clase cada '
+        'uno, y con un hueco el resto sigue igual', () {
+      final policy = inEs('[FECHA] y [Suposición].');
+      final kinds = [for (final i in gate.checkPolicyText(policy)) i.kind];
+      expect(
+        kinds,
+        unorderedEquals([GateIssueKind.policyGap, GateIssueKind.policyMark]),
+      );
+    });
+
+    test('CA-020-11: una marca sin cerrar el corchete también cuenta', () {
+      expect(marks(inEs('Falta [Pendiente de revisar')), hasLength(1));
+    });
+
+    test('CA-020-11: con la política real hay 12 o más marcas (ES y EN)', () {
+      final text = File('../docs/legal/privacy-policy.md').readAsStringSync();
+      final found = marks(text);
+      expect(found.length, greaterThanOrEqualTo(12));
+      expect(found.where((i) => i.subject == 'política (ES)'), isNotEmpty);
+      expect(found.where((i) => i.subject == 'política (EN)'), isNotEmpty);
+      // Y ninguna cae en la cabecera ni en las notas: su línea es la de una frase de las partes.
+      final notesLine = lineOf(text, '## Notas para la revisión');
+      final headerLine = lineOf(text, '# Política de privacidad (ES)');
+      for (final i in found) {
+        final n = int.parse(RegExp(r'línea (\d+)').firstMatch(i.message)![1]!);
+        expect(n, greaterThan(headerLine));
+        expect(n, lessThan(notesLine));
+      }
+    });
+  });
+
+  group(
+    'CA-020-12: la puerta falla cerrada (ficheros que no se pueden leer)',
+    () {
+      late Directory tmp;
+      setUp(() => tmp = Directory.systemTemp.createTempSync('gate_closed_'));
+      tearDown(() => tmp.deleteSync(recursive: true));
+
+      String path(String name) => '${tmp.path}/$name';
+
+      void expectFault(List<gate.GateIssue> issues, String named) {
+        expect(issues, isNotEmpty, reason: 'no puede dar por buena la lectura');
+        expect(issues.map((i) => i.kind), everyElement(GateIssueKind.fault));
+        expect(
+          issues.map((i) => '${i.subject} ${i.message}').join('\n'),
+          contains(named),
+        );
+      }
+
+      String valid() =>
+          'displayName: "X"\nwordmark: "x"\n'
+          'privacyPolicyUrl: "https://una-app.dev/privacy"\n'
+          'thirdPartyLicensesUrl: "https://una-app.dev/licenses"\n'
+          'helpUrl: "https://una-app.dev/help"\n';
+
+      group('identity.yaml (checkIdentityFile)', () {
+        test('CA-020-12: con un archivo bueno no da errores (control)', () {
+          File(path('identity.yaml')).writeAsStringSync(valid());
+          expect(gate.checkIdentityFile(path('identity.yaml')), isEmpty);
+        });
+
+        test('CA-020-12: ausente falla y nombra el archivo', () {
+          expectFault(
+            gate.checkIdentityFile(path('no-existe.yaml')),
+            'no-existe.yaml',
+          );
+        });
+
+        test('CA-020-12: una carpeta en su lugar falla y la nombra', () {
+          Directory(path('carpeta.yaml')).createSync();
+          expectFault(
+            gate.checkIdentityFile(path('carpeta.yaml')),
+            'carpeta.yaml',
+          );
+          expect(
+            gate.checkIdentityFile(path('carpeta.yaml')).single.message,
+            contains('no es un archivo'),
+          );
+        });
+
+        for (final (name, content) in <(String, String)>[
+          ('vacío', ''),
+          ('solo espacios y saltos', '  \n\n\t \n'),
+          ('solo comentarios', '# nada\n# más nada\n'),
+          ('solo el separador', '---\n'),
+          ('null', 'null\n'),
+        ]) {
+          test('CA-020-12: $name falla y nombra el archivo', () {
+            File(path('identity.yaml')).writeAsStringSync(content);
+            final issues = gate.checkIdentityFile(path('identity.yaml'));
+            expectFault(issues, 'identity.yaml');
+            expect(issues.single.message, contains('vací'));
+          });
+        }
+
+        for (final (name, content) in <(String, String)>[
+          ('yaml roto', 'a: [\n'),
+          ('una lista', '- a\n- b\n'),
+          ('un texto suelto', 'solo texto\n'),
+          ('claves repetidas', 'a: 1\na: 2\n'),
+        ]) {
+          test('CA-020-12: $name falla y nombra el archivo', () {
+            File(path('identity.yaml')).writeAsStringSync(content);
+            expectFault(
+              gate.checkIdentityFile(path('identity.yaml')),
+              'identity.yaml',
+            );
+          });
+        }
+
+        test('CA-020-12: bytes que no son UTF-8 fallan sin excepción', () {
+          File(path('identity.yaml'))
+              .writeAsBytesSync([0xff, 0xfe, 0x41, 0x80]);
+          expectFault(
+            gate.checkIdentityFile(path('identity.yaml')),
+            'identity.yaml',
+          );
+        });
+
+        test(
+          'CA-020-12: sin permiso de lectura falla y lo nombra',
+          () {
+            final f = File(path('identity.yaml'))..writeAsStringSync(valid());
+            Process.runSync('chmod', ['000', f.path]);
+            addTearDown(() => Process.runSync('chmod', ['644', f.path]));
+            expectFault(gate.checkIdentityFile(f.path), 'identity.yaml');
+          },
+          skip: Process.runSync('id', ['-u']).stdout.toString().trim() == '0'
+              ? 'root lee igualmente un archivo sin permisos'
+              : null,
+        );
+      });
+
+      group('política (checkPolicyFile)', () {
+        test('CA-020-12: con una política buena delega en checkPolicyText', () {
+          File(path('p.md')).writeAsStringSync(_cleanPolicy);
+          expect(gate.checkPolicyFile(path('p.md')), isEmpty);
+          File(path('p.md')).writeAsStringSync(
+            _cleanPolicy.replaceFirst('30 de septiembre de 2026', '[FECHA]'),
+          );
+          expect(
+            gate.checkPolicyFile(path('p.md')).single.kind,
+            GateIssueKind.policyGap,
+          );
+        });
+
+        test('CA-020-12: ausente falla y nombra el archivo', () {
+          expectFault(
+            gate.checkPolicyFile(path('no-existe.md')),
+            'no-existe.md',
+          );
+        });
+
+        test('CA-020-12: una carpeta en su lugar falla y la nombra', () {
+          Directory(path('carpeta.md')).createSync();
+          expectFault(gate.checkPolicyFile(path('carpeta.md')), 'carpeta.md');
+          expect(
+            gate.checkPolicyFile(path('carpeta.md')).single.message,
+            contains('no es un archivo'),
+          );
+        });
+
+        for (final (name, content) in <(String, String)>[
+          ('vacía', ''),
+          ('solo espacios y saltos', '  \n\n\t \n'),
+        ]) {
+          test('CA-020-12: $name falla y nombra el archivo', () {
+            File(path('p.md')).writeAsStringSync(content);
+            final issues = gate.checkPolicyFile(path('p.md'));
+            expectFault(issues, 'p.md');
+            expect(issues.single.message, contains('vací'));
+          });
+        }
+
+        test(
+          'CA-020-12: bytes que no son UTF-8 fallan y nombran el archivo',
+          () {
+            File(path('p.md')).writeAsBytesSync([0xff, 0xfe, 0x41, 0x80]);
+            expectFault(gate.checkPolicyFile(path('p.md')), 'p.md');
+          },
+        );
+
+        test('CA-020-12: sin las dos partes falla (fault, no aviso)', () {
+          File(path('p.md')).writeAsStringSync('# Otra cosa\n\nTexto.\n');
+          expectFault(gate.checkPolicyFile(path('p.md')), 'política');
+        });
+      });
+
+      group('lo generado (checkGenerated)', () {
+        Directory copyOfGenerated() {
+          final root = Directory(path('app'))..createSync();
+          for (final p in _generatedFiles) {
+            File('${root.path}/$p')
+              ..parent.createSync(recursive: true)
+              ..writeAsStringSync(File(p).readAsStringSync());
+          }
+          return root;
+        }
+
+        test('CA-020-12: al día no da errores (control)', () {
+          expect(gate.checkGenerated(copyOfGenerated().path), isEmpty);
+        });
+
+        test('CA-020-12: desfasado es un fallo que nombra los archivos', () {
+          final root = copyOfGenerated();
+          File('${root.path}/lib/app/app_identity.g.dart')
+              .writeAsStringSync('// viejo\n');
+          final issues = gate.checkGenerated(root.path);
+          expectFault(issues, 'app_identity.g.dart');
+          expect(issues.single.subject, contains('gen_identity'));
+        });
+
+        test('CA-020-12: un archivo generado ausente es un fallo', () {
+          final root = copyOfGenerated();
+          File('${root.path}/web/manifest.json').deleteSync();
+          // gen_identity no sabe construir sin el archivo actual y se detiene con un error: sigue
+          // siendo un fallo (código distinto de 0), nunca un visto bueno.
+          expectFault(gate.checkGenerated(root.path), 'gen_identity');
+        });
+
+        test('CA-020-12: si no se puede comprobar (sin identity.yaml) es un '
+            'fallo, nunca un visto bueno', () {
+          final root = Directory(path('vacia'))..createSync();
+          expectFault(gate.checkGenerated(root.path), 'gen_identity');
+        });
+      });
+    },
+  );
+
   group('CA-015-13b: el script tools/check-release-config.sh', () {
     late Directory tmp;
     setUp(() => tmp = Directory.systemTemp.createTempSync('release_config_'));
@@ -670,6 +1567,287 @@ void main() {
         policy(_cleanPolicy).path,
       ]);
       expect(result.exitCode, isNot(0));
+    });
+
+    group('CA-020-05: --json <archivo> (la lista de errores con su clase)', () {
+      Map<String, Object?> readJson(File f) =>
+          jsonDecode(f.readAsStringSync()) as Map<String, Object?>;
+
+      List<Map<String, Object?>> issuesOf(Map<String, Object?> json) => [
+        for (final i in json['issues']! as List) i as Map<String, Object?>,
+      ];
+
+      test(
+        'CA-020-05: con todo en orden escribe complete y ninguna incidencia, '
+        'y no deja temporales',
+        () {
+          final json = File('${tmp.path}/out/gate.json');
+          json.parent.createSync();
+          final result = run(extra: ['--json', json.path]);
+          expect(result.exitCode, 0, reason: out(result));
+          final data = readJson(json);
+          expect(data['complete'], isTrue);
+          expect(issuesOf(data), isEmpty);
+          expect(data['checks'], isA<List<Object?>>());
+          expect(json.parent.listSync().map((e) => e.path.split('/').last), [
+            'gate.json',
+          ], reason: 'sin archivo temporal');
+        },
+      );
+
+      test(
+        'CA-020-05: los marcadores de hoy, los huecos y las marcas salen como '
+        'placeholderAddress, policyGap y policyMark, y se conserva la salida ::error::',
+        () {
+          final json = File('${tmp.path}/gate.json');
+          final result = _runScript(['--json', json.path]);
+          expect(result.exitCode, 1, reason: out(result));
+          expect(out(result), contains('::error::privacyPolicyUrl'));
+          final data = readJson(json);
+          expect(data['complete'], isTrue);
+          final issues = issuesOf(data);
+          final kinds = issues.map((i) => i['kind']).toSet();
+          expect(kinds, {'placeholderAddress', 'policyGap', 'policyMark'});
+          expect(
+            issues
+                .where((i) => i['kind'] == 'placeholderAddress')
+                .map((i) => i['subject']),
+            unorderedEquals(_keys),
+          );
+          for (final i in issues) {
+            expect(i['message'], isA<String>());
+            expect((i['message']! as String), isNotEmpty);
+          }
+        },
+      );
+
+      test('CA-020-05: una dirección con aviso y fallo a la vez '
+          '(https://example.com/%2e) sale como fallo', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = run(
+          id: identity(privacy: 'https://example.com/%2e'),
+          extra: ['--json', json.path],
+        );
+        expect(result.exitCode, 1, reason: out(result));
+        final issues = issuesOf(readJson(json));
+        expect(issues, isNotEmpty);
+        expect(issues.map((i) => i['kind']), everyElement('fault'));
+        expect(
+          issues.map((i) => i['subject']),
+          everyElement('privacyPolicyUrl'),
+        );
+      });
+
+      test('CA-020-05: http://ejemplo-propio.es es un fallo en el JSON', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = run(
+          id: identity(help: 'http://ejemplo-propio.es'),
+          extra: ['--json', json.path],
+        );
+        expect(result.exitCode, 1, reason: out(result));
+        final issues = issuesOf(readJson(json));
+        expect(issues.single['kind'], 'fault');
+        expect(issues.single['subject'], 'helpUrl');
+      });
+
+      test(
+        'CA-020-05: un identity.yaml roto es un fallo y el JSON se escribe',
+        () {
+          final json = File('${tmp.path}/gate.json');
+          final result = run(
+            id: identity(raw: 'a: [\n'),
+            extra: ['--json', json.path],
+          );
+          expect(result.exitCode, 1, reason: out(result));
+          final data = readJson(json);
+          expect(data['complete'], isTrue);
+          final issues = issuesOf(data);
+          expect(issues.map((i) => i['kind']), everyElement('fault'));
+          expect(
+            issues.map((i) => i['subject']).join(),
+            contains('identity.yaml'),
+          );
+        },
+      );
+
+      test('CA-020-05: una política que no existe es un fallo en el JSON', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = _runScript([
+          '--identity',
+          identity().path,
+          '--policy',
+          '${tmp.path}/no-existe.md',
+          '--json',
+          json.path,
+        ]);
+        expect(result.exitCode, 1, reason: out(result));
+        final issues = issuesOf(readJson(json));
+        expect(issues.single['kind'], 'fault');
+        expect(issues.single['subject'], contains('no-existe.md'));
+      });
+
+      test('CA-020-11: una marca en la política sale como policyMark con su '
+          'línea y falla', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = run(
+          pol: policy(
+            _cleanPolicy.replaceFirst(
+              'Escribe a hola@ejemplo.org.',
+              'Dato [Suposición, PD-9].',
+            ),
+          ),
+          extra: ['--json', json.path],
+        );
+        expect(result.exitCode, 1, reason: out(result));
+        final issues = issuesOf(readJson(json));
+        expect(issues, hasLength(1));
+        expect(issues.single['kind'], 'policyMark');
+        expect(issues.single['subject'], 'política (ES)');
+        expect(issues.single['message'], contains('[Suposición, PD-9]'));
+        expect(out(result), contains('::error::política (ES)'));
+      });
+
+      test('CA-020-12: un identity.yaml que no existe es un fallo con JSON '
+          '(no un error de uso) y la política se revisa igualmente', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = _runScript([
+          '--identity',
+          '${tmp.path}/no-existe.yaml',
+          '--policy',
+          policy(
+            _cleanPolicy.replaceFirst('30 de septiembre de 2026', '[FECHA]'),
+          ).path,
+          '--json',
+          json.path,
+        ]);
+        expect(result.exitCode, 1, reason: out(result));
+        final data = readJson(json);
+        expect(data['complete'], isTrue);
+        final issues = issuesOf(data);
+        expect(
+          issues.where((i) => i['kind'] == 'fault').map((i) => i['subject']),
+          ['identity.yaml'],
+        );
+        expect(
+          issues.firstWhere((i) => i['subject'] == 'identity.yaml')['message'],
+          contains('no-existe.yaml'),
+        );
+        expect(issues.map((i) => i['kind']), contains('policyGap'));
+      });
+
+      test('CA-020-12: un identity.yaml en una carpeta que no existe es un '
+          'fallo con JSON', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = _runScript([
+          '--identity',
+          '${tmp.path}/otra/no-existe.yaml',
+          '--policy',
+          policy(_cleanPolicy).path,
+          '--json',
+          json.path,
+        ]);
+        expect(result.exitCode, 1, reason: out(result));
+        final issues = issuesOf(readJson(json));
+        expect(issues.single['kind'], 'fault');
+        expect(issues.single['message'], contains('no-existe.yaml'));
+      });
+
+      test('CA-020-12: un identity.yaml vacío es un fallo con JSON', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = run(
+          id: identity(raw: ''),
+          extra: ['--json', json.path],
+        );
+        expect(result.exitCode, 1, reason: out(result));
+        final issues = issuesOf(readJson(json));
+        expect(issues.single['kind'], 'fault');
+        expect(issues.single['subject'], 'identity.yaml');
+        expect(issues.single['message'], contains('vací'));
+      });
+
+      test(
+        'CA-020-12: una política vacía es un fallo con JSON que la nombra',
+        () {
+          final json = File('${tmp.path}/gate.json');
+          final empty = policy('');
+          final result = run(pol: empty, extra: ['--json', json.path]);
+          expect(result.exitCode, 1, reason: out(result));
+          final issues = issuesOf(readJson(json));
+          expect(issues.single['kind'], 'fault');
+          expect(issues.single['subject'], contains('policy.md'));
+          expect(out(result), contains('policy.md'));
+        },
+      );
+
+      test('CA-020-12: lo generado desfasado es un fallo en el JSON', () {
+        final root = Directory('${tmp.path}/app')..createSync();
+        for (final p in _generatedFiles) {
+          File('${root.path}/$p')
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync(File(p).readAsStringSync());
+        }
+        File('${root.path}/lib/app/app_identity.g.dart')
+            .writeAsStringSync('// viejo\n');
+        final json = File('${tmp.path}/gate.json');
+        final result = run(
+          extra: ['--generated-root', root.path, '--json', json.path],
+        );
+        expect(result.exitCode, 1, reason: out(result));
+        final issues = issuesOf(readJson(json));
+        expect(issues, hasLength(1));
+        expect(issues.single['kind'], 'fault');
+        expect(issues.single['subject'], contains('gen_identity'));
+        expect(issues.single['message'], contains('app_identity.g.dart'));
+        expect(out(result), contains('::error::'));
+      });
+
+      test('CA-020-12: sin --generated-root la herramienta no lo da por '
+          'comprobado en el JSON', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = Process.runSync('dart', [
+          'run',
+          'tool/check_release_config.dart',
+          '--identity',
+          identity().path,
+          '--policy',
+          policy(_cleanPolicy).path,
+          '--json',
+          json.path,
+        ]);
+        expect(result.exitCode, 0, reason: out(result));
+        expect(readJson(json)['checks'], isNot(contains('generated')));
+      });
+
+      test(
+        'CA-020-12: con lo generado al día el JSON lo lista como comprobado',
+        () {
+          final json = File('${tmp.path}/gate.json');
+          final result = run(extra: ['--json', json.path]);
+          expect(result.exitCode, 0, reason: out(result));
+          expect(readJson(json)['checks'], contains('generated'));
+        },
+      );
+
+      test('CA-020-05: --json sin valor es un error de uso', () {
+        final result = _runScript(['--json']);
+        expect(result.exitCode, 2, reason: out(result));
+      });
+
+      test('CA-020-05: una ruta relativa de --json se resuelve donde está el '
+          'que llama, no en app/', () {
+        final dir = Directory('${tmp.path}/cwd')..createSync();
+        final result = Process.runSync('bash', [
+          File('../tools/check-release-config.sh').absolute.path,
+          '--identity',
+          identity().path,
+          '--policy',
+          policy(_cleanPolicy).path,
+          '--json',
+          'rel.json',
+        ], workingDirectory: dir.path);
+        expect(result.exitCode, 0, reason: out(result));
+        expect(File('${dir.path}/rel.json').existsSync(), isTrue);
+      });
     });
 
     test('CA-015-13b: --url ya no existe y un argumento desconocido falla '

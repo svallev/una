@@ -32,8 +32,8 @@ class PngImage {
 }
 
 /// El mayor lado que se acepta al leer (los iconos miden 1024 como mucho): evita reservar memoria
-/// por una cabecera corrupta.
-const _maxSide = 8192;
+/// por una cabecera corrupta (spec 020, CA-020-15: antes 8192).
+const maxPngSide = 2048;
 
 const _signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
@@ -69,6 +69,10 @@ PngImage decodePng(Uint8List bytes) {
     }
     switch (type) {
       case 'IHDR':
+        // Un PNG tiene un solo IHDR: un segundo cambiaría las medidas ya aceptadas (CA-020-15).
+        if (width != null) {
+          throw const FormatException('IHDR repetido');
+        }
         if (body.length != 13) {
           throw const FormatException('IHDR incorrecto');
         }
@@ -88,8 +92,13 @@ PngImage decodePng(Uint8List bytes) {
         if (body[12] != 0) {
           throw const FormatException('PNG entrelazado no admitido');
         }
-        if (width < 1 || height < 1 || width > _maxSide || height > _maxSide) {
-          throw FormatException('Tamaño $width x $height fuera de límites');
+        if (width < 1 ||
+            height < 1 ||
+            width > maxPngSide ||
+            height > maxPngSide) {
+          throw FormatException(
+            'Tamaño $width x $height fuera de límites (máximo $maxPngSide px por lado)',
+          );
         }
       case 'IDAT':
         idat.add(body);
@@ -106,14 +115,8 @@ PngImage decodePng(Uint8List bytes) {
   }
   final bpp = colorType == 6 ? 4 : 3;
   final stride = width * bpp;
-  final Uint8List raw;
-  try {
-    raw = Uint8List.fromList(ZLibCodec().decode(idat.takeBytes()));
-  } on FormatException {
-    rethrow;
-  } on Object catch (e) {
-    throw FormatException('Datos de imagen corruptos: $e');
-  }
+  // Se descomprime con tope: lo que corresponde a las medidas declaradas, ni un byte más.
+  final raw = inflateBounded(idat.takeBytes(), maxBytes: (stride + 1) * height);
   if (raw.length != (stride + 1) * height) {
     throw const FormatException('Tamaño de los datos de imagen incorrecto');
   }
@@ -157,6 +160,63 @@ PngImage decodePng(Uint8List bytes) {
     rgba[p * 4 + 3] = 255;
   }
   return PngImage(width, height, rgba);
+}
+
+/// Descomprime [compressed] (zlib) **parándose** en cuanto el resultado pasa de [maxBytes]: una
+/// «bomba» (megas de ceros en unos kilobytes) no llega a ocuparlos en memoria (CA-020-15). Lanza
+/// [FormatException] si se pasa del tope o si los datos están corruptos. [onChunk] recibe el
+/// total producido tras cada trozo (para que un test compruebe que se paró pronto).
+Uint8List inflateBounded(
+  List<int> compressed, {
+  required int maxBytes,
+  void Function(int total)? onChunk,
+}) {
+  final sink = _BoundedSink(maxBytes, onChunk);
+  try {
+    final conversion = ZLibCodec().decoder.startChunkedConversion(sink);
+    const slice = 16 * 1024;
+    for (var i = 0; i < compressed.length; i += slice) {
+      conversion.add(
+        compressed.sublist(i, math.min(i + slice, compressed.length)),
+      );
+    }
+    conversion.close();
+  } on FormatException catch (e) {
+    // El nuestro (tope) o el de zlib con datos malos: los dos son FormatException.
+    if (e is _TooLarge) rethrow;
+    throw FormatException('Datos de imagen corruptos: ${e.message}');
+  } on Object catch (e) {
+    throw FormatException('Datos de imagen corruptos: $e');
+  }
+  return sink.takeBytes();
+}
+
+class _TooLarge extends FormatException {
+  _TooLarge(int max)
+    : super('Los datos de imagen descomprimidos superan los $max bytes');
+}
+
+/// Recoge lo descomprimido y corta al pasar del tope.
+class _BoundedSink implements Sink<List<int>> {
+  _BoundedSink(this._max, this._onChunk);
+
+  final int _max;
+  final void Function(int total)? _onChunk;
+  final _out = BytesBuilder();
+  var _total = 0;
+
+  @override
+  void add(List<int> chunk) {
+    _total += chunk.length;
+    _onChunk?.call(_total);
+    if (_total > _max) throw _TooLarge(_max);
+    _out.add(chunk);
+  }
+
+  @override
+  void close() {}
+
+  Uint8List takeBytes() => _out.takeBytes();
 }
 
 int _paeth(int a, int b, int c) {

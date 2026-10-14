@@ -2,31 +2,44 @@
 # Puerta de publicación (spec 012, CA-012-05; spec 015, CA-015-13b): falla si
 #  - alguna de las tres direcciones de app/identity.yaml (privacyPolicyUrl, thirdPartyLicensesUrl,
 #    helpUrl) no es una `https` de un dominio propio (no el marcador example.com ni ningún dominio
-#    reservado, sin `?`, `#` ni `\`), o si dos de ellas son la misma dirección;
+#    reservado, sin `?`, `#` ni `\`, con una ruta de solo letras ASCII, cifras y `._~-/` sin `%`, `.`,
+#    `..` ni `//`), o si dos de ellas son la misma dirección;
 #  - lo generado desde el yaml (lib/app/app_identity.g.dart…) no está al día (`gen_identity.dart
 #    --check`): la puerta valida lo que se compila, no solo el yaml;
 #  - docs/legal/privacy-policy.md sigue con huecos ([NOMBRE DE LA APP], [FECHA], [RESPONSABLE],
-#    [CONTACTO] y sus versiones EN).
+#    [CONTACTO] y sus versiones EN) o con marcas de documento ([Suposición], [Assumption],
+#    [Pendiente], [Pending]) en las partes ES y EN (spec 020, CA-020-11);
+#  - alguno de esos archivos falta, está vacío, no es YAML válido o no se puede leer (falla cerrada,
+#    CA-020-12: nunca se da por buena una comprobación que no ha podido hacerse).
 #
 #   tools/check-release-config.sh                                    (los valores del repositorio)
 #   tools/check-release-config.sh --identity <archivo> --policy <archivo>   (valores de prueba)
 #   tools/check-release-config.sh ... --generated-root <carpeta>     (otra copia de app/ para lo generado)
+#   tools/check-release-config.sh ... --json <archivo>               (además, la lista de errores con su clase)
 #
-# Se ejecuta en `/release-checklist` **antes de cada entrega a testers** y antes de publicar (en una
-# entrega a testers con marcadores se anota qué falla; antes de publicar tiene que pasar) y, en F6,
-# en el trabajo de CI que genere el artefacto de publicación (aún no existe): NO en las
-# compilaciones locales ni de desarrollo, donde los marcadores son normales. Necesita `dart`; no
-# instala nada ni usa la red.
+# Lo ejecuta el trabajo de publicación (`.github/workflows/release.yml`, id `identity`, con `--json`:
+# spec 020, CA-020-02), que clasifica sus errores (CA-020-05): en una entrega a testers los avisos de
+# identidad se listan y en una publicación tienen que pasar. NO corre en las compilaciones locales,
+# de desarrollo ni de la CI de las PR, donde los marcadores son normales (CA-020-08). Necesita `dart`;
+# no instala nada ni usa la red.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Las rutas dadas se resuelven antes de entrar en app/ (donde vive el paquete de Dart).
+# Si la carpeta no existe, la ruta se pasa tal cual: la herramienta informa de que el archivo no
+# existe (falla cerrada, CA-020-12) y escribe el JSON.
 abs_file() {
   local dir
   dir="$(dirname "$1")"
-  [ -d "$dir" ] || { echo "::error::no existe el directorio de $1"; exit 1; }
-  echo "$(cd "$dir" && pwd)/$(basename "$1")"
+  if [ -d "$dir" ]; then
+    echo "$(cd "$dir" && pwd)/$(basename "$1")"
+  else
+    case "$1" in
+      /*) echo "$1" ;;
+      *) echo "$PWD/$1" ;;
+    esac
+  fi
 }
 
 args=()
@@ -43,6 +56,11 @@ while [ $# -gt 0 ]; do
     --identity)
       [ $# -ge 2 ] || { echo "::error::--identity necesita un valor"; exit 2; }
       args+=("--identity" "$(abs_file "$2")")
+      shift 2
+      ;;
+    --json)
+      [ $# -ge 2 ] || { echo "::error::--json necesita un valor"; exit 2; }
+      args+=("--json" "$(abs_file "$2")")
       shift 2
       ;;
     --generated-root)
@@ -63,15 +81,6 @@ fi
 
 cd "$ROOT/app"
 
-status=0
-if ! dart run tool/gen_identity.dart --check --root "$generated_root"; then
-  echo "::error::lo generado desde identity.yaml no está al día: ejecuta \`dart run tool/gen_identity.dart\` en app/"
-  status=1
-fi
-
-check_status=0
-dart run tool/check_release_config.dart "${args[@]}" || check_status=$?
-if [ "$check_status" -ne 0 ]; then
-  exit "$check_status"
-fi
-exit "$status"
+# La herramienta comprueba también lo generado (`gen_identity.dart --check`) y lo cuenta como un
+# fallo más, en la salida y en el JSON.
+exec dart run tool/check_release_config.dart --generated-root "$generated_root" "${args[@]}"

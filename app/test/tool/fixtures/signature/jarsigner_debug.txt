@@ -1,0 +1,23 @@
+
+jar verified, with signer errors.
+
+Error: 
+This jar contains entries whose certificate chain is invalid. Reason: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+This jar contains entries whose signer certificate is self-signed.
+
+Warning: 
+This jar contains signatures that do not include a timestamp. Without a timestamp, users may not be able to validate this jar after any of the signer certificates expire (as early as 2056-09-16).
+POSIX file permission and/or symlink attributes detected. These attributes are ignored when signing and are not protected by the signature.
+
+This JAR file contains internal inconsistencies that may result in different contents when reading via JarFile and JarInputStream:
+- Manifest is missing when reading via JarInputStream
+- Entry BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libapp.so.sym is signed in JarFile but is not signed in JarInputStream
+- Entry BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libdartjni.so.sym is signed in JarFile but is not signed in JarInputStream
+- Entry BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libflutter.so.sym is signed in JarFile but is not signed in JarInputStream
+- Entry BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libsqlite3.so.sym is signed in JarFile but is not signed in JarInputStream
+- Entry BUNDLE-METADATA/com.android.tools.build.debugsymbols/armeabi-v7a/libapp.so.sym is signed in JarFile but is not signed in JarInputStream
+- Entry BUNDLE-METADATA/com.android.tools.build.debugsymbols/armeabi-v7a/libdartjni.so.sym is signed in JarFile but is not signed in JarInputStream
+- Entry BUNDLE-METADATA/com.android.tools.build.debugsymbols/armeabi-v7a/libflutter.so.sym is signed in JarFile but is not signed in JarInputStream
+- (otras entradas, omitidas en este archivo de prueba)
+
+Re-run with the -verbose and -certs options for more details.
