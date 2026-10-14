@@ -1,14 +1,16 @@
-// Puerta de publicación (spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-05, 09 y 10):
+// Puerta de publicación (spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-05 y 09 a 12):
 // falla si alguna de las tres direcciones de `identity.yaml` (política de privacidad, licencias de
-// terceros y ayuda) no sirve para publicar, si dos de ellas son la misma, o si el texto de la
-// política sigue con huecos.
+// terceros y ayuda) no sirve para publicar, si dos de ellas son la misma, si el texto de la
+// política sigue con huecos o con marcas de documento (`[Suposición]`, `[Pendiente]`…), o si lo
+// generado desde `identity.yaml` no está al día.
 //
 //   dart run tool/check_release_config.dart [--identity <archivo>] [--policy <archivo>]
-//                                           [--json <archivo>]
+//                                           [--generated-root <carpeta>] [--json <archivo>]
 //
 // Sin argumentos lee `identity.yaml` y la política de `../docs/legal/privacy-policy.md` (se ejecuta
-// desde `app/`; lo normal es llamarla con `tools/check-release-config.sh`, que además comprueba que
-// lo generado desde el yaml está al día). Con una compilación de desarrollo o local NO se usa: los
+// desde `app/`; lo normal es llamarla con `tools/check-release-config.sh`, que pasa
+// `--generated-root` para comprobar también, con `tool/gen_identity.dart --check`, que lo generado
+// desde el yaml está al día). Con una compilación de desarrollo o local NO se usa: los
 // marcadores `https://example.com/…` son normales mientras se desarrolla.
 //
 // Cada dirección debe ser `https`, sin usuario, sin puerto, sin `?`, `#` ni `\`, con un dominio
@@ -21,9 +23,11 @@
 // tres claves.
 //
 // Cada error lleva una clase ([GateIssueKind]) que usa el resumen del trabajo de publicación
-// (CA-020-05): `placeholderAddress` y `policyGap` son avisos de identidad; `fault` (todo lo demás)
-// falla en los dos modos. Si una misma clave tiene un aviso y un fallo, todos sus errores son
-// `fault`. Con `--json <archivo>` se escribe además la lista de errores (de forma atómica y al
+// (CA-020-05): `placeholderAddress`, `policyGap` y `policyMark` son avisos de identidad; `fault`
+// (todo lo demás) falla en los dos modos. La puerta falla cerrada (CA-020-12): un archivo que falta,
+// está vacío, no es YAML válido o no se puede leer, o lo generado desfasado, es un `fault` que lo
+// nombra; nunca se da por buena una comprobación que no ha podido hacerse. Si una misma clave
+// tiene un aviso y un fallo, todos sus errores son `fault`. Con `--json <archivo>` se escribe además la lista de errores (de forma atómica y al
 // final, con `complete: true`).
 import 'dart:convert';
 import 'dart:io';
@@ -141,6 +145,18 @@ const _idnTestTlds = [
 final _gap = RegExp(
   r'\[\s*(NOMBRE DE LA APP|FECHA|RESPONSABLE|CONTACTO|APP NAME|DATE|CONTROLLER|CONTACT)\s*\]',
   caseSensitive: false,
+);
+
+/// Una marca de documento en la política publicada (CA-020-11): `[Suposición]`, `[Assumption]`,
+/// `[Pendiente]` o `[Pending]`, sin distinguir mayúsculas, con o sin espacios (y sin caracteres
+/// invisibles de formato) tras el corchete, y con o sin texto detrás (`[Pendiente PD-2]`,
+/// `[Suposición, PD-9]`). «Suposición» admite la forma sin tilde y la descompuesta (una `o` y una
+/// marca de acento aparte). No exige el corchete de cierre: una marca sin cerrar sigue siendo una
+/// marca. `[Hecho]` no casa. **[Hecho]** El proyecto solo usa estas cuatro palabras como marca.
+final _mark = RegExp(
+  r'\[[\s\p{Cf}]*(suposici\p{L}\p{M}*n|assumption|pendiente|pending)(?![\p{L}\p{M}])',
+  caseSensitive: false,
+  unicode: true,
 );
 
 /// Los errores de [value] como dirección de la clave [key] (vacío = sirve para publicar). El
@@ -457,15 +473,151 @@ List<GateIssue> checkPolicyText(String text) {
         ),
       );
     }
+    // Las marcas de documento: una entrada por marca, con su línea (CA-020-11). Cuentan también
+    // dentro de bloques de código y de comentarios HTML (CL-020-9): la política publicada no lleva
+    // marcas en ninguna parte.
+    final part = text.substring(start, stop);
+    for (final m in _mark.allMatches(part)) {
+      final at = start + m.start;
+      final line = '\n'.allMatches(text.substring(0, at)).length + 1;
+      issues.add(
+        GateIssue(
+          GateIssueKind.policyMark,
+          'política ($label)',
+          'lleva la marca ${_markText(part, m)} en la línea $line: una política '
+              'publicada no puede llevar marcas de documento',
+        ),
+      );
+    }
   }
   return issues;
+}
+
+/// El texto de la marca que casa [m] en [part], para el mensaje: desde el corchete hasta el de
+/// cierre en la misma línea (o hasta el final de la línea), acotado a 60 caracteres.
+String _markText(String part, RegExpMatch m) {
+  var end = part.indexOf('\n', m.start);
+  if (end < 0) end = part.length;
+  final close = part.indexOf(']', m.end);
+  final stop = close >= 0 && close < end ? close + 1 : end;
+  final shown = part.substring(m.start, stop).trim();
+  return shown.length <= 60 ? shown : '${shown.substring(0, 59)}…';
+}
+
+/// Lee [path] como texto UTF-8 (bytes que no lo son: `FileSystemException`, que se atrapa). Devuelve el texto o, si no se puede leer, un `fault` que nombra el
+/// archivo (CA-020-12): ausente, no es un archivo, sin permiso, no es UTF-8 o está vacío (solo
+/// espacios incluido). [subject] es lo que sale como sujeto del error; si no es la propia ruta, esta
+/// se añade al motivo.
+(String?, GateIssue?) _readText(String path, String subject) {
+  final where = subject == path ? '' : ' ($path)';
+  GateIssue fault(String message) =>
+      GateIssue(GateIssueKind.fault, subject, '$message$where');
+  final type = FileSystemEntity.typeSync(path);
+  if (type == FileSystemEntityType.notFound) {
+    return (null, fault('no existe'));
+  }
+  if (type != FileSystemEntityType.file) {
+    return (null, fault('no es un archivo'));
+  }
+  final String text;
+  try {
+    text = File(path).readAsStringSync();
+  } on FileSystemException catch (e) {
+    return (
+      null,
+      fault('no se puede leer (${e.osError?.message ?? e.message})'),
+    );
+  }
+  if (text.trim().isEmpty) return (null, fault('está vacío'));
+  return (text, null);
+}
+
+/// Los errores de `identity.yaml` en [path]: si no se puede leer (ausente, vacío, ilegible o YAML
+/// no válido) es un `fault` que lo nombra, en los dos modos (CA-020-12); si no, los de
+/// [checkIdentity]. Nunca da por buena una lectura que no ha podido hacer.
+List<GateIssue> checkIdentityFile(String path) {
+  const subject = 'identity.yaml';
+  final (text, issue) = _readText(path, subject);
+  if (issue != null) return [issue];
+  final Object? root;
+  try {
+    root = loadYaml(text!);
+  } on YamlException catch (e) {
+    return [
+      GateIssue(
+        GateIssueKind.fault,
+        subject,
+        'no se puede leer (${e.message})',
+      ),
+    ];
+  }
+  if (root == null) {
+    return [
+      GateIssue(
+        GateIssueKind.fault,
+        subject,
+        'está vacío (no tiene ninguna clave)',
+      ),
+    ];
+  }
+  return checkIdentity(root);
+}
+
+/// Los errores de la política en [path]: si no se puede leer (ausente, vacía o ilegible) es un
+/// `fault` que nombra el archivo (CA-020-12); si no, los de [checkPolicyText].
+List<GateIssue> checkPolicyFile(String path) {
+  final (text, issue) = _readText(path, path);
+  if (issue != null) return [issue];
+  return checkPolicyText(text!);
+}
+
+/// Los errores de lo generado desde `identity.yaml` (`tool/gen_identity.dart --check --root
+/// [root]`): desfasado, o que la comprobación no ha podido hacerse, es un `fault` (CA-020-12,
+/// CA-015-13b: la puerta valida lo que se compila, no solo el yaml). Se ejecuta con [dart] desde
+/// la carpeta actual (`app/`).
+List<GateIssue> checkGenerated(String root, {String dart = 'dart'}) {
+  const subject = 'lo generado (gen_identity.dart --check)';
+  final ProcessResult result;
+  try {
+    result = Process.runSync(dart, [
+      'run',
+      'tool/gen_identity.dart',
+      '--check',
+      '--root',
+      root,
+    ]);
+  } on ProcessException catch (e) {
+    return [
+      GateIssue(
+        GateIssueKind.fault,
+        subject,
+        'no se ha podido ejecutar la comprobación (${e.message})',
+      ),
+    ];
+  }
+  if (result.exitCode == 0) return [];
+  // `dart run` escribe «Running build hooks...» en la salida de error: no es el motivo.
+  final detail = '${result.stderr}'
+      .replaceAll('Running build hooks...', '')
+      .split('\n')
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty)
+      .join(' ');
+  final shown = detail.length <= 400 ? detail : '${detail.substring(0, 399)}…';
+  return [
+    GateIssue(
+      GateIssueKind.fault,
+      subject,
+      'no está al día o no se ha podido comprobar (código ${result.exitCode}): $shown',
+    ),
+  ];
 }
 
 Never _usage(String message) {
   stderr.writeln('::error::$message');
   stderr.writeln(
     'Uso: dart run tool/check_release_config.dart [--identity <archivo>] '
-    '[--policy <archivo>] [--json <archivo>]',
+    '[--policy <archivo>] [--generated-root <carpeta>] [--json <archivo>]',
   );
   exit(2);
 }
@@ -489,6 +641,7 @@ void _writeJson(String path, List<GateIssue> issues, List<String> checks) {
 void main(List<String> args) {
   var identityPath = 'identity.yaml';
   var policyPath = '../docs/legal/privacy-policy.md';
+  String? generatedRoot;
   String? jsonPath;
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -498,6 +651,9 @@ void main(List<String> args) {
       case '--policy':
         if (++i >= args.length) _usage('--policy necesita un valor');
         policyPath = args[i];
+      case '--generated-root':
+        if (++i >= args.length) _usage('--generated-root necesita un valor');
+        generatedRoot = args[i];
       case '--json':
         if (++i >= args.length) _usage('--json necesita un valor');
         jsonPath = args[i];
@@ -506,40 +662,34 @@ void main(List<String> args) {
     }
   }
 
-  final identity = File(identityPath);
-  if (!identity.existsSync()) {
-    _usage('no existe $identityPath (¿se ejecuta desde app/?); usa --identity');
-  }
-  final checks = ['addresses', 'policy'];
-  final List<GateIssue> addressIssues;
-  try {
-    addressIssues = checkIdentity(loadYaml(identity.readAsStringSync()));
-  } on YamlException catch (e) {
-    final issue = GateIssue(
-      GateIssueKind.fault,
-      'identity.yaml',
-      'no se puede leer (${e.message})',
-    );
-    stdout.writeln('::error::${issue.line}');
-    if (jsonPath != null) _writeJson(jsonPath, [issue], checks);
-    exit(1);
-  }
-
-  final policy = File(policyPath);
+  // Cada comprobación se hace aunque otra haya fallado: el resumen del trabajo de publicación
+  // lista todo lo que falla de una vez. Un archivo que no se puede leer es un fallo (CA-020-12).
+  final checks = [
+    'addresses',
+    'policy',
+    if (generatedRoot != null) 'generated',
+  ];
   final issues = <GateIssue>[
-    ...addressIssues,
-    if (policy.existsSync())
-      ...checkPolicyText(policy.readAsStringSync())
-    else
-      GateIssue(GateIssueKind.fault, policyPath, 'no existe la política'),
+    ...checkIdentityFile(identityPath),
+    ...checkPolicyFile(policyPath),
+    if (generatedRoot != null) ...checkGenerated(generatedRoot),
   ];
 
-  if (jsonPath != null) _writeJson(jsonPath, issues, checks);
+  if (jsonPath != null) {
+    try {
+      _writeJson(jsonPath, issues, checks);
+    } on FileSystemException catch (e) {
+      stdout.writeln(
+        '::error::no se puede escribir $jsonPath (${e.osError?.message ?? e.message})',
+      );
+      exit(1);
+    }
+  }
 
   if (issues.isEmpty) {
     stdout.writeln(
-      'OK las tres direcciones (${addressKeys.join(', ')}) y el texto de la '
-      'política sin huecos',
+      'OK las tres direcciones (${addressKeys.join(', ')}), el texto de la '
+      'política sin huecos ni marcas${generatedRoot != null ? ' y lo generado al día' : ''}',
     );
     return;
   }
@@ -548,7 +698,7 @@ void main(List<String> args) {
   }
   stdout.writeln(
     'La puerta de publicación falla (${issues.length}): no publicar esta versión '
-    '(spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-09 y 10).',
+    '(spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-09 a 12).',
   );
   exit(1);
 }
