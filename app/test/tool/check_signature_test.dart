@@ -650,6 +650,7 @@ Certificate fingerprints:
     final jarsigner = _realTool('jarsigner', ['-help']);
     final keytool = _realTool('keytool', ['-help']);
     final apksigner = findBuildTool('apksigner');
+    final java = _realTool('java', ['-version']);
     final aabFile = File(realAabPath);
 
     test('CA-020-05: el AAB real de release está firmado con la clave de '
@@ -704,8 +705,10 @@ Certificate fingerprints:
       final apk = File(
         'build/app/outputs/flutter-apk/app-arm64-v8a-release.apk',
       );
-      if (apksigner == null || !apk.existsSync()) {
-        markTestSkipped('sin apksigner o sin APK de release');
+      // apksigner is a Java program: without a runnable JRE it fails closed
+      // (`fault`), which says nothing about the signature.
+      if (apksigner == null || !java || !apk.existsSync()) {
+        markTestSkipped('sin apksigner, sin Java o sin APK de release');
         return;
       }
       final out = StringBuffer();
