@@ -2,7 +2,8 @@
 # Puerta de publicación (spec 012, CA-012-05; spec 015, CA-015-13b): falla si
 #  - alguna de las tres direcciones de app/identity.yaml (privacyPolicyUrl, thirdPartyLicensesUrl,
 #    helpUrl) no es una `https` de un dominio propio (no el marcador example.com ni ningún dominio
-#    reservado, sin `?`, `#` ni `\`), o si dos de ellas son la misma dirección;
+#    reservado, sin `?`, `#` ni `\`, con una ruta de solo letras ASCII, cifras y `._~-/` sin `%`, `.`,
+#    `..` ni `//`), o si dos de ellas son la misma dirección;
 #  - lo generado desde el yaml (lib/app/app_identity.g.dart…) no está al día (`gen_identity.dart
 #    --check`): la puerta valida lo que se compila, no solo el yaml;
 #  - docs/legal/privacy-policy.md sigue con huecos ([NOMBRE DE LA APP], [FECHA], [RESPONSABLE],
@@ -11,6 +12,7 @@
 #   tools/check-release-config.sh                                    (los valores del repositorio)
 #   tools/check-release-config.sh --identity <archivo> --policy <archivo>   (valores de prueba)
 #   tools/check-release-config.sh ... --generated-root <carpeta>     (otra copia de app/ para lo generado)
+#   tools/check-release-config.sh ... --json <archivo>               (además, la lista de errores con su clase)
 #
 # Se ejecuta en `/release-checklist` **antes de cada entrega a testers** y antes de publicar (en una
 # entrega a testers con marcadores se anota qué falla; antes de publicar tiene que pasar) y, en F6,
@@ -43,6 +45,11 @@ while [ $# -gt 0 ]; do
     --identity)
       [ $# -ge 2 ] || { echo "::error::--identity necesita un valor"; exit 2; }
       args+=("--identity" "$(abs_file "$2")")
+      shift 2
+      ;;
+    --json)
+      [ $# -ge 2 ] || { echo "::error::--json necesita un valor"; exit 2; }
+      args+=("--json" "$(abs_file "$2")")
       shift 2
       ;;
     --generated-root)
