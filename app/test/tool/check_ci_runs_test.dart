@@ -233,6 +233,9 @@ cat "$f"
       expect(run(repo: 'sin-barra').exitCode, 2);
       expect(run(repo: 'a/b/c').exitCode, 2);
       expect(run(repo: r'a/b$(x)').exitCode, 2);
+      // The whole value is checked, not line by line.
+      expect(run(sha: '${'a' * 40}\nx').exitCode, 2);
+      expect(run(repo: 'a/b\nx y').exitCode, 2);
       expect(run(extra: ['--nada']).exitCode, 2);
       expect(log.existsSync(), isFalse);
       final r = Process.runSync('bash', [_script]);

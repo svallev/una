@@ -131,6 +131,7 @@ void main() {
         'a;b',
         '1abc',
         '-x',
+        'ok\nBAD', // the whole id, not line by line
       ]) {
         final r = run([id, '--', 'bash', '-c', 'exit 0']);
         expect(r.exitCode, 2, reason: 'id «$id»');

@@ -30,8 +30,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 export LC_ALL=C
-grep -E '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' <<<"$repo" >/dev/null || { echo "::error::--repo no es dueño/nombre: usa --repo <dueño/nombre>" >&2; usage; }
-grep -E '^[0123456789abcdef]{40}$' <<<"$sha" >/dev/null || { echo "::error::--sha no es un commit de 40 caracteres hexadecimales en minúsculas" >&2; usage; }
+repo_re='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+[[ $repo =~ $repo_re ]] || { echo "::error::--repo no es dueño/nombre: usa --repo <dueño/nombre>" >&2; usage; }
+sha_re='^[0123456789abcdef]{40}$'
+[[ $sha =~ $sha_re ]] || { echo "::error::--sha no es un commit de 40 caracteres hexadecimales en minúsculas" >&2; usage; }
 
 command -v gh >/dev/null 2>&1 || { echo "::error::No hay gh en el PATH: no se puede comprobar la CI del commit"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "::error::No hay python3 en el PATH: no se puede leer la respuesta de GitHub"; exit 1; }
