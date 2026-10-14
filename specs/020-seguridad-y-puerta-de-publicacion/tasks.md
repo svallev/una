@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** por el propietario el 2026-10-14, junto con `plan.md` (P-020-1 a P-020-4: las cuatro recomendaciones). `security-reviewer` aplicado (2026-10-14).
 
-**Siguiente:** T-020-14 (emulador de API 37: la hace el **coordinador**, nunca un `spec-task`; rama `feat/020-seguridad-y-puerta`). T-020-13 hecha: con ella queda hecho todo el código de la 020; falta medir (T-020-14) y documentar (T-020-15, T-020-16).
+**Siguiente:** T-020-14 (emulador de API 37: la hace el **coordinador**, nunca un `spec-task`; rama `feat/020-seguridad-y-puerta`). T-020-13 hecha: con ella queda hecho todo el código de la 020; falta medir (T-020-14) y documentar (T-020-15, T-020-16). **Emulador para T-020-14:** AVD `Pixel_6a_api37_root` (imagen `android-37.2/google_apis_ps16k`, `adb root` comprobado; el `Pixel_6a` con Play Store se conserva, sin root). `adb` y `emulator` no están en el PATH (`~/Library/Android/sdk/{platform-tools,emulator}`); `avdmanager`/`sdkmanager` piden `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Sin textos ni tokens nuevos. Tests primero: en cada tarea con código, los tests se escriben antes y fallan por la razón esperada. **Cortes de sesión sugeridos:** tras T-020-06 (herramientas completas), tras T-020-12 (app completa). T-020-14 usa el emulador: la hace el **coordinador** (P-020-4), nunca un `spec-task`. Ninguna usa el Xiaomi (Q-020-4).
 
