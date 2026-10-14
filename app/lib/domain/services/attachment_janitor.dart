@@ -143,32 +143,54 @@ class AttachmentJanitor {
   /// La importación [id] ha terminado (guardada o descartada).
   void release(String id) => registry.remove(id);
 
+  /// Ids por consulta del barrido (CA-020-19): los mismos que un trozo de
+  /// `existingAttachmentIds`. Ninguna consulta del barrido lleva más.
+  static const int sweepBatchSize = 500;
+
   /// Borra los adjuntos que no pertenecen a ninguna tarea y todas las
   /// preparaciones, salvo las importaciones en curso (CA-007-16) y las
   /// eliminaciones que aún se pueden deshacer (ADR-0021). También los de una
   /// tarea completada o eliminada si la app murió antes de `discard` o de
   /// `discardHeld` (CA-014-13), y los que deja la migración a v2 (ADR-0012).
+  ///
+  /// La BD se consulta por **lotes** de [sweepBatchSize] ids del disco
+  /// (`existingAttachmentIds`): nunca se carga la lista de todas las filas, así
+  /// que la memoria no crece con ellas (CA-020-19). Si una consulta falla, el
+  /// barrido **se corta sin borrar nada más**: «no se pudo leer» nunca es «no
+  /// existe». Lo recoge el siguiente arranque.
   Future<void> sweep() async {
     final active = registry.active;
     // Primero el disco y después la BD: lo que se guarde entre medias no está
     // en la lista del disco o sigue en `active` hasta estar en la BD.
-    final stored = await store.storedIds();
+    final stored = (await store.storedIds()).toList();
     final staging = await store.stagingIds();
-    final known = await repository.attachmentIds();
     // Protegidas: las activas al empezar (que pueden haberse guardado ya y no
-    // estar en `known`), las que empiecen durante el barrido y las retenidas.
+    // estar en la BD), las que empiecen durante el barrido y las retenidas.
     bool protected(String id) =>
         active.contains(id) ||
         registry.active.contains(id) ||
         _held.contains(id);
-    for (final id in stored) {
-      if (known.contains(id) || protected(id)) continue;
-      // Justo antes de borrar, otra vez la BD: una tarea eliminada y recuperada
-      // mientras el barrido avanza ya no está retenida, pero sí en la BD
-      // (deshacer guarda antes de soltar). Por eso, la protección primero y la
-      // BD después: al revés, una recuperación entre las dos se perdería.
-      if (await _inDatabase(id)) continue;
-      await discard(id);
+    for (var i = 0; i < stored.length; i += sweepBatchSize) {
+      final batch = [
+        for (final id in stored.skip(i).take(sweepBatchSize))
+          if (!protected(id)) id,
+      ];
+      if (batch.isEmpty) continue;
+      final known = await _existingOrNull(batch);
+      if (known == null) return;
+      for (final id in batch) {
+        if (known.contains(id)) continue;
+        // Justo antes de borrar, otra vez la protección y la BD: una tarea
+        // eliminada y recuperada mientras el barrido avanza ya no está
+        // retenida, pero sí en la BD (deshacer guarda antes de soltar). Por
+        // eso, la protección primero y la BD después: al revés, una
+        // recuperación entre las dos se perdería.
+        if (protected(id)) continue;
+        final now = await _existingOrNull([id]);
+        if (now == null) return;
+        if (now.contains(id)) continue;
+        await discard(id);
+      }
     }
     for (final name in staging) {
       // La cámara escribe `<id>.camera` junto a la preparación `<id>`.
@@ -179,6 +201,16 @@ class AttachmentJanitor {
           // Ídem.
         }
       }
+    }
+  }
+
+  /// [existingAttachmentIds] de un lote del barrido; `null` si no se puede
+  /// leer (el barrido se corta).
+  Future<Set<String>?> _existingOrNull(List<String> ids) async {
+    try {
+      return await repository.existingAttachmentIds(ids);
+    } on Object {
+      return null;
     }
   }
 
@@ -193,11 +225,11 @@ class AttachmentJanitor {
     }
   }
 
-  /// ¿Tiene fila el adjunto [id]? Una consulta por candidato (son pocos). Si
-  /// no se puede leer, se deja para otro barrido.
+  /// ¿Tiene fila el adjunto [id]? Una consulta por id, sin cargar la lista
+  /// entera (CA-020-19). Si no se puede leer, se deja para otro barrido.
   Future<bool> _inDatabase(String id) async {
     try {
-      return (await repository.attachmentIds()).contains(id);
+      return (await repository.existingAttachmentIds([id])).contains(id);
     } on Object {
       return true;
     }
