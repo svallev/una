@@ -105,6 +105,10 @@ jobs:
         run: |
           bash ../tools/check-android-permissions.sh release
           bash ../tools/check-android-permissions.sh debug
+      - name: Manifiestos negativos de permisos y componentes (CA-020-13)
+        # Cada manifiesto de tools/fixtures/manifests/ (un permiso, un -sdk-23, un -sdk-m, un segundo
+        # filtro, un <data>, BROWSABLE, DEFAULT, una acción de más…) tiene que hacer fallar el script.
+        run: bash tools/check-android-permissions.sh --negative
       - name: Pruebas JVM del núcleo de notificaciones (spec 019, P-019-1)
         # JUnit 4.13.2 es solo `testImplementation`: corre el Kotlin real (horas, despertares, orquestador)
         # con puertos falsos, sin emulador. Tras `flutter build`, que deja resuelto el proyecto Gradle.

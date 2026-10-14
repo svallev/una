@@ -1,0 +1,11 @@
+# Un manifiesto negativo por línea: archivo, TAB, texto que el error tiene que nombrar (CA-020-13).
+# Cada uno es ok.xml (el manifiesto combinado real de release) con un solo cambio.
+permission-extra.xml	android.permission.READ_EXTERNAL_STORAGE
+permission-sdk-23.xml	uses-permission-sdk-23
+permission-sdk-m.xml	uses-permission-sdk-m
+main-second-filter.xml	exactamente un <intent-filter>
+main-no-filter.xml	exactamente un <intent-filter>
+main-data.xml	<data>
+main-browsable.xml	android.intent.category.BROWSABLE
+main-default.xml	android.intent.category.DEFAULT
+main-extra-action.xml	android.intent.action.VIEW
