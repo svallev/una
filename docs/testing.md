@@ -212,3 +212,4 @@ Es un cambio de recursos, así que los tests miden **los archivos** (`test/icon/
 - **`flutter drive` desinstala al terminar el paquete *base* (`invalid.pending.app`), no el que ha instalado**: el 2026-09-25 borró así la app real del propietario y sus tareas de prueba. En el móvil del propietario se usa **siempre** `--keep-app-running` y después se desinstala a mano solo `invalid.pending.app.profile`.
 - No se maneja el móvil por `adb` mientras el propietario lo está usando.
 
+
