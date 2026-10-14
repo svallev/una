@@ -5,7 +5,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** CA-019-17, 18 y 22: lo que el `Poster` de Android traduce, construido y comprobado en la JVM. */
+/**
+ * CA-019-17, 18 y 22; CA-020-28 (la notificación lleva la versión pública genérica y es solo
+ * local): lo que el `Poster` de Android traduce, construido y comprobado en la JVM.
+ */
 class NotificationSpecTest {
     private fun spec(
         display: Display,
@@ -53,7 +56,7 @@ class NotificationSpecTest {
     }
 
     @Test
-    fun `CA-019-17 la completa es privada, local y con estilo expandible`() {
+    fun `CA-020-28 CA-019-17 la completa es privada, local y con estilo expandible`() {
         for (d in displays) {
             val s = spec(d)
             assertEquals(Visibility.PRIVATE, s.visibility)
@@ -63,7 +66,7 @@ class NotificationSpecTest {
     }
 
     @Test
-    fun `CA-019-17 cada notificacion lleva las dos versiones y la publica es la generica`() {
+    fun `CA-020-28 CA-019-17 cada notificacion lleva las dos versiones y la publica es la generica`() {
         val full = spec(Display.Full(TaskLabel.Text("SECRETO-7")))
         assertEquals("SECRETO-7", full.text.body.text)
         assertEquals("Tienes una tarea pendiente.", full.text.publicBody.text)

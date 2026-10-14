@@ -7,7 +7,10 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** CA-019-20, P-019-4: el `nonce` de la orden «abrir la tarea actual». */
+/**
+ * CA-019-20, P-019-4; CA-020-28 (la orden de abrir sin el `nonce` vigente, con uno usado o con
+ * otro, se ignora): el `nonce` de la orden «abrir la tarea actual».
+ */
 class ActivationNonceTest {
     @After
     fun tearDown() = ActivationNonce.clear()
@@ -31,14 +34,14 @@ class ActivationNonceTest {
     }
 
     @Test
-    fun `CA-019-20 se acepta una vez y solo una`() {
+    fun `CA-020-28 CA-019-20 se acepta una vez y solo una`() {
         val nonce = ActivationNonce.issue()
         assertTrue(ActivationNonce.consume(nonce))
         assertFalse(ActivationNonce.consume(nonce))
     }
 
     @Test
-    fun `CA-019-20 uno nuevo sustituye al anterior`() {
+    fun `CA-020-28 CA-019-20 uno nuevo sustituye al anterior`() {
         val old = ActivationNonce.issue()
         val new = ActivationNonce.issue()
         assertNotEquals(old, new)
@@ -47,7 +50,7 @@ class ActivationNonceTest {
     }
 
     @Test
-    fun `CA-019-20 sin nonce, vacio, ajeno o nulo se rechaza sin gastar el vigente`() {
+    fun `CA-020-28 CA-019-20 sin nonce, vacio, ajeno o nulo se rechaza sin gastar el vigente`() {
         assertFalse(ActivationNonce.consume(null))
         assertFalse(ActivationNonce.consume("")) // nada emitido
         val nonce = ActivationNonce.issue()
@@ -68,7 +71,7 @@ class ActivationNonceTest {
     }
 
     @Test
-    fun `CA-019-20 accept pide la accion exacta y el nonce vigente`() {
+    fun `CA-020-28 CA-019-20 accept pide la accion exacta y el nonce vigente`() {
         val nonce = ActivationNonce.issue()
         // Otra accion (o ninguna) con el nonce bueno: se ignora y no gasta el vigente.
         assertFalse(ActivationNonce.accept(null, nonce))
