@@ -69,4 +69,19 @@ Con permiso del propietario. La CI y Security de `main` en verde sobre ese commi
 - **Artefactos:** solo `release-summary` y `third-party-notices`; ningún `.apk` ni `.aab` (CA-020-06).
 - **Fallo real (F-1):** las *build-tools* más nuevas del runner son la **37.0.0**, cuyo `apksigner verify --print-certs` escribe `V2 Signer: certificate DN: …` en vez de `Signer #1 certificate DN: …` (la 36, la de este Mac). El parser fallaba cerrado («ningún firmante legible»): sin falso verde, pero sin entrega a testers posible. **Corregido** en `fix/020-apksigner-37` (`c0e1f94`): entiende los dos formatos, cuenta una vez la misma clave en varios esquemas, ignora Source Stamp y sigue fallando cerrado ante lo demás; fixture real `apksigner37_debug.txt`.
 
-**[Pendiente]** repetir los dos modos tras fusionar el arreglo (con permiso) y anotarlos aquí; entonces la spec pasa a **Implementada**.
+### Segundo intento, 2026-10-14, sobre `4eafec4` (PR #54 y #55)
+
+Pedido por el propietario tras fusionar el arreglo de F-1. La CI ([38632280355](https://github.com/svallev/una/actions/runs/38632280355)) y Security ([38632281003](https://github.com/svallev/una/actions/runs/38632281003)) de `main` en verde sobre ese commit antes de lanzar.
+
+| Modo | Ejecución | Resultado | Lo esperado |
+|---|---|---|---|
+| Testers (a mano desde `main`) | [38636803463](https://github.com/svallev/una/actions/runs/38636803463) | **Verde con avisos** («Esta versión no se puede publicar.») | Verde con avisos |
+| Estricto (etiqueta `v0.1.0` de prueba, borrada después) | [38636812640](https://github.com/svallev/una/actions/runs/38636812640) | Rojo: «fallo (3)», `identity`, `package-name` y `signature` | Rojo |
+
+- **En verde en los dos:** `mode`, `build`, `ci-runs`, `lockfile`, `native-strings`, `permissions`, `test-classes`, `pdfium`, `licenses`, `size` y `mastg-static`. `tag`: aviso en testers («no hay etiqueta») y ok en estricto.
+- **Testers:** `identity`, `package-name`, `signature` y `tag` en aviso, los esperados: las tres direcciones `example.com`, los huecos de la política (4 en ES y 4 en EN) y sus marcas (6 `[Suposición]` y 6 `[Assumption]`), el *package name* provisional `invalid.pending.app` (tres APK y el AAB) y los tres APK y el AAB firmados con el certificado de depuración del runner (**un aviso por paquete**: ya no se repiten).
+- **Estricto:** los mismos de dirección, *package name* y firma como fallos, más la falta de `upload-cert.sha256` (**[Pendiente, F6]**).
+- **F-1 resuelto:** `signature` lee la salida de `apksigner` 37 del runner (`V2 Signer: …`) y da el resultado correcto en los dos modos.
+- **Artefactos:** solo `release-summary` y `third-party-notices`; ningún `.apk` ni `.aab` (CA-020-06).
+
+Con esto quedan verificados en GitHub CA-020-01, 03, 04 y 06, y la spec pasa a **Implementada** (2026-10-14).
