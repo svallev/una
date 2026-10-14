@@ -443,7 +443,7 @@ Sin textos nuevos en la app (ARB sin cambios). Los mensajes de las herramientas 
 
 - **Q-020-1** ✅ **Resuelta (propietario, 2026-10-14): sí.** ¿`[Pendiente]` y `[Pending]` también bloquean en la política, además de `[Suposición]` y `[Assumption]`? **[Suposición]** Sí (CA-020-11).
 - **Q-020-2** ✅ **Resuelta (propietario, 2026-10-14): sí, solo desde `main`.** ¿El modo testers solo se lanza desde `main`, o también desde una rama para probar una entrega antes de fusionar? **[Suposición]** Solo desde `main` (CL-020-3).
-- **Q-020-3** (Claude Code, en el plan) El valor mínimo de `targetSdk` que exige Play hoy y dónde se fija. **[Suposición]** Se toma el requisito vigente de Google Play al escribir el plan, en un solo sitio.
+- **Q-020-3** ✅ **Resuelta en el plan (2026-10-14): `targetSdk` ≥ 36**, requisito de Google Play desde el 31-08-2026, fijado en `playMinTargetSdk` de `app/tool/check_package.dart` (plan §1). (Claude Code, en el plan) El valor mínimo de `targetSdk` que exige Play hoy y dónde se fija. **[Suposición]** Se toma el requisito vigente de Google Play al escribir el plan, en un solo sitio.
 - **Q-020-4** ✅ **Resuelta (propietario, 2026-10-14): solo en el emulador.** ¿La pasada MASTG se hace solo en el emulador, o también en el Xiaomi (con tu permiso y sin capturas)? **[Suposición]** Solo en el emulador; lo que dependa del Xiaomi va a la 022.
 - **Q-020-5** ✅ **Resuelta (propietario, 2026-10-14): no.** ¿El modo testers debería dejar el APK como artefacto (firmado con el certificado de depuración, de retención corta) para que la entrega sea **ese** archivo? Como el repositorio es público, lo podría descargar cualquiera con cuenta de GitHub. **[Suposición]** No: la entrega se compila del mismo commit (CA-020-06).
 
