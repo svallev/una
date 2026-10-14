@@ -1,0 +1,24 @@
+# Sumas del wrapper de Gradle (spec 020, CA-020-14; threat-model §5). Las comprueba
+# tools/check-gradle-wrapper.sh, que falla si cambia algo.
+#
+# Fuente: las sumas SHA-256 que publica Gradle, en https://gradle.org/release-checksums/ y en
+# https://services.gradle.org/distributions/<archivo>.sha256. Comprobadas el 2026-10-14 (las dos
+# fuentes dan lo mismo en las tres líneas de abajo).
+#
+# distribution <archivo del distributionUrl> <sha256>
+#   La suma que tiene que llevar distributionSha256Sum en
+#   app/android/gradle/wrapper/gradle-wrapper.properties. Gradle comprueba la distribución con ella
+#   al descargarla (no al reutilizar una ya instalada en ~/.gradle).
+# wrapper-jar <versión de Gradle que lo publica> <sha256>
+#   Las sumas admitidas del gradle-wrapper.jar que se ejecuta. El jar no está en el repositorio
+#   (app/android/.gitignore): la herramienta de Flutter lo copia de su caché
+#   (bin/cache/artifacts/gradle_wrapper) al compilar, y el de Flutter 3.47.5 es el jar publicado con
+#   Gradle 2.10 (su MANIFEST.MF dice Implementation-Version 2.10; no cambia con distributionUrl).
+#   La comprobación corre después de compilar y detecta un jar alterado, no impide que se haya
+#   ejecutado ya (P-020-2, threat-model §5).
+#
+# Al subir de versión de Gradle o de Flutter: repite la comprobación en las dos fuentes y actualiza
+# este archivo y el distributionSha256Sum en la misma PR (la CI falla mientras no coincidan: CL-020-18).
+distribution gradle-9.8.0-all.zip 46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf
+wrapper-jar 2.10 16caeaf66d57a0d1d2087fef6a97efa62de8da69afa5b908f40db35afc4342da
+wrapper-jar 9.8.0 238e777fcddd7e34f9708186085def2abd6e08e658505b38718d79d74c21abd5

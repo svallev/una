@@ -100,6 +100,11 @@ jobs:
           flutter pub get --enforce-lockfile
           flutter build apk --debug
           flutter build apk --release --split-per-abi
+      - name: Wrapper de Gradle verificado (distributionSha256Sum y gradle-wrapper.jar; CA-020-14, P-020-2)
+        # Tras compilar: el gradle-wrapper.jar no está en el repositorio, lo copia Flutter de su caché
+        # al compilar. Falla si falta la suma (p. ej. tras una actualización de Flutter, CL-020-18),
+        # si no es la de tools/gradle-wrapper.lock o si el jar no es uno de los que publica Gradle.
+        run: bash tools/check-gradle-wrapper.sh
       - name: Permisos del manifiesto combinado (release sin permisos; debug solo los esperados)
         working-directory: app
         run: |
