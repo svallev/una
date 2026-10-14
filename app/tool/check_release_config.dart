@@ -327,32 +327,28 @@ List<GateIssue> _addressIssues(String key, String address) {
       fault('el dominio "$host" no tiene punto: no es un dominio público'),
     );
   } else {
-    for (final reserved in _reservedDomains) {
-      if (host == reserved || host.endsWith('.$reserved')) {
-        issues.add(
-          placeholder(
-            'el dominio "$host" está reservado para ejemplos ($reserved y sus subdominios): '
-            'cámbialo por el definitivo',
-          ),
-        );
-      }
-    }
-    if (_reservedTlds.contains(last)) {
-      issues.add(
-        placeholder(
-          'el dominio "$host" termina en `.$last`, reservado para ejemplos, pruebas o uso privado',
-        ),
-      );
-    }
-    if (_idnTestTlds.contains(last)) {
-      issues.add(
-        placeholder(
-          'el dominio "$host" termina en `.$last`, un dominio internacional de pruebas de IANA',
-        ),
-      );
+    for (final reason in reservedHostReasons(host)) {
+      issues.add(placeholder(reason));
     }
   }
   return issues;
+}
+
+/// Por qué [host] (en minúsculas, sin punto final y con al menos un punto) es un dominio reservado
+/// para ejemplos, pruebas o uso privado: una frase por motivo, vacía si no lo es. Lo usan la puerta
+/// de las direcciones y la del *package name* (`check_package.dart`, spec 020, CA-020-03 f).
+List<String> reservedHostReasons(String host) {
+  final last = host.split('.').last;
+  return [
+    for (final reserved in _reservedDomains)
+      if (host == reserved || host.endsWith('.$reserved'))
+        'el dominio "$host" está reservado para ejemplos ($reserved y sus subdominios): '
+            'cámbialo por el definitivo',
+    if (_reservedTlds.contains(last))
+      'el dominio "$host" termina en `.$last`, reservado para ejemplos, pruebas o uso privado',
+    if (_idnTestTlds.contains(last))
+      'el dominio "$host" termina en `.$last`, un dominio internacional de pruebas de IANA',
+  ];
 }
 
 /// La identidad de una dirección para compararlas: dominio (en minúsculas, sin el punto final) y

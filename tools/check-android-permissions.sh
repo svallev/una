@@ -5,7 +5,11 @@
 #
 #   tools/check-android-permissions.sh [release|debug]     (desde app/, tras compilar esa variante)
 #   tools/check-android-permissions.sh [release|debug] --manifest <archivo>   (un manifiesto dado:
-#       pruebas y, en F6, el del AAB; no hace falta compilar)
+#       pruebas; no hace falta compilar)
+#   tools/check-android-permissions.sh release --aab <archivo> [--aapt2 <ruta>]   (el manifiesto de un
+#       AAB, que va en formato proto: se lee con `app/tool/check_package.dart --manifest-xml`, que
+#       reempaqueta el módulo base y lo pasa a XML, y se revisa con las mismas reglas; spec 020,
+#       P-020-1; falla cerrada si el AAB no se puede leer)
 #   tools/check-android-permissions.sh --negative           (los manifiestos de prueba de
 #       tools/fixtures/manifests/: cada uno tiene que fallar nombrando lo suyo; el bueno, pasar)
 #
@@ -33,17 +37,23 @@ set -euo pipefail
 
 MODE="release"
 MANIFEST=""
+AAB=""
+AAPT2=""
 NEGATIVE=false
-usage() { echo "Uso: $0 [release|debug] [--manifest <archivo>] | $0 --negative" >&2; exit 2; }
+usage() { echo "Uso: $0 [release|debug] [--manifest <archivo> | --aab <archivo> [--aapt2 <ruta>]] | $0 --negative" >&2; exit 2; }
 while [ $# -gt 0 ]; do
   case "$1" in
     release|debug) MODE="$1" ;;
     --manifest) [ $# -ge 2 ] || usage; MANIFEST="$2"; shift ;;
+    --aab) [ $# -ge 2 ] || usage; AAB="$2"; shift ;;
+    --aapt2) [ $# -ge 2 ] || usage; AAPT2="$2"; shift ;;
     --negative) NEGATIVE=true ;;
     *) usage ;;
   esac
   shift
 done
+if [ -n "$AAB" ] && { [ -n "$MANIFEST" ] || [ "$NEGATIVE" = true ]; }; then usage; fi
+if [ -n "$AAPT2" ] && [ -z "$AAB" ]; then usage; fi
 ALLOWED=("android.permission.INTERNET" "android.permission.POST_NOTIFICATIONS" "android.permission.RECEIVE_BOOT_COMPLETED")
 
 # Los manifiestos de prueba (CA-020-13): cada uno de expected.tsv (archivo, TAB, texto que el error
@@ -82,7 +92,20 @@ if [ "$NEGATIVE" = true ]; then
   exit $bad
 fi
 
-if [ -z "$MANIFEST" ]; then
+if [ -n "$AAB" ]; then
+  # El manifiesto del AAB, como XML en un archivo temporal (se borra al salir).
+  abs() { case "$1" in /*) echo "$1" ;; *) echo "$PWD/$1" ;; esac; }
+  TOOLS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+  AAB_ABS="$(abs "$AAB")"
+  MANIFEST="$(mktemp "${TMPDIR:-/tmp}/aab-manifest.XXXXXX")"
+  trap 'rm -f "$MANIFEST"' EXIT
+  aapt_args=()
+  [ -n "$AAPT2" ] && aapt_args=(--aapt2 "$(abs "$AAPT2")")
+  if ! (cd "$TOOLS_ROOT/app" && dart run tool/check_package.dart ${aapt_args[@]+"${aapt_args[@]}"} --manifest-xml "$MANIFEST" "$AAB_ABS") >&2; then
+    echo "::error::No se pudo leer el manifiesto de $AAB" >&2
+    exit 1
+  fi
+elif [ -z "$MANIFEST" ]; then
   MANIFEST="$(find build/app/intermediates/merged_manifest -path "*/$MODE/*" -name AndroidManifest.xml 2>/dev/null | head -n1 || true)"
   if [ -z "$MANIFEST" ]; then
     echo "No se encontró el manifiesto combinado de $MODE. Compila antes: flutter build apk --$MODE" >&2

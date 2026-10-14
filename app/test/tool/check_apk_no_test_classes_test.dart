@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/aab_support.dart' show realAabPath;
+
 /// El script de CI que vigila que JUnit/Hamcrest (solo `testImplementation`,
 /// spec 019, plan §0 C-2) no entre en un APK distribuido. Crea APK de juguete
 /// con `zip` (un APK es un zip con `classes*.dex`).
@@ -120,4 +122,85 @@ void main() {
     expect(_run(['${tmp.path}/no-existe.apk']).exitCode, 1);
     expect(_run([]).exitCode, 2);
   }, skip: skip);
+
+  // CA-020-02 (4) (T-020-06): el mismo script acepta un AAB (`base/dex/classes*.dex`).
+  group('CA-020-02: el AAB', () {
+    String aab(String name, Map<String, List<int>> entries) {
+      final staging = Directory('${tmp.path}/staging_$name')..createSync();
+      entries.forEach((path, bytes) {
+        File('${staging.path}/$path')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(bytes);
+      });
+      final out = '${tmp.path}/$name.aab';
+      final r = Process.runSync('zip', [
+        '-q',
+        '-r',
+        out,
+        '.',
+      ], workingDirectory: staging.path);
+      expect(r.exitCode, 0, reason: '${r.stderr}');
+      return out;
+    }
+
+    test('CA-020-02: un AAB sin clases de pruebas pasa', () {
+      final f = aab('clean', {
+        'BundleConfig.pb': [1],
+        'base/manifest/AndroidManifest.xml': [1],
+        'base/dex/classes.dex': _dex('Landroidx/core/app/NotificationCompat;'),
+      });
+      final r = _run([f]);
+      expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+      expect(r.stdout, contains('OK'));
+    }, skip: skip);
+
+    for (final descriptor in [
+      'Lorg/junit/Test;',
+      'Lorg/hamcrest/Matcher;',
+      'Ljunit/framework/TestCase;',
+    ]) {
+      test('CA-020-02: un base/dex/classes2.dex con $descriptor falla y '
+          'nombra el dex', () {
+        final f = aab('bad', {
+          'base/dex/classes.dex': _dex('Lfoo/Bar;'),
+          'base/dex/classes2.dex': _dex('xx $descriptor yy'),
+        });
+        final r = _run([f]);
+        expect(r.exitCode, 1, reason: '${r.stdout}${r.stderr}');
+        expect('${r.stdout}${r.stderr}', contains('base/dex/classes2.dex'));
+      }, skip: skip);
+    }
+
+    test(
+      'CA-020-02: una entrada org/junit/... bajo base/root/ del AAB falla',
+      () {
+        final f = aab('entry', {
+          'base/dex/classes.dex': _dex('Lfoo/Bar;'),
+          'base/root/org/junit/Test.class': [0xca, 0xfe],
+        });
+        final r = _run([f]);
+        expect(r.exitCode, 1, reason: '${r.stdout}${r.stderr}');
+      },
+      skip: skip,
+    );
+
+    test('CA-020-02: APK y AAB juntos: uno malo hace fallar a todos', () {
+      final good = _apk(tmp, 'good', {'classes.dex': _dex('Lfoo/Bar;')});
+      final bad = aab('bad3', {
+        'base/dex/classes.dex': _dex('Lorg/junit/Test;'),
+      });
+      final r = _run([good, bad]);
+      expect(r.exitCode, 1);
+      expect(r.stdout, contains('OK'));
+    }, skip: skip);
+
+    test('CA-020-02: el AAB real de release (si está compilado) pasa', () {
+      if (!File(realAabPath).existsSync() || skip != null) {
+        markTestSkipped('sin AAB de release compilado');
+        return;
+      }
+      final r = _run([realAabPath]);
+      expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+    });
+  });
 }

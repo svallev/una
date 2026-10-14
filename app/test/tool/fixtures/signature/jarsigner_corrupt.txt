@@ -1,0 +1,1 @@
+jarsigner error: java.lang.SecurityException: SHA-256 digest error for BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libapp.so.sym

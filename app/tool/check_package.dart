@@ -1,12 +1,14 @@
-// Estática MASTG del paquete de release (spec 020, CA-020-22; plan §3.3): falla si el APK compilado
-// se aparta de lo que la app promete en privacidad y seguridad. Mira el paquete, no el código
-// fuente: lo que se distribuye es lo que cuenta.
+// Estática MASTG del paquete de release (spec 020, CA-020-22; plan §3.3): falla si el APK o el AAB
+// compilado se aparta de lo que la app promete en privacidad y seguridad. Mira el paquete, no el
+// código fuente: lo que se distribuye es lo que cuenta.
 //
-//   dart run tool/check_package.dart [--aapt2 <ruta>] [--allowlist <archivo>] <apk>...
+//   dart run tool/check_package.dart [--aapt2 <ruta>] [--allowlist <archivo>] <apk|aab>...
+//   dart run tool/check_package.dart [--aapt2 <ruta>] --package-name [--json <archivo>] <apk|aab>...
+//   dart run tool/check_package.dart [--aapt2 <ruta>] --manifest-xml <archivo> <apk|aab>
 //
 // Lo normal es llamarla con `tools/check-package.sh`, que pasa los APK de release y la lista de
-// excepciones (`tools/release/secret-allowlist.txt`). Usa `aapt2 dump` (manifiesto, recursos y
-// configuración de red) y `unzip` (los secretos); no instala nada ni usa la red.
+// excepciones (`tools/release/secret-allowlist.txt`). Usa `aapt2` (manifiesto, recursos y
+// configuración de red), `unzip` (los secretos) y, para un AAB, `zip`; no instala nada ni usa la red.
 //
 // Las reglas (cada fallo nombra la regla, el archivo del paquete y el motivo):
 //   (a) ni `debuggable` ni `testOnly` en `<application>`;
@@ -26,10 +28,25 @@
 //
 // Todo atributo que sea una referencia (`@bool/…`, `@xml/…`) se resuelve con `aapt2 dump resources`;
 // si no se puede, la regla falla. Falla cerrada: un volcado que no se entiende o un archivo que no
-// se puede leer es un hallazgo (`fault`), nunca un verde. Sin paquetes (P11): solo `dart:*`.
+// se puede leer es un hallazgo (`fault`), nunca un verde.
+//
+// **El AAB (T-020-06, P-020-1).** Guarda el manifiesto y los recursos en formato *proto*, que
+// `aapt2 dump` no lee igual que el binario del APK. Se reempaqueta su módulo `base/`
+// (`manifest/AndroidManifest.xml` a la raíz, `resources.pb` y `res/`) como un APK *proto* temporal y
+// se convierte con `aapt2 convert --output-format binary`: el volcado sale con el mismo formato que
+// el de un APK y valen las mismas reglas. Un AAB con otro módulo que `base/` es un fallo, y los
+// secretos se buscan en el archivo entero (también en `BUNDLE-METADATA/`).
+//
+// `--package-name` comprueba el *package name* (CA-020-03 f): ni el provisional `invalid.pending.*`
+// ni un dominio reservado (la lista de la puerta de la identidad) son un fallo, sino un **aviso**
+// de clase `provisional` (CA-020-05 b); lo mal formado, un fallo. `--json` escribe la lista con su
+// clase, de forma atómica y al final (`complete: true`). `--manifest-xml` escribe el manifiesto
+// como XML para `tools/check-android-permissions.sh --manifest`.
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+
+import 'check_release_config.dart' show reservedHostReasons;
 
 /// El `targetSdk` mínimo que acepta Google Play para apps nuevas y actualizaciones (Android 16,
 /// API 36, desde el 31-08-2026; Q-020-3). Si Play lo sube, se cambia aquí y en ningún sitio más
@@ -84,6 +101,9 @@ class _Node {
   final String name;
   final int indent;
   final Map<String, String> attrs = {};
+
+  /// Los atributos que van sin espacio de nombres (`package`…), para volver a escribir el XML.
+  final Set<String> plain = {};
   final List<_Node> children = [];
 
   Iterable<_Node> child(String n) => children.where((c) => c.name == n);
@@ -144,6 +164,7 @@ _Node _parseXmlTree(String dump) {
         throw FormatException('línea $number: atributo sin nombre');
       }
       stack.last.attrs[name] = _attrValue(text.substring(eq + 1), number);
+      if (colon < 0) stack.last.plain.add(name);
       continue;
     }
     throw FormatException('línea $number: no se entiende «${_clip(trimmed)}»');
@@ -1409,6 +1430,141 @@ String _aapt(String aapt2, List<String> args) {
   return r.stdout as String;
 }
 
+// ─── El AAB: su módulo base como APK ────────────────────────────────────────────────────────────
+
+/// Si [path] es un AAB (por su extensión).
+bool isAab(String path) => path.toLowerCase().endsWith('.aab');
+
+/// Las carpetas de primer nivel de un AAB que se esperan: `base/` (el único módulo) y los metadatos.
+const _aabDirs = {'base', 'BUNDLE-METADATA', 'META-INF'};
+const _aabConfig = 'BundleConfig.pb';
+
+const _aabManifest = 'base/manifest/AndroidManifest.xml';
+const _aabResourceTable = 'base/resources.pb';
+
+/// Un paquete que `aapt2 dump` puede leer: el propio APK o, para un AAB, su módulo base convertido
+/// a un APK binario en una carpeta temporal ([dispose] la borra).
+class ReadablePackage {
+  ReadablePackage._(this.path, [this._temp]);
+
+  /// El APK que se pasa a `aapt2 dump`.
+  final String path;
+  final Directory? _temp;
+
+  void dispose() {
+    final t = _temp;
+    if (t != null && t.existsSync()) t.deleteSync(recursive: true);
+  }
+}
+
+String _runTool(String tool, List<String> args, {String? cwd}) {
+  final ProcessResult r;
+  try {
+    r = Process.runSync(
+      tool,
+      args,
+      workingDirectory: cwd,
+      stdoutEncoding: utf8,
+      stderrEncoding: utf8,
+    );
+  } on ProcessException catch (e) {
+    throw StateError('no se pudo ejecutar $tool (${e.message})');
+  }
+  if (r.exitCode != 0 && r.exitCode != 1 && r.exitCode != 11) {
+    final detail = '${r.stderr}'.trim().split('\n').first;
+    throw StateError(
+      '$tool falló (código ${r.exitCode}${detail.isEmpty ? '' : ': ${_clip(detail)}'})',
+    );
+  }
+  return r.stdout as String;
+}
+
+/// Prepara [package] para `aapt2 dump`. Lanza [StateError] con el motivo si no se puede (un AAB con
+/// otro módulo que `base/`, sin manifiesto o sin tabla de recursos, ilegible, o `aapt2 convert`
+/// que falla).
+ReadablePackage openPackage(String package, String aapt2) {
+  if (!isAab(package)) return ReadablePackage._(package);
+
+  final listing = Process.runSync('unzip', [
+    '-Z1',
+    package,
+  ], stdoutEncoding: utf8);
+  if (listing.exitCode != 0) {
+    throw StateError(
+      'unzip -Z1 falló (código ${listing.exitCode}): no es un zip legible',
+    );
+  }
+  final names = const LineSplitter()
+      .convert(listing.stdout as String)
+      .where((n) => n.isNotEmpty)
+      .toList();
+  // Solo `base/` como módulo: otra carpeta de primer nivel es un módulo más; un archivo suelto que no
+  // sea `BundleConfig.pb`, una entrada inesperada.
+  final modules = <String>{};
+  final loose = <String>{};
+  for (final name in names) {
+    final slash = name.indexOf('/');
+    if (slash < 0) {
+      if (name != _aabConfig) loose.add(name);
+    } else if (!_aabDirs.contains(name.substring(0, slash))) {
+      modules.add(name.substring(0, slash));
+    }
+  }
+  if (modules.isNotEmpty || loose.isNotEmpty) {
+    throw StateError(
+      [
+        if (modules.isNotEmpty)
+          'el AAB lleva un módulo distinto de base/ (${(modules.toList()..sort()).join(', ')}): '
+              'esta herramienta solo lee el módulo base',
+        if (loose.isNotEmpty)
+          'el AAB lleva entradas inesperadas en la raíz (${(loose.toList()..sort()).join(', ')})',
+      ].join('; '),
+    );
+  }
+  for (final required in [_aabManifest, _aabResourceTable]) {
+    if (!names.contains(required)) {
+      throw StateError('el AAB no tiene $required');
+    }
+  }
+
+  final temp = Directory.systemTemp.createTempSync('una_aab_');
+  try {
+    final extracted = '${temp.path}/x';
+    _runTool('unzip', [
+      '-q',
+      '-o',
+      '-d',
+      extracted,
+      package,
+      _aabManifest,
+      _aabResourceTable,
+      'base/res/*',
+    ]);
+    final proto = Directory('${temp.path}/proto')..createSync();
+    File('$extracted/$_aabManifest')
+        .renameSync('${proto.path}/AndroidManifest.xml');
+    File('$extracted/$_aabResourceTable')
+        .renameSync('${proto.path}/resources.pb');
+    final res = Directory('$extracted/base/res');
+    if (res.existsSync()) res.renameSync('${proto.path}/res');
+    final protoApk = '${temp.path}/proto.apk';
+    _runTool('zip', ['-q', '-r', '-X', protoApk, '.'], cwd: proto.path);
+    final binary = '${temp.path}/base.apk';
+    _aapt(aapt2, [
+      'convert',
+      '--output-format',
+      'binary',
+      '-o',
+      binary,
+      protoApk,
+    ]);
+    return ReadablePackage._(binary, temp);
+  } on Object {
+    temp.deleteSync(recursive: true);
+    rethrow;
+  }
+}
+
 /// Todas las reglas sobre [package]: los volcados de `aapt2` y el escaneo de secretos.
 List<PackageIssue> checkPackage(
   String package, {
@@ -1416,7 +1572,10 @@ List<PackageIssue> checkPackage(
   SecretAllowlist? allowlist,
 }) {
   final issues = <PackageIssue>[];
+  ReadablePackage? readable;
   try {
+    readable = openPackage(package, aapt2);
+    final apk = readable.path;
     issues.addAll(
       checkPackageXml(
         manifest: _aapt(aapt2, [
@@ -1424,22 +1583,202 @@ List<PackageIssue> checkPackage(
           'xmltree',
           '--file',
           _manifestEntry,
-          package,
+          apk,
         ]),
-        resources: _aapt(aapt2, ['dump', 'resources', package]),
+        resources: _aapt(aapt2, ['dump', 'resources', apk]),
         xmlFile: (entry) =>
-            _aapt(aapt2, ['dump', 'xmltree', '--file', entry, package]),
+            _aapt(aapt2, ['dump', 'xmltree', '--file', entry, apk]),
       ),
     );
   } on StateError catch (e) {
     issues.add(PackageIssue('fault', package, e.message));
+  } finally {
+    readable?.dispose();
   }
   issues.addAll(scanSecrets(package, allowlist: allowlist));
   return issues;
 }
 
+// ─── El manifiesto como XML ─────────────────────────────────────────────────────────────────────
+
+String _xmlEscape(String v) => v
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+
+/// El volcado de `aapt2 dump xmltree` del manifiesto, como XML: lo que lee
+/// `tools/check-android-permissions.sh --manifest`. Los atributos de `android` llevan su prefijo, los
+/// que no tienen espacio de nombres (`package`…) no, y los de otro espacio se escriben con `ext:`.
+/// Lanza [FormatException] si el volcado no se entiende.
+String manifestDumpToXml(String dump) {
+  final root = _parseXmlTree(dump);
+  final out = StringBuffer('<?xml version="1.0" encoding="utf-8"?>\n');
+  void write(_Node n, int depth) {
+    final pad = '  ' * depth;
+    out.write('$pad<${n.name}');
+    if (depth == 0) out.write(' xmlns:android="$_androidNs"');
+    n.attrs.forEach((name, value) {
+      final String shown;
+      if (n.plain.contains(name)) {
+        shown = name;
+      } else if (name.contains(':')) {
+        shown = 'ext:${name.substring(name.lastIndexOf(':') + 1)}';
+      } else {
+        shown = 'android:$name';
+      }
+      out.write(' $shown="${_xmlEscape(value)}"');
+    });
+    out.write('>\n');
+    for (final c in n.children) {
+      write(c, depth + 1);
+    }
+    out.write('$pad</${n.name}>\n');
+  }
+
+  write(root, 0);
+  return out.toString();
+}
+
+/// El manifiesto de [package] como XML. Lanza [StateError] si no se puede leer.
+String manifestXmlOf(String package, {required String aapt2}) {
+  final readable = openPackage(package, aapt2);
+  try {
+    final dump = _aapt(aapt2, [
+      'dump',
+      'xmltree',
+      '--file',
+      _manifestEntry,
+      readable.path,
+    ]);
+    try {
+      return manifestDumpToXml(dump);
+    } on FormatException catch (e) {
+      throw StateError('el manifiesto no se entiende: ${e.message}');
+    }
+  } finally {
+    readable.dispose();
+  }
+}
+
+// ─── El package name (CA-020-03 f, CA-020-05 b) ─────────────────────────────────────────────────
+
+/// Un hallazgo con clase, para el resumen del trabajo de publicación: `kind` es `provisional` (un
+/// aviso de identidad, CA-020-05 b) o `fault`; [subject] es el paquete y [message] el motivo.
+class ClassedIssue {
+  const ClassedIssue(this.kind, this.subject, this.message);
+
+  final String kind;
+  final String subject;
+  final String message;
+
+  String get line => '$subject: $message';
+
+  Map<String, Object?> toJson() => {
+    'kind': kind,
+    'subject': subject,
+    'message': message,
+  };
+
+  @override
+  String toString() => '$kind: $line';
+}
+
+final _applicationId = RegExp(
+  r'^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$',
+);
+
+/// El prefijo del *package name* provisional (PD-2).
+const provisionalPackagePrefix = 'invalid.pending.';
+
+/// Los hallazgos del *package name* [id]: `provisional` si es el provisional (`invalid.pending.*`) o
+/// su dominio, al revés, está reservado (lista de la puerta de la identidad); `fault` si no es un
+/// *package name* de Android. Un fallo y un aviso no se mezclan: si hay un fallo, todo es fallo.
+List<ClassedIssue> checkApplicationId(
+  String id, {
+  String subject = 'applicationId',
+}) {
+  if (!_applicationId.hasMatch(id)) {
+    return [
+      ClassedIssue(
+        'fault',
+        subject,
+        'el package name "${_clip(id.replaceAll(RegExp(r'[\x00-\x1f\x7f]'), '?'))}" '
+            'no es válido: dos o más segmentos de letras, cifras y «_», cada uno empezando por letra',
+      ),
+    ];
+  }
+  // El provisional ya lo explica todo (su primer segmento, `invalid`, es un sufijo reservado): un
+  // solo aviso por paquete.
+  if ('$id.'.startsWith(provisionalPackagePrefix)) {
+    return [
+      ClassedIssue(
+        'provisional',
+        subject,
+        'el package name "$id" es el provisional (invalid.pending.*): '
+            'no se puede cambiar después de la primera subida a Play (PD-2)',
+      ),
+    ];
+  }
+  final reasons = <String>[];
+  final host = id.split('.').reversed.join('.').toLowerCase();
+  reasons.addAll(
+    reservedHostReasons(host)
+        .map((r) => 'el package name "$id" usa un dominio reservado: $r'),
+  );
+  return [for (final r in reasons) ClassedIssue('provisional', subject, r)];
+}
+
+/// El `package` del manifiesto compilado de [package]. Lanza [StateError] si no se puede leer.
+String applicationIdOf(String package, {required String aapt2}) {
+  final readable = openPackage(package, aapt2);
+  try {
+    final dump = _aapt(aapt2, [
+      'dump',
+      'xmltree',
+      '--file',
+      _manifestEntry,
+      readable.path,
+    ]);
+    final _Node root;
+    try {
+      root = _parseXmlTree(dump);
+    } on FormatException catch (e) {
+      throw StateError('el manifiesto no se entiende: ${e.message}');
+    }
+    final id = root.attrs['package'];
+    if (root.name != 'manifest' || id == null) {
+      throw StateError('el manifiesto no tiene el atributo package');
+    }
+    return id;
+  } finally {
+    readable.dispose();
+  }
+}
+
+/// Escribe [issues] en [path] de forma atómica (archivo temporal + renombrado), con `complete: true`
+/// y la lista de comprobaciones hechas: el resumen solo da por bueno un JSON completo.
+void writeClassJson(
+  String path,
+  List<ClassedIssue> issues,
+  List<String> checks,
+) {
+  final temp = File('$path.tmp');
+  temp.writeAsStringSync(
+    const JsonEncoder.withIndent('  ').convert({
+      'version': 1,
+      'complete': true,
+      'checks': checks,
+      'issues': [for (final i in issues) i.toJson()],
+    }),
+  );
+  temp.renameSync(path);
+}
+
 const _usage =
-    'Uso: dart run tool/check_package.dart [--aapt2 <ruta>] [--allowlist <archivo>] <apk>...';
+    'Uso: dart run tool/check_package.dart [--aapt2 <ruta>] [--allowlist <archivo>] <apk|aab>...\n'
+    '     dart run tool/check_package.dart [--aapt2 <ruta>] --package-name [--json <archivo>] <apk|aab>...\n'
+    '     dart run tool/check_package.dart [--aapt2 <ruta>] --manifest-xml <archivo> <apk|aab>';
 
 /// Ejecuta la herramienta. Devuelve el código de salida: 0 bien, 1 hallazgos o comprobación que no
 /// pudo hacerse, 2 uso incorrecto. [out] y [err] son donde escribe (por defecto, la consola).
@@ -1448,19 +1787,33 @@ int runCheckPackage(List<String> args, {StringSink? out, StringSink? err}) {
   final e = err ?? stderr;
   String? aapt2;
   String? allowlistPath;
+  String? jsonPath;
+  String? manifestXmlPath;
+  var packageName = false;
   final packages = <String>[];
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
-    if (a == '--aapt2' || a == '--allowlist') {
+    if (a == '--aapt2' ||
+        a == '--allowlist' ||
+        a == '--json' ||
+        a == '--manifest-xml') {
       if (i + 1 >= args.length) {
         e.writeln('::error::$a necesita un valor\n$_usage');
         return 2;
       }
-      if (a == '--aapt2') {
-        aapt2 = args[++i];
-      } else {
-        allowlistPath = args[++i];
+      final value = args[++i];
+      switch (a) {
+        case '--aapt2':
+          aapt2 = value;
+        case '--allowlist':
+          allowlistPath = value;
+        case '--json':
+          jsonPath = value;
+        default:
+          manifestXmlPath = value;
       }
+    } else if (a == '--package-name') {
+      packageName = true;
     } else if (a.startsWith('--')) {
       e.writeln('::error::argumento desconocido: $a\n$_usage');
       return 2;
@@ -1474,6 +1827,59 @@ int runCheckPackage(List<String> args, {StringSink? out, StringSink? err}) {
     );
     return 2;
   }
+  if (jsonPath != null && !packageName) {
+    e.writeln('::error::--json solo vale con --package-name\n$_usage');
+    return 2;
+  }
+  if (packageName && (manifestXmlPath != null || allowlistPath != null)) {
+    e.writeln(
+      '::error::--package-name no se mezcla con --manifest-xml ni --allowlist\n$_usage',
+    );
+    return 2;
+  }
+  if (manifestXmlPath != null &&
+      (packages.length != 1 || allowlistPath != null)) {
+    e.writeln(
+      '::error::--manifest-xml pide exactamente un paquete y no admite --allowlist\n$_usage',
+    );
+    return 2;
+  }
+
+  final tool = aapt2 ?? findAapt2();
+  final toolOk = tool != null && File(tool).existsSync();
+  if (!toolOk) {
+    final message =
+        'no se encuentra aapt2${tool == null ? '' : ' ($tool)'}: instala las build-tools del SDK '
+        'de Android o pásalo con --aapt2';
+    if (packageName) {
+      return _packageNameRun(packages, null, jsonPath, o, failAll: message);
+    }
+    o.writeln('::error::$message');
+    return 1;
+  }
+
+  if (manifestXmlPath != null) {
+    final package = packages.single;
+    if (!File(package).existsSync()) {
+      o.writeln('::error::No existe el paquete: $package');
+      return 1;
+    }
+    try {
+      final xml = manifestXmlOf(package, aapt2: tool);
+      File(manifestXmlPath).writeAsStringSync(xml);
+    } on StateError catch (ex) {
+      o.writeln('::error::$package: ${ex.message}');
+      return 1;
+    } on FileSystemException catch (ex) {
+      o.writeln(
+        '::error::no se puede escribir $manifestXmlPath (${ex.osError?.message ?? ex.message})',
+      );
+      return 1;
+    }
+    return 0;
+  }
+
+  if (packageName) return _packageNameRun(packages, tool, jsonPath, o);
 
   var allowlist = SecretAllowlist.empty;
   if (allowlistPath != null) {
@@ -1488,14 +1894,6 @@ int runCheckPackage(List<String> args, {StringSink? out, StringSink? err}) {
       );
       return 1;
     }
-  }
-  final tool = aapt2 ?? findAapt2();
-  if (tool == null || !File(tool).existsSync()) {
-    o.writeln(
-      '::error::no se encuentra aapt2${tool == null ? '' : ' ($tool)'}: instala las build-tools del SDK '
-      'de Android o pásalo con --aapt2',
-    );
-    return 1;
   }
 
   var status = 0;
@@ -1520,6 +1918,57 @@ int runCheckPackage(List<String> args, {StringSink? out, StringSink? err}) {
     );
   }
   return status;
+}
+
+/// `--package-name`: el *package name* de cada paquete. [failAll] (sin `aapt2`) hace fallar todos.
+int _packageNameRun(
+  List<String> packages,
+  String? aapt2,
+  String? jsonPath,
+  StringSink o, {
+  String? failAll,
+}) {
+  final issues = <ClassedIssue>[];
+  for (final package in packages) {
+    final subject = _baseName(package);
+    if (failAll != null) {
+      issues.add(ClassedIssue('fault', subject, failAll));
+      continue;
+    }
+    if (!File(package).existsSync()) {
+      issues.add(ClassedIssue('fault', subject, 'no existe el paquete'));
+      continue;
+    }
+    try {
+      final id = applicationIdOf(package, aapt2: aapt2!);
+      issues.addAll(checkApplicationId(id, subject: subject));
+    } on StateError catch (ex) {
+      issues.add(ClassedIssue('fault', subject, ex.message));
+    }
+  }
+  if (jsonPath != null) {
+    try {
+      writeClassJson(jsonPath, issues, ['package-name']);
+    } on FileSystemException catch (ex) {
+      o.writeln(
+        '::error::no se puede escribir $jsonPath (${ex.osError?.message ?? ex.message})',
+      );
+      return 1;
+    }
+  }
+  if (issues.isEmpty) {
+    o.writeln(
+      'OK package name de ${packages.length} paquete(s): propio y no reservado',
+    );
+    return 0;
+  }
+  for (final i in issues) {
+    o.writeln('::error::${i.line}');
+  }
+  o.writeln(
+    'El package name no sirve para publicar (${issues.length}) (spec 020, CA-020-03 f).',
+  );
+  return 1;
 }
 
 void main(List<String> args) {

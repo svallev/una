@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../tool/check_package.dart' show findAapt2;
+import '../support/aab_support.dart';
+
 /// `tools/check-android-permissions.sh` (CA-019-25, T-8, T-13): permisos exactos y lista blanca
 /// de componentes del manifiesto combinado. Se prueba con manifiestos de juguete en un
 /// directorio temporal con la misma estructura que deja Gradle.
@@ -665,5 +668,118 @@ void main() {
         'provider',
       );
     });
+  });
+
+  // CA-020-02 (3) (T-020-06, P-020-1): el manifiesto del AAB, que va en formato proto, se lee con
+  // `check_package.dart --manifest-xml` y se revisa con las mismas reglas que el combinado del APK.
+  group('CA-020-02: --aab (el manifiesto del AAB)', () {
+    final skip = zipToolsSkip;
+
+    String aab() => zipEntries(tmp, 'app', aabEntries());
+
+    /// El volcado bueno con una línea de más delante de `uses-sdk`.
+    String dumpWith(String block) {
+      final good = goodManifestDump();
+      const marker = '      E: uses-sdk';
+      expect(good, contains(marker));
+      return good.replaceFirst(marker, '$block$marker');
+    }
+
+    test('CA-020-02: el manifiesto bueno del AAB pasa', () {
+      final r = runArgs([
+        'release',
+        '--aab',
+        aab(),
+        '--aapt2',
+        writeFakeAapt2(tmp),
+      ]);
+      expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+      expect('${r.stdout}', contains('Permisos y componentes de release'));
+    }, skip: skip);
+
+    test('CA-020-02: un permiso de más en el AAB falla y lo nombra', () {
+      final bad = dumpWith(
+        '      E: uses-permission (line=9)\n'
+        '        A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.CAMERA" (Raw: "android.permission.CAMERA")\n',
+      );
+      final r = runArgs([
+        'release',
+        '--aab',
+        aab(),
+        '--aapt2',
+        writeFakeAapt2(tmp, manifest: bad),
+      ]);
+      expect(r.exitCode, isNot(0), reason: '${r.stdout}${r.stderr}');
+      expect('${r.stdout}${r.stderr}', contains('android.permission.CAMERA'));
+    }, skip: skip);
+
+    test('CA-020-02: un componente de más en el AAB falla', () {
+      final bad = goodManifestDump().replaceFirst(
+        '          E: provider (line=115)',
+        '          E: service (line=114)\n'
+            '            A: http://schemas.android.com/apk/res/android:name(0x01010003)="x.Extra" (Raw: "x.Extra")\n'
+            '          E: provider (line=115)',
+      );
+      final r = runArgs([
+        'release',
+        '--aab',
+        aab(),
+        '--aapt2',
+        writeFakeAapt2(tmp, manifest: bad),
+      ]);
+      expect(r.exitCode, isNot(0), reason: '${r.stdout}${r.stderr}');
+      expect('${r.stdout}${r.stderr}', contains('x.Extra'));
+    }, skip: skip);
+
+    test(
+      'CA-020-02: un AAB que no se lee falla cerrado (no se da por bueno)',
+      () {
+        final r = runArgs([
+          'release',
+          '--aab',
+          '${tmp.path}/no-existe.aab',
+          '--aapt2',
+          writeFakeAapt2(tmp),
+        ]);
+        expect(r.exitCode, isNot(0));
+        expect('${r.stdout}${r.stderr}', contains('no-existe.aab'));
+        final notZip = File('${tmp.path}/roto.aab')..writeAsStringSync('nada');
+        final r2 = runArgs([
+          'release',
+          '--aab',
+          notZip.path,
+          '--aapt2',
+          writeFakeAapt2(tmp),
+        ]);
+        expect(r2.exitCode, isNot(0));
+        expect('${r2.stdout}${r2.stderr}', contains('roto.aab'));
+      },
+      skip: skip,
+    );
+
+    test('CA-020-02: --aab no se mezcla con --manifest ni con --negative', () {
+      final xml = File('${tmp.path}/m.xml')..writeAsStringSync(_manifest());
+      expect(
+        runArgs(['release', '--aab', 'a.aab', '--manifest', xml.path]).exitCode,
+        2,
+      );
+      expect(runArgs(['--negative', '--aab', 'a.aab']).exitCode, 2);
+      expect(runArgs(['release', '--aab']).exitCode, 2);
+    });
+
+    test('CA-020-02: el AAB real de release (si está compilado) pasa', () {
+      final aapt2 = findAapt2();
+      if (aapt2 == null || !File(realAabPath).existsSync() || skip != null) {
+        markTestSkipped('sin aapt2, sin zip o sin AAB de release compilado');
+        return;
+      }
+      final r = Process.runSync('bash', [
+        File(_script).absolute.path,
+        'release',
+        '--aab',
+        File(realAabPath).absolute.path,
+      ], workingDirectory: Directory.current.path);
+      expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+    }, timeout: const Timeout(Duration(minutes: 3)));
   });
 }

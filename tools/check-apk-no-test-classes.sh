@@ -4,7 +4,8 @@
 # (threat-model §5, excepción de licencia). Mira los nombres de las entradas del APK y los
 # descriptores de clase dentro de los classes*.dex (`Lorg/junit/…;`).
 #
-#   tools/check-apk-no-test-classes.sh <apk>...        (desde app/, tras compilar)
+#   tools/check-apk-no-test-classes.sh <apk|aab>...    (desde app/, tras compilar; un AAB lleva sus
+#                                                       dex en base/dex/, spec 020, CA-020-02)
 #
 # Ojo: R8 elimina del release lo que nadie usa, así que el APK sale limpio aunque JUnit estuviera
 # declarado como `implementation` (comprobado en T-019-04); de que sea solo `testImplementation` se
@@ -16,7 +17,7 @@
 set -euo pipefail
 
 if [ "$#" -eq 0 ]; then
-  echo "Uso: $0 <apk>..." >&2
+  echo "Uso: $0 <apk|aab>..." >&2
   exit 2
 fi
 
@@ -27,7 +28,7 @@ status=0
 for apk in "$@"; do
   apk_status=0
   if [ ! -f "$apk" ]; then
-    echo "::error::No existe el APK: $apk" >&2
+    echo "::error::No existe el paquete: $apk" >&2
     status=1
     continue
   fi
@@ -41,7 +42,7 @@ for apk in "$@"; do
       echo "::error::$apk: $dex lleva clases de JUnit/Hamcrest"
       apk_status=1
     fi
-  done < <(unzip -Z1 "$apk" | grep -E '^classes[0-9]*\.dex$' || true)
+  done < <(unzip -Z1 "$apk" | grep -E '^(base/dex/)?classes[0-9]*\.dex$' || true)
   if [ "$apk_status" -eq 0 ]; then
     echo "OK: $apk sin clases de pruebas (org/junit, org/hamcrest)"
   else

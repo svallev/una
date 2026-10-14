@@ -6,8 +6,16 @@
 #
 #   tools/check-package.sh                      (los APK de release por ABI de app/build, tras compilar
 #                                                `flutter build apk --release --split-per-abi`)
-#   tools/check-package.sh <apk>...             (otros paquetes; rutas absolutas o relativas a donde estés)
+#   tools/check-package.sh <apk|aab>...         (otros paquetes, también el AAB; rutas absolutas o
+#                                                relativas a donde estés)
 #   tools/check-package.sh --aapt2 <ruta> ...   (otro aapt2 que el de las build-tools más nuevas del SDK)
+#   tools/check-package.sh --package-name [--json <archivo>] <apk|aab>...
+#                                               (solo el package name: provisional o dominio reservado
+#                                                es un aviso de identidad, CA-020-03 f; con --json, la
+#                                                lista con su clase para el resumen del trabajo)
+#   tools/check-package.sh --manifest-xml <archivo> <apk|aab>
+#                                               (escribe el manifiesto como XML; lo usa
+#                                                tools/check-android-permissions.sh --aab)
 #
 # Las excepciones de la regla de secretos están en tools/release/secret-allowlist.txt. Falla cerrada:
 # sin ningún paquete (0 entradas), un paquete que no existe o un volcado de aapt2 que no se entiende
@@ -31,6 +39,7 @@ abs_file() {
 
 args=()
 packages=()
+other_mode=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --aapt2)
@@ -38,10 +47,16 @@ while [ $# -gt 0 ]; do
       args+=("--aapt2" "$(abs_file "$2")")
       shift 2
       ;;
-    --allowlist)
-      [ $# -ge 2 ] || { echo "::error::--allowlist necesita un valor"; exit 2; }
-      args+=("--allowlist" "$(abs_file "$2")")
+    --allowlist|--json|--manifest-xml)
+      [ $# -ge 2 ] || { echo "::error::$1 necesita un valor"; exit 2; }
+      [ "$1" = "--manifest-xml" ] && other_mode=1
+      args+=("$1" "$(abs_file "$2")")
       shift 2
+      ;;
+    --package-name)
+      other_mode=1
+      args+=("--package-name")
+      shift
       ;;
     --*)
       echo "::error::argumento desconocido: $1" >&2
@@ -66,4 +81,8 @@ if [ "${#packages[@]}" -eq 0 ]; then
 fi
 
 cd "$ROOT/app"
+# Con --package-name o --manifest-xml no se usa la lista de excepciones de los secretos.
+if [ "$other_mode" -eq 1 ]; then
+  exec dart run tool/check_package.dart "${args[@]}" "${packages[@]}"
+fi
 exec dart run tool/check_package.dart --allowlist "$ROOT/tools/release/secret-allowlist.txt" "${args[@]+"${args[@]}"}" "${packages[@]}"
