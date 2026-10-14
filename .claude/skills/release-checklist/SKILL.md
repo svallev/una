@@ -36,7 +36,8 @@ Las comprobaciones automáticas (la puerta de la identidad y de la política, te
 ## Identidad y firma
 - [ ] Bundle ID y package name **definitivos** (PD-2 resuelto); nombre de la app en su fuente única. El trabajo de publicación lo comprueba (`package-name`): en modo estricto, en verde.
 - [ ] Android: AAB firmado con la *upload key* (fuera del repo); Play App Signing activo. `tools/release/upload-cert.sha256` con la huella SHA-256 **pública** del certificado de subida (**[Pendiente, F6]**) y `signature` en verde en el modo estricto.
-- [ ] Configuración del repositorio antes de la primera subida (T-11, spec 020 §8): reglas de las etiquetas `v*` (quién puede lanzar el modo estricto), aprobación de workflows de *forks* y *secret scanning*.
+- [ ] La ejecución del trabajo de publicación que se mira es la del commit que se entrega y viene de **`main`** (testers) o de **la etiqueta `v*`** (estricto): en GitHub, la rama o etiqueta de la ejecución y su commit (`head_branch`/`head_sha`). Una lanzada desde otra rama no vale: llevaría su propio `release.yml` (C-4 de la 020).
+- [ ] Configuración del repositorio antes de la primera subida (T-11, spec 020 §8): reglas de las etiquetas `v*` (quién puede lanzar el modo estricto) y protección de `main`, aprobación de workflows de *forks* y *secret scanning*.
 - [ ] iOS: archivo firmado con la cuenta de Apple Developer (firma automática).
 
 ## Privacidad y tiendas

@@ -113,6 +113,7 @@ Aplica si la PR toca `MainActivity.kt`, `RecentsPrivacy.kt`, el tema de arranque
 - [ ] Ningún aviso nuevo sin que una spec lo añada a la lista cerrada; la tabla de clases está en `release_summary.dart`.
 - [ ] El workflow sigue con disparadores `v*` y `workflow_dispatch` y nada más, `contents: read` y `actions: read`, acciones fijadas por SHA, `persist-credentials: false`, sin `secrets.`, sin `pull_request_target`, sin `${{ }}` dentro de un `run:`, `GH_TOKEN` solo en `ci-runs` y sin subir `.apk` ni `.aab` (lo comprueba `release_workflow_test.dart`).
 - [ ] Bajo `set -o pipefail`, nada de `… | grep -q` (falsos negativos por SIGPIPE): `grep … >/dev/null`.
+- [ ] Al mirar un resultado del trabajo: la ejecución viene de `main` (modo testers) o de la etiqueta `v*` (estricto), con el `release.yml` de ese commit; una lanzada desde otra rama no cuenta (C-4 de la 020: hasta el *ruleset* de F6, cualquiera con escritura puede lanzar un YAML cambiado).
 - [ ] Una excepción de secretos nueva, con su motivo en la PR (nunca un patrón que desactive la regla).
 - [ ] Al subir Gradle o Flutter: `distributionSha256Sum` y `tools/gradle-wrapper.lock` actualizados en la misma PR, con las sumas de gradle.org y services.gradle.org (`tools/check-gradle-wrapper.sh`, CL-020-18).
 - [ ] Al subir el `targetSdk` mínimo de Play: el valor en su único sitio (`playMinTargetSdk`, CL-020-13).
