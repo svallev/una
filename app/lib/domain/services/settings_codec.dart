@@ -15,14 +15,27 @@ abstract final class SettingKeys {
 }
 
 /// Más largo que esto no puede ser un ajuste válido (`"system"` son 8
-/// caracteres): se descarta **antes** de `jsonDecode` (CA-015-26).
-const _maxRawLength = 16;
+/// caracteres): se descarta **antes** de `jsonDecode` (CA-015-26) y, en la base
+/// de datos, antes de llegar a Dart (CA-020-16).
+const settingMaxRawLength = 16;
+
+/// Lo más que puede ocupar en UTF-8 un valor de [settingMaxRawLength]
+/// caracteres (4 bytes cada uno): la segunda cota de la lectura en SQL, que no
+/// depende de que `length()` cuente más allá de un NUL.
+const settingMaxRawBytes = settingMaxRawLength * 4;
+
+/// El valor guardado de un ajuste tal como lo lee la app (CA-020-16): `null`
+/// (ilegible, con su valor por defecto) si no hay fila o mide más de
+/// [settingMaxRawLength] caracteres. La misma regla que aplica la consulta de
+/// `DriftTaskRepository`, para el repositorio en memoria.
+String? boundedSetting(String? raw) =>
+    raw == null || raw.length > settingMaxRawLength ? null : raw;
 
 /// Decodificadores únicos de los ajustes guardados (CA-015-26). Los usan los
 /// dos repositorios (Drift y memoria): **nunca lanzan** y ante cualquier cosa
 /// que no sea exactamente un valor válido dan el valor por defecto.
 Object? _decode(String? raw) {
-  if (raw == null || raw.length > _maxRawLength) return null;
+  if (raw == null || raw.length > settingMaxRawLength) return null;
   try {
     return jsonDecode(raw);
   } on Object {

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:app/app/providers.dart';
+import 'package:app/data/db/open_database_native.dart';
+import 'package:app/data/drift_task_repository.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/notification_settings.dart';
@@ -26,7 +28,9 @@ class _ThrowingSettings implements SettingsRepository {
       : _inner.firstRunDone();
 
   @override
-  Future<bool> hasEverHadTasks() => _inner.hasEverHadTasks();
+  Future<bool> hasEverHadTasks() async => throwOn.contains('hasEverHadTasks')
+      ? _fail('hasEverHadTasks')
+      : _inner.hasEverHadTasks();
 
   @override
   Future<bool> keepScreenOn() async => throwOn.contains('keepScreenOn')
@@ -121,6 +125,85 @@ void main() {
     expect(boot.firstRunDone, isFalse);
     expect(boot.hasEverHadTasks, isFalse);
   });
+
+  for (final key in ['firstRunDone', 'hasEverHadTasks']) {
+    test('CA-020-17: un repositorio que lanza al leer `$key` no impide el '
+        'arranque: como si la clave no existiera', () async {
+      final repo = InMemoryTaskRepository();
+      await repo.setFirstRunDone();
+      await repo.setLocale(LocaleChoice.en);
+      final boot = await readBootState(
+        repo,
+        _ThrowingSettings(repo, throwOn: {key}),
+      );
+      expect(boot.firstRunDone, key == 'firstRunDone' ? isFalse : isTrue);
+      expect(boot.hasEverHadTasks, isFalse);
+      expect(boot.locale, LocaleChoice.en, reason: 'los demás se leen');
+    });
+  }
+
+  test('CA-020-17: con una tarea, `hasEverHadTasks` es verdadero aunque su '
+      'lectura lance (no se lee)', () async {
+    final repo = InMemoryTaskRepository();
+    await repo.insert(sampleTask());
+    final boot = await readBootState(
+      repo,
+      _ThrowingSettings(repo, throwOn: {'hasEverHadTasks'}),
+    );
+    expect(boot.hasEverHadTasks, isTrue);
+  });
+
+  // Los valores raros guardados en la base real (Drift), en cada clave de
+  // marca: arranca sin error, sin registrar nada y como si no existiera.
+  final oddValues = <String, String>{
+    'un entero': '1',
+    'un real': '1.5',
+    'un BLOB': "X'74727565'",
+    'un BLOB de 1 MB': 'zeroblob(1000000)',
+    'un `NULL`': 'NULL',
+    '`"yes"`': "'\"yes\"'",
+    '`TRUE`': "'TRUE'",
+    'un texto de 17 caracteres': "'${'t' * 17}'",
+    'un texto de 1 MB': "replace(hex(zeroblob(500000)), '0', 't')",
+  };
+  for (final key in ['firstRunDone', 'hasEverHadTasks']) {
+    for (final MapEntry(key: label, value: sql) in oddValues.entries) {
+      test('CA-020-17: `$key` guardada como $label: arranca sin error, '
+          'como si no existiera', () async {
+        final db = openInMemoryDatabase();
+        addTearDown(db.close);
+        final repo = DriftTaskRepository(db);
+        if (label.contains('NULL')) {
+          await db.customStatement('DROP TABLE settings');
+          await db.customStatement(
+            'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT, '
+            'updated_at INTEGER)',
+          );
+        }
+        await db.customStatement(
+          'INSERT OR REPLACE INTO settings (key, value, updated_at) '
+          "VALUES ('$key', $sql, 0)",
+        );
+        final printed = <String>[];
+        final oldDebugPrint = debugPrint;
+        debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+        FlutterErrorDetails? reported;
+        final oldOnError = FlutterError.onError;
+        FlutterError.onError = (details) => reported = details;
+        try {
+          final boot = await readBootState(repo, repo);
+          expect(boot.firstRunDone, isFalse);
+          expect(boot.hasEverHadTasks, isFalse);
+          expect(boot.currentTask, isNull);
+        } finally {
+          FlutterError.onError = oldOnError;
+          debugPrint = oldDebugPrint;
+        }
+        expect(printed, isEmpty);
+        expect(reported, isNull);
+      });
+    }
+  }
 
   for (final key in ['locale', 'keepScreenOn', 'lockZoom']) {
     test('CL-015-16, CA-017-03: un repositorio que lanza al leer `$key` no '

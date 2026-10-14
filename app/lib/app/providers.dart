@@ -357,8 +357,10 @@ class FirstRunController extends Notifier<bool> {
 /// La tarea actual se lee **primero**: una base de datos inaccesible
 /// falla ahí y sale la pantalla de error de almacenamiento (CL-015-16). Los
 /// cinco ajustes de Ajustes (idioma, pantalla siempre activa, bloquear zoom y
-/// las dos claves de notificaciones) se leen después, cada uno en su propio `try/catch`: si no se puede leer,
-/// vale su valor por defecto y el arranque sigue (CA-015-26, CA-017-03).
+/// las dos claves de notificaciones) y las dos marcas (`firstRunDone`,
+/// `hasEverHadTasks`) se leen después, cada uno en su propio `try/catch`: si
+/// no se puede leer, vale su valor por defecto (como si la clave no existiera)
+/// y el arranque sigue (CA-015-26, CA-017-03, CA-020-17).
 Future<BootState> readBootState(
   TaskRepository tasks,
   SettingsRepository settings,
@@ -366,8 +368,9 @@ Future<BootState> readBootState(
   final current = await tasks.currentTask();
   return BootState(
     currentTask: current,
-    firstRunDone: await settings.firstRunDone(),
-    hasEverHadTasks: current != null || await settings.hasEverHadTasks(),
+    firstRunDone: await _orDefault(settings.firstRunDone, false),
+    hasEverHadTasks:
+        current != null || await _orDefault(settings.hasEverHadTasks, false),
     keepScreenOn: await _orDefault(settings.keepScreenOn, false),
     locale: await _orDefault(settings.locale, LocaleChoice.system),
     lockZoom: await _orDefault(settings.lockZoom, false),

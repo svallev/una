@@ -254,13 +254,19 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
   @visibleForTesting
   void putRawSetting(String key, String raw) => _settings[key] = raw;
 
+  /// La lectura de un ajuste con la misma regla que `DriftTaskRepository`
+  /// (CA-020-16): más de 16 caracteres, ilegible (`null`).
+  @visibleForTesting
+  Future<String?> readRawSetting(String key) async =>
+      boundedSetting(_settings[key]);
+
   @override
   Future<bool> hasEverHadTasks() async =>
-      decodeFlag(_settings[SettingKeys.hasEverHadTasks]);
+      decodeFlag(await readRawSetting(SettingKeys.hasEverHadTasks));
 
   @override
   Future<bool> firstRunDone() async =>
-      decodeFlag(_settings[SettingKeys.firstRunDone]);
+      decodeFlag(await readRawSetting(SettingKeys.firstRunDone));
 
   @override
   Future<void> setFirstRunDone() async =>
@@ -268,7 +274,7 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<bool> keepScreenOn() async =>
-      decodeKeepScreenOn(_settings[SettingKeys.keepScreenOn]);
+      decodeKeepScreenOn(await readRawSetting(SettingKeys.keepScreenOn));
 
   @override
   Future<void> setKeepScreenOn(bool value) async =>
@@ -276,7 +282,7 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<bool> lockZoom() async =>
-      decodeLockZoom(_settings[SettingKeys.lockZoom]);
+      decodeLockZoom(await readRawSetting(SettingKeys.lockZoom));
 
   @override
   Future<void> setLockZoom(bool value) async =>
@@ -284,7 +290,7 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<bool> notificationsOn() async =>
-      decodeNotificationsOn(_settings[SettingKeys.notificationsOn]);
+      decodeNotificationsOn(await readRawSetting(SettingKeys.notificationsOn));
 
   @override
   Future<void> setNotificationsOn(bool value) async =>
@@ -292,7 +298,9 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<NotificationsPerDay> notificationsPerDay() async =>
-      decodeNotificationsPerDay(_settings[SettingKeys.notificationsPerDay]);
+      decodeNotificationsPerDay(
+        await readRawSetting(SettingKeys.notificationsPerDay),
+      );
 
   @override
   Future<void> setNotificationsPerDay(NotificationsPerDay value) async =>
@@ -302,7 +310,7 @@ class InMemoryTaskRepository implements TaskRepository, SettingsRepository {
 
   @override
   Future<LocaleChoice> locale() async =>
-      decodeLocaleChoice(_settings[SettingKeys.locale]);
+      decodeLocaleChoice(await readRawSetting(SettingKeys.locale));
 
   @override
   Future<void> setLocale(LocaleChoice choice) async =>
