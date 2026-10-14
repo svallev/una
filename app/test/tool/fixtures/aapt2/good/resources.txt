@@ -1,0 +1,269 @@
+Binary APK
+Package name=invalid.pending.app id=7f
+  type color id=04 entryCount=1
+    resource 0x7f040008 color/ic_launcher_background
+      () #ffffe55c
+  type drawable id=06 entryCount=3
+    resource 0x7f060006 drawable/ic_launcher_foreground
+      (nodpi) (file) res/Wn.png type=PNG
+    resource 0x7f060007 drawable/ic_stat_una
+      (mdpi) (file) res/i4.png type=PNG
+      (hdpi) (file) res/iO.png type=PNG
+      (xhdpi) (file) res/iX.png type=PNG
+      (xxhdpi) (file) res/ue.png type=PNG
+      (xxxhdpi) (file) res/EC.png type=PNG
+    resource 0x7f060008 drawable/launch_background
+      () (file) res/Zn.xml type=XML
+  type id id=07 entryCount=101
+    resource 0x7f070000 id/accessibility_action_clickable_span
+      () (id)
+    resource 0x7f070001 id/accessibility_custom_action_0
+      () (id)
+    resource 0x7f070002 id/accessibility_custom_action_1
+      () (id)
+    resource 0x7f070003 id/accessibility_custom_action_10
+      () (id)
+    resource 0x7f070004 id/accessibility_custom_action_11
+      () (id)
+    resource 0x7f070005 id/accessibility_custom_action_12
+      () (id)
+    resource 0x7f070006 id/accessibility_custom_action_13
+      () (id)
+    resource 0x7f070007 id/accessibility_custom_action_14
+      () (id)
+    resource 0x7f070008 id/accessibility_custom_action_15
+      () (id)
+    resource 0x7f070009 id/accessibility_custom_action_16
+      () (id)
+    resource 0x7f07000a id/accessibility_custom_action_17
+      () (id)
+    resource 0x7f07000b id/accessibility_custom_action_18
+      () (id)
+    resource 0x7f07000c id/accessibility_custom_action_19
+      () (id)
+    resource 0x7f07000d id/accessibility_custom_action_2
+      () (id)
+    resource 0x7f07000e id/accessibility_custom_action_20
+      () (id)
+    resource 0x7f07000f id/accessibility_custom_action_21
+      () (id)
+    resource 0x7f070010 id/accessibility_custom_action_22
+      () (id)
+    resource 0x7f070011 id/accessibility_custom_action_23
+      () (id)
+    resource 0x7f070012 id/accessibility_custom_action_24
+      () (id)
+    resource 0x7f070013 id/accessibility_custom_action_25
+      () (id)
+    resource 0x7f070014 id/accessibility_custom_action_26
+      () (id)
+    resource 0x7f070015 id/accessibility_custom_action_27
+      () (id)
+    resource 0x7f070016 id/accessibility_custom_action_28
+      () (id)
+    resource 0x7f070017 id/accessibility_custom_action_29
+      () (id)
+    resource 0x7f070018 id/accessibility_custom_action_3
+      () (id)
+    resource 0x7f070019 id/accessibility_custom_action_30
+      () (id)
+    resource 0x7f07001a id/accessibility_custom_action_31
+      () (id)
+    resource 0x7f07001b id/accessibility_custom_action_4
+      () (id)
+    resource 0x7f07001c id/accessibility_custom_action_5
+      () (id)
+    resource 0x7f07001d id/accessibility_custom_action_6
+      () (id)
+    resource 0x7f07001e id/accessibility_custom_action_7
+      () (id)
+    resource 0x7f07001f id/accessibility_custom_action_8
+      () (id)
+    resource 0x7f070020 id/accessibility_custom_action_9
+      () (id)
+    resource 0x7f070021 id/action_container
+      () (id)
+    resource 0x7f070022 id/action_divider
+      () (id)
+    resource 0x7f070023 id/action_image
+      () (id)
+    resource 0x7f070024 id/action_text
+      () (id)
+    resource 0x7f070025 id/actions
+      () (id)
+    resource 0x7f070026 id/adjacent
+      () (id)
+    resource 0x7f070027 id/always
+      () (id)
+    resource 0x7f070028 id/alwaysAllow
+      () (id)
+    resource 0x7f070029 id/alwaysDisallow
+      () (id)
+    resource 0x7f07002a id/androidx_window_activity_scope
+      () (id)
+    resource 0x7f07002b id/async
+      () (id)
+    resource 0x7f07002c id/blocking
+      () (id)
+    resource 0x7f07002d id/bottomToTop
+      () (id)
+    resource 0x7f07002e id/browser_actions_header_text
+      () (id)
+    resource 0x7f07002f id/browser_actions_menu_item_icon
+      () (id)
+    resource 0x7f070030 id/browser_actions_menu_item_text
+      () (id)
+    resource 0x7f070031 id/browser_actions_menu_items
+      () (id)
+    resource 0x7f070032 id/browser_actions_menu_view
+      () (id)
+    resource 0x7f070033 id/chronometer
+      () (id)
+    resource 0x7f070034 id/dialog_button
+      () (id)
+    resource 0x7f070035 id/edit_text_id
+      () (id)
+    resource 0x7f070036 id/forever
+      () (id)
+    resource 0x7f070037 id/fragment_container_view_tag
+      () (id)
+    resource 0x7f070038 id/hide_ime_id
+      () (id)
+    resource 0x7f070039 id/icon
+      () (id)
+    resource 0x7f07003a id/icon_group
+      () (id)
+    resource 0x7f07003b id/info
+      () (id)
+    resource 0x7f07003c id/italic
+      () (id)
+    resource 0x7f07003d id/line1
+      () (id)
+    resource 0x7f07003e id/line3
+      () (id)
+    resource 0x7f07003f id/locale
+      () (id)
+    resource 0x7f070040 id/ltr
+      () (id)
+    resource 0x7f070041 id/never
+      () (id)
+    resource 0x7f070042 id/normal
+      () (id)
+    resource 0x7f070043 id/notification_background
+      () (id)
+    resource 0x7f070044 id/notification_main_column
+      () (id)
+    resource 0x7f070045 id/notification_main_column_container
+      () (id)
+    resource 0x7f070046 id/report_drawn
+      () (id)
+    resource 0x7f070047 id/right_icon
+      () (id)
+    resource 0x7f070048 id/right_side
+      () (id)
+    resource 0x7f070049 id/rtl
+      () (id)
+    resource 0x7f07004a id/special_effects_controller_view_tag
+      () (id)
+    resource 0x7f07004b id/tag_accessibility_actions
+      () (id)
+    resource 0x7f07004c id/tag_accessibility_clickable_spans
+      () (id)
+    resource 0x7f07004d id/tag_accessibility_heading
+      () (id)
+    resource 0x7f07004e id/tag_accessibility_pane_title
+      () (id)
+    resource 0x7f07004f id/tag_compat_insets_dispatch
+      () (id)
+    resource 0x7f070050 id/tag_on_apply_window_listener
+      () (id)
+    resource 0x7f070051 id/tag_on_receive_content_listener
+      () (id)
+    resource 0x7f070052 id/tag_on_receive_content_mime_types
+      () (id)
+    resource 0x7f070053 id/tag_screen_reader_focusable
+      () (id)
+    resource 0x7f070054 id/tag_state_description
+      () (id)
+    resource 0x7f070055 id/tag_system_bar_state_monitor
+      () (id)
+    resource 0x7f070056 id/tag_transition_group
+      () (id)
+    resource 0x7f070057 id/tag_unhandled_key_event_manager
+      () (id)
+    resource 0x7f070058 id/tag_unhandled_key_listeners
+      () (id)
+    resource 0x7f070059 id/tag_window_insets_animation_callback
+      () (id)
+    resource 0x7f07005a id/text
+      () (id)
+    resource 0x7f07005b id/text2
+      () (id)
+    resource 0x7f07005c id/time
+      () (id)
+    resource 0x7f07005d id/title
+      () (id)
+    resource 0x7f07005e id/topToBottom
+      () (id)
+    resource 0x7f07005f id/view_tree_disjoint_parent
+      () (id)
+    resource 0x7f070060 id/view_tree_lifecycle_owner
+      () (id)
+    resource 0x7f070061 id/view_tree_on_back_pressed_dispatcher_owner
+      () (id)
+    resource 0x7f070062 id/view_tree_saved_state_registry_owner
+      () (id)
+    resource 0x7f070063 id/view_tree_view_model_store_owner
+      () (id)
+    resource 0x7f070064 id/visible_removing_fragment_view_tag
+      () (id)
+  type mipmap id=0a entryCount=1
+    resource 0x7f0a0000 mipmap/ic_launcher
+      (anydpi) (file) res/E4.xml type=XML
+  type string id=0b entryCount=9
+    resource 0x7f0b0000 string/androidx_startup
+      () "androidx.startup"
+    resource 0x7f0b0001 string/app_name
+      () "Una."
+    resource 0x7f0b0002 string/attachment_image
+      () "Image"
+      (es) "Imagen"
+    resource 0x7f0b0003 string/attachment_pdf
+      () "PDF"
+      (es) "PDF"
+    resource 0x7f0b0004 string/attachment_photo
+      () "Photo"
+      (es) "Foto"
+    resource 0x7f0b0010 string/notification_channel_description
+      () "Reminds you of your current task 1, 2 or 3 times a day, as set in Settings."
+      (es) "Te recuerda tu tarea actual 1, 2 o 3 veces al día, según elijas en Ajustes."
+    resource 0x7f0b0011 string/notification_channel_name
+      () "Current task"
+      (es) "Tarea actual"
+    resource 0x7f0b0012 string/notification_public
+      () "You have a task waiting."
+      (es) "Tienes una tarea pendiente."
+    resource 0x7f0b0013 string/notification_title
+      () "Current task"
+      (es) "Tarea actual"
+  type style id=0c entryCount=2
+    resource 0x7f0c0000 style/LaunchTheme
+      () (style) size=1 parent=0x0103000d
+        0x01010054=@drawable/launch_background
+      (night) (style) size=1 parent=0x01030009
+        0x01010054=@drawable/launch_background
+    resource 0x7f0c0001 style/NormalTheme
+      () (style) size=1 parent=0x0103000d
+        0x01010054=?0x01010031
+      (night) (style) size=1 parent=0x01030009
+        0x01010054=?0x01010031
+  type xml id=0e entryCount=4
+    resource 0x7f0e0000 xml/backup_rules
+      () (file) res/Qq.xml type=XML
+      (v28) (file) res/xo.xml type=XML
+    resource 0x7f0e0001 xml/data_extraction_rules
+      () (file) res/4j.xml type=XML
+    resource 0x7f0e0003 xml/import_paths
+      () (file) res/Md.xml type=XML
+    resource 0x7f0e0004 xml/network_security_config
+      () (file) res/8G.xml type=XML

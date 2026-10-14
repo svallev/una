@@ -114,6 +114,13 @@ jobs:
         # Cada manifiesto de tools/fixtures/manifests/ (un permiso, un -sdk-23, un -sdk-m, un segundo
         # filtro, un <data>, BROWSABLE, DEFAULT, una acción de más…) tiene que hacer fallar el script.
         run: bash tools/check-android-permissions.sh --negative
+      - name: Estática MASTG de los APK de release (spec 020, CA-020-22)
+        # Sobre lo compilado, no sobre el código: sin depurable ni tráfico en claro (a, b), reglas de
+        # copia y transferencia exactas (c), proveedores y rutas de archivos (d), minSdk 26 y targetSdk
+        # >= el de Google Play (e), ni claves ni archivos de firma dentro (f) y los ajustes de
+        # privacidad de hoy (g). No depende de la identidad: los marcadores siguen siendo normales.
+        # Las excepciones de (f): tools/release/secret-allowlist.txt.
+        run: bash tools/check-package.sh
       - name: Pruebas JVM del núcleo de notificaciones (spec 019, P-019-1)
         # JUnit 4.13.2 es solo `testImplementation`: corre el Kotlin real (horas, despertares, orquestador)
         # con puertos falsos, sin emulador. Tras `flutter build`, que deja resuelto el proyecto Gradle.
