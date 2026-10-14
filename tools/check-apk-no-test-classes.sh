@@ -32,13 +32,15 @@ for apk in "$@"; do
     status=1
     continue
   fi
-  if unzip -Z1 "$apk" | grep -qE "$PATTERN_ENTRY"; then
+  # Sin `grep -q` en las tuberías: con `pipefail`, un grep que encuentra pronto y sale corta a `unzip`
+  # (SIGPIPE, estado 141) y el `if` daba por no encontrado lo que sí estaba (comprobado en T-020-07).
+  if unzip -Z1 "$apk" | grep -E "$PATTERN_ENTRY" >/dev/null; then
     echo "::error::$apk lleva entradas de JUnit/Hamcrest (org/junit, org/hamcrest, junit/framework)"
     apk_status=1
   fi
   while IFS= read -r dex; do
     [ -z "$dex" ] && continue
-    if unzip -p "$apk" "$dex" | LC_ALL=C grep -qaE "$PATTERN_DEX"; then
+    if unzip -p "$apk" "$dex" | LC_ALL=C grep -aE "$PATTERN_DEX" >/dev/null; then
       echo "::error::$apk: $dex lleva clases de JUnit/Hamcrest"
       apk_status=1
     fi

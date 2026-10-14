@@ -17,11 +17,11 @@
 #   tools/check-release-config.sh ... --generated-root <carpeta>     (otra copia de app/ para lo generado)
 #   tools/check-release-config.sh ... --json <archivo>               (además, la lista de errores con su clase)
 #
-# Se ejecuta en `/release-checklist` **antes de cada entrega a testers** y antes de publicar (en una
-# entrega a testers con marcadores se anota qué falla; antes de publicar tiene que pasar) y, en F6,
-# en el trabajo de CI que genere el artefacto de publicación (aún no existe): NO en las
-# compilaciones locales ni de desarrollo, donde los marcadores son normales. Necesita `dart`; no
-# instala nada ni usa la red.
+# Lo ejecuta el trabajo de publicación (`.github/workflows/release.yml`, id `identity`, con `--json`:
+# spec 020, CA-020-02), que clasifica sus errores (CA-020-05): en una entrega a testers los avisos de
+# identidad se listan y en una publicación tienen que pasar. NO corre en las compilaciones locales,
+# de desarrollo ni de la CI de las PR, donde los marcadores son normales (CA-020-08). Necesita `dart`;
+# no instala nada ni usa la red.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

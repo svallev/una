@@ -32,7 +32,9 @@ status=0
 # check_entry <paquete> <entrada> <abi> <huella esperada>
 check_entry() {
   local package="$1" entry="$2" abi="$3" expected="$4" actual
-  if ! unzip -Z1 "$package" 2>/dev/null | grep -qxF "$entry"; then
+  # Sin `grep -q` en la tubería: con `pipefail`, un grep que encuentra pronto y sale corta a `unzip`
+  # (SIGPIPE) y daba por ausente una biblioteca que sí estaba (intermitente, visto en T-020-07).
+  if ! unzip -Z1 "$package" 2>/dev/null | grep -xF "$entry" >/dev/null; then
     echo "::error::$package no tiene $entry (libpdfium.so de $abi)"
     status=1
     return

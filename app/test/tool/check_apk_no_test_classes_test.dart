@@ -32,6 +32,16 @@ String _apk(Directory dir, String name, Map<String, List<int>> entries) {
   return out;
 }
 
+/// Como [_run], pero con SIGPIPE en su comportamiento por defecto: la VM de Dart lo ignora y los hijos
+/// lo heredan, y entonces el cierre temprano de `grep -q` no corta la tubería como en la CI real.
+ProcessResult _runWithSigpipe(List<String> apks) => Process.runSync('perl', [
+  '-e',
+  r'$SIG{PIPE} = "DEFAULT"; exec @ARGV',
+  'bash',
+  _script,
+  ...apks,
+]);
+
 ProcessResult _run(List<String> apks) => Process.runSync(
   'bash',
   [_script, ...apks],
@@ -51,6 +61,60 @@ void main() {
 
   setUp(() => tmp = Directory.systemTemp.createTempSync('apk_check_'));
   tearDown(() => tmp.deleteSync(recursive: true));
+
+  // Un APK real tiene miles de entradas y dex de megas: con `set -o pipefail`, un `| grep -q` que
+  // encuentra pronto corta la tubería (SIGPIPE) y la comprobación daba por buena una clase de pruebas
+  // (falso negativo, comprobado en T-020-07). Aquí lo que hay que encontrar está al principio.
+  group('CA-020-02: paquetes grandes (sin SIGPIPE bajo pipefail)', () {
+    test('un org/junit al principio de un zip de 6000 entradas se detecta', () {
+      final dir = Directory('${tmp.path}/big')..createSync();
+      File('${dir.path}/org/junit/Test.class')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync([0xca, 0xfe]);
+      final names = <String>[];
+      for (var i = 0; i < 6000; i++) {
+        File('${dir.path}/f$i.txt').writeAsStringSync('$i');
+        names.add('f$i.txt');
+      }
+      final out = '${tmp.path}/big.apk';
+      final z = Process.runSync('zip', [
+        '-q',
+        '-X',
+        out,
+        'org/junit/Test.class',
+        ...names,
+      ], workingDirectory: dir.path);
+      expect(z.exitCode, 0, reason: '${z.stderr}');
+      for (var i = 0; i < 5; i++) {
+        final r = _runWithSigpipe([out]);
+        expect(r.exitCode, 1, reason: 'pasada $i: ${r.stdout}${r.stderr}');
+        expect(r.stdout, contains('entradas de JUnit'));
+      }
+    }, skip: skip);
+
+    test('ningún script de tools/ canaliza unzip a un grep -q (con pipefail daba falsos negativos)', () {
+      final scripts = [
+        ...Directory('../tools').listSync().whereType<File>(),
+        ...Directory('../tools/release').listSync().whereType<File>(),
+      ].where((f) => f.path.endsWith('.sh'));
+      expect(scripts, isNotEmpty);
+      final bad = RegExp(r'unzip[^\n|]*\|\s*(LC_ALL=C\s+)?grep\s+-[a-zA-Z]*q');
+      for (final f in scripts) {
+        expect(bad.hasMatch(f.readAsStringSync()), isFalse, reason: f.path);
+      }
+    });
+
+    test('una clase de JUnit al principio de un dex de 3 MB se detecta', () {
+      final apk = _apk(tmp, 'bigdex', {
+        'classes.dex': _dex('Lorg/junit/Test; ${'x' * (3 * 1024 * 1024)}'),
+      });
+      for (var i = 0; i < 5; i++) {
+        final r = _runWithSigpipe([apk]);
+        expect(r.exitCode, 1, reason: 'pasada $i: ${r.stdout}${r.stderr}');
+        expect(r.stdout, contains('classes.dex lleva clases de JUnit'));
+      }
+    }, skip: skip);
+  });
 
   test('CA-019-25: un APK sin clases de pruebas pasa', () {
     final apk = _apk(tmp, 'clean', {
