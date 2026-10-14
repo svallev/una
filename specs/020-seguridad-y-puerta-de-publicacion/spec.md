@@ -1,6 +1,6 @@
 # Spec 020: Seguridad y puerta de publicación
 
-- **Estado:** **Borrador** (2026-10-13). Alcance decidido por el propietario el 2026-10-13 en la ronda de preguntas de `/spec-new 020`: **1c** (puerta y herramientas, los hallazgos bajos que tocan código de la app y las pruebas MASTG), **2 sí** (un trabajo de publicación aparte, estricto con una etiqueta `v*` y en modo «entrega a testers» cuando se lanza a mano), **3 sí** (las marcas de la política bloquean en modo estricto) y **4** (pantallas grandes, R-25/PD-11, en la 022). Revisada por `spec-reviewer` el 2026-10-14: 2 bloqueantes (la entrega a testers frente a lo comprobado y el *package name* provisional fuera de la puerta), 19 importantes y varios menores, **aplicados**.
+- **Estado:** **Aprobada** por el propietario el 2026-10-14 («aprobada»; Q-020-1, 2, 4 y 5 respondidas: sí, sí, sí y no, §9). Antes **Borrador** (2026-10-13). Alcance decidido por el propietario el 2026-10-13 en la ronda de preguntas de `/spec-new 020`: **1c** (puerta y herramientas, los hallazgos bajos que tocan código de la app y las pruebas MASTG), **2 sí** (un trabajo de publicación aparte, estricto con una etiqueta `v*` y en modo «entrega a testers» cuando se lanza a mano), **3 sí** (las marcas de la política bloquean en modo estricto) y **4** (pantallas grandes, R-25/PD-11, en la 022). Revisada por `spec-reviewer` el 2026-10-14: 2 bloqueantes (la entrega a testers frente a lo comprobado y el *package name* provisional fuera de la puerta), 19 importantes y varios menores, **aplicados**.
 - **Fase:** F5 Endurecimiento. Es la primera de las specs 020–023 (D30) y empieza al terminar F4b (la 019 se fusionó el 2026-10-13, PR #50). Tamaño **L**.
 - **Reglas de producto:** ninguna regla R nueva. Desarrolla **P4** (privacidad por defecto), **P5** (seguridad desde el diseño, OWASP MASVS/MASTG) y **P11** (dependencias con criterio). Cierra lo que `docs/PLAN.md` deja «para la 020».
 - **Pantallas del prototipo:** **sin diseño**. La spec no cambia ninguna pantalla, texto ni interacción de la app.
@@ -441,11 +441,11 @@ Sin textos nuevos en la app (ARB sin cambios). Los mensajes de las herramientas 
 
 ## 9. Preguntas abiertas
 
-- **Q-020-1** (propietario) ¿`[Pendiente]` y `[Pending]` también bloquean en la política, además de `[Suposición]` y `[Assumption]`? **[Suposición]** Sí (CA-020-11).
-- **Q-020-2** (propietario) ¿El modo testers solo se lanza desde `main`, o también desde una rama para probar una entrega antes de fusionar? **[Suposición]** Solo desde `main` (CL-020-3).
+- **Q-020-1** ✅ **Resuelta (propietario, 2026-10-14): sí.** ¿`[Pendiente]` y `[Pending]` también bloquean en la política, además de `[Suposición]` y `[Assumption]`? **[Suposición]** Sí (CA-020-11).
+- **Q-020-2** ✅ **Resuelta (propietario, 2026-10-14): sí, solo desde `main`.** ¿El modo testers solo se lanza desde `main`, o también desde una rama para probar una entrega antes de fusionar? **[Suposición]** Solo desde `main` (CL-020-3).
 - **Q-020-3** (Claude Code, en el plan) El valor mínimo de `targetSdk` que exige Play hoy y dónde se fija. **[Suposición]** Se toma el requisito vigente de Google Play al escribir el plan, en un solo sitio.
-- **Q-020-4** (propietario) ¿La pasada MASTG se hace solo en el emulador, o también en el Xiaomi (con tu permiso y sin capturas)? **[Suposición]** Solo en el emulador; lo que dependa del Xiaomi va a la 022.
-- **Q-020-5** (propietario) ¿El modo testers debería dejar el APK como artefacto (firmado con el certificado de depuración, de retención corta) para que la entrega sea **ese** archivo? Como el repositorio es público, lo podría descargar cualquiera con cuenta de GitHub. **[Suposición]** No: la entrega se compila del mismo commit (CA-020-06).
+- **Q-020-4** ✅ **Resuelta (propietario, 2026-10-14): solo en el emulador.** ¿La pasada MASTG se hace solo en el emulador, o también en el Xiaomi (con tu permiso y sin capturas)? **[Suposición]** Solo en el emulador; lo que dependa del Xiaomi va a la 022.
+- **Q-020-5** ✅ **Resuelta (propietario, 2026-10-14): no.** ¿El modo testers debería dejar el APK como artefacto (firmado con el certificado de depuración, de retención corta) para que la entrega sea **ese** archivo? Como el repositorio es público, lo podría descargar cualquiera con cuenta de GitHub. **[Suposición]** No: la entrega se compila del mismo commit (CA-020-06).
 
 ## 10. Enmiendas a otras specs y documentos (al aprobar esta spec)
 
