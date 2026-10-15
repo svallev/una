@@ -66,7 +66,7 @@ Cada CA dice cómo se verifica: con un **test** (corre en la CI, sin dispositivo
 - **CA-021-05** · Fondo de la ventana
   - **Dado** la app abierta, con el sistema en claro o en oscuro
   - **Cuando** el sistema enseña el fondo de la ventana antes de que la app vuelva a dibujar: al aparecer o desaparecer el teclado en el editor, al entrar o salir de pantalla dividida, o al girar con una tarea con imagen o PDF
-  - **Entonces** ese fondo es `paper`, nunca negro ni blanco.
+  - **Entonces** ese fondo es `paper`, nunca negro ni blanco. **Excepción aceptada (propietario, 2026-10-15; hallazgo de T-021-06):** al **entrar** en pantalla dividida puede verse **un solo fotograma** negro en la mitad de la app, porque la superficie de Flutter aún no tiene imagen. No es el fondo de la ventana ni depende del modo, y ocurre igual en `main`: es un límite del motor, no una regresión. Salir de la división y el resto de acciones no tienen excepción.
   - **Verificable:** test de recursos (CA-021-04) y casilla C-021-4 (`screenrecord`, 10 repeticiones de cada acción en claro y 10 en oscuro: ningún fotograma con el área de contenido negra o blanca). **[Suposición]** al girar, el sistema suele animar con una captura de la app y el fondo no llega a verse; el teclado y la pantalla dividida son lo que de verdad lo pone a prueba.
 
 **La app, siempre en claro**
