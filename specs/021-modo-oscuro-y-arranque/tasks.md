@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-15), junto con `plan.md`. Spec **Aprobada** (2026-10-15).
 
-**Siguiente:** T-021-01 (necesita el emulador: la hace el coordinador) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** terminar T-021-01 (necesita el emulador: la hace el coordinador). Hechos (a) en parte y (e); faltan (a) tres botones y velo, (b), (c) y (d); ver `dispositivo.md`. Rama `feat/021-modo-oscuro-y-arranque` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Sin textos ni tokens nuevos. Tests primero: en T-021-02 a 05 los tests se escriben antes y fallan por la razón esperada.
 
