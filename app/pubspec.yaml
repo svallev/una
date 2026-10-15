@@ -8,7 +8,7 @@ environment:
 
 dependencies:
   characters: ^1.4.1
-  drift: ^2.35.0
+  drift: ^2.35.2
   flutter:
     sdk: flutter
   flutter_localizations:
