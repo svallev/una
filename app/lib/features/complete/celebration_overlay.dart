@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
+import '../../app/system_bars.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/una_icons.dart';
@@ -225,78 +227,82 @@ class _Success extends StatelessWidget {
       letterSpacing: UnaLetterSpacing.intro * UnaFontSizes.success,
       color: UnaColors.onInk,
     );
-    return ColoredBox(
-      color: UnaColors.ink,
-      child: LayoutBuilder(
-        builder: (context, constraints) => Stack(
-          children: [
-            if (confettiTime > 0 && confettiTime < 1)
-              _Confetti(
-                progress: confetti,
-                time: confettiTime,
-                origin: Offset(_confettiX, constraints.maxHeight / 2),
-              ),
-            SafeArea(
-              child: Padding(
-                // Prototipo: padding 0 24 60 (el bloque queda algo por encima del centro).
-                padding: const EdgeInsets.fromLTRB(
-                  UnaSpace.l,
-                  0,
-                  UnaSpace.l,
-                  UnaSpace.xxl + UnaSpace.ml,
+    // Fondo oscuro a sangre tras las dos barras: iconos claros mientras dura (CA-021-09).
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemBarsOnDarkStyle,
+      child: ColoredBox(
+        color: UnaColors.ink,
+        child: LayoutBuilder(
+          builder: (context, constraints) => Stack(
+            children: [
+              if (confettiTime > 0 && confettiTime < 1)
+                _Confetti(
+                  progress: confetti,
+                  time: confettiTime,
+                  origin: Offset(_confettiX, constraints.maxHeight / 2),
                 ),
-                // No se anuncia aparte: ya hubo un único anuncio (CA-003-07).
-                child: ExcludeSemantics(
-                  // Con texto grande se desplaza en lugar de cortarse (§6).
-                  child: LayoutBuilder(
-                    builder: (context, box) => SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: box.maxHeight),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _Stamp(progress: stamp, color: color),
-                            const SizedBox(height: _gap),
-                            _Rise(
-                              progress: rise1,
-                              child: Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(text: '${l10n.successTitle1}\n'),
-                                    TextSpan(
-                                      text: l10n.successTitle2,
-                                      style: TextStyle(color: color),
-                                    ),
-                                  ],
-                                ),
-                                style: titleStyle,
-                              ),
-                            ),
-                            if (hasNext) ...[
+              SafeArea(
+                child: Padding(
+                  // Prototipo: padding 0 24 60 (el bloque queda algo por encima del centro).
+                  padding: const EdgeInsets.fromLTRB(
+                    UnaSpace.l,
+                    0,
+                    UnaSpace.l,
+                    UnaSpace.xxl + UnaSpace.ml,
+                  ),
+                  // No se anuncia aparte: ya hubo un único anuncio (CA-003-07).
+                  child: ExcludeSemantics(
+                    // Con texto grande se desplaza en lugar de cortarse (§6).
+                    child: LayoutBuilder(
+                      builder: (context, box) => SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: box.maxHeight),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _Stamp(progress: stamp, color: color),
                               const SizedBox(height: _gap),
                               _Rise(
-                                progress: rise2,
-                                child: Text(
-                                  l10n.successNext,
-                                  style: const TextStyle(
-                                    fontFamily: UnaFonts.mono,
-                                    fontSize: UnaFontSizes.bodyS,
-                                    height: 1.4,
-                                    color: UnaColors.onInk,
+                                progress: rise1,
+                                child: Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(text: '${l10n.successTitle1}\n'),
+                                      TextSpan(
+                                        text: l10n.successTitle2,
+                                        style: TextStyle(color: color),
+                                      ),
+                                    ],
                                   ),
+                                  style: titleStyle,
                                 ),
                               ),
+                              if (hasNext) ...[
+                                const SizedBox(height: _gap),
+                                _Rise(
+                                  progress: rise2,
+                                  child: Text(
+                                    l10n.successNext,
+                                    style: const TextStyle(
+                                      fontFamily: UnaFonts.mono,
+                                      fontSize: UnaFontSizes.bodyS,
+                                      height: 1.4,
+                                      color: UnaColors.onInk,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

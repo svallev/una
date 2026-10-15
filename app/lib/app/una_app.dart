@@ -24,6 +24,7 @@ import '../ui/semantics_action_order.dart';
 import 'app_identity.g.dart';
 import 'locale_resolution.dart';
 import 'providers.dart';
+import 'system_bars.dart';
 import 'theme/tokens.g.dart';
 import 'theme/una_theme.dart';
 import 'web_preview_banner.dart';
@@ -427,17 +428,3 @@ Widget appFrame(BuildContext context, Widget? child) {
     child: framed,
   );
 }
-
-/// Estilo de las barras con la app abierta (CA-021-09): transparentes, iconos
-/// oscuros sobre `paper` y sin el velo de contraste que añade Android 10+.
-const systemBarsStyle = SystemUiOverlayStyle(
-  statusBarColor: Colors.transparent,
-  statusBarIconBrightness: Brightness.dark,
-  // Solo lo lee iOS: la barra de estado clara lleva texto oscuro.
-  statusBarBrightness: Brightness.light,
-  systemStatusBarContrastEnforced: false,
-  systemNavigationBarColor: Colors.transparent,
-  systemNavigationBarDividerColor: Colors.transparent,
-  systemNavigationBarIconBrightness: Brightness.dark,
-  systemNavigationBarContrastEnforced: false,
-);

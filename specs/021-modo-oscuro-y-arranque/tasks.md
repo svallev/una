@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-15), junto con `plan.md`. Spec **Aprobada** (2026-10-15).
 
-**Siguiente:** T-021-09 (cierre: lo hace el coordinador con los revisores; no hacer push ni abrir la PR sin confirmación). Hechas T-021-01 a 08. Hallazgo de T-021-06 (fotograma negro al entrar en pantalla dividida) **aceptado por el propietario el 2026-10-15** como límite del motor y anotado en CA-021-05. Rama `feat/021-modo-oscuro-y-arranque` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** ninguna: spec cerrada (T-021-01 a 09). Falta que el propietario confirme el push y la PR (`pr-description.md`); después, `/post-merge` y la 022. Hallazgo de T-021-06 (fotograma negro al entrar en pantalla dividida) **aceptado por el propietario el 2026-10-15** como límite del motor y anotado en CA-021-05. Rama `feat/021-modo-oscuro-y-arranque` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Sin textos ni tokens nuevos. Tests primero: en T-021-02 a 05 los tests se escriben antes y fallan por la razón esperada.
 
@@ -20,9 +20,9 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde (los de apariencia, casilla anotada en `dispositivo.md`).
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada** (o **Implementada parcialmente**).
+- [x] Todos los CA de la spec tienen test en verde (los de apariencia, casilla anotada en `dispositivo.md`).
+- [x] Definition of Done (`specs/constitution.md`) completa.
+- [x] Spec marcada como **Implementada parcialmente** (casillas de dispositivo a la 022).
 
 ## Estado
 
@@ -38,3 +38,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 | T-021-06 | Casillas en el emulador (API 37, APK de depuración): C-021-1, 2, 4 (teclado y giro), 5, 6, 7, 8, 10 y 12 **[Hecho]**, `webview_hardening_test` 4/4, (d) con «Tema oscuro ampliado» y forzar oscuro: la app sigue clara. La app y la página no cambian ni un píxel al cambiar el modo; contraste de iconos ≥ 3:1 en todos los casos (el más justo, 3,3:1 en tres botones sobre la card). **[Hallazgo]** 1 fotograma negro al **entrar** en pantalla dividida (4/30 claro, 1/25 oscuro; `main` 2/20): del motor, no del tema → **[Hecho]** aceptado como límite del motor (CA-021-05 enmendado). **[Pendiente]** C-021-11 (el emulador no activa iconos con tema; 022) y C-021-3 (PD-10). | `dispositivo.md` |
 | T-021-07 | Arranque en frío en el emulador (API 37, *release*, tarea de texto, ABBA, n = 20 por compilación y modo, calentamiento descartado): p50 rama − `main` = **+1,5 ms en claro y +5,5 ms en oscuro**, oscuro − claro +6,5 ms; todo dentro de la deriva de ≈ 12 ms (CA-021-10 **[Hecho]**). Deriva de `main` entre bloques: 12,5 ms claro, 62,5 oscuro (ruido). **[Pendiente, 022]** repetir en el Xiaomi. | `dispositivo.md` |
 | T-021-08 | Documentación: DEV-57 completa (arranque, app siempre clara, barras, excepciones de Android 8.0 y de la pantalla dividida), los 4 términos del glosario con su código, `architecture.md` §2 «Splash nativo» reescrito (tema único, barras, WebView) y «Casillas de la 021» en `PLAN.md` (C-021-3 con PD-10; Xiaomi: C-021-1/2/7/9/10, CL-021-7, 8 y 9; fotograma negro aceptado; C-021-11; TalkBack/giro; *goldens* en CI). Solo documentos, sin tests; enlaces y etiquetas revisados a ojo. **[Pendiente]** nada propio; sin Trampas nuevas. | (este commit) |
+| T-021-09 | Cierre: `flutter test` 4289, `analyze`, `format`, `validate-tokens` y `gen_icons --check` en verde; sin textos ni dependencias nuevas. `security-reviewer`: 0 altos ni medios. `a11y-reviewer`: la enhorabuena (`ink` a sangre) llevaba iconos oscuros → corregido (`systemBarsOnDarkStyle`, `lib/app/system_bars.dart`, 2 tests); la card con tres botones (3,3:1) y la enhorabuena sin medir en dispositivo → 022. Spec **Implementada parcialmente**. | (este commit) |

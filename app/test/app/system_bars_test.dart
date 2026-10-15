@@ -1,8 +1,11 @@
 import 'package:app/app/providers.dart';
+import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/app_error/storage_error_screen.dart';
+import 'package:app/features/complete/celebration_overlay.dart';
+import 'package:app/features/complete/hold_to_complete_button.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
 import 'package:app/features/settings/settings_screen.dart';
@@ -142,6 +145,55 @@ void main() {
         expectLightBars();
       });
     });
+  }
+
+  for (final brightness in Brightness.values) {
+    final mode = brightness == Brightness.dark ? 'oscuro' : 'claro';
+
+    // La enhorabuena pinta `ink` a sangre bajo las dos barras: allí los iconos son claros
+    // (CA-021-09, tercer punto) y, al terminar, vuelven los oscuros.
+    testWidgets(
+      'CA-021-09: la enhorabuena (fondo oscuro tras las barras) pide iconos claros, con el sistema en $mode',
+      (tester) async {
+        setBrightness(tester, brightness);
+        await forgetStyle(tester);
+        await pumpUnaApp(
+          tester,
+          repo: InMemoryTaskRepository(),
+          tasks: ['Primera', 'Segunda'],
+        );
+        await tester.pump();
+        expectLightBars();
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(HoldToCompleteButton)),
+        );
+        await tester.pump();
+        await tester.pump(UnaMotion.holdToComplete);
+        await tester.pump(const Duration(milliseconds: 16));
+        await gesture.up();
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.pump(UnaMotion.holdDonePause);
+        await tester.pump(UnaMotion.tear ~/ 2);
+        expect(find.byType(CelebrationOverlay), findsOneWidget);
+
+        final style = SystemChrome.latestStyle!;
+        expect(style.statusBarColor, transparent);
+        expect(style.statusBarIconBrightness, Brightness.light);
+        expect(style.systemNavigationBarColor, transparent);
+        expect(style.systemNavigationBarIconBrightness, Brightness.light);
+        expect(style.systemStatusBarContrastEnforced, isFalse);
+        expect(style.systemNavigationBarContrastEnforced, isFalse);
+
+        await tester.pump(UnaMotion.tear);
+        await tester.pump(UnaMotion.successHold);
+        await tester.pump(UnaMotion.successFade);
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.pump(UnaMotion.introFade);
+        expect(find.byType(CelebrationOverlay), findsNothing);
+        expectLightBars();
+      },
+    );
   }
 
   testWidgets(
