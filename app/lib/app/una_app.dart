@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/entities/locale_choice.dart';
@@ -23,6 +24,7 @@ import '../ui/semantics_action_order.dart';
 import 'app_identity.g.dart';
 import 'locale_resolution.dart';
 import 'providers.dart';
+import 'system_bars.dart';
 import 'theme/tokens.g.dart';
 import 'theme/una_theme.dart';
 import 'web_preview_banner.dart';
@@ -184,6 +186,8 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       debugShowCheckedModeBanner: false,
       onGenerateTitle: (_) => AppIdentity.displayName,
       theme: UnaTheme.light(),
+      // La app es siempre clara, con el sistema en claro o en oscuro (spec 021, P-021-1).
+      themeMode: ThemeMode.light,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       // Idioma elegido en Ajustes (ADR-0023): con "Español" o "English" Flutter
@@ -373,6 +377,8 @@ class StorageErrorApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       onGenerateTitle: (_) => AppIdentity.displayName,
       theme: UnaTheme.light(),
+      // La app es siempre clara, con el sistema en claro o en oscuro (spec 021, P-021-1).
+      themeMode: ThemeMode.light,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
@@ -409,8 +415,16 @@ Widget appFrame(BuildContext context, Widget? child) {
   // Marca de idioma del contenido: el lector de pantalla usa la voz del
   // idioma de la app (español o inglés) y no la del sistema, también con el
   // texto del usuario (CA-010-10).
-  return Semantics(
+  final framed = Semantics(
     localeForSubtree: Localizations.maybeLocaleOf(context),
     child: kIsWeb ? WebPreviewBanner(child: centered) : centered,
+  );
+  // Barras del sistema (CA-021-09): detrás se ve el fondo de la app, sin velo,
+  // y los iconos son oscuros, con el sistema en claro o en oscuro. El motor
+  // pide los iconos oscuros de la barra de navegación desde API 26
+  // (`setAppearanceLightNavigationBars`), también en Android 8.0 (P-021-2).
+  return AnnotatedRegion<SystemUiOverlayStyle>(
+    value: systemBarsStyle,
+    child: framed,
   );
 }

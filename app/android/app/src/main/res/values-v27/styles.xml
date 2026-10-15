@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Barras del sistema desde la API 27 (spec 021, CA-021-09): ambas transparentes, con iconos
+     oscuros, sobre el `paper` de la ventana. Solo redefine UnaBars; el resto vive en values/. -->
+<resources>
+    <style name="UnaBars" parent="UnaWindow">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

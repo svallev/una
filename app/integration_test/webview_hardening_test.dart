@@ -112,6 +112,7 @@ void main() {
       'noMixedContent': true,
       'safeBrowsing': true,
       'noMultipleWindows': true,
+      'noDarkening': true,
       'wrapped': true,
     });
     // Idempotente: no envuelve dos veces.
