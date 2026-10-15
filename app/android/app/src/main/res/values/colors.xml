@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Color del arranque y del fondo de la ventana (spec 021, CA-021-04). Es el token `paper` de
+     design/tokens.json (color.paper), escrito a mano: test/app/launch_theme_test.dart falla si
+     no coincide. No lo genera tool/gen_icons.dart (los iconos no se tocan, CA-021-11). -->
+<resources>
+    <color name="paper">#F4F1EA</color>
+</resources>

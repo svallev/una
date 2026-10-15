@@ -1,18 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Theme applied to the Android Window while the process is starting when the OS's Dark Mode setting is off -->
-    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <!-- Show a splash screen on the activity. Automatically removed when
-             the Flutter engine draws its first frame -->
-        <item name="android:windowBackground">@drawable/launch_background</item>
+<!-- Un solo tema claro para claro y oscuro (spec 021, plan §1.1): no hay values-night. La app
+     no tiene modo oscuro (Q-021-1); el arranque y el fondo de la ventana son siempre `paper`. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base: fondo liso `paper` (arranque de Android 8-11 y fondo de la ventana detrás de la app),
+         splash de Android 12+ con la «u.» del primer plano de la 018 sobre `paper` (sin color de
+         icono: sin círculo), sin velo en las barras y sin dejarse oscurecer por el sistema. -->
+    <style name="UnaWindow" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@color/paper</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/paper</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@drawable/ic_launcher_foreground</item>
+        <item name="android:enforceStatusBarContrast" tools:targetApi="29">false</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
+        <item name="android:forceDarkAllowed" tools:targetApi="29">false</item>
     </style>
-    <!-- Theme applied to the Android Window as soon as the process has started.
-         This theme determines the color of the Android Window while your
-         Flutter UI initializes, as well as behind your Flutter UI while its
-         running.
-
-         This Theme is only used starting with V2 of Flutter's Android embedding. -->
-    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+    <!-- Barras del sistema en API 26: la de estado, transparente con iconos oscuros; la de
+         navegación, la del sistema (oscura con iconos claros: windowLightNavigationBar no existe
+         antes de la API 27; excepción de CA-021-09). values-v27/ lo redefine. -->
+    <style name="UnaBars" parent="UnaWindow">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
+    <!-- Theme applied to the Android Window while the process is starting. Android 12+ draws the
+         splash from the attributes of UnaWindow; before that, this is the window background.
+         Automatically removed when the Flutter engine draws its first frame. -->
+    <style name="LaunchTheme" parent="UnaBars"/>
+    <!-- Theme applied to the Android Window as soon as the process has started. It determines the
+         color of the Android Window while the Flutter UI initializes, as well as behind it while
+         it is running. Only used starting with V2 of Flutter's Android embedding. -->
+    <style name="NormalTheme" parent="UnaBars"/>
 </resources>

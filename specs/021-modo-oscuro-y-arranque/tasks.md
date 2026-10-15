@@ -31,3 +31,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 | Tareas | Estado | Commit |
 |---|---|---|
 | T-021-01 | Medida previa hecha en el emulador de API 37 (sin código): barras en gestos y tres botones, WebView oscura con `prefers-color-scheme` (T-021-04 necesaria), *Expanded* no oscurece nada hoy. **[Pendiente]** (c) y «Anular forzar modo oscuro» → T-021-06. | `dispositivo.md` |
+| T-021-02 | Tema único claro en `res/` (`colors.xml` con `paper`, `UnaWindow`/`UnaBars`/`values-v27`, *splash* de 12+, `forceDarkAllowed=false`; borrados `values-night` y los dos `launch_background`). 19 tests nuevos (`launch_theme`, `icon_checksums`, `uiMode`; 11 mutaciones detectadas); `analyze`, `flutter test` (4239), `build apk --debug`, `gen_icons --check` y permisos en verde, iconos sin tocar. | (este commit) |
