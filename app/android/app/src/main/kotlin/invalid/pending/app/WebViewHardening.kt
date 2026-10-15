@@ -32,7 +32,8 @@ import io.flutter.plugins.webviewflutter.WebViewFlutterAndroidExternalApi
  * (el identificador es `AndroidWebViewController.webViewIdentifier`).
  *
  * - `harden`: ajustes (sin archivos ni contenido, sin datos de formularios,
- *   sin contenido mixto, Safe Browsing, sin ventanas nuevas), descargas
+ *   sin contenido mixto, Safe Browsing, sin ventanas nuevas, sin oscurecer la
+ *   página: spec 021), descargas
  *   bloqueadas (CL-009-4), sin depuración en *release* y el envoltorio del
  *   cliente (ADR-0017). Se llama **después** de `setNavigationDelegate`, que
  *   vuelve a poner el cliente y el `DownloadListener` del paquete. Lee todo de
@@ -103,6 +104,15 @@ class WebViewHardening : FlutterPlugin, MethodChannel.MethodCallHandler {
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             safeBrowsingEnabled = true
             setSupportMultipleWindows(false)
+            // La página se queda como es (spec 021, CA-021-08): ni el oscurecimiento
+            // algorítmico (API 33+) ni el forzado (API 29-32), también el del ajuste de
+            // accesibilidad del sistema. API de la plataforma, sin androidx.webkit (P11).
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                isAlgorithmicDarkeningAllowed = false
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                @Suppress("DEPRECATION")
+                forceDark = WebSettings.FORCE_DARK_OFF
+            }
         }
         // Sustituye al del paquete, que convertía la descarga en una petición de
         // navegación. No se descarga nada: se avisa a Dart ("no es una página").
@@ -142,8 +152,17 @@ class WebViewHardening : FlutterPlugin, MethodChannel.MethodCallHandler {
             "noMixedContent" to (s.mixedContentMode == WebSettings.MIXED_CONTENT_NEVER_ALLOW),
             "safeBrowsing" to s.safeBrowsingEnabled,
             "noMultipleWindows" to !s.supportMultipleWindows(),
+            "noDarkening" to noDarkening(s),
             "wrapped" to (view.webViewClient is RenderGoneClient),
         )
+    }
+
+    /** El oscurecimiento de la página está apagado (en API < 29 no existe: nada que apagar). */
+    @Suppress("DEPRECATION")
+    private fun noDarkening(s: WebSettings): Boolean = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> !s.isAlgorithmicDarkeningAllowed
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> s.forceDark == WebSettings.FORCE_DARK_OFF
+        else -> true
     }
 
     private fun isDebuggable(context: Context): Boolean =
