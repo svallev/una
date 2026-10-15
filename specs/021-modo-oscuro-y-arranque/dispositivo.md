@@ -37,3 +37,21 @@ Emulador `Pixel_6a_api37_root` (API 37, gestos), APK de **depuración** de la ra
 ### Hallazgo abierto (T-021-06): un fotograma negro al entrar en pantalla dividida
 
 El único incumplimiento literal de CA-021-05 («ese fondo es `paper`, nunca negro»): al **entrar** en pantalla dividida, la mitad de la app sale **negra un fotograma** (la barra de estado ya está dibujada, la superficie de Flutter aún no tiene imagen). Con la rama: 4 de 30 repeticiones en claro y 1 de 25 en oscuro; con `main`, 2 de 20 en claro. Es el mismo fenómeno con los dos temas, **no es el fondo de la ventana** (sería `paper`: un `SurfaceView` perfora el fondo y no lo deja ver) y no lo cambia el tema de la 021. **Decisión del propietario (2026-10-15): aceptado como límite del motor**, igual que `main`; anotado como excepción en CA-021-05 y en `docs/PLAN.md` (la 022 lo vuelve a mirar en el Xiaomi). Sin tarea nueva ni spike.
+
+## T-021-07: arranque en frío, C-021-9 (2026-10-15, **hecha**)
+
+Emulador `Pixel_6a_api37_root` (API 37, `emulator-5554`; el Xiaomi, conectado a la vez, no se tocó). APK de *release* `--split-per-abi --target-platform android-arm64` de `main` (`8787643`) y de la rama (`32e5e92`), instalados con `adb install -r` (mismos datos). Datos de la app borrados y **una tarea de texto** («Prueba de arranque») como tarea actual (CA-021-10; antes había una tarea web). Método: `am start -W -S` (TotalTime, como `tools/measure-cold-start.sh`), 2 s entre arranques, **un arranque de calentamiento descartado tras cada instalación**, y bloques de 10 en orden **ABBA** por modo (main, rama, rama, main), es decir **n = 20 por compilación y modo**, claro (`cmd uimode night no`) y oscuro (`yes`). El script y los datos en bruto quedaron en el directorio temporal de la sesión (no se suben).
+
+| Modo | Compilación | n | mín | **p50** | p90 | máx |
+|---|---|---|---|---|---|---|
+| Claro | `main` | 20 | 380 | **397,0** | 451 | 547 |
+| Claro | rama | 20 | 375 | **398,5** | 485 | 547 |
+| Oscuro | `main` | 20 | 364 | **399,5** | 492 | 620 |
+| Oscuro | rama | 20 | 370 | **405,0** | 455 | 486 |
+
+- **[Hecho]** Rama menos `main` (p50): **+1,5 ms en claro y +5,5 ms en oscuro**, dentro de la deriva de ≈ 12 ms de la spec. Oscuro menos claro en la rama: **+6,5 ms** (≤ 12). Cumple CA-021-10 en los dos modos.
+- **Deriva entre dos pasadas de `main` el mismo día** (p50 de los bloques, primero frente a último): claro 390,5 → 403,0 (**12,5 ms**); oscuro 379,0 → 441,5 (**62,5 ms**, ruido del emulador: el p50 del bloque va de 379 a 441 con la misma compilación). Con la deriva de la spec (≈ 12 ms) los dos modos ya pasan; con la medida de hoy, oscuro pasa con más margen. Los bloques de la rama quedan entre los de `main` (claro 403,5 y 391,0; oscuro 429,5 y 395,0): ninguna diferencia atribuible a la rama.
+- Antes de la 021, T-021-01 (e), n = 5 por modo con `main`: oscuro 448, claro 469 ms; con el dispositivo en reposo y otra tarea. No es comparable con esta tabla (otra tarea actual, n = 5).
+- **[Pendiente, 022]** repetir en el Xiaomi 15T Pro (≈ 200 ms de línea base en `docs/perf/baseline.md`, gama alta).
+- Estado final del emulador: claro, la app *release* de `main` instalada con la tarea de prueba (datos de la app borrados y recreados).
+
