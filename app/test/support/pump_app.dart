@@ -56,6 +56,9 @@ Future<InMemoryTaskRepository> pumpWithApp(
           disableAnimations: disableAnimations,
           accessibleNavigation: accessibleNavigation,
           textScaler: TextScaler.linear(textScale),
+          // El brillo del sistema simulado llega a la app (spec 021, CA-021-06): por defecto
+          // es claro, y `dark_mode_golden_test.dart` lo pone en oscuro.
+          platformBrightness: tester.platformDispatcher.platformBrightness,
         ),
         child: MaterialApp(
           // Como la app: sin la cinta "DEBUG" (goldens de toda la app).
