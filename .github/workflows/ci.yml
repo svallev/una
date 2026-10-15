@@ -28,22 +28,44 @@ jobs:
             | xargs -0 -n1 node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))'
 
   detect:
-    name: ¿Existe la app?
+    name: ¿Hay que compilar?
     runs-on: ubuntu-latest
     outputs:
-      app: ${{ steps.check.outputs.app }}
+      build: ${{ steps.check.outputs.build }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # En una PR el checkout es el commit de fusión: HEAD^1 es la punta de la rama base.
+          fetch-depth: 2
       - id: check
+        # Compila si existe la app y, en una PR, si toca algo más que documentación. Esto va a nivel
+        # de job (`if:` de los trabajos) y no con `paths:` en `on:`: un job saltado cuenta como
+        # superado para las comprobaciones obligatorias; un workflow que no arranca las deja pendientes.
+        # En main se compila siempre. Cualquier ruta que no esté en la lista de documentación compila.
+        env:
+          EVENT: ${{ github.event_name }}
         run: |
-          if [ -f app/pubspec.yaml ]; then echo "app=true" >> "$GITHUB_OUTPUT"; else echo "app=false" >> "$GITHUB_OUTPUT"; fi
+          if [ ! -f app/pubspec.yaml ]; then echo "build=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$EVENT" != "pull_request" ]; then echo "build=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          build=false
+          while IFS= read -r -d '' f; do
+            case "$f" in
+              # Documentos que leen los tests de app/test (glosario, modelo de amenazas, política
+              # de privacidad): si cambian, hay que compilar y probar.
+              docs/glossary.md|docs/security/threat-model.md|docs/legal/privacy-policy.md) build=true ;;
+              docs/*|specs/*) ;;
+              */*) build=true ;;
+              *.md) ;;
+              *) build=true ;;
+            esac
+          done < <(git diff --name-only -z HEAD^1 HEAD)
+          echo "build=$build" >> "$GITHUB_OUTPUT"
 
   flutter:
     name: Flutter · format, analyze, test, web
     needs: detect
-    if: needs.detect.outputs.app == 'true'
+    if: needs.detect.outputs.build == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -83,8 +105,8 @@ jobs:
 
   android:
     name: Android · build debug y release
-    needs: [detect, flutter]
-    if: needs.detect.outputs.app == 'true'
+    needs: detect
+    if: needs.detect.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -159,8 +181,8 @@ jobs:
 
   ios:
     name: iOS · build sin firmar
-    needs: [detect, flutter]
-    if: needs.detect.outputs.app == 'true'
+    needs: detect
+    if: needs.detect.outputs.build == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
