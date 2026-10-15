@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-15), junto con `plan.md`. Spec **Aprobada** (2026-10-15).
 
-**Siguiente:** T-021-02 (tema único y arranque en `paper`; la lanza un `spec-task`). T-021-01 medida hecha (resumen en `dispositivo.md`; (c) y «Anular forzar modo oscuro» pasan a T-021-06). Rama `feat/021-modo-oscuro-y-arranque` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-021-03 (barras del sistema con la app abierta; la lanza un `spec-task`). Hechas T-021-01 y 02. Rama `feat/021-modo-oscuro-y-arranque` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Sin textos ni tokens nuevos. Tests primero: en T-021-02 a 05 los tests se escriben antes y fallan por la razón esperada.
 
@@ -31,4 +31,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 | Tareas | Estado | Commit |
 |---|---|---|
 | T-021-01 | Medida previa hecha en el emulador de API 37 (sin código): barras en gestos y tres botones, WebView oscura con `prefers-color-scheme` (T-021-04 necesaria), *Expanded* no oscurece nada hoy. **[Pendiente]** (c) y «Anular forzar modo oscuro» → T-021-06. | `dispositivo.md` |
-| T-021-02 | Tema único claro en `res/` (`colors.xml` con `paper`, `UnaWindow`/`UnaBars`/`values-v27`, *splash* de 12+, `forceDarkAllowed=false`; borrados `values-night` y los dos `launch_background`). 19 tests nuevos (`launch_theme`, `icon_checksums`, `uiMode`; 11 mutaciones detectadas); `analyze`, `flutter test` (4239), `build apk --debug`, `gen_icons --check` y permisos en verde, iconos sin tocar. | (este commit) |
+| T-021-02 | Tema único claro en `res/` (`colors.xml` con `paper`, `UnaWindow`/`UnaBars`/`values-v27`, *splash* de 12+, `forceDarkAllowed=false`; borrados `values-night` y los dos `launch_background`). 19 tests nuevos (`launch_theme`, `icon_checksums`, `uiMode`; 11 mutaciones detectadas); `analyze`, `flutter test` (4239), `build apk --debug`, `gen_icons --check` y permisos en verde, iconos sin tocar. | `ec24a71` |
