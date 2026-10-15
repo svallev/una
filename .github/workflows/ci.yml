@@ -73,7 +73,7 @@ jobs:
         run: flutter test --coverage
       - name: Diferencias de los goldens (si fallan)
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: goldens-diferencias
           path: app/test/goldens/failures/
@@ -140,7 +140,7 @@ jobs:
         # Emite app/build/third-party-notices.txt del APK de release comprobado y lo verifica ya emitido.
         run: bash ../tools/check-licenses.sh
       - name: Archivo de avisos de terceros (el que se publica en la web; caduca a los 90 días)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: third-party-notices
           path: app/build/third-party-notices.txt
