@@ -350,3 +350,6 @@ Lo que el `docs/PLAN.md` deja «para la 022» y la spec saca del alcance o no es
 - **`pm clear`/desinstalación:** solo del emulador. Se desinstaló la *release* anterior del emulador (instalada el 2026-10-15, con datos de pruebas) para instalar la auditada; la 05 la usa tal cual.
 - **Las capturas** (PNG de las pruebas) se quedaron en el *scratchpad* de la sesión y se borraron las de `check-recents.sh`; nada en el repositorio.
 
+### Notas de uso del emulador (T-022-04)
+
+- **`check-recents.sh` en el emulador:** para la card de deshacer, `capture` tarda ~1 s antes de la captura de delante: tocar Eliminar, `sleep 2.9` y lanzarlo (antes sale el arrugado; la card caduca a los 4 s). Con la app ya instalada tras `pm clear` la primera pantalla es el editor (sin bienvenida). Tareas desde `adb`: menú (954,258) → «Nuevo» → `input text` → `KEYCODE_BACK` (cierra el teclado) → «+» → «Subir imágenes»/«Subir archivo» (DocumentsUI: menú ☰ → Downloads, desplazar al final) → Guardar; completar = `input swipe x y x y 2500` sobre el botón. El selector de fotos del sistema **no pasa de 10** y `sleep` entre toques cortos pierde alguno (comprobar con `uitxt` el contador). `adb emu rotate` gira 90° por llamada: 3 más devuelven a vertical. Una ráfaga de `screencap` justo tras «Done» (8 seguidos) pilla «Preparando foto i de n…».

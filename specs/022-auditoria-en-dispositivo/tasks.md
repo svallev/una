@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-16), junto con `plan.md` (P-022-1: todo en la `.profile`). Spec **Aprobada** (2026-10-16).
 
-**Siguiente:** T-022-05 (spec-task; la *release* de `2e835cf` ya está instalada en el emulador, sin datos). T-022-03 (coordinador) sigue pendiente: necesita el «sí» del propietario para lanzar `release.yml` en GitHub. T-022-01, 02 y 04 hechas. Sesión nueva (`/spec-implement 022`). Rama `feat/022-auditoria-en-dispositivo` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-022-05 (emulador; la *release* de `2e835cf` ya está instalada y sin datos). T-022-01, 02 y 04 hechas. **T-022-03 pendiente:** el propietario da el «sí» pero el clasificador bloquea `gh workflow run`; debe lanzarlo él (`! gh workflow run release.yml --ref main`) y el coordinador anota la ejecución. Sesión nueva (`/spec-implement 022`). Rama `feat/022-auditoria-en-dispositivo` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 **En el emulador (T-022-04 a 06):** todas las órdenes con `adb -s emulator-5554` y el Xiaomi desconectado (plan §6.3).
 
