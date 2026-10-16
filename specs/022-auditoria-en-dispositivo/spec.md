@@ -1,6 +1,6 @@
 # Spec 022: Auditoría en dispositivo
 
-- **Estado:** **Borrador** (2026-10-16). Revisada por `spec-reviewer` el 2026-10-16: 2 bloqueantes (la gravedad de la voz de la notificación y la app del propietario frente a la `.profile`), 8 importantes y 11 menores, **aplicados**. Quedan Q-022-1 a 5 para el propietario.
+- **Estado:** **Borrador** (2026-10-16). Revisada por `spec-reviewer` el 2026-10-16: 2 bloqueantes (la gravedad de la voz de la notificación y la app del propietario frente a la `.profile`), 8 importantes y 11 menores, **aplicados**. Q-022-1, 2, 3 y 5 respondidas por el propietario el 2026-10-16; queda Q-022-4.
 - **Alcance decidido por el propietario** el 2026-10-16, en la ronda de preguntas de `/spec-new 022`:
   - **1a:** la 022 **solo verifica**. Lo que falle se registra como hallazgo y va a una spec de corrección aparte. La 022 no cambia código.
   - **2:** las pruebas en otros emuladores y en otros dispositivos se **cierran sin hacerlas**. Esto incluye Android 8 y 12L (PD-10), otros lanzadores y otros lectores de pantalla. «Vamos a pasar esto como si lo hubiéramos hecho […] nos lo saltamos, no nos importa.»
@@ -109,8 +109,8 @@ Todos los criterios se verifican **leyendo el registro**: el `dispositivo.md` de
     - **Alta:** alguien no puede hacer una acción principal de la app, se pierden o se exponen datos, o se incumple un principio de la constitución sin excepción aprobada. Ejemplos: una acción sin camino con lector o con Switch Access, o la notificación que enseña la tarea cuando la versión genérica debería salir.
     - **Media:** se puede hacer, pero con un estorbo serio. Por ejemplo, un anuncio que no se oye pero tiene otro camino, o algo tapado al 200 % que se alcanza desplazando.
     - **Baja:** el resto.
-  - **Regla de excepción prevista** (Q-022-5): si lo que falla ya tiene su salida escrita en el criterio de revisión de un ADR aceptado (por ejemplo, ampliar una excepción de P6 o descartar una función), el hallazgo es **Medio**, aunque incumpla un principio, y lo decide la spec de corrección. Sin esa regla, sería **Alto**.
-  - El destino es la **spec de corrección** (Q-022-1). Ningún hallazgo se corrige en la 022 (alcance 1a).
+  - **Regla de excepción prevista** (Q-022-5, aceptada por el propietario): si lo que falla ya tiene su salida escrita en el criterio de revisión de un ADR aceptado (por ejemplo, ampliar una excepción de P6 o descartar una función), el hallazgo es **Medio**, aunque incumpla un principio, y lo decide la spec de corrección. Sin esa regla, sería **Alto**.
+  - El destino es la **spec de corrección 024** (Q-022-1). Ningún hallazgo se corrige en la 022 (alcance 1a).
   - Si el propietario lo acepta tal cual, el resultado pasa a «Aceptada» y el hallazgo se cierra con sus palabras.
 - **CA-022-05 La auditoría no cambia la app**
   - **Dado** la rama de la 022
@@ -337,7 +337,8 @@ Cada casilla cita lo que se comprueba. El plan las agrupa en sesiones. **TalkBac
     - el acordeón de notificaciones (019);
     - el arrugado y la enhorabuena;
   - **Entonces** se ven sin animación o en un solo paso, como dice cada spec.
-- **CA-022-25 Teclado físico, ratón, *trackpad* y lápiz (Q-022-3)**
+- **CA-022-25 Teclado físico, ratón, *trackpad* y lápiz (Q-022-3: Aceptada sin probar en el Xiaomi)**
+  - **Decisión del propietario (2026-10-16):** no se prueba con accesorios. Todas las casillas de abajo quedan **Aceptada** con el resultado del emulador (T-015-14, T-016-21 y T-017-10b, y la 019). Se conserva la lista para que conste qué se acepta.
   - **Dado** los accesorios que tenga el propietario
   - **Cuando** se usan en el Xiaomi
   - **Entonces** se cumple lo ya comprobado en el emulador:
@@ -510,19 +511,19 @@ Sin textos nuevos.
 
 ## 9. Preguntas abiertas
 
-- **Q-022-1 [Pendiente, propietario] ¿Adónde van los hallazgos?** Opciones:
+- **Q-022-1 [Resuelta, propietario, 2026-10-16: a)] ¿Adónde van los hallazgos?** A una spec de corrección **024**, entre la 023 y F6. Opciones:
   - **a)** Una spec de corrección nueva, **024**, entre la 023 y F6.
   - **b)** Dentro de la 023.
   - **c)** Una spec por hallazgo alto.
   - **Recomendación:** a), una sola spec 024 con todo lo de la auditoría y los hallazgos de código de §8. La 023 es de privacidad y tienda, y conviene no mezclarlas.
-- **Q-022-2 [Pendiente, propietario] ¿Qué impide pasar a Implementada?**
+- **Q-022-2 [Resuelta, propietario, 2026-10-16: la recomendación] ¿Qué impide pasar a Implementada?**
   - **Recomendación:** que no quede ningún hallazgo alto ni medio abierto de esa spec. Los bajos se anotan y no lo impiden (CA-022-31).
-- **Q-022-3 [Pendiente, propietario] ¿Qué accesorios tienes?** Teclado físico (Bluetooth o USB-C), ratón, *trackpad* o lápiz.
+- **Q-022-3 [Resuelta, propietario, 2026-10-16] ¿Qué accesorios tienes?** «No lo voy a probar con otra cosa. Se queda con lo que ya se probó»: CA-022-25 entera queda **Aceptada** con el resultado del emulador, sin probarla en el Xiaomi. Teclado físico (Bluetooth o USB-C), ratón, *trackpad* o lápiz.
   - **[Suposición]** Si no hay ninguno, CA-022-25 entera pasa a «Aceptada» con lo hecho en el emulador.
 - **Q-022-4 [Pendiente, propietario] ¿Se puede cambiar el idioma del sistema del Xiaomi durante una sesión?** Hace falta para CA-022-19: la voz con el otro idioma y el canal de la notificación.
   - **Recomendación:** sí, a inglés durante esa sesión, y se restaura al acabar.
   - Si no, CA-022-19 se hace solo con la app en inglés sobre el sistema en español, y el otro sentido queda «Cerrada sin verificar».
-- **Q-022-5 [Pendiente, propietario] ¿Qué gravedad tiene un fallo que ya tiene su salida prevista en un ADR?** Por ejemplo, la voz de TalkBack en otro idioma (ADR-0023) o la de la notificación (CA-019-21).
+- **Q-022-5 [Resuelta, propietario, 2026-10-16: a)] ¿Qué gravedad tiene un fallo que ya tiene su salida prevista en un ADR?** Por ejemplo, la voz de TalkBack en otro idioma (ADR-0023) o la de la notificación (CA-019-21).
   - **a)** **Medio:** lo decide la spec de corrección y no bloquea la beta (regla de CA-022-04).
   - **b)** **Alto:** bloquea F6 hasta resolverlo (CA-022-33).
   - **Recomendación:** a). Los ADR ya dicen qué hacer en ese caso, y el propietario oyó la voz bien en el Xiaomi el 2026-10-05.
