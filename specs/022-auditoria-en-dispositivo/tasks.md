@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-16), junto con `plan.md` (P-022-1: todo en la `.profile`). Spec **Aprobada** (2026-10-16).
 
-**Siguiente:** T-022-07 (Xiaomi X1, **coordinador**, con el permiso del propietario en esa sesión; antes, decidir H-022-01). T-022-01 a 06 hechas; el emulador queda con la *release* de `2e835cf` sin datos, idioma `en-US`, Chrome reactivado y reloj restaurado. Sesión nueva (`/spec-implement 022`). Rama `feat/022-auditoria-en-dispositivo` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-022-07 (coordinador; **Xiaomi X1, TalkBack en español**: necesita el móvil conectado, el permiso del propietario y que no lo use; plan §6.1 y §6.3). T-022-01 a 06 hechas (el emulador queda restaurado). Abierto: **H-022-01** (K-022-060, media; decisión del propietario: Aceptada o a la 024). Sesión nueva (`/spec-implement 022`). Rama `feat/022-auditoria-en-dispositivo` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 **En el emulador (T-022-04 a 06):** todas las órdenes con `adb -s emulator-5554` y el Xiaomi desconectado (plan §6.3).
 
