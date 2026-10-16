@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-16), junto con `plan.md` (P-022-1: todo en la `.profile`). Spec **Aprobada** (2026-10-16).
 
-**Siguiente:** T-022-01, en una sesión nueva (`/spec-implement 022`). Rama `feat/022-auditoria-en-dispositivo` (sale de `docs/022-spec`; sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-022-03 (coordinador; necesita el «sí» del propietario para lanzar `release.yml` en GitHub). T-022-01 y 02 hechas; si el propietario aplaza la 03, la siguiente con dependencias hechas es T-022-04. Sesión nueva (`/spec-implement 022`). Rama `feat/022-auditoria-en-dispositivo` (sin push) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 **En el emulador (T-022-04 a 06):** todas las órdenes con `adb -s emulator-5554` y el Xiaomi desconectado (plan §6.3).
 
