@@ -2,6 +2,7 @@
 
 - **Estado:** Aceptado (propietario, 2026-10-04, con la spec 014); incluye una excepción a P6 (ver Consecuencias)
 - **Fecha:** 2026-10-04
+- **Nota de estado (spec 022, CA-022-06, 2026-10-16; no cambia la decisión):** los 10 s de Android 8 y 9 (la excepción a P6 de abajo) **no se han visto en un dispositivo**: el propietario cerró sin verificar esa casilla (CA-014-06 en API 26 y 28; alcance 2 de la 022). La excepción y su mitigación (contador parado mientras la card tiene el foco) siguen como están.
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
 - **Relacionado:** constitución P6 (excepción, en Consecuencias); sustituye en parte al ADR-0012 (solo el momento del borrado); spec 014 (y 004, 006, 007); D7 y D20 en `docs/PLAN.md`; ADR-0002 (`rank`); ADR-0004 (copias de seguridad); ADR-0006 y ADR-0011 (antecedentes)
 

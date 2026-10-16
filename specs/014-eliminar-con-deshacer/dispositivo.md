@@ -115,3 +115,10 @@ Hecha por el propietario con la versión *profile* de la PR (la anterior, que a�
 | Resto de casillas de TalkBack de esta spec | «Está todo ok» | [Hecho] |
 
 **Decisiones del propietario (2026-10-05):** **M2** descartado (sin tope de espera al primer foco: la cuenta empieza cuando el foco llega a «Deshacer»); **B5** descartado (no se alargan a 10 s Switch Access ni Voice Access: o 10 s o el contador parado mientras hay foco, y se queda el contador parado); sin cambios de código ni de spec. Siguen en la 022: Voice Access, API 26 y 28, PD-10 con la card, el foco fuera de la card en el listado con un gesto real.
+
+## Auditoría 022 (spec 022, T-022-02, 2026-10-16)
+
+Resultados de la auditoría en dispositivo que **no** necesitan el emulador ni el Xiaomi en esta tarea (casillas cerradas por decisión del propietario, ya cumplidas por la CI o por lo que el propietario vio el 2026-10-15, y aceptadas con el resultado del emulador). El resto de casillas de esta spec se anotan aquí, con el mismo formato, en las tareas T-022-03 a 13. Inventario: `specs/022-auditoria-en-dispositivo/informe.md`.
+
+- **PD-10 con la card de deshacer a la vista (`tools/check-recents.sh` en API 26 y 32)** (K-022-008) — **Cerrada sin verificar** · 2026-10-16 · API 26 y 32 (no se prueba) · propietario, alcance 2 de la 022 (CA-022-06): «Vamos a pasar esto como si lo hubiéramos hecho […] nos lo saltamos, no nos importa.»
+- **CA-014-06: la card dura 10 s en Android 8 y 9 con un servicio de accesibilidad y 4 s sin él** (K-022-009) — **Cerrada sin verificar** · 2026-10-16 · API 26 y 28 (no se prueba) · propietario, alcance 2 de la 022 (CA-022-06): «Vamos a pasar esto como si lo hubiéramos hecho […] nos lo saltamos, no nos importa.». Nota de estado en el ADR-0021 (sin cambiar la decisión): los 10 s de Android 8 y 9 no se han visto en un dispositivo; en Android 10 o posterior manda el ajuste «Tiempo para actuar» del sistema y el contador se detiene con el foco (CA-014-06)

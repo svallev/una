@@ -90,3 +90,10 @@ Método: `screenrecord` a 540x1200 + lectura de fotogramas con marca de tiempo (
 - [ ] Anuncio único del aviso (contar los anuncios a oído); "Reintentar" con TalkBack.
 - [ ] "Reducir movimiento" a ojo en el móvil (el hundido y el relleno están medidos en el emulador).
 - [ ] *Goldens* en CI.
+
+## Auditoría 022 (spec 022, T-022-02, 2026-10-16)
+
+Resultados de la auditoría en dispositivo que **no** necesitan el emulador ni el Xiaomi en esta tarea (casillas cerradas por decisión del propietario, ya cumplidas por la CI o por lo que el propietario vio el 2026-10-15, y aceptadas con el resultado del emulador). El resto de casillas de esta spec se anotan aquí, con el mismo formato, en las tareas T-022-03 a 13. Inventario: `specs/022-auditoria-en-dispositivo/informe.md`.
+
+- ***Goldens* de la 013 en CI (§1 y §6: «Goldens en CI»)** (K-022-025) — **Pasa** · 2026-10-16 · CI (Linux) · CI de `main` sobre `2e835cf`, ejecución 38761348413 (2026-10-15, `success`; `gh run view 38761348413`): el paso «Tests (unitarios, widgets, goldens, migraciones, l10n, tokens)» del trabajo «Flutter · format, analyze, test, web» corrió entero (15:35:45 a 15:45:10, `success`; el paso «Diferencias de los goldens (si fallan)» salió `skipped`). Los *goldens* que la 013 regeneraba eran los de «Configuración» (nombre traducido de «Bibliotecas de Android»); la 015 retiró esas pantallas (ADR-0026) y los sustituyen los de Ajustes (K-022-026). La suite entera de `app/test/goldens/` pasó con los PNG del repositorio
+- **«Reintentar» con TalkBack (§6: «Anuncio único del aviso… "Reintentar" con TalkBack»)** (K-022-062) — **Cerrada sin verificar** · 2026-10-16 · Doc · La spec 022 la cierra por sí misma (CA-022-16a): «Reintentar» era de las pantallas de licencias que retiró la 015 (ADR-0026) y ya no existe en la app. Sin palabras nuevas del propietario: no hay nada que probar. La otra mitad de la casilla (el aviso «No hay ninguna app…» se oye una sola vez) sigue en K-022-060, T-022-06
