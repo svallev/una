@@ -1,0 +1,335 @@
+# Informe de la auditoría en dispositivo — Spec 022
+
+- **Estado:** **inventario creado** en T-022-01 (2026-10-16). Los resultados se anotan sesión a sesión (T-022-02 a 13) y se repasan en T-022-14 y 15. Spec y plan **Aprobados** el 2026-10-16 (`spec.md`, `plan.md`).
+- **Esta tabla es la lista de trabajo** (plan §1): cada sesión toma sus filas y las rellena. La 022 **no cambia código** (CA-022-05): solo `specs/`, `docs/` y `CLAUDE.md`.
+- **Dónde se anota cada resultado (CA-022-03):** en la sección «Auditoría 022» al final del `dispositivo.md` de la spec de origen (una línea por casilla), en `docs/PLAN.md` («Casillas de la 0NN», cambiando **[Pendiente]** por el resultado y un enlace) y aquí, en la columna **Resultado**.
+
+## 1. Cabecera
+
+### 1.1 Commit auditado (CA-022-01)
+
+| Dato | Valor |
+|---|---|
+| Commit auditado | `2e835cf` (cabeza de `main` el 2026-10-16: PR #63, spec 021). `git rev-parse origin/main` da `2e835cf` al crear el inventario (T-022-01) |
+| Rama de la auditoría | `feat/022-auditoria-en-dispositivo` (sale de `docs/022-spec`, que es `main` más la spec; no toca `app/`, así que compilar desde la rama da el mismo APK que desde `main`) |
+| Si algo que toca `app/` se fusiona en `main` durante la auditoría | Se anota aquí qué casillas se hicieron con cada commit (CA-022-01, CL-022-9) |
+| Casillas hechas con otro commit | — |
+
+### 1.2 Entornos (CA-022-01)
+
+Solo hay dos. No se instala ningún otro emulador ni se usa ningún otro dispositivo.
+
+| Entorno | Qué es | Lo que se audita |
+|---|---|---|
+| **Emulador** | `Pixel_6a_api37_root` (Android 16, API 37), `emulator-5554`; todas las órdenes con `adb -s emulator-5554` y el Xiaomi desconectado (plan §6.3) | La *release* del commit auditado (T-022-04 a 06) |
+| **Xiaomi** | Xiaomi 15T Pro del propietario (HyperOS 3), solo en sesiones guiadas y con su permiso en cada una | La *release* del propietario solo para «Recientes» (CA-022-27), arranque e iconos (CA-022-28) y TalkBack sobre el icono (CA-022-17); la `.profile` (`invalid.pending.app.profile`) para todo lo demás (CA-022-01a, P-022-1) |
+
+### 1.3 Versiones (CA-022-01, CL-022-4)
+
+**[Pendiente]** hasta X1: se apuntan al empezar la primera sesión con el Xiaomi (plan §6.1) y se actualizan si cambian durante la auditoría (CL-022-4: se anota la versión nueva y desde qué casilla se usa).
+
+| Dato | Orden | Valor |
+|---|---|---|
+| HyperOS | `getprop ro.mi.os.version.name` | **[Pendiente]** |
+| Android | `getprop ro.build.version.release` | **[Pendiente]** |
+| TalkBack | `dumpsys package com.google.android.marvin.talkback \| grep versionName` | **[Pendiente]** |
+| Switch Access y Voice Access (si se usan) | `dumpsys package <paquete> \| grep versionName` | **[Pendiente]** (X4) |
+| Voces de TTS instaladas | `settings get secure tts_default_synth` y las voces del móvil | **[Pendiente]** (X3, antes de la primera ronda) |
+| Clave del modo de navegación en HyperOS (`navigation_mode` o `force_fsg_nav_bar`) | `settings get secure navigation_mode` / `settings get global force_fsg_nav_bar` | **[Pendiente]** (T-022-07 la confirma antes de cambiar nada) |
+
+### 1.4 Resultado de una casilla (CA-022-03)
+
+Uno de cuatro valores: **Pasa**, **Falla** (se abre un H-022-NN, CA-022-04), **Aceptada** (el propietario acepta lo visto o que no se pueda probar del todo, con el motivo y sus palabras) o **Cerrada sin verificar** (el propietario decide no hacerla, con el motivo y sus palabras). La columna **Previsto por la spec** dice lo que la spec ya decidió o prevé; **no es un resultado**: hasta que la sesión lo confirma, la columna **Resultado** queda vacía. Formato de la línea en el `dispositivo.md` de origen: `- **<casilla>** — <resultado> · <fecha> · <entorno> · <evidencia>`.
+
+### 1.5 Restauración por sesión (CA-022-02)
+
+Cada sesión añade aquí **una línea** con lo que dejó como estaba (TalkBack, Switch Access y Voice Access apagados; idioma del sistema, tamaño del texto, modo de navegación, modo oscuro, ajustes de la app, `lock_screen_allow_private_notifications`, «No molestar», ahorro de batería, huso, la `.profile` desinstalada y las fotos de prueba borradas) y la **hora**. Si la sesión se corta (CL-022-1), se restaura igual y las casillas a medias quedan sin resultado. **Restaurar es volver al valor apuntado**, nunca un `reset` ni el valor de fábrica (plan §6.1).
+
+| Sesión | Tarea | Entorno | Fecha | Restauración |
+|---|---|---|---|---|
+| T-022-04 a 06 | Emulador (Recientes, pantalla pequeña, foto dañada, notificaciones, idiomas, sin navegador) | Emulador | **[Pendiente]** | **[Pendiente]** (reloj y `auto_time`, idioma `en-US`, navegador, `wm size`/`density`, `font_scale`) |
+| X1 | T-022-07 | Xiaomi | **[Pendiente]** | **[Pendiente]** |
+| X2 | T-022-08 | Xiaomi | **[Pendiente]** | **[Pendiente]** |
+| X3 | T-022-09 | Xiaomi | **[Pendiente]** | **[Pendiente]** |
+| X4 | T-022-10 | Xiaomi | **[Pendiente]** | **[Pendiente]** |
+| X5 | T-022-11 | Xiaomi | **[Pendiente]** | **[Pendiente]** |
+| X6 | T-022-12 | Xiaomi | **[Pendiente]** | **[Pendiente]** |
+| X7 | T-022-13 | Xiaomi | **[Pendiente]** | **[Pendiente]** (restaurar cada día; solo la `.profile` se queda de una noche a otra) |
+
+## 2. Inventario de casillas
+
+178 filas (`K-022-001` a `K-022-178`), una por casilla de dispositivo [Pendiente] de las fuentes de abajo. Los bloques siguen la spec: **B** (CA-022-06 a 08, cerradas por decisión del propietario), **C** (CA-022-09 a 10, ya cumplidas), **D** (CA-022-11 a 16b, emulador), **E** (CA-022-17 a 30a, Xiaomi, y CA-022-25, aceptada). **F** (CA-022-31): las dos casillas de la 012 que cierra la 015. Una casilla que pide dos sesiones o se cita en dos specs lleva una sola fila con su sesión de trabajo.
+
+**Fuentes leídas:** `docs/PLAN.md` («Hallazgos de la 012 para la auditoría de F5», «Casillas de la 014» a «Casillas de la 021», la fila de la 011 y la de F5 en §3, el párrafo de la 013 en «Troceado de F5», «Hallazgos de la 020») y los `dispositivo.md` de 011 a 019 y 021 (más `020/mastg.md` para O-1 y `007/spec.md` para CA-007-22). **Entorno** = dónde se hace (Doc: solo registro; CI; Emu; Xiaomi; o la versión de Android que se cierra sin verificar).
+
+| ID | Spec | Casilla (CA / CL) | CA-022 | Entorno | Sesión o tarea | Previsto por la spec | Resultado | Enlace |
+|---|---|---|---|---|---|---|---|---|
+| K-022-001 | 011 | T-011-03 (a): matriz de CA-011-02 (14 filas) y CA-011-01 con A y B en API 26 y 32; también con la card de deshacer a la vista y con el grupo de fotos | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-002 | 011 | T-011-03 (b): CA-011-03 y CA-011-08 (vueltas y ciclo de 10) en API 26 y 32 | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-003 | 011 | T-011-03 (c): CA-011-04 (captura con contenido con la app delante) en API 26 y 32 | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-004 | 011 | T-011-03 (d): casos límite en API 26 y 32 (CL-011-1, 2, 3, 6, 10, 11, 12) | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-005 | 011 | CL-011-4: superposiciones (selector parcial, bandeja, menú de apagado) en API 26 y 32; el menú de apagado no se verificó ni en API 37 | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-006 | 011 | CL-011-5: pantalla dividida o ventana flotante en Android 8-9 frente a 10+ | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-007 | 011 | T-011-09 / PD-10: el mecanismo B de «Recientes» (Android 8-12) sigue sin verificarse; nota en la spec 011, en threat-model.md y en el ADR-0019 (CA-022-06) | 06 | Doc | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16); PD-10 cerrada |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-008 | 014 | PD-10 con la card de deshacer a la vista (`tools/check-recents.sh` en API 26 y 32) | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-009 | 014 | CA-014-06: la card dura 10 s en Android 8 y 9 con un servicio de accesibilidad y 4 s sin él; nota en el ADR-0021 (CA-022-06) | 06 | API 26 y 28 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-010 | 016 | PD-10: escenario del grupo de 3 fotos con `tools/check-recents.sh` (carrusel foto 1 y 3, editor, «Foto no disponible», «Preparando foto {i} de {n}…», con `loop` y `record`) | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-011 | 017 | PD-10: `tools/check-recents.sh` sobre Ajustes con la fila «Bloquear zoom» | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-012 | 018 | C-018-3 y CA-018-05: icono adaptable amarillo con la «u.» entera y sin recorte en Android 8 y 12L; la capa monocroma no se usa | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-013 | 019 | PD-10: canal único y ausencia del diálogo del permiso (en 12L solo «bloqueadas» si se apagaron en el sistema) | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-014 | 019 | PD-10: `java.time`, SQLite 3.18 con la consulta de solo lectura e ICU para partir las letras (CA-019-16) | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-015 | 019 | PD-10: la notificación completa y la genérica en Android 8 y 12L | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-016 | 019 | CA-019-21: `LocaleSpan` con TalkBack de Android 8-12 (voz de la notificación) | 06, 07 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-017 | 019 | (d) del cierre: color de acento amarillo de la notificación en la bandeja clara de Android 8-11 | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-018 | 021 | C-021-3 (CA-021-03): arranque `paper` liso sin icono en Android 8-11 | 06 | API 26 y 32 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-019 | 021 | CA-021-09: barra de navegación de Android 8.0 con iconos claros sobre fondo oscuro (excepción P-021-2) | 06 | API 26 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-020 | 018 | CA-018-02: el «cuadrado de esquinas casi rectas» con otro lanzador (Samsung One UI u otros) | 07 | Otro lanzador | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-021 | 018 | CA-018-13: *splash* de otros fabricantes (HyperOS en oscuro va en CA-022-10) | 07 | Otro fabricante | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-022 | 019 | CA-019-21: `LocaleSpan` con Samsung Voice Assistant | 07 | Otro lector | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-023 | 017 | CA-017-13 / ADR-0013: lupa del sistema en Android 8-11 (solo pantalla completa) | 07 | Android 8-11 | T-022-02 | Cerrada sin verificar (propietario, 2026-10-16) |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-024 | PLAN | PD-11 / R-25: comportamiento en tablets y pantallas grandes (D28: solo móvil) | 08 | Doc | T-022-02 | PD-11 aplazada; R-25 aceptado (propietario, 2026-10-16) |  | [PLAN](../../docs/PLAN.md) |
+| K-022-025 | 013 | *Goldens* de la 013 en CI (§1 y §6) | 09 | CI | T-022-02 | Pasa (ejecución 38761348413) |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-026 | 015 | *Goldens* de Ajustes, interruptor y página de Idioma (12 PNG): verlos en verde en la CI | 09 | CI | T-022-02 | Pasa (ejecución 38761348413) |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-027 | 015 | Paso de CI del archivo de avisos (`check-licenses.sh`, `upload-artifact`, paso negativo; CA-015-14b) | 09 | CI | T-022-02 | Pasa (ejecución 38761348413) |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-028 | 017 | *Goldens* de la 017: `settings_lockzoom_*` (4 PNG nuevos y 4 regenerados de Ajustes) | 09 | CI | T-022-02 | Pasa (ejecución 38761348413); comprobar los PNG en el repositorio |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-029 | 019 | *Goldens* de la 019: `settings_notifications_*` (16 PNG) | 09 | CI | T-022-02 | Pasa (ejecución 38761348413); comprobar los PNG en el repositorio |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-030 | 021 | Suites de *goldens* en oscuro (`runSuiteInDarkMode`) en Linux | 09 | CI | T-022-02 | Pasa (ejecución 38761348413) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-031 | 021 | CA-021-11: trabajo de publicación (`release.yml`) en modo testers sobre el commit auditado, con los avisos de identidad esperados (CA-020-04) | 09a | GitHub | T-022-03 | Pasa si termina en verde; lo lanza el coordinador con el «sí» del propietario |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-032 | 021 | C-021-1 en el Xiaomi: arranque en frío en claro, `paper` con la «u.» (HyperOS puede pintar su propio *splash*) | 10 | Xiaomi | T-022-02 | Pasa a ojo (propietario, 2026-10-15) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-033 | 021 | C-021-2 en el Xiaomi: arranque en frío con el sistema en oscuro | 10 | Xiaomi | T-022-02 | Pasa a ojo (propietario, 2026-10-15) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-034 | 018 | CA-018-13 en el Xiaomi: *splash* con el modo oscuro del sistema (superado por el `paper` de la 021) | 10 | Xiaomi | T-022-02 | Pasa a ojo (propietario, 2026-10-15) |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-035 | 021 | C-021-5 en el Xiaomi: con el modo oscuro de HyperOS la app se ve en claro | 10 | Xiaomi | T-022-02 | Pasa a ojo (propietario, 2026-10-15); CL-021-7 (modo oscuro **forzado**) sigue en CA-022-28 |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-036 | 021 | C-021-6 en el Xiaomi: la web se ve en claro con el modo oscuro del sistema | 10 | Xiaomi | T-022-02 | Pasa a ojo (propietario, 2026-10-15) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-037 | 021 | C-021-7 en el Xiaomi: los iconos de las barras sobre la enhorabuena (cierre de T-021-09), a ojo; la medida va en CA-022-29 | 10 | Xiaomi | T-022-02 | Pasa a ojo, sin medir (propietario, 2026-10-15) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-038 | 021 | C-021-7 en el Xiaomi: los iconos de las barras sobre la card de deshacer, a ojo; la medida va en CA-022-29 | 10 | Xiaomi | T-022-02 | Pasa a ojo, sin medir (propietario, 2026-10-15) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-039 | 011 | CA-011-01/02/03/04/08: «Recientes» con una tarea de texto (`check-recents.sh`, vertical) | 11 | Emu | T-022-04 | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-040 | 011 | CA-011-01/02/03/04/08: «Recientes» con una tarea con imagen | 11 | Emu | T-022-04 | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-041 | 016 | CA-011-01/02/03/04/08: «Recientes» con un grupo de 3 fotos | 11 | Emu | T-022-04 | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-042 | 011 | CA-011-01/02/03/04/08: «Recientes» con una tarea con PDF | 11 | Emu | T-022-04 | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-043 | 011 | CA-011-01/02/03/04/08: «Recientes» con una tarea web | 11 | Emu | T-022-04 | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-044 | 014 | CA-011-01/02/03/04/08: «Recientes» con la card de deshacer a la vista | 11 | Emu | T-022-04 | — |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-045 | 011 | CA-011-01/02/03/04/08: «Recientes» en «Todo hecho.» | 11 | Emu | T-022-04 | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-046 | 011 | CA-011-01/02/03/04/08: «Recientes» en el listado | 11 | Emu | T-022-04 | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-047 | 015 | CA-011-01/02/03/04/08: «Recientes» en Ajustes | 11 | Emu | T-022-04 | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-048 | 011 | CA-011-03 y CA-011-08: `loop 10` y `record 5` sin fallos; y pasar `tools/check-recents.sh` antes de entregar a testers (§7.1 punto 2) | 11 | Emu | T-022-04 | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) |
+| K-022-049 | 016 | «Recientes» en horizontal, a ojo y recortando (el script no está calibrado; calibrarlo es de herramienta, fuera de alcance) | 11 | Emu | T-022-04 | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-050 | 016 | (a) «Foto no disponible» del carrusel a 360 × 640 dp y texto al 200 %: se ve entero, sin quedar bajo la cabecera ni el pie | 12 | Emu | T-022-04 | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-051 | 016 | (a) el editor con el aviso compuesto de CA-016-21 mientras se preparan las fotos, a 360 × 640 dp y al 200 %: vista previa de al menos 56 dp | 12 | Emu | T-022-04 | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-052 | 016 | (b) foto corrupta (no ausente) llegada con TalkBack: se anuncia «Foto no disponible» y no solo «Foto {i} de {n}» (CA-016-20) | 13 | Emu | T-022-05 | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-053 | 019 | (f) texto de más de 120 letras con emoji ZWJ y acentos: la notificación corta entre letras completas (CA-019-16) | 14 | Emu | T-022-05 | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-054 | 019 | (g) CA-019-20: tocar la notificación con la app 11 minutos en segundo plano lleva a la tarea actual | 16 | Emu | T-022-05 | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-055 | 019 | (g) CA-019-19a: la notificación con la pantalla apagada | 16 | Emu | T-022-05 | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-056 | 015 | CL-015-7: sistema en `ca`, app «Como el sistema»: la app y Ajustes salen en español | 15 | Emu | T-022-06 | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-057 | 015 | CL-015-7: sistema en `gl`: la app y Ajustes salen en inglés | 15 | Emu | T-022-06 | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-058 | 015 | CL-015-7: sistema en `eu`: la app y Ajustes salen en inglés; la voz de los anuncios en `eu` se anota (012 §8 la pide con `ca` y `gl`, CA-022-16b solo cita `ca` y `gl`) | 15 | Emu | T-022-06 | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-059 | 019 | La notificación en `ca`, `gl` y `eu` (título y canal, CA-019-21 y 22) | 15 | Emu | T-022-06 | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-060 | 013 | CA-013-05 / CL-013-8: el aviso «No hay ninguna app…» se oye una sola vez, después de las opciones, con TalkBack y el navegador desactivado | 16a | Emu | T-022-06 | — |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-061 | 012 | M2 de la 012 (aviso obsoleto): con Chrome desactivado, ver el aviso, reactivarlo y tocar otra fila: el aviso ha desaparecido | 16a | Emu | T-022-06 | — |  | [012 dispositivo §8](../012-configuracion-temporal/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-062 | 013 | «Reintentar» con TalkBack: ya no existe (era de las pantallas de licencias que retiró la 015) | 16a | Doc | T-022-06 | Cerrada sin verificar (la spec la cierra) |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-063 | 012 | 012-A-B2: qué voz dice los anuncios y la pantalla con el sistema en `ca` (ADR-0020 y 0023) | 16b | Emu | T-022-06 | Aceptada si la voz es la del sistema |  | [012 dispositivo §8](../012-configuracion-temporal/dispositivo.md) · [PLAN «Hallazgos de la 012»](../../docs/PLAN.md) |
+| K-022-064 | 012 | 012-A-B2: qué voz dice los anuncios y la pantalla con el sistema en `gl` (ADR-0020 y 0023) | 16b | Emu | T-022-06 | Aceptada si la voz es la del sistema |  | [012 dispositivo §8](../012-configuracion-temporal/dispositivo.md) · [PLAN «Hallazgos de la 012»](../../docs/PLAN.md) |
+| K-022-065 | 007 | CA-007-22: hoja «Añadir»: foco al abrirla y al cerrarla sin elegir, y al volver de la cámara o del selector (limitación de TalkBack aceptada 2026-09-27) | 17 | Xiaomi | X1 (T-022-07) | — |  | [007 spec CA-007-22](../007-adjunto-imagen/spec.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-066 | 013 | Hoja del menú de la tarea (spec 005): foco al cerrarla (X, fuera, deslizar o atrás; CA-005-02) | 17 | Xiaomi | X1 (T-022-07) | — |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-067 | 013 | Hoja (spec 002) «¿Dónde la pones?»: foco al abrirla, al «Seguir editando» y al colocar la tarea | 17 | Xiaomi | X1 (T-022-07) | — |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-068 | 013 | Hoja «Cargar URL» (spec 009, CA-009-19): foco al abrirla y al cerrarla | 17 | Xiaomi | X1 (T-022-07) | — |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-069 | 013 | Confirmación de un enlace del PDF (spec 008, CA-008-12 y CA-008-21; `LinkConfirmSheet`): foco inicial y foco al cerrarla | 17 | Xiaomi | X1 (T-022-07) | — |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-070 | 013 | Hoja (spec 006) «Mover tarea» del listado: foco al elegir una opción y al cerrarla (CA-006-17) | 17 | Xiaomi | X1 (T-022-07) | — |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-071 | 016 | Editor: «{n} fotos añadidas» al volver del selector con un grupo (CA-016-21) | 17 | Xiaomi | X1 (T-022-07) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-072 | 016 | Editor: el aviso compuesto («Solo se usarán las 10 primeras.» · «{n} fotos añadidas.» · «No se pudo añadir 1 foto.») sin que lo pise «Vista previa: …» | 17 | Xiaomi | X1 (T-022-07) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-073 | 016 | Editor: «Adjunto quitado» y el foco en (+) | 17 | Xiaomi | X1 (T-022-07) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-074 | 016 | Editor: «Preparando foto {i} de {n}…» (una vez al empezar) y el foco en «Cancelar» | 17 | Xiaomi | X1 (T-022-07) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-075 | 016 | El gesto real de «siguiente elemento» no tiene una segunda parada en el nodo vivo del anuncio | 17 | Xiaomi | X1 (T-022-07) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-076 | 016 | Cinco cambios seguidos de foto con el gesto real: un único «Foto {i} de {n}» cada vez | 17 | Xiaomi | X1 (T-022-07) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-077 | 017 | El gesto real de «desplazar adelante» y «atrás» con el bloqueo de zoom y una foto alta (recorre la foto y luego pasa a la siguiente) | 17 | Xiaomi | X1 (T-022-07) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-078 | 017 | Dos dobles toques seguidos en las dos filas de Ajustes: cada estado se dice una vez (CA-017-14) | 17 | Xiaomi | X1 (T-022-07) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-079 | 014 | Mover el foco fuera de la card en el listado con un gesto real: la pausa y su reanudación (CA-014-17) | 17 | Xiaomi | X1 (T-022-07) | — |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-080 | 014 | Tiempo hasta el primer foco en «Deshacer» (cronómetro del propietario; se anota, sin umbral) | 17 | Xiaomi | X1 (T-022-07) | — |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-081 | 014 | La voz real en español y en HyperOS de la card de deshacer (CA-014-16) | 17 | Xiaomi | X1 (T-022-07) | — |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-082 | 014 | «Todo hecho.» con la voz (último paso de X1, porque vacía la cola) | 17 | Xiaomi | X1 (T-022-07) | — |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-083 | 014 | TalkBack y Switch Access encendidos a la vez: recorrer la card otra vez (**[Suposición]** el cambio no hace releer el canal; la siguiente eliminación sí) | 17 | Xiaomi | X4 (T-022-10) | — |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-084 | 015 | Voz de TalkBack al llegar al botón de menú tras cerrar Ajustes (T-015-10) | 17 | Xiaomi | X1 (T-022-07) | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-085 | 019 | Interruptor de notificaciones como un solo nodo (CA-019-04) | 17 | Xiaomi | X1 (T-022-07) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-086 | 019 | Acordeón: se despliega sin anuncio y hay uno solo al cambiar de opción (CA-019-07 y 08) | 17 | Xiaomi | X1 (T-022-07) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-087 | 019 | «Notificaciones al día» sin parada de foco propia (CA-019-26); si la tiene, es un hallazgo | 17 | Xiaomi | X1 (T-022-07) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-088 | 019 | La línea de privacidad como parada tras la fila (CA-019-09) | 17 | Xiaomi | X1 (T-022-07) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-089 | 019 | Dónde cae el foco tras el diálogo del permiso y «Notificaciones activadas.» | 17 | Xiaomi | X1 (T-022-07) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-090 | 019 | Aviso de bloqueo y su botón (permiso rechazado de verdad) y «Notificaciones permitidas.» al volver del sistema | 17 | Xiaomi | X1 (T-022-07) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-091 | 019 | Aviso de error del bloque de notificaciones (si se puede provocar sin tocar nada del propietario; si no, CL-022-2) | 17 | Xiaomi | X1 (T-022-07) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-092 | 011 | TalkBack al volver a la app desde «Recientes»: el blanco intermedio y dónde cae el foco (fila de F5, 2026-09-30) | 17 | Xiaomi | X1 (T-022-07) | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-093 | 011 | TalkBack lee la tarjeta de «Recientes» solo con el nombre de la app, en español y en HyperOS (§3.6 y §6; en el emulador se leyó en inglés) | 17 | Xiaomi | X1 (T-022-07) | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-094 | 021 | Arranque: lo que dice TalkBack al arrancar, frente a lo que dicen las specs de cada pantalla (en el emulador solo se contó el número de frases: 4) | 17 | Xiaomi | X1 (T-022-07) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-095 | 021 | Giro: lo que dice TalkBack al girar, frente a lo que dicen las specs de cada pantalla | 17 | Xiaomi | X1 (T-022-07) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-096 | 018 | C-018-7: TalkBack lee «Una.», sin nada más como «imagen», en el lanzador (con iconos con tema y sin ellos; *release*) | 17 | Xiaomi | X1 (T-022-07) | — |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-097 | 018 | C-018-7: lo mismo en la lista de aplicaciones | 17 | Xiaomi | X1 (T-022-07) | — |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-098 | 018 | C-018-7: lo mismo en Ajustes → Aplicaciones | 17 | Xiaomi | X1 (T-022-07) | — |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-099 | 019 | Móvil bloqueado y contenido sensible **oculto**: cuando la pantalla se enciende sola, TalkBack no lee ninguna parte de la tarea (CA-019-17; si la lee, **alto**) | 17 | Xiaomi | X1 (T-022-07) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-100 | 019 | Móvil bloqueado con la preferencia por defecto: lo decide el sistema; se anota qué lee | 17 | Xiaomi | X1 (T-022-07) | Aceptada con lo que diga el sistema |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-101 | 019 | N-1 (a): el aviso de bloqueo **se oye** con TalkBack al 200 % a 360 dp aunque el bloque quede bajo el pliegue (permiso rechazado de forma permanente) | 18 | Xiaomi | X2 (T-022-08) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-102 | 015 | a11y M2: con el texto al 200 % y sin navegador, «No hay ninguna app…» desde Ayuda: la fila que tenía el foco sigue a la vista o se recupera | 18 | Xiaomi | X2 (T-022-08) | Aceptada con el resultado del emulador (T-022-06) si no se puede provocar sin tocar el navegador del propietario |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-103 | 015 | R-26 / CA-015-11: «Idioma, Español» y «Como el sistema» suenan con la voz del idioma de la app (tres rondas) | 19 | Xiaomi | X3 (T-022-09) | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-104 | 015 | CA-015-12: un aviso de error de Ajustes con la voz del idioma de la app (tres rondas) | 19 | Xiaomi | X3 (T-022-09) | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-105 | 017 | CA-017-17: la fila «Bloquear zoom» y sus avisos con la voz del idioma de la app (tres rondas) | 19 | Xiaomi | X3 (T-022-09) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-106 | 016 | R-22 y R-26: «Foto {i} de {n}» con la voz del idioma de la app, y la frase `eng-USA` suelta junto a la primera acción (tres rondas) | 19 | Xiaomi | X3 (T-022-09) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-107 | 019 | CA-019-21: la notificación completa con su marca de idioma (`LocaleSpan`), en las tres rondas | 19 | Xiaomi | X3 (T-022-09) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-108 | 019 | CA-019-21: la notificación genérica (desbloqueado y con la pantalla bloqueada y el contenido oculto), en las tres rondas | 19 | Xiaomi | X3 (T-022-09) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-109 | 019 | CA-019-21: la notificación con la voz del otro idioma **sin instalar** (solo si ya falta alguna voz; si no, Aceptada o Cerrada sin verificar, con las palabras del propietario) | 19 | Xiaomi | X3 (T-022-09) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-110 | 019 | CA-019-21 y 22: al cambiar el idioma del sistema, el canal toma el nombre nuevo (`LOCALE_CHANGED`) | 19 | Xiaomi | X3 (T-022-09) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-111 | 012 | Recorrido de Ajustes y de la página de Idioma con TalkBack, el sistema en inglés y la app en inglés, repetido en el móvil (hecho en el emulador, T-015-14) | 19 | Xiaomi | X3 (T-022-09) | — |  | [012 dispositivo §8](../012-configuracion-temporal/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-112 | 013 | Switch Access en Ajustes: título, opciones, aviso y Volver o Cerrar, en el orden del lector (CA-013-05, CA-015-21; 012 §8 y 013 §6) | 20 | Xiaomi | X4 (T-022-10) | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-113 | 014 | Switch Access: la card de deshacer se alcanza y se activa por barrido | 20 | Xiaomi | X4 (T-022-10) | — |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-114 | 016 | Switch Access: «Foto siguiente», «Foto anterior» y las acciones de desplazar, también en horizontal (ADR-0022) | 20 | Xiaomi | X4 (T-022-10) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-115 | 017 | Switch Access: la fila «Bloquear zoom» y las acciones de la tarea con el bloqueo | 20 | Xiaomi | X4 (T-022-10) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-116 | 019 | Switch Access: dos opciones seguidas del bloque de notificaciones | 20 | Xiaomi | X4 (T-022-10) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-117 | 011 | Switch Access y teclado con la app delante y tras volver de «Recientes» (fila de F5); aquí, Switch Access | 20 | Xiaomi | X4 (T-022-10) | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-118 | 017 | Voice Access: «tocar Bloquear zoom» (el nombre va primero, WCAG 2.5.3) | 21 | Xiaomi | X4 (T-022-10) | Aceptada si Voice Access no está o no admite español ni inglés |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-119 | 017 | Voice Access: «desplazar a la izquierda» y «a la derecha» cambian de foto (ADR-0022) | 21 | Xiaomi | X4 (T-022-10) | Aceptada si Voice Access no está o no admite español ni inglés |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-120 | 017 | Voice Access: «desplazar hacia abajo» y «hacia arriba» con una foto alta y el bloqueo encendido | 21 | Xiaomi | X4 (T-022-10) | Aceptada si Voice Access no está o no admite español ni inglés |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-121 | 016 | Voice Access: «Foto siguiente» y «Foto anterior» por su nombre | 21 | Xiaomi | X4 (T-022-10) | Aceptada si Voice Access no está o no admite español ni inglés |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-122 | 019 | Voice Access: «toca 2» con los números superpuestos y «toca notificaciones» (se anota la ambigüedad con las opciones) | 21 | Xiaomi | X4 (T-022-10) | Aceptada si Voice Access no está o no admite español ni inglés |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-123 | 014 | Voice Access: las acciones de la card de deshacer | 21 | Xiaomi | X4 (T-022-10) | Aceptada si Voice Access no está o no admite español ni inglés |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-124 | 019 | Voice Access: abrir y descartar la notificación por voz (con una notificación de la `.profile` en la bandeja) | 21 | Xiaomi | X4 (T-022-10) | Aceptada si Voice Access no está o no admite español ni inglés |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-125 | 011 | H-5: lupa del sistema con la app delante, a pantalla completa y en ventana (**[Suposición]** funciona porque la ventana no lleva `FLAG_SECURE`) | 22 | Xiaomi | X4 (T-022-10) | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-126 | 017 | CA-017-13: lupa sobre la tarea con imagen, con el bloqueo apagado y encendido (pantalla completa y en ventana; se puede mover por la pantalla ampliada) | 22 | Xiaomi | X4 (T-022-10) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-127 | 017 | CA-017-13: lupa sobre un grupo de fotos, con el bloqueo apagado y encendido; un swipe horizontal sigue cambiando de foto (ADR-0022) | 22 | Xiaomi | X4 (T-022-10) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-128 | 017 | Lupa tras volver de «Recientes» (fila de F5) | 22 | Xiaomi | X4 (T-022-10) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-129 | 014 | B4: la card de deshacer al 200 % con tres botones, en vertical y en horizontal, y su aviso de error de recuperación (WCAG 2.4.11) | 23 | Xiaomi | X2 (T-022-08) | Aceptada con el emulador si no se puede provocar el error en el móvil |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-130 | 016 | Hallazgo previo a la 016: el editor con un texto largo, con y sin fotos, al 200 % con tres botones (el emulador deja «+» y «Guardar» medio bajo la barra; si se repite, **medio** contra la 003) | 23 | Xiaomi | X2 (T-022-08) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-131 | 012 | Ajustes al 200 % con tres botones a 360 dp, sin que la barra tape nada (012 §8 y 015, hecho en el emulador) | 23 | Xiaomi | X2 (T-022-08) | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-132 | 019 | El bloque de notificaciones desplegado con la opción 3, la línea de privacidad y el aviso, en ES y EN (idioma de la **app**), al 200 % con tres botones | 23 | Xiaomi | X2 (T-022-08) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-133 | 015 | Reducir movimiento: Ajustes, la subida y el interruptor (CA-015-01d), a ojo en el móvil | 24 | Xiaomi | X2 (T-022-08) | — |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-134 | 013 | Reducir movimiento: el pulsado de los botones (CA-013-03; el relleno de completar no cambia) | 24 | Xiaomi | X2 (T-022-08) | — |  | [013 dispositivo §6](../013-deuda-accesibilidad/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-135 | 019 | Reducir movimiento: el acordeón de notificaciones | 24 | Xiaomi | X2 (T-022-08) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-136 | 014 | Reducir movimiento: el arrugado y la enhorabuena | 24 | Xiaomi | X2 (T-022-08) | — |  | [014 dispositivo](../014-eliminar-con-deshacer/dispositivo.md) · [PLAN «Casillas de la 014»](../../docs/PLAN.md) |
+| K-022-137 | 015 | Teclado físico en Ajustes: orden de Tab, anillo de foco, Intro, Espacio y Escape (015, 017; 012 §8 y 013 §6), con el acordeón plegado y desplegado (019) | 25 | Emu (Aceptada, sin probar en el Xiaomi) | T-022-02 | Aceptada con el resultado del emulador (propietario, Q-022-3, 2026-10-16) |  | [015 dispositivo](../015-ajustes/dispositivo.md) · [PLAN «Casillas de la 015»](../../docs/PLAN.md) |
+| K-022-138 | 019 | Teclado físico en el bloque de notificaciones: flechas que solo mueven el foco, opción enfocada a la vista (019) | 25 | Emu (Aceptada, sin probar en el Xiaomi) | T-022-02 | Aceptada con el resultado del emulador (propietario, Q-022-3, 2026-10-16) |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-139 | 016 | Teclado físico en la tarea con grupo: flechas del carrusel y Av Pág / Re Pág, también en horizontal y con una foto clara y otra oscura (016, 017) | 25 | Emu (Aceptada, sin probar en el Xiaomi) | T-022-02 | Aceptada con el resultado del emulador (propietario, Q-022-3, 2026-10-16) |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-140 | 017 | Lápiz, ratón, rueda y *trackpad* con el bloqueo de zoom: la foto no se mueve ni se amplía (017) | 25 | Emu (Aceptada, sin probar en el Xiaomi) | T-022-02 | Aceptada con el resultado del emulador (propietario, Q-022-3, 2026-10-16) |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-141 | 017 | Swipe horizontal con lápiz y con ratón: cambia de foto en un grupo (Q-017-9) | 25 | Emu (Aceptada, sin probar en el Xiaomi) | T-022-02 | Aceptada con el resultado del emulador (propietario, Q-022-3, 2026-10-16) |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-142 | 017 | Observación sin criterio: tras un clic de ratón dentro de la foto, las flechas arriba y abajo dejan de mover con el bloqueo (017) | 25 | Emu (Aceptada, sin probar en el Xiaomi) | T-022-02 | Aceptada con el resultado del emulador (propietario, Q-022-3, 2026-10-16) |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-143 | 011 | Anillo de foco con teclado tras volver de «Recientes» (fila de F5) | 25 | Emu (Aceptada, sin probar en el Xiaomi) | T-022-02 | Aceptada con el resultado del emulador (propietario, Q-022-3, 2026-10-16) |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-144 | 017 | CL-017-6: el gesto de volver desde el borde, con gestos y con tres botones, con el bloqueo y sin él (Android 10+ con otros márgenes) | 26 | Xiaomi | X5 (T-022-11) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-145 | 017 | El giro con el bloqueo de zoom y con el **bloqueo de rotación del sistema** | 26 | Xiaomi | X5 (T-022-11) | — |  | [017 dispositivo](../017-bloquear-zoom/dispositivo.md) · [PLAN «Casillas de la 017»](../../docs/PLAN.md) |
+| K-022-146 | 021 | Giro de una tarea con 3 fotos: sin banda negra ni blanca, a ojo (C-021-4; **[Suposición]** del emulador: cadencia de 0,3 s) | 26 | Xiaomi | X5 (T-022-11) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-147 | 021 | CA-021-05: entrada en pantalla dividida, 5 veces: cuántas muestran el fotograma negro (aceptado 2026-10-15 si es un solo fotograma) | 26 | Xiaomi | X5 (T-022-11) | Aceptada (propietario, 2026-10-15) si es un fotograma suelto |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-148 | 011 | CA-011-03: la duración del blanco al volver de «Recientes» (a ojo; `*release*`) | 27 | Xiaomi | X5 (T-022-11) | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-149 | 011 | CA-011-04: la captura del sistema con la app delante sale con la app, sin blanco (la hace el propietario; no se copia al Mac) | 27 | Xiaomi | X5 (T-022-11) | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-150 | 011 | CL-011-3 y CL-011-15: la cámara y el selector abiertos desde la app (en la `.profile`) | 27 | Xiaomi | X5 (T-022-11) | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-151 | 011 | CL-011-14: «Recientes» abierto desde la propia app (solo informativo) | 27 | Xiaomi | X5 (T-022-11) | — |  | [011 dispositivo](../011-ocultar-recientes/dispositivo.md) · [PLAN «Troceado de F5»](../../docs/PLAN.md) |
+| K-022-152 | 021 | C-021-11 / CL-021-10: iconos con tema encendidos: el arranque sigue siendo la «u.» negra sobre `paper` | 28 | Xiaomi | X5 (T-022-11) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-153 | 021 | CL-021-7: «modo oscuro para apps» de HyperOS aplicado a la app y opciones de desarrollo que fuerzan el oscuro: la app sigue en claro | 28 | Xiaomi | X5 (T-022-11) | Aceptada si el sistema la oscurece igualmente (límite del sistema) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-154 | 021 | CL-021-8: el ajuste de accesibilidad de HyperOS que oscurece las apps, si existe | 28 | Xiaomi | X5 (T-022-11) | Aceptada si el sistema la oscurece igualmente (límite del sistema) |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-155 | 021 | C-021-10 / CL-021-4: arranque tocando una notificación de la `.profile` con el proceso cerrado: se ve `paper`, nunca blanco ni negro | 28 | Xiaomi | X5 (T-022-11) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-156 | 018 | «Tamaño de visualización» al máximo en el Xiaomi (opcional) | 28 | Xiaomi | X5 (T-022-11) | Aceptada (opcional) si no se hace |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-157 | 018 | CL-018-3: iconos con tema sobre un fondo de pantalla de poco contraste (opcional) | 28 | Xiaomi | X5 (T-022-11) | Aceptada (opcional) si no se hace |  | [018 dispositivo](../018-iconos/dispositivo.md) · [PLAN «Casillas de la 018»](../../docs/PLAN.md) |
+| K-022-158 | 021 | C-021-9 / CA-021-10: arranque en frío del commit auditado frente a `8787643`, n ≥ 20, **en claro**: p50(B) − p50(A) ≤ deriva y < 1 s | 29 | Xiaomi | X6 (T-022-12) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-159 | 021 | C-021-9 / CA-021-10: lo mismo **en oscuro**; y p50 oscuro(B) − p50 claro(B) ≤ deriva | 29 | Xiaomi | X6 (T-022-12) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-160 | 016 | R-24: el hueco al cambiar de foto en el Xiaomi (se anota, sin umbral nuevo) | 29 | Xiaomi | X6 (T-022-12) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-161 | 016 | R-24: el espacio en disco de una tarea de 10 fotos de 24 MP (se anota) | 29 | Xiaomi | X6 (T-022-12) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-162 | 016 | R-24: el p90 de raster del carrusel y del arrugado con la foto (se anota; el pico de memoria ya está aceptado, ADR-0024) | 29 | Xiaomi | X6 (T-022-12) | — |  | [016 dispositivo](../016-varias-imagenes-carrusel/dispositivo.md) · [PLAN «Casillas de la 016»](../../docs/PLAN.md) |
+| K-022-163 | 021 | C-021-7: contraste ≥ 3:1 de los iconos de las barras, tres botones, sobre la hoja abierta | 29 | Xiaomi | X6 (T-022-12) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-164 | 021 | C-021-7 / cierre de T-021-09: contraste ≥ 3:1 sobre la card de deshacer (3,3:1 en el emulador); si baja de 3:1, iconos claros en la barra mientras está la card | 29 | Xiaomi | X6 (T-022-12) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-165 | 021 | Cierre de T-021-09: contraste ≥ 3:1 sobre la enhorabuena, con gestos y con tres botones (no se midió en ningún dispositivo) | 29 | Xiaomi | X6 (T-022-12) | — |  | [021 dispositivo](../021-modo-oscuro-y-arranque/dispositivo.md) · [PLAN «Casillas de la 021»](../../docs/PLAN.md) |
+| K-022-166 | 019 | CA-019-17: entrega con el móvil **bloqueado y la app cerrada** y el contenido sensible en «oculto»: sale la versión genérica | 30 | Xiaomi | X7 (T-022-13) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-167 | 019 | Tocar la notificación con la app cerrada abre la tarea actual (la muestra de las 18:55 de T-019-15 no lo confirmó) | 30 | Xiaomi | X7 (T-022-13) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-168 | 020 | O-1: tras abrir la app desde la notificación, que la app no se quede sin pintar (si se reproduce, **alto**) | 30 | Xiaomi | X7 (T-022-13) | — |  | [020 mastg](../020-seguridad-y-puerta-de-publicacion/mastg.md) · [PLAN «Hallazgos de la 020»](../../docs/PLAN.md) |
+| K-022-169 | 019 | CA-019-19a: la app a la vista a la hora del aviso no notifica (solo la cubren los tests) | 30 | Xiaomi | X7 (T-022-13) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-170 | 019 | Entrega con el ahorro de batería de Android activo | 30 | Xiaomi | X7 (T-022-13) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-171 | 019 | Entrega con «No molestar» y con los modos de concentración de HyperOS, si existen (CA-022-30a los añade) | 30 | Xiaomi | X7 (T-022-13) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-172 | 019 | Entrega tras actualizar la app (`adb install -r` de la misma `.profile`) | 30 | Xiaomi | X7 (T-022-13) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-173 | 019 | Entrega tras un cambio de huso (Ajustes → Fecha y hora; lo hace el propietario y lo deja como estaba) | 30 | Xiaomi | X7 (T-022-13) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-174 | 019 | Entrega con la pantalla apagada mucho rato (HyperOS las entrega al encender; se anota el retraso, W = 15 min no es criterio) | 30 | Xiaomi | X7 (T-022-13) | — |  | [019 dispositivo](../019-notificaciones/dispositivo.md) · [PLAN «Casillas de la 019»](../../docs/PLAN.md) |
+| K-022-175 | 009 | Modo avión, arranque en frío, tarea de texto, con foto y web; completar una y eliminar otra (P3) | 30a | Xiaomi | X7 (T-022-13) | — |  | [022 spec](spec.md) |
+| K-022-176 | 009 | Modo avión: abrir la tarea web en modo avión: dice que necesita conexión (ADR-0016) | 30a | Xiaomi | X7 (T-022-13) | — |  | [022 spec](spec.md) |
+| K-022-177 | 012 | Foco de TalkBack al volver en los tres saltos, tras Cancelar y tras el navegador (pantallas de licencias, sustituidas por Ajustes) | 31 | Doc | T-022-14 | Cerrada por la 015 (propietario, 2026-10-05: se acepta el comportamiento de TalkBack al volver del navegador; la vuelta desde Idioma, comprobada en el emulador) |  | [012 dispositivo §8](../012-configuracion-temporal/dispositivo.md) · [PLAN «Hallazgos de la 012»](../../docs/PLAN.md) |
+| K-022-178 | 012 | CA-012-06 a los 10 minutos con el reloj real (lo cubre `home_router_test.dart`, 9:59 y 10:00) | 31 | Doc | T-022-14 | Cerrada por la 015 (CA-015-16 y 20h, aceptadas por el propietario) |  | [012 dispositivo §8](../012-configuracion-temporal/dispositivo.md) · [PLAN «Hallazgos de la 012»](../../docs/PLAN.md) |
+
+### 2.1 Filas por CA-022
+
+Cada CA-022-06 a 30a tiene al menos una fila; ninguna fila queda sin CA-022. (Una fila que cuenta para dos CA aparece en las dos líneas.)
+
+| CA-022 | Filas |
+|---|---|
+| CA-022-06 | 19 |
+| CA-022-07 | 5 |
+| CA-022-08 | 1 |
+| CA-022-09 | 6 |
+| CA-022-09a | 1 |
+| CA-022-10 | 7 |
+| CA-022-11 | 11 |
+| CA-022-12 | 2 |
+| CA-022-13 | 1 |
+| CA-022-14 | 1 |
+| CA-022-15 | 4 |
+| CA-022-16 | 2 |
+| CA-022-16a | 3 |
+| CA-022-16b | 2 |
+| CA-022-17 | 36 |
+| CA-022-18 | 2 |
+| CA-022-19 | 9 |
+| CA-022-20 | 6 |
+| CA-022-21 | 7 |
+| CA-022-22 | 4 |
+| CA-022-23 | 4 |
+| CA-022-24 | 4 |
+| CA-022-25 | 7 |
+| CA-022-26 | 4 |
+| CA-022-27 | 4 |
+| CA-022-28 | 6 |
+| CA-022-29 | 8 |
+| CA-022-30 | 9 |
+| CA-022-30a | 2 |
+| CA-022-31 | 2 |
+
+## 3. Lo esperado, para el guion de X1 (T-022-01)
+
+Las casillas de X1 que comparan **lo que se oye** con lo que dicen las specs. Se copia aquí lo esperado de la spec de origen para que el coordinador lo tenga a mano al leer el guion al propietario (plan §6.3 X1, puntos 6 a 8). Lo que se oye lo dice el propietario y se anota tal cual, con comillas (plan §6.1). **Antes de cada sesión conviene releer la spec de origen: esto es un resumen.**
+
+- **K-022-065:** **Hoja «Añadir» (CA-007-22; CA-016-21):** al abrirla, el foco debería ir al título «Añadir a la tarea» y el anuncio ser su nombre; al cerrarla sin elegir (X, atrás o fuera) y al cancelar la cámara o el selector, el foco debería ir a (+), sin anuncio. **Limitación de TalkBack ya aceptada (propietario, 2026-09-27):** TalkBack pone el foco en el primer botón de la hoja (la X) y, al cerrarla o al volver de la cámara o del selector, en el primer elemento pulsable del editor, no en (+); con teclado el foco va donde dice la tabla. Si el foco cae en otro sitio distinto de esos dos, es un hallazgo; si cae en la X o en el primer elemento, **Aceptada** (CA-007-22).
+- **K-022-066:** **Hoja del menú de la tarea (CA-005-02, spec 005 §6):** foco inicial en «Editar». Al cerrarla (X, fuera, deslizar o atrás) se vuelve a la tarea y no hay un criterio escrito más preciso para el foco: se anota dónde cae. Con Ajustes (CA-015-02), al cerrar Ajustes el foco va al botón de menú de la tarea. **[Suposición]** de la 022: lo razonable es que quede en la tarea o en el botón de menú; cualquier otro sitio se anota y no se cuenta como fallo sin criterio escrito.
+- **K-022-067:** **Hoja «¿Dónde la pones?» (spec 002 §6, CA-002):** el foco va al título «¿Dónde la pones?» y queda atrapado en la hoja; Escape o atrás equivalen a «Seguir editando» (se vuelve al editor); tras colocar la tarea, el foco va a la tarea actual.
+- **K-022-068:** **Hoja «Cargar URL» (CA-009-19, con la limitación de TalkBack de CA-007-22):** al abrirla, el foco va al campo y se anuncia el título de la hoja; al cerrarla, el foco va al botón (+) del editor, sin anuncio. Con la limitación aceptada, TalkBack puede poner el foco en el primer elemento del editor y no en (+): **Aceptada**; en cualquier otro sitio, hallazgo.
+- **K-022-069:** **Confirmación de un enlace del PDF (CA-008-12; tabla de foco de CA-008-21):** el foco inicial va a «Cancelar» y se anuncia el texto de la confirmación («¿Abrir {host} en el navegador?»); al cerrarla o al volver del navegador u otra app, el foco queda en el enlace, sin anuncio. Enlace sin app para abrirlo: el foco queda en el enlace y se anuncia el error.
+- **K-022-070:** **Hoja «Mover tarea» (CA-006-17):** elegir una opción mueve la tarea, cierra la hoja y deja el foco en la tarea en su nueva posición, con el anuncio «Movida a la posición {n} de {total}» (o «Ahora es la tarea actual» si llega a la primera); el anuncio espera a que la hoja termine de cerrarse. Cerrarla sin elegir: sin cambios y sin anuncio.
+- **K-022-092:** **Volver desde «Recientes» (CA-001-12, CA-011-03):** con menos de 10 minutos se ve la misma pantalla; con 10 minutos o más, la tarea actual, con el foco de entrada en el botón de menú. El blanco intermedio (o `paper`) es aceptado (CA-011-03 enmendado) mientras no haya negro. **No hay criterio escrito para dónde cae el recuadro de TalkBack:** se acepta que quede en el título de la pantalla o en el texto de la tarea (CA-015-16 y CA-015-20h enmendadas, 2026-10-05). En la `.profile` se anota como desviación de CA-022-01a. Se anota el blanco (duración a ojo) y dónde cae el foco.
+- **K-022-094:** **Arranque (spec 021 §6):** el arranque no es interactivo ni lo recorre el lector (lo pinta el sistema); no hay frases nuevas. TalkBack debe decir solo lo que dice la pantalla que se abre (p. ej. «Tarea actual: …»; con un grupo, «{n} fotos. Foto 1 de {n}»). En el emulador se contaron 4 síntesis, las mismas que en `main`; aquí se anota el texto y si coincide con la spec de la pantalla. «No se instala `8787643` para comparar de oído» (CA-022-17).
+- **K-022-095:** **Giro (CA-007-08 a 11, CA-016-12 y spec 021 §6):** sin frases nuevas; con la orientación, TalkBack anuncia «Horizontal» o «Vertical» (lo dice el sistema) y el foco se queda en el mismo elemento. En horizontal con imagen, PDF o grupo se ve solo la foto y el logotipo (ADR-0013 y 0022): no hay menú ni botón de completar que leer. Se anota lo que dice.
+
+**Orden de lectura de referencia (X1, punto 8):** se apunta además el orden de lectura de TalkBack en Ajustes, en la card de deshacer y en la tarea con grupo, como referencia para Switch Access en X4. Lo esperado: Ajustes, el título y luego las filas en el orden de la pantalla, con **Cerrar al final** (CA-013-05, CA-015-20a y 20g; en el emulador salió título → Idioma → Pantalla siempre activa → Bloquear zoom → Información → tres webs → Cerrar, 017); la card de deshacer, una sola lectura que empieza por «Deshacer» y el botón (CA-014-16); la tarea con grupo, un solo nodo con el texto, el número de fotos y «Foto {i} de {n}» (CA-016-20).
+
+## 4. Hallazgos H-022-NN (CA-022-04)
+
+**Ninguno abierto** (T-022-01 solo crea el inventario). Cada fila «Falla» abre un hallazgo con estos cinco campos; ninguno se corrige en la 022 (alcance 1a): el destino es la **spec de corrección 024** (Q-022-1), salvo que el propietario lo acepte tal cual (entonces el resultado pasa a **Aceptada** y el hallazgo se cierra con sus palabras).
+
+| Campo | Qué se anota |
+|---|---|
+| Criterio de origen | CA, CL o hallazgo anterior |
+| Entorno | Emulador o Xiaomi, y el commit |
+| Cómo se reproduce | Pasos con los gestos reales |
+| Gravedad | **Alta**, **Media** o **Baja** (CA-022-04 y la tabla de gravedad del plan §7). Regla de excepción prevista (Q-022-5): si lo que falla ya tiene su salida en el criterio de revisión de un ADR aceptado, es **Media** |
+| Destino | Spec 024 (o «Aceptada por el propietario», con sus palabras) |
+
+| H-022-NN | Fila (K-022-NNN) | Resumen | Gravedad | Destino | Estado |
+|---|---|---|---|---|---|
+| — | — | — | — | — | — |
+
+Si queda algún **alto** abierto al cerrar, la beta (F6) **no empieza** hasta que la spec de corrección lo cierre (CA-022-33).
+
+## 5. Lo que queda fuera del inventario
+
+Lo que el `docs/PLAN.md` deja «para la 022» y la spec saca del alcance o no es una casilla de dispositivo. No tiene fila:
+
+- **Hallazgos de código ya conocidos (spec §8, pasan tal cual a la 024):** 013-A-M1, B1 de la 015, M4, M5 y M7 de la 015, (d) y (e) de la 016, (3) de la 018, (b) y (c) de los hallazgos bajos de la 019, M9 de la 015, (d) de la 017, N-2 y N-3 de la 019, C-5 de la 020, la observación de `accessibleNavigation` con Switch Access en el listado, la enhorabuena y la bienvenida (014), calibrar `tools/check-recents.sh` en horizontal, el test de Chrome del selector múltiple en la CI, TD-1, TD-2, H-5 y H-6.
+- **Web de pruebas (D4, R-15):** el pellizco y Ctrl + rueda en Chrome con la 017, el `lang` que no declara y la falta de favicon de 16 px (018).
+- **023 y F6:** política de privacidad, Data Safety, ficha de tienda, presupuesto de tamaño, H-2 de la 020, la revisión legal de las licencias (ADR-0026, R-27), la ayuda web («Restringir» de HyperOS), `ACCESS_LOCAL_NETWORK`, C-4 y `actionlint`.
+- **F-iOS (D17):** B6 de la 014.
+- **F6:** copiar a las notas de la beta los límites de «Recientes» (011 §7.1, punto 4).
+- **Anuladas por la 015 (pantallas de licencias):** «Cargando licencias…», «Reintentar» del nivel 2 y el nivel 3 de «Bibliotecas de Android» (012 §8): no tienen fila. Lo que de ellas pasa a Ajustes (foco al volver, teclado, Switch Access, 200 %, idiomas, aviso obsoleto) sí la tiene.
+- **Ya cerradas por el propietario antes de la 022** (sin casilla viva): «Tarea recuperada» no se oye en API 37 (014, hallazgo 1), M2, M3, B5 de la 014, el foco de TalkBack al volver del navegador (015 y 012 §8) y CA-012-06 a los 10 minutos con el reloj real, que cierra la 015 (CA-015-16 y 20h; CA-022-31).
+- **Hechas y con resultado** en sus `dispositivo.md` (no se repiten): p90 de raster del arrugado y arranque en el Xiaomi (014, 012, 017, 019), *goldens* de la 014 y la 016, medidas de arranque, memoria y espacio en el emulador (016, 017, 021).
+
+## 6. Notas de T-022-01 para el coordinador
+
+- **Glosario:** `docs/glossary.md` ya traía «Casilla de dispositivo», «Sesión guiada» y «Commit auditado» (de la redacción de la spec). T-022-01 añade «Resultado de una casilla» y «Hallazgo de la auditoría (H-022-NN)». La spec lista **5** términos en su nomenclatura y el plan y la tarea dicen «6»: se ha tomado la lista de la spec.
+- **«El (d) de su cierre» de la 019 (CA-022-06):** `PLAN.md` tiene dos «(d)» en la 019: el color de acento amarillo de la bandeja (Android 8-11, PD-10) y, entre los hallazgos bajos, `Poster`/`MainActivity` sin prueba JVM. Se ha tomado el primero (una sola fila). Si el propietario se refería al otro, es una fila más.
+- **Idioma `eu` (CA-022-15 y 16b):** `012 §8` pide la voz de los anuncios con `ca`, `gl` y `eu`; CA-022-16b solo cita `ca` y `gl`. La voz en `eu` se anota dentro de la fila de CA-022-15.
+- **Hoja de confirmación de eliminar:** desde la 014 (ADR-0021) no existe («¿Eliminar esta tarea?» desaparece de la app), así que la casilla «foco al cerrar cada hoja» de 013 §6 no la incluye. Las hojas que existen en `app/lib` son: menú, «¿Dónde la pones?», «Añadir», «Cargar URL», «Mover tarea» y la confirmación de enlace del PDF; la confirmación de enlace de Ajustes se retiró en T-015-07b.

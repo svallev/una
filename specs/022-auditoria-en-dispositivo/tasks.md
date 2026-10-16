@@ -38,3 +38,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde, qué falló y lo pe
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-022-01 | `informe.md` creado: cabecera (commit `2e835cf` = `origin/main`; versiones y «Restauración» **[Pendiente]** hasta X1), **178 filas** `K-022-001` a `178` (B 24, C 14, D 26, E 112, F 2; cada CA-022-06 a 30a con ≥ 1 fila, resultado vacío), lo esperado de hojas, «Recientes», arranque y giro para X1 y hallazgos vacíos. Glosario: +2 términos (la spec lista 5, el plan dice 6). **[Pendiente]** confirmar que «el (d) de su cierre» de la 019 es el acento amarillo (§6 del informe). | `informe.md`, `docs/glossary.md` |
