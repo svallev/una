@@ -1,6 +1,6 @@
 # Spec 022: Auditoría en dispositivo
 
-- **Estado:** **Borrador** (2026-10-16). Revisada por `spec-reviewer` el 2026-10-16: 2 bloqueantes (la gravedad de la voz de la notificación y la app del propietario frente a la `.profile`), 8 importantes y 11 menores, **aplicados**. Q-022-1 a 5 respondidas por el propietario el 2026-10-16.
+- **Estado:** **Aprobada** por el propietario el 2026-10-16 («aprobada»). Antes **Borrador** (2026-10-16). Revisada por `spec-reviewer` el 2026-10-16: 2 bloqueantes (la gravedad de la voz de la notificación y la app del propietario frente a la `.profile`), 8 importantes y 11 menores, **aplicados**. Q-022-1 a 5 respondidas por el propietario el 2026-10-16.
 - **Alcance decidido por el propietario** el 2026-10-16, en la ronda de preguntas de `/spec-new 022`:
   - **1a:** la 022 **solo verifica**. Lo que falle se registra como hallazgo y va a una spec de corrección aparte. La 022 no cambia código.
   - **2:** las pruebas en otros emuladores y en otros dispositivos se **cierran sin hacerlas**. Esto incluye Android 8 y 12L (PD-10), otros lanzadores y otros lectores de pantalla. «Vamos a pasar esto como si lo hubiéramos hecho […] nos lo saltamos, no nos importa.»
