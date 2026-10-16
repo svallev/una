@@ -96,6 +96,9 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Arranque | Launch screen | `LaunchTheme`, `UnaWindow` *(spec 021)* | Lo que se ve desde que se toca el icono o la notificación hasta el primer fotograma: fondo `paper` con la «u.» negra del icono en Android 12+ (*splash* del sistema) y fondo liso `paper` en Android 8–11. |
 | Fondo de la ventana | Window background | `android:windowBackground`, `@color/paper` *(spec 021)* | Color que pinta el sistema detrás de la app cuando no hay nada dibujado (arranque, giro, teclado). Siempre `paper`. |
 | Barras del sistema | System bars | `UnaBars`, `SystemUiOverlayStyle` *(spec 021)* | Barra de estado y barra de navegación, que dibuja el sistema; sus iconos se leen sobre el fondo de la app, sin velo (spec 021, CA-021-09). |
+| Casilla de dispositivo | Device check | — *(spec 022)* | Comprobación que no se puede hacer con `flutter test` ni en la CI y que una spec deja registrada para la auditoría en dispositivo (022). Se cierra con un resultado: **Pasa**, **Falla** (abre un hallazgo H-022-NN), **Aceptada** (el propietario acepta lo visto o que no se pueda probar del todo) o **Cerrada sin verificar** (el propietario decide no hacerla). |
+| Sesión guiada | Guided session | — *(spec 022)* | Rato acordado con el propietario, con el Xiaomi en la mano, en el que se le lee una lista de pasos; el propietario hace los gestos y dice lo que oye o ve, y Claude Code lo anota. Al acabar, el móvil queda como estaba. |
+| Commit auditado | Audited commit | — *(spec 022)* | Commit de `main` cuya versión *release* se comprueba en la auditoría en dispositivo; consta en su informe. |
 | Indicador de función | Feature flag | `FeatureFlag` | Interruptor local para funcionalidades a medio hacer. |
 | Fecha límite *(futuro)* | Due date | `dueDate` | Bloque 1 de la hoja de ruta. |
 | Subtarea *(futuro)* | Subtask | `parentId` | Bloque 2. |
