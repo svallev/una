@@ -1,6 +1,6 @@
 # Spec 022: Auditoría en dispositivo
 
-- **Estado:** **Borrador** (2026-10-16). Revisada por `spec-reviewer` el 2026-10-16: 2 bloqueantes (la gravedad de la voz de la notificación y la app del propietario frente a la `.profile`), 8 importantes y 11 menores, **aplicados**. Q-022-1, 2, 3 y 5 respondidas por el propietario el 2026-10-16; queda Q-022-4.
+- **Estado:** **Borrador** (2026-10-16). Revisada por `spec-reviewer` el 2026-10-16: 2 bloqueantes (la gravedad de la voz de la notificación y la app del propietario frente a la `.profile`), 8 importantes y 11 menores, **aplicados**. Q-022-1 a 5 respondidas por el propietario el 2026-10-16.
 - **Alcance decidido por el propietario** el 2026-10-16, en la ronda de preguntas de `/spec-new 022`:
   - **1a:** la 022 **solo verifica**. Lo que falle se registra como hallazgo y va a una spec de corrección aparte. La 022 no cambia código.
   - **2:** las pruebas en otros emuladores y en otros dispositivos se **cierran sin hacerlas**. Esto incluye Android 8 y 12L (PD-10), otros lanzadores y otros lectores de pantalla. «Vamos a pasar esto como si lo hubiéramos hecho […] nos lo saltamos, no nos importa.»
@@ -520,7 +520,7 @@ Sin textos nuevos.
   - **Recomendación:** que no quede ningún hallazgo alto ni medio abierto de esa spec. Los bajos se anotan y no lo impiden (CA-022-31).
 - **Q-022-3 [Resuelta, propietario, 2026-10-16] ¿Qué accesorios tienes?** «No lo voy a probar con otra cosa. Se queda con lo que ya se probó»: CA-022-25 entera queda **Aceptada** con el resultado del emulador, sin probarla en el Xiaomi. Teclado físico (Bluetooth o USB-C), ratón, *trackpad* o lápiz.
   - **[Suposición]** Si no hay ninguno, CA-022-25 entera pasa a «Aceptada» con lo hecho en el emulador.
-- **Q-022-4 [Pendiente, propietario] ¿Se puede cambiar el idioma del sistema del Xiaomi durante una sesión?** Hace falta para CA-022-19: la voz con el otro idioma y el canal de la notificación.
+- **Q-022-4 [Resuelta, propietario, 2026-10-16: sí] ¿Se puede cambiar el idioma del sistema del Xiaomi durante una sesión?** «Sí, puedes ponerlo en inglés»: durante la sesión de CA-022-19, y se restaura al acabar (CA-022-02). Hace falta para CA-022-19: la voz con el otro idioma y el canal de la notificación.
   - **Recomendación:** sí, a inglés durante esa sesión, y se restaura al acabar.
   - Si no, CA-022-19 se hace solo con la app en inglés sobre el sistema en español, y el otro sentido queda «Cerrada sin verificar».
 - **Q-022-5 [Resuelta, propietario, 2026-10-16: a)] ¿Qué gravedad tiene un fallo que ya tiene su salida prevista en un ADR?** Por ejemplo, la voz de TalkBack en otro idioma (ADR-0023) o la de la notificación (CA-019-21).
