@@ -93,3 +93,9 @@ Resultados de la auditoría en dispositivo que **no** necesitan el emulador ni e
 **T-022-07 (2026-10-18): Xiaomi X1, TalkBack en español** (CA-022-17).
 
 - **Voz de TalkBack al llegar al botón de menú tras cerrar Ajustes (T-015-10)** (K-022-084) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf`, TalkBack en español (T-022-07, X1) · al cerrar Ajustes la voz llega al botón de menú de la tarea; el propietario: «Todas las pruebas ok»
+
+**T-022-08 (2026-10-18): Xiaomi X2, texto al 200 %, tres botones y reducir movimiento** (CA-022-18, 23 y 24; detalle en el [informe](../022-auditoria-en-dispositivo/informe.md), §12).
+
+- **a11y M2: con el texto al 200 % y sin navegador, «No hay ninguna app…» desde Ayuda** (K-022-102) — **Aceptada** · 2026-10-18 · propietario («aceptada»), previsto por la spec (CA-022-18): no se puede provocar sin desactivar su navegador; vale el resultado del emulador (T-022-06): a 200 % y 360 dp «Ayuda» y el aviso quedan a la vista a la vez
+- **Ajustes al 200 % con tres botones, sin que la barra tape nada (012 §8)** (K-022-131) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf` (T-022-08, X2), `font_scale` 2,0, tres botones, ES y EN · «Ayuda» / «Help» termina en y 2515, la barra de tres botones empieza en 2619, el aviso de bloqueo y su botón terminan en 2570 · propietario: «bien» en español y en inglés. Límite: ancho ≈ 394 dp, no 360
+- **Reducir movimiento: Ajustes, la subida y el interruptor (CA-015-01d)** (K-022-133) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf` (T-022-08, X2), «Quitar animaciones» del sistema (escalas a 0,0, comprobado con `adb`) · Ajustes aparece de golpe y el interruptor cambia al instante · propietario: «bien»
