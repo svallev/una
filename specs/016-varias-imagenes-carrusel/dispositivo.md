@@ -156,3 +156,7 @@ Resultados de la auditoría en dispositivo que **no** necesitan el emulador ni e
 **T-022-08 (2026-10-18): Xiaomi X2, texto al 200 %, tres botones y reducir movimiento** (CA-022-18, 23 y 24; detalle en el [informe](../022-auditoria-en-dispositivo/informe.md), §12).
 
 - **Hallazgo previo a la 016: el editor con un texto largo, con y sin fotos, al 200 % con tres botones** (K-022-130) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf` (T-022-08, X2), `font_scale` 2,0, tres botones · sin fotos: con el teclado cerrado «Add a photo» queda en y 2277-2485 y «Save changes» en 2273-2489 (la barra empieza en 2619) y con el teclado abierto quedan por encima de él (`uiautomator dump`); con fotos, a ojo del propietario («listo, bien»), sin medir. El fallo del emulador a 360 dp **no se repite** en el Xiaomi (≈ 394 dp); a 360 dp no se probó
+
+**T-022-09 (2026-10-18): Xiaomi X3, la voz con el idioma de la app** (CA-022-19; detalle en el [informe](../022-auditoria-en-dispositivo/informe.md), §13). Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf`, TalkBack en español, tres rondas (sistema EN + app ES, sistema ES + app EN, EN + EN).
+
+- **«Foto {i} de {n}» con la voz del idioma de la app y la frase `eng-USA` suelta (R-22, R-26)** (K-022-106) — **Pasa** · «Foto i de 3» en español, «Photo one of three» en inglés; la frase `eng-USA` no se oyó; lo único en inglés con la app en español es la pista «pulse con tres dedos para ver las acciones disponibles» (voz del sistema).

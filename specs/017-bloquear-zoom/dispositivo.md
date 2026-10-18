@@ -183,3 +183,7 @@ Resultados de la auditoría en dispositivo que **no** necesitan el emulador ni e
 
 - **El gesto real de «desplazar adelante» y «atrás» con el bloqueo de zoom y una foto alta (recorre la foto y luego pasa a la siguiente)** (K-022-077) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf`, TalkBack en español (T-022-07, X1) · foto alta de prueba (2000×8000) con el bloqueo encendido: «desplazar adelante» y «atrás» recorren la foto y luego pasan a la siguiente; el propietario: «Todo funciona como lo esperado»
 - **Dos dobles toques seguidos en las dos filas de Ajustes: cada estado se dice una vez (CA-017-14)** (K-022-078) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf`, TalkBack en español (T-022-07, X1) · dos dobles toques seguidos en «Bloquear zoom» y en «Pantalla siempre activa»: cada estado se dice una vez; el propietario: «Todo funciona como lo esperado»
+
+**T-022-09 (2026-10-18): Xiaomi X3, la voz con el idioma de la app** (CA-022-19; detalle en el [informe](../022-auditoria-en-dispositivo/informe.md), §13). Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf`, TalkBack en español, tres rondas (sistema EN + app ES, sistema ES + app EN, EN + EN).
+
+- **La fila «Bloquear zoom» y sus avisos con la voz del idioma de la app (CA-017-17)** (K-022-105) — **Pasa** · nombre y descripción con la voz de la app, estado y pistas con la del sistema, en las tres rondas; los avisos de error no se pueden provocar en el móvil.
