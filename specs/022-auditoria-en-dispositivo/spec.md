@@ -1,6 +1,6 @@
 # Spec 022: Auditoría en dispositivo
 
-- **Estado:** **Aprobada** por el propietario el 2026-10-16 («aprobada»). Antes **Borrador** (2026-10-16). Revisada por `spec-reviewer` el 2026-10-16: 2 bloqueantes (la gravedad de la voz de la notificación y la app del propietario frente a la `.profile`), 8 importantes y 11 menores, **aplicados**. Q-022-1 a 5 respondidas por el propietario el 2026-10-16.
+- **Estado:** **Implementada** el 2026-10-19 (T-022-01 a 15: 178 casillas con resultado, 10 hallazgos, 0 altos; `informe.md`). Antes **Aprobada** por el propietario el 2026-10-16 («aprobada»). Antes **Borrador** (2026-10-16). Revisada por `spec-reviewer` el 2026-10-16: 2 bloqueantes (la gravedad de la voz de la notificación y la app del propietario frente a la `.profile`), 8 importantes y 11 menores, **aplicados**. Q-022-1 a 5 respondidas por el propietario el 2026-10-16.
 - **Alcance decidido por el propietario** el 2026-10-16, en la ronda de preguntas de `/spec-new 022`:
   - **1a:** la 022 **solo verifica**. Lo que falle se registra como hallazgo y va a una spec de corrección aparte. La 022 no cambia código.
   - **2:** las pruebas en otros emuladores y en otros dispositivos se **cierran sin hacerlas**. Esto incluye Android 8 y 12L (PD-10), otros lanzadores y otros lectores de pantalla. «Vamos a pasar esto como si lo hubiéramos hecho […] nos lo saltamos, no nos importa.»
@@ -116,6 +116,7 @@ Todos los criterios se verifican **leyendo el registro**: el `dispositivo.md` de
   - **Dado** la rama de la 022
   - **Cuando** se compara con `main`
   - **Entonces** solo cambian archivos de `specs/`, `docs/` y `CLAUDE.md`. No cambian `app/`, `tools/`, `design/` ni `.github/`.
+  - **Enmienda (propietario, 2026-10-19):** también se permiten las skills de proyecto `caveman` y `ponytail` (`.agents/skills/`, `.claude/skills/` y `skills-lock.json`, commit `f8626f0`, revisadas el 2026-10-18 y anotadas en `docs/claude-code.md` §3).
   - Las pruebas provisionales (sondas de integración, *fixtures*) no se suben, o se borran antes del cierre.
 
 ### B. Cerradas sin verificar, por decisión del propietario
@@ -213,6 +214,7 @@ Todos los criterios se verifican **leyendo el registro**: el `dispositivo.md` de
   - **Dado** el emulador con el sistema en `ca`, en `gl` y en `eu`
   - **Cuando** se abre la app con el idioma «Como el sistema»
   - **Entonces** la app sale en español con `ca` y en inglés con `gl` y `eu` (reglas de la 010), también Ajustes y la notificación.
+  - **Enmienda (2026-10-19, T-022-15):** `eu` **no se audita** por decisión del propietario (2026-10-16, K-022-058, Cerrada sin verificar).
 - **CA-022-16 Notificación con la app en segundo plano y con la pantalla apagada (bajo (g) de la 019)**
   - **Dado** el emulador
   - **Cuando** se comprueban por separado:

@@ -52,7 +52,7 @@ No hay tests nuevos: cada CA se verifica **leyendo el registro** (spec §3). Las
 | CA-022-01, 01a, 02 | Cabecera del informe y su apartado «Restauración» por sesión | T-022-01 y cada sesión |
 | CA-022-03 | Inventario sin filas vacías; `grep -n '\[Pendiente\]'` en las secciones «Casillas de la 0NN» de `PLAN.md` sin resultado | T-022-15 |
 | CA-022-04 | Cada fila «Falla» enlaza un H-022-NN con sus 5 campos | Cada sesión; T-022-14 |
-| CA-022-05 | `git diff --stat main...HEAD` solo en `specs/`, `docs/`, `CLAUDE.md` | Cada tarea; T-022-15 |
+| CA-022-05 | `git diff --stat main...HEAD` solo en `specs/`, `docs/`, `CLAUDE.md` (y las skills de proyecto `caveman` y `ponytail`, enmienda del 2026-10-19) | Cada tarea; T-022-15 |
 | CA-022-06 a 08, 10 | Notas en specs, ADR, `threat-model.md` y `PLAN.md` | T-022-02 |
 | CA-022-09 | Ejecución 38761348413 (ver §5.1) | T-022-02 |
 | CA-022-09a | Ejecución de `release.yml` en modo testers en verde | T-022-03 |
