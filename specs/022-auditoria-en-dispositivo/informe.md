@@ -399,7 +399,7 @@ Lo que el `docs/PLAN.md` deja «para la 022» y la spec saca del alcance o no es
 
 - **Hallazgos de código ya conocidos (spec §8, pasan tal cual a la 024):** 013-A-M1, B1 de la 015, M4, M5 y M7 de la 015, (d) y (e) de la 016, (3) de la 018, (b) y (c) de los hallazgos bajos de la 019, M9 de la 015, (d) de la 017, N-2 y N-3 de la 019, C-5 de la 020, la observación de `accessibleNavigation` con Switch Access en el listado, la enhorabuena y la bienvenida (014), calibrar `tools/check-recents.sh` en horizontal, el test de Chrome del selector múltiple en la CI, TD-1, TD-2, H-5 y H-6.
 - **Web de pruebas (D4, R-15):** el pellizco y Ctrl + rueda en Chrome con la 017, el `lang` que no declara y la falta de favicon de 16 px (018).
-- **023 y F6:** política de privacidad, Data Safety, ficha de tienda, presupuesto de tamaño, H-2 de la 020, la revisión legal de las licencias (ADR-0026, R-27), la ayuda web («Restringir» de HyperOS), `ACCESS_LOCAL_NETWORK`, C-4 y `actionlint`.
+- **023 y F6:** política de privacidad, Data Safety, ficha de tienda, presupuesto de tamaño, H-2 de la 020, la revisión legal de las licencias (ADR-0026, R-27), `ACCESS_LOCAL_NETWORK`, C-4 y `actionlint`.
 - **F-iOS (D17):** B6 de la 014.
 - **F6:** copiar a las notas de la beta los límites de «Recientes» (011 §7.1, punto 4).
 - **Anuladas por la 015 (pantallas de licencias):** «Cargando licencias…», «Reintentar» del nivel 2 y el nivel 3 de «Bibliotecas de Android» (012 §8): no tienen fila. Lo que de ellas pasa a Ajustes (foco al volver, teclado, Switch Access, 200 %, idiomas, aviso obsoleto) sí la tiene.
