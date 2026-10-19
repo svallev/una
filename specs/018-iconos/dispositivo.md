@@ -107,3 +107,8 @@ Resultados de la auditoría en dispositivo que **no** necesitan el emulador ni e
 - **CA-018-13 en el Xiaomi: *splash* con el modo oscuro del sistema** (K-022-034) — **Pasa** (a ojo) · 2026-10-16 · Xiaomi 15T Pro (HyperOS 3), *release* de `2e835cf`, a ojo, el propietario el 2026-10-15 («van bien»; hoy no consta en el repositorio) · Lo confirmó el propietario con el arranque en frío en oscuro; esa parte quedó superada por el arranque en `paper` con la «u.» de la 021 (CA-021-02). Sin captura
 
 - **C-018-7: TalkBack lee «Una.», sin nada más como «imagen», en el lanzador, la lista de aplicaciones y Ajustes → Aplicaciones, con iconos con tema y sin ellos** (K-022-096 a 098) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), *release* de `2e835cf`, TalkBack en español · el propietario: «Lo esperado», «ok. Mismo comportamiento», «ok»
+
+**T-022-11 (2026-10-19): Xiaomi X5, gestos, giro, «Recientes», arranque e iconos** (CA-022-26 a 28; detalle en el [informe](../022-auditoria-en-dispositivo/informe.md), §15).
+
+- **«Tamaño de visualización» al máximo en el Xiaomi (opcional)** (K-022-156) — **Aceptada (opcional)** · 2026-10-19 · no se hizo en X5 (opcional por CA-022-28)
+- **CL-018-3: iconos con tema sobre un fondo de pantalla de poco contraste (opcional)** (K-022-157) — **Aceptada (opcional)** · 2026-10-19 · no se hizo en X5 (opcional por CA-022-28)
