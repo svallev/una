@@ -101,6 +101,14 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Commit auditado | Audited commit | — *(spec 022)* | Commit de `main` cuya versión *release* se comprueba en la auditoría en dispositivo; consta en su informe. |
 | Resultado de una casilla | Check result | — *(spec 022)* | Uno de cuatro valores: **Pasa**, **Falla** (se abre un hallazgo), **Aceptada** (el propietario acepta lo visto o que no se pueda probar del todo, con el motivo escrito) o **Cerrada sin verificar** (el propietario decide no hacerla). Se anota en el `dispositivo.md` de la spec de origen, en `docs/PLAN.md` y en el informe de la 022. |
 | Hallazgo de la auditoría (H-022-NN) | Audit finding | — *(spec 022)* | Casilla de dispositivo que falla, con su criterio de origen, entorno, cómo se reproduce, gravedad (alta, media o baja) y destino (la spec de corrección 024). La 022 no lo corrige. |
+| Ficha de tienda | Store listing | `store/google-play/listing/` *(spec 023)* | Lo que Google Play enseña de la app: nombre, descripción breve y completa, icono, gráfico de funciones, capturas, categoría y contacto. |
+| Gráfico de funciones | Feature graphic | `store/google-play/feature-graphic.png` *(spec 023)* | Imagen de 1024 × 500 que Play pone en la cabecera de la ficha. |
+| Seguridad de los datos | Data safety | — *(spec 023)* | Formulario de Play Console en el que se declara qué datos recoge y comparte la app; Play lo enseña en la ficha. |
+| Declaración de Data Safety | Data safety declaration | `store/google-play/data-safety.md` *(spec 023)* | Documento del repositorio con cada pregunta del formulario, su respuesta, el porqué y la fuente; desde él se rellena Play Console. |
+| Clasificación de contenido | Content rating | — *(spec 023)* | Cuestionario de IARC en Play Console que da la edad recomendada por país. |
+| Público objetivo | Target audience | — *(spec 023)* | Grupos de edad para los que está pensada la app, declarados en Play Console. |
+| Webs de la app | App web pages | `landing/`, `privacyPolicyUrl`, `thirdPartyLicensesUrl`, `helpUrl` *(spec 023)* | Las tres páginas que abren las filas de Ajustes: Política de privacidad, Licencias de terceros y Ayuda; una dirección cada una, con ES y EN en la misma página. |
+| Huecos de identidad | Identity placeholders | `[RESPONSABLE]`, `[CONTACTO]`, `[FECHA]`… *(spec 023)* | Datos que solo existen en F6 (responsable, contacto, dominio, fecha); la puerta de publicación impide publicar con ellos. |
 | Indicador de función | Feature flag | `FeatureFlag` | Interruptor local para funcionalidades a medio hacer. |
 | Fecha límite *(futuro)* | Due date | `dueDate` | Bloque 1 de la hoja de ruta. |
 | Subtarea *(futuro)* | Subtask | `parentId` | Bloque 2. |
