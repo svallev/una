@@ -118,3 +118,11 @@ tools/measure-cold-start.sh <serial> 20
 - [x] Resultados anotados en el plan §8 y en `docs/perf/baseline.md`.
 - [x] `tasks.md`: T-007-23 y T-007-24 hechas; lista de cierre (todos los CA con test en verde, DoD) y spec marcada como **Implementada**.
 - [x] PR de la rama `feat/007-adjunto-imagen-c2zgoo` con el antes y el después de los goldens: svallev/una#11.
+
+## Auditoría 022 (spec 022, T-022-07, 2026-10-18)
+
+Resultados de la auditoría en dispositivo de esta spec. Inventario: `specs/022-auditoria-en-dispositivo/informe.md`.
+
+**T-022-07 (2026-10-18): Xiaomi X1, TalkBack en español** (CA-022-17).
+
+- **CA-007-22: hoja «Añadir»: foco al abrirla y al cerrarla sin elegir, y al volver de la cámara o del selector (limitación de TalkBack aceptada 2026-09-27)** (K-022-065) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf`, TalkBack en español (T-022-07, X1) · TalkBack en español: al abrir «Añadir» el foco va a «Añadir a la tarea»; al cerrarla sin elegir (atrás) el foco va a (+); «Subir imágenes» y volver sin elegir deja el foco en (+) (mejor que la limitación de TalkBack aceptada el 2026-09-27) · **Parte no probada: Aceptada** (propietario, 2026-10-19, «De acuerdo con tus recomendaciones»): la vuelta de la cámara no se probó; queda como está.

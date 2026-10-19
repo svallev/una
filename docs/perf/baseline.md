@@ -292,3 +292,25 @@ Se repite al cerrar cada spec que toque el arranque (003, 007–009, 011, 012) y
 - **[Hecho]** Arranque en frío p50 ≈ 370 ms con y sin el bloqueo: una foto de 24 MP 373 ms (apagado) frente a 376 ms (encendido), grupo de 10 370 frente a 374 ms (8 pasadas de 20 arranques; deriva entre pasadas apagadas 6-8 ms). Grupo frente a una foto ≤ −2 ms (CA-016-08, límite +100 ms).
 - **[Hecho]** PSS sin diferencia entre encendido y apagado: grupo de 10 en reposo 239-250 MB, recorriendo 369-371 MB, pico 390,7-392,2 MB (399,5 en la primera pasada); una foto 212-238 MB en reposo, pico 219-240 MB (ruido entre pasadas hasta ~25 MB, más alto al principio).
 - **[Hallazgo, spec 016]** Pico del grupo ≈ +166 MB sobre una foto en el Xiaomi (CA-016-23 pedía +50 MB, medido en el emulador sin GPU): **aceptado por el propietario el 2026-10-10**, sin tope menor (ADR-0024).
+
+## Arranque en frío de la 021 en el Xiaomi (spec 022, T-022-12, CA-022-29)
+
+- **Fecha:** 2026-10-19 · **Dispositivo:** Xiaomi 15T Pro (HyperOS 3, Android 16), con el permiso del propietario y sin tocar el móvil durante las pasadas.
+- **Qué se compara:** el commit auditado `2e835cf` (B) frente a `8787643` (A, el último de `main` antes del código de la 021). Dos `.profile` arm64 (`flutter build apk --profile --split-per-abi --target-platform android-arm64`) compiladas en dos `git worktree --detach`; tarea de texto; `adb install -r` (datos intactos) antes de cada pasada, un arranque de calentamiento y 5 s de espera.
+- **Método:** `am start -W -S -n invalid.pending.app.profile/invalid.pending.app.MainActivity` (la actividad de la `.profile`; `tools/measure-cold-start.sh` lanza `.MainActivity`, que no existe ahí; no se tocó), 20 arranques por pasada, 2 s entre ellos, orden **A B B A A B B A**, primero un modo y luego el otro (`cmd uimode night yes|no`, restaurado a `no`). **Deriva** = diferencia entre las dos primeras pasadas A del mismo modo.
+
+| Serie | Modo | p50 de A (4 pasadas) | p50 de B (4 pasadas) | Deriva | B − A | Máximo |
+|---|---|---|---|---|---|---|
+| 1 | claro | 409,5 · 395 · 407 · 413,5 (media 406,3) | 396,5 · 407 · 426 · 423 (media 413,1) | 14,5 | **+6,9** | 475 |
+| 1 | oscuro | 426 · 422,5 · 419,5 · 419 (421,8) | 425 · 417,5 · 415 · 428 (421,4) | 3,5 | **−0,4** | 503 |
+| 2 | oscuro | 427 · 462 · 437,5 · 448 (443,6) | 460 · 451,5 · 447,5 · 462 (455,3) | 35 | **+11,6** | 540 |
+| 2 | claro | 459 · 433 · 438,5 · 432 (440,6) | 463 · 452 · 432,5 · 436 (445,9) | 26 | **+5,3** | 553 |
+
+- **[Hecho]** CA-022-29 se cumple: B − A está dentro de la deriva en los dos modos y en las dos series, y todos los arranques quedan por debajo de 1 s (máximo 553 ms; P2). El tercer criterio, **B oscuro − B claro**, dio **+8,3 ms** en la serie 1 (dentro de la deriva de claro, 14,5, y fuera de la de oscuro, 3,5) y **+9,4 ms** en la serie 2, hecha entera por CL-022-6 con el oscuro primero (dentro de las dos derivas, 26 y 35).
+- **[Hecho]** El efecto «oscuro más lento» no es de la 021: A, anterior a la 021, sube igual (+15,5 ms en la serie 1 y +3,0 en la 2). Las derivas del día (3,5 a 35 ms) son mayores que la de 6–8 ms de referencia: el móvil se calentaba y estaba por USB.
+
+### Grupo de 10 fotos de 24 MP en el Xiaomi (spec 022, T-022-12, R-24)
+
+- **Espacio por tarea:** 10 JPEG de 4000 × 6000 (~4,25 MB, 42,7 MB en total) creados con Pillow; el propietario creó la tarea con el selector. «Datos del usuario» de la `.profile` en Ajustes → Aplicaciones → Almacenamiento: **44,45 MB con la tarea y 4,8 MB sin ella → ≈ 39,7 MB por tarea de 10 fotos** (≈ 4,0 MB por foto). `dumpsys diskstats` da una lectura en caché y no sirve.
+- **Listado con 500 tareas de 10 fotos** (`task_list_perf_test.dart` con `--dart-define=UNA_PERF_PHOTOS=10`, `flutter drive --profile --no-dds --keep-app-running`, `.profile` no dividida de `2e835cf`): abrir **165 ms**; desplazar (2159 fotogramas) build p90 1,51 ms y **raster p90 1,03 ms** (p99 4,97; peor 22,9 ms; 1 fotograma fuera de presupuesto); arrastrar (263 fotogramas) build p90 1,37 ms y **raster p90 1,08 ms** (p99 8,59; peor 173 ms, el primer fotograma; 1 fuera). El test mide el listado: **no** hay medida del carrusel ni del arrugado con la foto.
+- **Hueco al cambiar de foto:** sin número. Dos tandas de 12 deslizamientos con 3 capturas seguidas cada uno (12 y 15 válidas; el USB se cortó varias veces): ninguna enseñó el color de fondo en la zona de la foto (máx. 0,5 % de los píxeles); el propietario, a ojo: «no veo destello». Muestreo de ~0,35 s. `screenrecord --output-format=raw-frames --size 360x800` dio fotogramas vacíos (en X5 funcionó a 320x692; no se repitió).

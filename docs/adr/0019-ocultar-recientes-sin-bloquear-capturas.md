@@ -2,6 +2,7 @@
 
 - **Estado:** Aceptado (propietario, 2026-09-30). **[Hecho en API 37 y, para la tarjeta, en HyperOS (Xiaomi, Android 16); [Suposición] en 33–35]**; **Provisional** en la parte de Android 8–12 (mecanismo B) hasta PD-10
 - **Fecha:** 2026-09-30
+- **Nota de estado (spec 022, CA-022-06, 2026-10-16; no cambia la decisión):** PD-10 queda **cerrada sin verificar** por decisión del propietario (no se prueba en Android 8 ni en 12L). El **mecanismo B** (Android 8–12) sigue siendo **[Suposición]**: en esas versiones la miniatura podría verse y el propietario acepta ese riesgo. **La regla de desempate no se aplica** porque no hay medida; la decisión de abajo sigue como está.
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** spec 011 (CA-011-01, 03, 04, 08; CL-011-3, 6, 13, 14, 15; plan §1, §7 y §8), CL-007-11, CL-008-13 y CL-009-10 (que cierra), modelo de amenazas T-2, P2, P4 y P5, PD-10 y riesgos R-1 a R-6 del plan de la 011
 

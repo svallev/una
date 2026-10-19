@@ -96,3 +96,19 @@ El Xiaomi se miró solo a ojo (el propietario, sin capturas): icono en el lanzad
 | C-018-5 | **Hecha**: p50 375 → 367,5 ms; *splash* con la «u.» entera sobre blanco y, en modo oscuro, sobre un círculo amarillo (T-018-08); **[Pendiente]** modo oscuro en el Xiaomi (022) |
 | C-018-6 | **Hecha** |
 | C-018-7 | [Pendiente] TalkBack en el Xiaomi (022) |
+
+## Auditoría 022 (spec 022, T-022-02, 2026-10-16)
+
+Resultados de la auditoría en dispositivo que **no** necesitan el emulador ni el Xiaomi en esta tarea (casillas cerradas por decisión del propietario, ya cumplidas por la CI o por lo que el propietario vio el 2026-10-15, y aceptadas con el resultado del emulador). El resto de casillas de esta spec se anotan aquí, con el mismo formato, en las tareas T-022-03 a 13. Inventario: `specs/022-auditoria-en-dispositivo/informe.md`.
+
+- **C-018-3 y CA-018-05: icono adaptable amarillo con la «u.» entera y sin recorte en Android 8 y 12L; la capa monocroma no se usa** (K-022-012) — **Cerrada sin verificar** · 2026-10-16 · API 26 y 32 (no se prueba) · propietario, alcance 2 de la 022 (CA-022-06): «Vamos a pasar esto como si lo hubiéramos hecho […] nos lo saltamos, no nos importa.». Se conserva la comprobación de `aapt2` (el recurso está en `mipmap-anydpi`, válido desde API 26, y se ve para todas las densidades)
+- **CA-018-02: el «cuadrado de esquinas casi rectas» con otro lanzador (Samsung One UI u otros)** (K-022-020) — **Cerrada sin verificar** · 2026-10-16 · Otro lanzador (no se prueba) · propietario, alcance 2 de la 022 (CA-022-07): otros fabricantes, lanzadores, lectores y versiones de Android se cierran sin hacerlas; si un tester de la beta informa de un fallo, es un hallazgo nuevo. En el lanzador de Pixel y en HyperOS la máscara se vio bien (`[Hecho]` arriba)
+- **CA-018-13: *splash* de otros fabricantes (el de HyperOS en oscuro va en K-022-034)** (K-022-021) — **Cerrada sin verificar** · 2026-10-16 · Otro fabricante (no se prueba) · propietario, alcance 2 de la 022 (CA-022-07): otros fabricantes, lanzadores, lectores y versiones de Android se cierran sin hacerlas; si un tester de la beta informa de un fallo, es un hallazgo nuevo
+- **CA-018-13 en el Xiaomi: *splash* con el modo oscuro del sistema** (K-022-034) — **Pasa** (a ojo) · 2026-10-16 · Xiaomi 15T Pro (HyperOS 3), *release* de `2e835cf`, a ojo, el propietario el 2026-10-15 («van bien»; hoy no consta en el repositorio) · Lo confirmó el propietario con el arranque en frío en oscuro; esa parte quedó superada por el arranque en `paper` con la «u.» de la 021 (CA-021-02). Sin captura
+
+- **C-018-7: TalkBack lee «Una.», sin nada más como «imagen», en el lanzador, la lista de aplicaciones y Ajustes → Aplicaciones, con iconos con tema y sin ellos** (K-022-096 a 098) — **Pasa** · 2026-10-18 · Xiaomi 15T Pro (HyperOS 3), *release* de `2e835cf`, TalkBack en español · el propietario: «Lo esperado», «ok. Mismo comportamiento», «ok»
+
+**T-022-11 (2026-10-19): Xiaomi X5, gestos, giro, «Recientes», arranque e iconos** (CA-022-26 a 28; detalle en el [informe](../022-auditoria-en-dispositivo/informe.md), §15).
+
+- **«Tamaño de visualización» al máximo en el Xiaomi (opcional)** (K-022-156) — **Aceptada (opcional)** · 2026-10-19 · no se hizo en X5 (opcional por CA-022-28)
+- **CL-018-3: iconos con tema sobre un fondo de pantalla de poco contraste (opcional)** (K-022-157) — **Aceptada (opcional)** · 2026-10-19 · no se hizo en X5 (opcional por CA-022-28)
