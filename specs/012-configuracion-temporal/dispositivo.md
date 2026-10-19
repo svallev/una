@@ -138,3 +138,8 @@ Resultados de la auditoría en dispositivo de las casillas de esta spec que pasa
 **T-022-09 (2026-10-18): Xiaomi X3, la voz con el idioma de la app** (CA-022-19; detalle en el [informe](../022-auditoria-en-dispositivo/informe.md), §13). Xiaomi 15T Pro (HyperOS 3), `.profile` de `2e835cf`, TalkBack en español, tres rondas (sistema EN + app ES, sistema ES + app EN, EN + EN).
 
 - **Recorrido de Ajustes y de la página de Idioma con TalkBack, sistema en inglés y app en inglés (012 §8)** (K-022-111) — **Pasa** · 2026-10-18 · todo en inglés («Todo en inglés. suena bien»).
+
+**T-022-14 (2026-10-19): las dos casillas que quedaban de §8.** Inventario: `specs/022-auditoria-en-dispositivo/informe.md` (K-022-177 y 178). La pantalla de la 012 ya no existe (la sustituye Ajustes, spec 015): las dos se cierran con lo aceptado por el propietario el 2026-10-05 al cerrar la 015.
+
+- **Foco de TalkBack al volver en los tres saltos, tras Cancelar y tras el navegador** (K-022-177) — **Aceptada** · 2026-10-19 · propietario (aceptada el 2026-10-05, spec 015) · lo que pasó a Ajustes tiene sus filas en la 022 (K-022-092 y 137); al volver del navegador TalkBack lleva el foco al título (no se arregla desde Dart).
+- **CA-012-06 a los 10 minutos con el reloj real** (K-022-178) — **Aceptada** · 2026-10-19 · propietario (CA-015-16 y 20h, aceptadas el 2026-10-05) · lo cubre `home_router_test.dart` (9:59 y 10:00); en el emulador, 11 min 20 s fuera dejaron la tarea actual sin Ajustes ni menú (T-015-14).
