@@ -31,7 +31,7 @@ Todo lo que creas se guarda **en tu dispositivo**, en el espacio privado de la a
 
 El desarrollador no recibe nada de esto: no tenemos servidor.
 
-**Cómo se protegen:** Android aísla el espacio privado de cada app, así que otras apps de tu móvil no pueden leer lo que guarda {appName}. Las páginas de la tarea web se cargan solo con conexión cifrada (`https`): la app no carga nada sin cifrar. La app no escribe en ningún registro el texto de tus tareas ni las direcciones que abres. Y lo que borras se borra de verdad: ver «Cuánto tiempo se guarda y cómo borrarlo».
+**Cómo se protegen:** Android aísla el espacio privado de cada app, así que otras apps de tu móvil no pueden leer lo que guarda esta app. Las páginas de la tarea web se cargan solo con conexión cifrada (`https`): la app no carga nada sin cifrar. La app no escribe en ningún registro el texto de tus tareas ni las direcciones que abres. Y lo que borras se borra de verdad: ver «Cuánto tiempo se guarda y cómo borrarlo».
 
 ## Qué permisos usa
 
@@ -52,7 +52,7 @@ Son **opcionales y vienen apagadas**. Si las enciendes, tu móvil te muestra 1, 
 
 Cuando añades una dirección, la app carga esa página en directo, como haría un navegador. Por eso:
 
-- El sitio web puede ver, como en cualquier visita, tu dirección IP y los datos técnicos habituales de tu navegador. Sus condiciones y su política de privacidad son las suyas, no las de {appName}.
+- El sitio web puede ver, como en cualquier visita, tu dirección IP y los datos técnicos habituales de tu navegador. Sus condiciones y su política de privacidad son las suyas, no las de esta app.
 - **La página puede ejecutar sus propios scripts**, como en un navegador, aislada de tus tareas: la app no le da acceso a tus datos. La app no te deja navegar desde ella a otros sitios ni a otras apps, y no guarda contraseñas ni formularios.
 - **Navegación segura de Google: está activada.** La comprobación de direcciones peligrosas la hace el componente web del sistema (Android System WebView), no la app, con Google, y se rige por las condiciones de Google.
 - **Autorrelleno:** en páginas con formularios, el componente web del sistema puede consultar a Google las predicciones de autorrelleno. Esa consulta lleva la firma del formulario (el dominio y los nombres de sus campos), no lo que escribes. Además, el servicio de autorrelleno de tu móvil (por ejemplo, el de Google) puede actuar en los campos de la página. La app no puede impedir ninguna de las dos cosas.
