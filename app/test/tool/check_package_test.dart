@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../tool/check_package.dart';
+import '../support/aab_support.dart' show expectPassesOrLocalBuildPaths;
 
 /// Estática MASTG del paquete de release (spec 020, CA-020-22, plan §3.3): `tool/check_package.dart`
 /// con las reglas (a) a (g) sobre `aapt2 dump` y `unzip`. Los negativos son volcados de `aapt2`
@@ -1256,6 +1257,195 @@ void main() {
     });
   });
 
+  group('CA-023-19: sin rutas de la máquina de compilación (build-paths)', () {
+    final skip = !_hasTool('zip') || !_hasTool('unzip')
+        ? 'zip/unzip no disponibles'
+        : null;
+    late Directory tmp;
+    setUp(() => tmp = Directory.systemTemp.createTempSync('check_package_'));
+    tearDown(() => tmp.deleteSync(recursive: true));
+
+    String pkg(Map<String, List<int>> entries) =>
+        _zip(tmp, 'p', {'classes.dex': _text('dex\n035 sin nada'), ...entries});
+
+    String sha(String s) => sha256Hex(_text(s));
+
+    for (final (what, path) in [
+      ('una carpeta personal de macOS', '/Users/ana/proyecto/lib/main.dart'),
+      ('el usuario «runner» en macOS', '/Users/runner/work/app/lib/main.dart'),
+      ('una carpeta personal de Linux', '/home/alguien/proyecto/lib/main.dart'),
+      ('un nombre que empieza como runner', '/home/runner2/work/app/x.dart'),
+    ]) {
+      test('CA-023-19: $what falla con el archivo y la ruta (ASCII)', () {
+        final issues = scanSecrets(
+          pkg({'lib/arm64-v8a/libapp.so': _text('abc\x00$path\x00def')}),
+        );
+        expect(issues, hasLength(1), reason: _findings(issues));
+        expect(issues.single.rule, 'build-paths');
+        expect(issues.single.entry, 'lib/arm64-v8a/libapp.so');
+        final line = issues.single.line;
+        expect(line, contains('(build-paths)'));
+        expect(line, contains('lib/arm64-v8a/libapp.so'));
+        expect(line, contains(path));
+        final root = RegExp(r'^/(Users|home)/[^/]+/').firstMatch(path)![0]!;
+        expect(issues.single.sha256, sha(root));
+      }, skip: skip);
+
+      test('CA-023-19: $what falla en UTF-16LE (resources.arsc)', () {
+        final issues = scanSecrets(
+          pkg({
+            'resources.arsc': [0, 1, ..._utf16le(path), 7, 7],
+          }),
+        );
+        expect(issues, hasLength(1), reason: _findings(issues));
+        expect(issues.single.rule, 'build-paths');
+        expect(issues.single.entry, 'resources.arsc');
+        expect(issues.single.line, contains(path));
+      }, skip: skip);
+
+      test('CA-023-19: $what falla en UTF-16LE desalineado', () {
+        final issues = scanSecrets(
+          pkg({
+            'resources.arsc': [9, ..._utf16le(path)],
+          }),
+        );
+        expect(issues, hasLength(1), reason: _findings(issues));
+      }, skip: skip);
+
+      test('CA-023-19: $what falla dentro de un jar anidado', () {
+        final inner = File(
+          _zip(tmp, 'inner', {'com/x/Y.class': _text('..$path..')}),
+        ).readAsBytesSync();
+        final issues = scanSecrets(pkg({'lib/dep.jar': inner}));
+        expect(issues, hasLength(1), reason: _findings(issues));
+        expect(issues.single.entry, 'lib/dep.jar!com/x/Y.class');
+      }, skip: skip);
+
+      test('CA-023-19: $what falla dentro de un gzip', () {
+        final gz = gzip.encode(_text('texto $path fin'));
+        final issues = scanSecrets(pkg({'assets/NOTICES.Z': gz}));
+        expect(issues, hasLength(1), reason: _findings(issues));
+        expect(issues.single.entry, 'assets/NOTICES.Z');
+        expect(issues.single.rule, 'build-paths');
+      }, skip: skip);
+    }
+
+    for (final path in [
+      '/home/runner/work/Una/Una/app/lib/main.dart',
+      '/home/runner/.pub-cache/hosted/pub.dev/drift-2.0.0/lib/drift.dart',
+      '/home/runner/android-sdk/platforms/android-36/android.jar',
+    ]) {
+      test('CA-023-19: «$path» (el runner de GitHub) pasa', () {
+        final issues = scanSecrets(
+          pkg({
+            'lib/x86_64/libapp.so': _text('a $path b'),
+            'resources.arsc': _utf16le(path),
+          }),
+        );
+        expect(issues, isEmpty, reason: _findings(issues));
+      }, skip: skip);
+    }
+
+    test('CA-023-19: un paquete sin rutas no da hallazgos', () {
+      final issues = scanSecrets(
+        pkg({
+          'a.txt': _text(
+            '/usr/lib/x /data/user/0/app /Users /home/ Users/ana/',
+          ),
+          'b.txt': _text('/Users/ /home//x /homestead/ana/ /Userspace/ana/'),
+        }),
+      );
+      expect(issues, isEmpty, reason: _findings(issues));
+    }, skip: skip);
+
+    test('CA-023-19: «/home/runner» no cubre «/Users/runner/» ni '
+        '«/home/runner/» dentro de otra ruta', () {
+      final issues = scanSecrets(
+        pkg({
+          'a.bin': _text('/Users/runner/x /home/runner/ok /srv/home/ana/y'),
+        }),
+      );
+      expect(
+        issues.map((i) => i.line).join('\n'),
+        allOf(contains('/Users/runner/x'), contains('/home/ana/y')),
+      );
+      expect(issues, hasLength(2), reason: _findings(issues));
+    }, skip: skip);
+
+    test(
+      'CA-023-19: varias rutas de la misma carpeta en un archivo, un hallazgo; '
+      'carpetas distintas, uno por carpeta',
+      () {
+        final issues = scanSecrets(
+          pkg({
+            'libapp.so': _text(
+              '/Users/ana/p/a.dart /Users/ana/p/b.dart /Users/ana/q/c.dart '
+              '/Users/luis/p/a.dart /home/ana/p/a.dart',
+            ),
+          }),
+        );
+        expect(issues, hasLength(3), reason: _findings(issues));
+        expect(
+          {for (final i in issues) i.sha256},
+          {sha('/Users/ana/'), sha('/Users/luis/'), sha('/home/ana/')},
+        );
+      },
+      skip: skip,
+    );
+
+    test('CA-023-19: la ruta se recorta en el mensaje', () {
+      final long = '/Users/ana/${'carpeta/' * 40}x.dart';
+      final issues = scanSecrets(pkg({'a.bin': _text(long)}));
+      expect(issues, hasLength(1), reason: _findings(issues));
+      final line = issues.single.line;
+      expect(line, contains('/Users/ana/carpeta/'));
+      expect(line, isNot(contains(long)));
+      expect(line.length, lessThan(300));
+    }, skip: skip);
+
+    test(
+      'CA-023-19: la ruta y un secreto en el mismo archivo son dos hallazgos',
+      () {
+        final issues = scanSecrets(
+          pkg({'a.bin': _text('${_awsKey()} /Users/ana/p/a.dart')}),
+        );
+        expect(issues.map((i) => i.rule).toSet(), {'f', 'build-paths'});
+      },
+      skip: skip,
+    );
+
+    group('lista de excepciones', () {
+      test('CA-023-19: la excepción exacta (entrada, regla y carpeta) lo deja pasar', () {
+        final list = SecretAllowlist.parse(
+          'libapp.so\tbuild-paths\t${sha('/Users/ana/')}\n',
+        );
+        final issues = scanSecrets(
+          pkg({'libapp.so': _text('/Users/ana/p/a.dart')}),
+          allowlist: list,
+        );
+        expect(issues, isEmpty, reason: _findings(issues));
+      }, skip: skip);
+
+      test(
+        'CA-023-19: otra carpeta, otra entrada o otra regla no quedan tapadas',
+        () {
+          for (final line in [
+            'libapp.so\tbuild-paths\t${sha('/Users/luis/')}',
+            'otra.so\tbuild-paths\t${sha('/Users/ana/')}',
+            'libapp.so\tgoogle-api-key\t${sha('/Users/ana/')}',
+          ]) {
+            final issues = scanSecrets(
+              pkg({'libapp.so': _text('/Users/ana/p/a.dart')}),
+              allowlist: SecretAllowlist.parse('$line\n'),
+            );
+            expect(issues, hasLength(1), reason: line);
+          }
+        },
+        skip: skip,
+      );
+    });
+  });
+
   group('sha256Hex', () {
     test('CA-020-22: vectores conocidos', () {
       expect(
@@ -1361,6 +1551,19 @@ exit 1
       expect(text, isNot(contains(secret.substring(0, 8))));
     }, skip: skip);
 
+    test('CA-023-19: una ruta de compilación: código 1, nombra regla, archivo y ruta', () {
+      final apk = _zip(tmp, 'bp', {
+        'lib/arm64-v8a/libapp.so': _text('x /Users/ana/p/lib/main.dart x'),
+      });
+      final r = run(['--aapt2', fakeAapt2(_Dumps.good()), apk]);
+      final text = '${r.out}${r.err}';
+      expect(r.code, 1, reason: text);
+      expect(text, contains('::error::'));
+      expect(text, contains('(build-paths)'));
+      expect(text, contains('lib/arm64-v8a/libapp.so'));
+      expect(text, contains('/Users/ana/p/lib/main.dart'));
+    }, skip: skip);
+
     test('CA-020-22: la lista de excepciones se lee del archivo dado', () {
       final secret = _googleKey();
       final apk = _zip(tmp, 'sec', {'assets/x.bin': _text(secret)});
@@ -1450,7 +1653,7 @@ exit 1
         '../tools/release/secret-allowlist.txt',
         apks.first,
       ]);
-      expect(r.code, 0, reason: '${r.out}${r.err}');
+      expectPassesOrLocalBuildPaths(r.code, '${r.out}${r.err}');
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
 

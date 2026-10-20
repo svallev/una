@@ -140,8 +140,9 @@ jobs:
         # Sobre lo compilado, no sobre el código: sin depurable ni tráfico en claro (a, b), reglas de
         # copia y transferencia exactas (c), proveedores y rutas de archivos (d), minSdk 26 y targetSdk
         # >= el de Google Play (e), ni claves ni archivos de firma dentro (f) y los ajustes de
-        # privacidad de hoy (g). No depende de la identidad: los marcadores siguen siendo normales.
-        # Las excepciones de (f): tools/release/secret-allowlist.txt.
+        # privacidad de hoy (g) y ninguna ruta de una carpeta personal de quien compila (build-paths,
+        # CA-023-19; el runner es /home/runner). No depende de la identidad: los marcadores siguen
+        # siendo normales. Las excepciones de (f) y build-paths: tools/release/secret-allowlist.txt.
         run: bash tools/check-package.sh
       - name: Pruebas JVM del núcleo de notificaciones (spec 019, P-019-1)
         # JUnit 4.13.2 es solo `testImplementation`: corre el Kotlin real (horas, despertares, orquestador)
