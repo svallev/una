@@ -44,3 +44,20 @@
 | C-023-4 · tres filas de Ajustes con las direcciones de la vista previa | **[Aceptado sin verificar]** la app solo abre `https` (`privacyLink`); una compilación de pruebas necesita admitir `http://127.0.0.1`, y el clasificador de permisos de la sesión rechazó ese cambio temporal. Requiere el visto bueno del propietario |
 
 **Observación** [Hecho]: el pie enseña `[CONTACTO]` / `[CONTACT]` (hueco de identidad, se rellena en F6; es el aviso esperado de `check.mjs`).
+
+## Revisión de accesibilidad del cierre (`a11y-reviewer`, 2026-10-20)
+
+**[Hecho]** Sin fallos AA ni bloqueantes sobre CA-023-13, 14 y 15. Hallazgos **opcionales**, registrados y **no corregidos** porque `landing/` es provisional (la web del producto la sustituirá); se repasan al decidir qué web se publica (F6, punto 10):
+
+| ID | Gravedad | Hallazgo | Dónde |
+|---|---|---|---|
+| M-1 | Media-baja | Los `h2` de la política y de la Ayuda salen con el sufijo «(ES)» / «(EN)»: marcador de edición que un lector pronuncia y que da nombre a la región | `landing/build.mjs:323-324, 453, 513, 734` |
+| B-1 | Baja | `ul.links` con `list-style: none`: VoiceOver en Safari no anuncia la lista (falta `role="list"`) | `site.css:73-76`, `build.mjs:775` |
+| B-2 | Baja | El separador «·» del `h1` bilingüe se lee («punto medio»); falta `aria-hidden` | `build.mjs:726` |
+| B-3 | Baja | `check.mjs` acepta un anillo de foco solo en `h2` (los enlaces quedarían sin foco con la CI en verde) | `check.mjs:333-335` |
+| B-4 | Baja | Nada comprueba el `tabindex="-1"` del destino del salto de idioma | `check.mjs:156-158` |
+| B-5 | Baja | El pie con `lang` por idioma no se comprueba | `build.mjs:745` |
+| B-6 | Baja | `.block-link` es `display: flex` (objetivo y anillo más anchos de lo necesario; cumple 2.5.8 y el 44 de P6) | `site.css:114-118` |
+| B-7 | Informativa | La página de licencias tiene ~35 000 líneas de `<pre>`; es el diseño de CA-023-16 | `dist/licenses/index.html` |
+
+**A comprobar a mano en F6** (no hechas): TalkBack (ya aceptado sin verificar), VoiceOver en Safari iOS, Switch Access, zoom al 400 % y texto al 200 % en Safari iOS.
