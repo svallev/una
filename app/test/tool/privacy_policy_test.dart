@@ -209,9 +209,9 @@ void main() {
         RegExp(r'sin cookies, sin analítica'),
         RegExp(r'no cookies, no analytics'),
       ),
-      'responsable de los registros': (
-        RegExp(r'responsable de esos registros'),
-        RegExp(r'responsible for those logs'),
+      'el desarrollador no guarda los registros de las webs': (
+        RegExp(r'no guarda ni consulta esos registros'),
+        RegExp(r'neither keeps nor looks at those logs'),
       ),
       'procedimientos de manejo seguro': (
         RegExp(r'Cómo se protegen'),

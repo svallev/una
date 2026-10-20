@@ -16,7 +16,7 @@
 
 ## Quién es el responsable
 
-[RESPONSABLE]. Contacto para cualquier duda sobre esta política: [CONTACTO]. También es el responsable de los registros de las webs de la app (ver «Esta web»).
+[RESPONSABLE]. Contacto para cualquier duda sobre esta política: [CONTACTO].
 
 ## Qué guarda la app y dónde
 
@@ -85,7 +85,7 @@ Android puede copiar los datos de las apps a tu cuenta de Google (copia de segur
 
 - Las **webs de la app** (esta política, la ayuda y las licencias de terceros) están alojadas en Vercel. Al abrirlas, el alojamiento ve, como cualquier sitio web, tu **dirección IP** y los datos técnicos de la visita (la página pedida, la hora, tu navegador y tu sistema), y los guarda en sus registros el tiempo mínimo necesario, según [su política de privacidad](https://vercel.com/legal/privacy-policy).
 - Las webs funcionan sin cookies, sin analítica, sin JavaScript y sin recursos de otros sitios (las fuentes van incluidas en la propia web).
-- El responsable de esos registros es el desarrollador; Vercel los trata por encargo suyo y puede hacerlo fuera de tu país, EE. UU. incluido, con las garantías que explica en su política.
+- El desarrollador **no guarda ni consulta esos registros** y no te pide ninguna información: los guarda el alojamiento, que puede tratarlos fuera de tu país, EE. UU. incluido, con las garantías que explica en su política.
 - La app no tiene nada que ver con esos registros: no envía datos a las webs; las abre tu navegador cuando tú lo pides (ver «Enlaces y otras apps»).
 
 ## Cuánto tiempo se guarda y cómo borrarlo
@@ -100,7 +100,7 @@ La app no está dirigida a menores de 16 años.
 
 ## Tus derechos
 
-Como la app no recoge ni conserva datos personales tuyos, no hay nada que acceder, corregir o borrar en ella. De los registros de las webs de la app (ver «Esta web») sí puedes pedir información o su borrado escribiendo a [CONTACTO]. Si tienes cualquier otra duda, escribe a la misma dirección. Si vives en el Espacio Económico Europeo, también puedes reclamar ante tu autoridad de protección de datos.
+Como la app no recoge ni conserva datos personales tuyos, no hay nada que acceder, corregir o borrar en ella. Si tienes cualquier duda, escribe a [CONTACTO]. Si vives en el Espacio Económico Europeo, también puedes reclamar ante tu autoridad de protección de datos.
 
 ## Cambios en esta política
 
@@ -118,7 +118,7 @@ Si algún día la app cambia lo que hace con los datos (por ejemplo, con sincron
 
 ## Who is responsible
 
-[CONTROLLER]. Contact for any question about this policy: [CONTACT]. They are also responsible for the logs of the app's websites (see "This website").
+[CONTROLLER]. Contact for any question about this policy: [CONTACT].
 
 ## What the app stores and where
 
@@ -187,7 +187,7 @@ Android can copy apps' data to your Google account (system backup) and move it t
 
 - The **app's websites** (this policy, the help and the third-party licenses) are hosted on Vercel. When you open them, the host sees, like any website, your **IP address** and the technical details of the visit (the page requested, the time, your browser and your system), and keeps them in its logs for the minimum time necessary, according to [its privacy policy](https://vercel.com/legal/privacy-policy).
 - The websites work with no cookies, no analytics, no JavaScript and no resources from other sites (the fonts are included in the website itself).
-- The developer is responsible for those logs; Vercel processes them on the developer's behalf and may do so outside your country, the US included, with the safeguards it explains in its policy.
+- The developer **neither keeps nor looks at those logs** and asks you for no information: the host keeps them, and may process them outside your country, the US included, with the safeguards it explains in its policy.
 - The app has nothing to do with those logs: it sends no data to the websites; your browser opens them when you ask it to (see "Links and other apps").
 
 ## How long data is kept and how to delete it
@@ -202,7 +202,7 @@ The app isn't aimed at children under 16.
 
 ## Your rights
 
-Since the app neither collects nor keeps personal data about you, there is nothing in it to access, correct or delete. For the logs of the app's websites (see "This website") you can ask for information or for their deletion by writing to [CONTACT]. If you have any other question, write to the same address. If you live in the European Economic Area, you can also complain to your data protection authority.
+Since the app neither collects nor keeps personal data about you, there is nothing in it to access, correct or delete. If you have any question, write to [CONTACT]. If you live in the European Economic Area, you can also complain to your data protection authority.
 
 ## Changes to this policy
 
@@ -221,7 +221,7 @@ Todas las fuentes se leyeron el 2026-10-20. **[Hecho]** = comprobado en el códi
 5. **PDF y metadatos:** **[Hecho]** se guardan sin modificar (spec 008). Si algún día se sanean, cambia el texto.
 6. **Edad:** **[Hecho]** Q-023-2 a (propietario, 2026-10-19): 16 y más; coincide con el público objetivo de `store/google-play/play-console.md`.
 7. **Responsable y contacto:** **[Pendiente, F6]** dependen de la cuenta de Play (PD-3) y del dominio (PD-2). Una cuenta personal puede obligar a mostrar dirección y teléfono (`play-console.md`).
-8. **Esta web:** **[Hecho]** alojamiento en Vercel (ADR-0009 y 0010; el proyecto se crea en F6). Fuentes: Aviso de privacidad de Vercel (última actualización 1 de junio de 2026, https://vercel.com/legal/privacy-policy): recoge de las webs de sus clientes «End User IP address, location information derived from IP address, and system configuration information»; cuando trata datos «at the direction of our Customer» actúa como encargado y el cliente es el responsable; conserva la información «for the minimum necessary period»; puede tratarla fuera del país de residencia (EE. UU. incluido) con cláusulas contractuales tipo y el Data Privacy Framework. Los registros de ejecución del panel de Vercel duran 1 hora (Hobby), 1 día (Pro) o 3 días (Enterprise), 30 con Observability Plus («Runtime Logs», actualizada 2026-08-28), pero esa página trata de las funciones, no de las visitas a archivos estáticos. **[Pendiente, F6]** Vercel no publica un plazo para los registros de visitas de un sitio estático: la política dice «el tiempo mínimo necesario» (lo que Vercel dice); al crear el proyecto se mira el plan elegido y, si el panel enseña un plazo, se concreta aquí. Sin cookies, analítica ni JavaScript: CA-023-13 y 14.
+8. **Esta web:** **[Hecho]** alojamiento en Vercel (ADR-0009 y 0010; el proyecto se crea en F6). Fuentes: Aviso de privacidad de Vercel (última actualización 1 de junio de 2026, https://vercel.com/legal/privacy-policy): recoge de las webs de sus clientes «End User IP address, location information derived from IP address, and system configuration information»; cuando trata datos «at the direction of our Customer» actúa como encargado y el cliente es el responsable; conserva la información «for the minimum necessary period»; puede tratarla fuera del país de residencia (EE. UU. incluido) con cláusulas contractuales tipo y el Data Privacy Framework. Los registros de ejecución del panel de Vercel duran 1 hora (Hobby), 1 día (Pro) o 3 días (Enterprise), 30 con Observability Plus («Runtime Logs», actualizada 2026-08-28), pero esa página trata de las funciones, no de las visitas a archivos estáticos. **[Pendiente, F6]** Vercel no publica un plazo para los registros de visitas de un sitio estático: la política dice «el tiempo mínimo necesario» (lo que Vercel dice); al crear el proyecto se mira el plan elegido y, si el panel enseña un plazo, se concreta aquí. Sin cookies, analítica ni JavaScript: CA-023-13 y 14. **Decisión del propietario (2026-10-20):** no guarda ni consulta ningún registro ni pide información a quien visita las webs; por eso la política no se declara responsable de los registros ni ofrece pedir su borrado (los guarda el alojamiento). **[Suposición]** La revisión legal (CA-023-22) debe confirmar que esa redacción basta, porque Vercel dice que el cliente es el responsable de los datos que trata por encargo.
 9. **Eliminar se puede deshacer (spec 014, ADR-0021):** **[Hecho]** 4 s por defecto (`design/tokens.json`, `undoWindow`), más con el «Tiempo para actuar» del sistema, y pasar a segundo plano la hace definitiva (`undo_controller.dart`). No cambia «no recoge datos»; los archivos siguen en disco mientras se puede deshacer (`threat-model.md`, T-7).
 10. **Afirmaciones con fuente:** «sin publicidad»: **[Hecho]** sin SDK de publicidad ni `AD_ID` en el manifiesto (la puerta de permisos solo admite tres; `threat-model.md` §4 y T-13). «Sin informes de errores propios»: sin SDK de fallos; las estadísticas de Android vitals las envía el sistema si el usuario lo ha activado (Ayuda de Play, «Android vitals»; `data-safety.md` W-6). El compromiso de consentimiento futuro es de P4.
 11. **Importación interrumpida:** **[Hecho]** `AttachmentJanitor.sweep()` (spec 007, CA-007-16) borra 2 s después de arrancar (`UnaApp.sweepDelay`) todas las preparaciones de la zona temporal (`getTemporaryDirectory()/import`) que no sean de una importación en curso.
