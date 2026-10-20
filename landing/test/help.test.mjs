@@ -283,7 +283,7 @@ describe("CA-023-17: falla cerrada", () => {
   });
 
   test("el nombre de la app escrito a mano en la Ayuda hace fallar la comprobación", () => {
-    for (const bad of ["Una. te enseña una tarea.", "Usa una. cada día."]) {
+    for (const bad of ["Bienvenido a Una. Una tarea.", "Usa una. cada día."]) {
       const w = cloneWorld(base);
       try {
         edit(w.paths.helpEs, (t) => t.replace("## ", `${bad}\n\n## `));

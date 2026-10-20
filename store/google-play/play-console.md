@@ -29,7 +29,7 @@
 | Qué pide Play Console | Respuesta | Por qué y fuente |
 |---|---|---|
 | **Idioma por defecto** de la ficha | **Español (es-ES)** **[Suposición, spec]** y traducción a inglés (en-US) | P1: «Select a default language and add the name of your app». Los dos idiomas de la app son ES y EN (spec 010). |
-| **Nombre de la app** | `{appName}` (hoy «Una.»; sale de `app/identity.yaml`), ≤ 30 caracteres, sin emojis | P6: «Your app title must be 30 characters or less. Don't use emojis, emoticons, or repeated special characters». El punto final forma parte del nombre de marca. |
+| **Nombre de la app** | `{appName}` (hoy «Una», sin punto; sale de `app/identity.yaml`), ≤ 30 caracteres, sin emojis | P6: «Your app title must be 30 characters or less. Don't use emojis, emoticons, or repeated special characters». El nombre es «Una» sin punto (decisión del propietario, 2026-10-20); el punto es solo del logotipo dentro de la app. |
 | **App o juego** | App | P1. |
 | **Gratis o de pago** | Gratis **[Hecho]** (confirmado por el propietario, 2026-10-20; la ficha no menciona compras) | P1 pide elegirlo al crear la app. Confirmado; al crear la app (P1 no dice que se pueda cambiar después). |
 | **Correo de contacto** para usuarios | `[CONTACTO]` (hueco de identidad; F6) | P8: «A contact email address is required»; web y teléfono, opcionales; el correo es público en la ficha. |

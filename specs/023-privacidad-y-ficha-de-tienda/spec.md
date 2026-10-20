@@ -247,7 +247,7 @@ Cada CA dice cómo se verifica: con un **test o una comprobación** que corre en
 
 | Clave | ES | EN | Notas |
 |---|---|---|---|
-| `storeTitle` | `{appName}` | `{appName}` | ≤ 30; hoy «Una.» |
+| `storeTitle` | `{appName}` | `{appName}` | ≤ 30; hoy «Una» (sin punto; el logotipo «una.» no es el nombre) |
 | `storeShortDescription` | Una sola tarea a la vez, a pantalla completa. Sin cuentas ni analítica. | One task at a time, full screen. No accounts, no tracking. | ≤ 80; no dice «sin conexión» porque la tarea web la necesita |
 | `storeFullDescription` | Se redacta en la implementación con los puntos de CA-023-09 | Igual | ≤ 4000; revisión del propietario |
 

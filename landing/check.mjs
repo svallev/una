@@ -439,13 +439,39 @@ function* walk(dir) {
 const literal = (name) =>
   new RegExp(`(?<![\\p{L}\\p{N}_])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}_])`, "u");
 
+/**
+ * Lo que va delante de una palabra que abre frase: nada o el final de otra, con una viñeta o un título de
+ * Markdown y comillas de apertura (la clave de una línea de JSON acaba en «:»). («Una», el artículo, abre frase con mayúscula.)
+ */
+const beforeSentenceStart = /(?:^|[.!?¿¡:…]|\\n)\s*(?:[-*>#]+\s+)?["'«(\-—]*\s*$/u;
+
+/** Lo que va detrás cuando la palabra sigue con más texto: otra palabra o un marcador `{…}`. */
+const followedByMoreText = /^\s+[\p{L}{]/u;
+
+/**
+ * ¿Aparece [name] como palabra suelta en [line]? Un nombre que es una palabra del español («Una», el artículo)
+ * no cuenta al abrir frase y seguido de más texto («Una sola tarea…»); en cualquier otro sitio sí, porque el
+ * artículo va en minúscula y la mayúscula a mitad de frase es el nombre.
+ */
+export function mentionsName(line, name) {
+  const bareWord = /\p{L}$/u.test(name);
+  const all = new RegExp(literal(name).source, "gu");
+  for (const m of line.matchAll(all)) {
+    const article = bareWord
+      && beforeSentenceStart.test(line.slice(0, m.index))
+      && followedByMoreText.test(line.slice(m.index + m[0].length));
+    if (!article) return true;
+  }
+  return false;
+}
+
 function checkHandWrittenName(paths, identity, errors) {
   const files = [paths.buildFile, ...(existsSync(paths.srcDir) ? walk(paths.srcDir) : [])];
   for (const file of files) {
     const rel = file === paths.buildFile ? "build.mjs" : `src/${relative(paths.srcDir, file)}`;
     readFileSync(file, "utf8").split("\n").forEach((line, i) => {
       for (const name of [identity.displayName, identity.wordmark]) {
-        if (literal(name).test(line)) {
+        if (mentionsName(line, name)) {
           errors.push(`landing/${rel}:${i + 1}: el nombre de la app «${name}» está escrito a mano (sale de app/identity.yaml, P7)`);
         }
       }

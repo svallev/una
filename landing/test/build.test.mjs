@@ -5,7 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
 import { build, defaultPaths, fill, readIdentity, tokensCss } from "../build.mjs";
-import { checkSite } from "../check.mjs";
+import { checkSite, mentionsName } from "../check.mjs";
 import { cloneWorld, edit, read, world } from "./support.mjs";
 
 let base;
@@ -110,8 +110,10 @@ describe("CA-023-13: el nombre sale de la identidad", () => {
       edit(w.paths.identity, (t) => t.replace(/displayName: "[^"]*"/, 'displayName: "Zorro"'));
       w.build();
       for (const f of pages) {
-        const html = read(join(w.dist, f));
-        assert.ok(!html.includes(name), `${f} sigue con el nombre anterior`);
+        // El texto de cada nodo en su línea; «Una» como artículo («Una sola tarea…») no es el nombre.
+        const text = read(join(w.dist, f)).replace(/<[^>]*>/g, "\n");
+        const left = text.split("\n").find((line) => mentionsName(line, name));
+        assert.equal(left, undefined, `${f} sigue con el nombre anterior`);
       }
       assert.match(read(join(w.dist, "index.html")), /<h1>Zorro<\/h1>/);
       assert.match(read(join(w.dist, "privacy/index.html")), /Zorro <strong>no recoge datos tuyos/);
@@ -125,7 +127,7 @@ describe("CA-023-13: el nombre sale de la identidad", () => {
     for (const value of [name, readIdentity(read(base.paths.identity)).wordmark]) {
       const w = cloneWorld(base);
       try {
-        edit(w.paths.strings, (t) => t.replace("Puede que la dirección", `${value} Puede que la dirección`));
+        edit(w.paths.strings, (t) => t.replace("Puede que la dirección", `Sobre ${value} Puede que la dirección`));
         const errors = checkSite(w.paths);
         assert.ok(errors.some((e) => /a mano/.test(e) && /strings\.json/.test(e)), errors.join("\n"));
       } finally {
@@ -142,6 +144,28 @@ describe("CA-023-13: el nombre sale de la identidad", () => {
     } finally {
       w.cleanup();
     }
+  });
+
+  test("el artículo «Una» al abrir frase y seguido de más texto no es el nombre", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.strings, (t) => t.replace("Puede que la dirección", "Una dirección mal escrita. Puede que la dirección"));
+      assert.ok(!checkSite(w.paths).some((e) => /a mano/.test(e)));
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  test("la búsqueda del nombre: el artículo no cuenta, el nombre sí", () => {
+    for (const line of ["Una sola tarea", "- Una tarea con foto", '    "k": "Una foto, nada más"', "Hola. Una cosa", "«Una foto»", "* Una tarea", "> Una tarea", "## Una guía corta"]) {
+      assert.equal(mentionsName(line, "Una"), false, line);
+    }
+    for (const line of ["Una", "Una.", "Bienvenido a Una", "Abre Una para empezar", "Una: ayuda", "Hola. Abre Una", "x = \"Una es\""]) {
+      assert.equal(mentionsName(line, "Una"), true, line);
+    }
+    assert.equal(mentionsName("Elige una. Luego", "una."), true);
+    assert.equal(mentionsName("ninguna. Luego", "una."), false);
+    assert.equal(mentionsName("una. Luego", "una."), true);
   });
 
   test("una palabra que contiene el nombre no cuenta (ninguna. termina en 'una.')", () => {

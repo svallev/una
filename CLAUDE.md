@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y deja su elemento (una foto o varias en carrusel, un PDF o una web) a pantalla completa nada más abrirla. Sin servidor, sin cuentas y sin analítica. Nombre provisional: "Una." (nunca literal en el código: sale de `app/identity.yaml` → `AppIdentity`).
+App móvil **local y sin conexión** que muestra **una sola tarea a la vez** y deja su elemento (una foto o varias en carrusel, un PDF o una web) a pantalla completa nada más abrirla. Sin servidor, sin cuentas y sin analítica. Nombre provisional: "Una" (sin punto; el logotipo dentro de la app es «una.») (nunca literal en el código: sale de `app/identity.yaml` → `AppIdentity`).
 
 **Fase actual:** **F5 Endurecimiento** (F4b terminada el 2026-10-13 con la 019; decisiones D20–D30 en `docs/PLAN.md`; diseño en el prototipo, tableros 12–17, copiado en `design/prototype/`). Una spec cada vez, en este orden:
 

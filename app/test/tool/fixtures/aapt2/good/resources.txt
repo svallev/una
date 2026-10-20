@@ -224,7 +224,7 @@ Package name=invalid.pending.app id=7f
     resource 0x7f0b0000 string/androidx_startup
       () "androidx.startup"
     resource 0x7f0b0001 string/app_name
-      () "Una."
+      () "Una"
     resource 0x7f0b0002 string/attachment_image
       () "Image"
       (es) "Imagen"
