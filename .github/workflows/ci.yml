@@ -32,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build: ${{ steps.check.outputs.build }}
+      web: ${{ steps.check.outputs.web }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,28 +40,24 @@ jobs:
           # En una PR el checkout es el commit de fusión: HEAD^1 es la punta de la rama base.
           fetch-depth: 2
       - id: check
-        # Compila si existe la app y, en una PR, si toca algo más que documentación. Esto va a nivel
-        # de job (`if:` de los trabajos) y no con `paths:` en `on:`: un job saltado cuenta como
-        # superado para las comprobaciones obligatorias; un workflow que no arranca las deja pendientes.
-        # En main se compila siempre. Cualquier ruta que no esté en la lista de documentación compila.
+        # La lógica vive en tools/ci-detect.sh (con su test, app/test/tool/ci_detect_test.dart):
+        # `build` = compilar y probar la app; `web` = construir y comprobar la web y la ficha
+        # (CA-023-18). Va a nivel de job (`if:` de los trabajos) y no con `paths:` en `on:`: un job
+        # saltado cuenta como superado para las comprobaciones obligatorias; un workflow que no
+        # arranca las deja pendientes. En main se compila y se construye siempre. Falla cerrada: si
+        # `git diff` falla, el paso falla (va en su propio comando, no en una sustitución de proceso),
+        # y una lista vacía en una PR lo da todo.
         env:
           EVENT: ${{ github.event_name }}
         run: |
-          if [ ! -f app/pubspec.yaml ]; then echo "build=false" >> "$GITHUB_OUTPUT"; exit 0; fi
-          if [ "$EVENT" != "pull_request" ]; then echo "build=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          build=false
-          while IFS= read -r -d '' f; do
-            case "$f" in
-              # Documentos que leen los tests de app/test (glosario, modelo de amenazas, política
-              # de privacidad): si cambian, hay que compilar y probar.
-              docs/glossary.md|docs/security/threat-model.md|docs/legal/privacy-policy.md) build=true ;;
-              docs/*|specs/*) ;;
-              */*) build=true ;;
-              *.md) ;;
-              *) build=true ;;
-            esac
-          done < <(git diff --name-only -z HEAD^1 HEAD)
-          echo "build=$build" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          changed="$RUNNER_TEMP/changed-files"
+          : > "$changed"
+          if [ "$EVENT" = "pull_request" ]; then
+            git diff --name-only -z HEAD^1 HEAD > "$changed"
+          fi
+          result="$(bash tools/ci-detect.sh --event "$EVENT" < "$changed")"
+          printf '%s\n' "$result" >> "$GITHUB_OUTPUT"
 
   flutter:
     name: Flutter · format, analyze, test, web
@@ -194,3 +191,39 @@ jobs:
         run: |
           flutter pub get --enforce-lockfile
           flutter build ios --debug --no-codesign
+
+  web:
+    name: Web y ficha
+    # Solo la web y la ficha de tienda (CA-023-18): construir, comprobar y probar. Sin despliegue, sin
+    # secretos y sin tocar la app; el proyecto de Vercel y el dominio llegan en F6.
+    needs: detect
+    if: needs.detect.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Construir la web
+        run: node landing/build.mjs
+      - name: Comprobar la web (HTML, contraste, enlaces, textos, dist al día)
+        run: node landing/check.mjs
+      - name: Tests de Node (web y ficha)
+        # Los archivos van con el glob de la shell: en Node 24 `node --test landing/test` falla. Falla
+        # cerrada: si la salida no trae el recuento, o es menor que el mínimo, el paso falla (un glob
+        # que no encuentra nada o un reportero que cambia de forma no pueden dar un «0 tests, bien»). El
+        # reportero `tap` fija el formato del recuento (`# tests N`; hoy 508). El mínimo no es una cifra
+        # exacta, solo el suelo que prueba que se ejecutó la batería.
+        run: |
+          set -euo pipefail
+          min=100
+          node --test --test-reporter=tap landing/test/*.test.mjs store/google-play/test/*.test.mjs | tee "$RUNNER_TEMP/node-tests.txt"
+          n="$(sed -nE 's/^# tests ([0-9]+)$/\1/p' "$RUNNER_TEMP/node-tests.txt" | tail -n 1)"
+          if [ -z "$n" ] || [ "$n" -lt "$min" ]; then
+            echo "::error::Se esperaban al menos $min tests de Node y se contaron '${n:-ninguno}'"
+            exit 1
+          fi
+          echo "Tests de Node: $n (mínimo $min)"
+      - name: Comprobar la ficha de Google Play (permisos, textos y gráficos)
+        run: node store/google-play/check.mjs
