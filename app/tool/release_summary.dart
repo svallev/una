@@ -62,9 +62,9 @@ const _both = {ReleaseMode.strict, ReleaseMode.testers};
 const identityWarningTable = <String, Set<ReleaseMode>>{
   // (a) una dirección marcador o con un dominio reservado.
   'identity.placeholderAddress': _both,
-  // (c) un hueco o una marca de documento en la política.
+  // (c) un hueco de identidad en la política o en los textos de la web. Una marca de documento o un
+  // texto entre corchetes ya no es un aviso sino un fallo (spec 023, CA-023-01).
   'identity.policyGap': _both,
-  'identity.policyMark': _both,
   // (b) el package name provisional.
   'package-name.provisional': _both,
   // (d) la firma de depuración o un paquete sin firmar, y, solo en estricto, que aún no haya huella

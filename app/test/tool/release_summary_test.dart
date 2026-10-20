@@ -133,7 +133,6 @@ void main() {
       expect(identityWarningTable.keys.toSet(), {
         'identity.placeholderAddress',
         'identity.policyGap',
-        'identity.policyMark',
         'package-name.provisional',
         'signature.debug',
         'signature.unsigned',
@@ -185,7 +184,6 @@ void main() {
       w.jsons['identity'] = _json('identity', [
         _issue('placeholderAddress', 'privacyPolicyUrl', 'es un marcador'),
         _issue('policyGap', 'privacy-policy.md', 'hueco [CONTACTO]'),
-        _issue('policyMark', 'privacy-policy.md', 'línea 12: [Pendiente]'),
       ]);
       w.jsons['package-name'] = _json('package-name', [
         _issue('provisional', 'app-release.aab', 'invalid.pending.app'),
@@ -201,12 +199,12 @@ void main() {
     test('CA-020-04: en testers los avisos no paran el trabajo y se listan uno por línea', () {
       final r = hoy().build(ReleaseMode.testers);
       expect(r.exitCode, 0, reason: r.findings.join('\n'));
-      expect(r.findings, hasLength(7));
+      expect(r.findings, hasLength(6));
       expect(r.findings.every((f) => f.severity == Severity.warning), isTrue);
       final lines = r.markdown
           .split('\n')
           .where((l) => l.startsWith('- aviso'));
-      expect(lines, hasLength(7));
+      expect(lines, hasLength(6));
       expect(
         r.markdown,
         contains('aviso · identity · `privacyPolicyUrl` · `es un marcador`'),
@@ -230,7 +228,7 @@ void main() {
         w.jsons['tag'] = _json('tag', []);
         final r = w.build(ReleaseMode.strict);
         expect(r.exitCode, 1);
-        expect(r.findings, hasLength(6));
+        expect(r.findings, hasLength(5));
         expect(r.findings.every((f) => f.severity == Severity.failure), isTrue);
         expect(r.markdown, isNot(contains('- aviso')));
         expect(r.markdown, contains('- fallo · identity · `privacyPolicyUrl`'));
@@ -765,6 +763,16 @@ void main() {
         Severity.warning,
         Severity.failure,
       ]);
+    });
+
+    test('CA-023-01: una marca ya no es un aviso de identidad: un `policyMark` '
+        'es un kind desconocido y falla', () {
+      final r = withJson(
+        'identity',
+        _json('identity', [_issue('policyMark', 'p', 'línea 3: [Pendiente]')]),
+      );
+      expect(r.exitCode, 1);
+      expect(r.findings.single.severity, Severity.failure);
     });
 
     test('CA-020-07: código 0 con errores en el JSON es un fallo', () {

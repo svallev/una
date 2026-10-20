@@ -6,14 +6,20 @@
 #    `..` ni `//`), o si dos de ellas son la misma dirección;
 #  - lo generado desde el yaml (lib/app/app_identity.g.dart…) no está al día (`gen_identity.dart
 #    --check`): la puerta valida lo que se compila, no solo el yaml;
-#  - docs/legal/privacy-policy.md sigue con huecos ([NOMBRE DE LA APP], [FECHA], [RESPONSABLE],
-#    [CONTACTO] y sus versiones EN) o con marcas de documento ([Suposición], [Assumption],
-#    [Pendiente], [Pending]) en las partes ES y EN (spec 020, CA-020-11);
+#  - docs/legal/privacy-policy.md (partes ES y EN) o los textos de la web (landing/src/strings.json,
+#    help.es.md y help.en.md; spec 023, CA-023-01, P-023-1 a) siguen con huecos de identidad
+#    ([RESPONSABLE]/[CONTROLLER], [CONTACTO]/[CONTACT], [FECHA]/[DATE] y [WEB]/[WEBSITE]: avisos
+#    de identidad, que en modo estricto fallan), con marcas de documento ([Suposición],
+#    [Assumption], [Pendiente], [Pending]) o con cualquier otro texto entre corchetes que no sea el
+#    de un enlace [texto](dirección) (fallos en los dos modos; `[NOMBRE DE LA APP]` y `[APP NAME]`
+#    ya no son huecos: el nombre se escribe {appName}, spec 020 CA-020-11 + spec 023);
 #  - alguno de esos archivos falta, está vacío, no es YAML válido o no se puede leer (falla cerrada,
 #    CA-020-12: nunca se da por buena una comprobación que no ha podido hacerse).
 #
 #   tools/check-release-config.sh                                    (los valores del repositorio)
 #   tools/check-release-config.sh --identity <archivo> --policy <archivo>   (valores de prueba)
+#   tools/check-release-config.sh ... --web-text <archivo>           (un texto de la web de prueba, .json o .md; repetible;
+#                                                                     sin él ni --policy se miran los de landing/src/ si existen)
 #   tools/check-release-config.sh ... --generated-root <carpeta>     (otra copia de app/ para lo generado)
 #   tools/check-release-config.sh ... --json <archivo>               (además, la lista de errores con su clase)
 #
@@ -44,6 +50,7 @@ abs_file() {
 
 args=()
 have_policy=0
+have_web=0
 generated_root="$ROOT/app"
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -51,6 +58,12 @@ while [ $# -gt 0 ]; do
       [ $# -ge 2 ] || { echo "::error::--policy necesita un valor"; exit 2; }
       have_policy=1
       args+=("--policy" "$(abs_file "$2")")
+      shift 2
+      ;;
+    --web-text)
+      [ $# -ge 2 ] || { echo "::error::--web-text necesita un valor"; exit 2; }
+      have_web=1
+      args+=("--web-text" "$(abs_file "$2")")
       shift 2
       ;;
     --identity)
@@ -77,6 +90,10 @@ while [ $# -gt 0 ]; do
 done
 if [ "$have_policy" -eq 0 ]; then
   args+=("--policy" "$ROOT/docs/legal/privacy-policy.md")
+  # Con los valores del repositorio, también los textos de la web (si no se dan otros).
+  if [ "$have_web" -eq 0 ]; then
+    args+=("--web-defaults")
+  fi
 fi
 
 cd "$ROOT/app"

@@ -950,12 +950,7 @@ void main() {
       expect(checkPolicyText(_cleanPolicy), isEmpty);
     });
 
-    for (final gap in [
-      '[NOMBRE DE LA APP]',
-      '[FECHA]',
-      '[RESPONSABLE]',
-      '[CONTACTO]',
-    ]) {
+    for (final gap in ['[WEB]', '[FECHA]', '[RESPONSABLE]', '[CONTACTO]']) {
       test('CA-012-05: falla con $gap en la parte española', () {
         final policy = _cleanPolicy.replaceFirst(
           'Escribe a hola@ejemplo.org.',
@@ -968,7 +963,7 @@ void main() {
       });
     }
 
-    for (final gap in ['[APP NAME]', '[DATE]', '[CONTROLLER]', '[CONTACT]']) {
+    for (final gap in ['[WEBSITE]', '[DATE]', '[CONTROLLER]', '[CONTACT]']) {
       test('CA-012-05: falla con $gap en la parte inglesa', () {
         final policy = _cleanPolicy.replaceFirst(
           'Write to hello@sample.org.',
@@ -1022,9 +1017,10 @@ void main() {
     String inEn(String text) =>
         _cleanPolicy.replaceFirst('Write to hello@sample.org.', text);
 
+    // CA-023-01: una marca ya no es un aviso de identidad sino un `fault` (en los dos modos).
     List<gate.GateIssue> marks(String policy) => [
       for (final i in gate.checkPolicyText(policy))
-        if (i.kind == GateIssueKind.policyMark) i,
+        if (i.message.contains('lleva la marca')) i,
     ];
 
     int lineOf(String policy, String needle) =>
@@ -1079,23 +1075,30 @@ void main() {
       });
     }
 
-    test(
-      'CA-020-11: [Hecho] no cuenta (ni con texto detrás ni en mayúsculas)',
-      () {
-        for (final ok in [
-          '[Hecho]',
-          '[HECHO]',
-          '[Hecho, PD-1]',
-          '[ Hecho ]',
-          'Suposición sin corchetes y pendiente sin corchetes',
-          'assumption pending',
-          '[Done]',
-        ]) {
-          expect(gate.checkPolicyText(inEs('A $ok B.')), isEmpty, reason: ok);
-          expect(gate.checkPolicyText(inEn('A $ok B.')), isEmpty, reason: ok);
+    test('CA-020-11: [Hecho] no es una marca (CA-023-01: pero sí texto entre '
+        'corchetes, que falla), y las palabras sin corchetes no cuentan', () {
+      for (final ok in [
+        'Suposición sin corchetes y pendiente sin corchetes',
+        'assumption pending',
+      ]) {
+        expect(gate.checkPolicyText(inEs('A $ok B.')), isEmpty, reason: ok);
+        expect(gate.checkPolicyText(inEn('A $ok B.')), isEmpty, reason: ok);
+      }
+      for (final other in [
+        '[Hecho]',
+        '[HECHO]',
+        '[Hecho, PD-1]',
+        '[ Hecho ]',
+        '[Done]',
+      ]) {
+        for (final build in [inEs, inEn]) {
+          final found = gate.checkPolicyText(build('A $other B.'));
+          expect(found, hasLength(1), reason: other);
+          expect(found.single.kind, GateIssueKind.fault);
+          expect(marks(build('A $other B.')), isEmpty, reason: other);
         }
-      },
-    );
+      }
+    });
 
     test('CA-020-11: una marca en la cabecera o en las notas de revisión '
         '(fuera de las partes publicadas) no cuenta', () {
@@ -1166,7 +1169,7 @@ void main() {
       final kinds = [for (final i in gate.checkPolicyText(policy)) i.kind];
       expect(
         kinds,
-        unorderedEquals([GateIssueKind.policyGap, GateIssueKind.policyMark]),
+        unorderedEquals([GateIssueKind.policyGap, GateIssueKind.fault]),
       );
     });
 
@@ -1188,6 +1191,433 @@ void main() {
         expect(n, greaterThan(headerLine));
         expect(n, lessThan(notesLine));
       }
+    });
+  });
+
+  group('CA-023-01: huecos de identidad admitidos y texto entre corchetes', () {
+    String inEs(String text) =>
+        _cleanPolicy.replaceFirst('Escribe a hola@ejemplo.org.', text);
+    String inEn(String text) =>
+        _cleanPolicy.replaceFirst('Write to hello@sample.org.', text);
+
+    int lineOf(String policy, String needle) =>
+        policy.split('\n').indexWhere((l) => l.contains(needle)) + 1;
+
+    final zeroWidth = String.fromCharCode(0x200B);
+
+    // La lista cerrada de huecos de identidad: aviso en testers, fallo en estricto.
+    for (final gap in [
+      '[RESPONSABLE]',
+      '[CONTROLLER]',
+      '[CONTACTO]',
+      '[CONTACT]',
+      '[FECHA]',
+      '[DATE]',
+      '[WEB]',
+      '[WEBSITE]',
+      '[ web ]',
+      '[Contacto]',
+      '[ website ]',
+    ]) {
+      test('CA-023-01: $gap es un hueco de identidad (aviso) en las dos '
+          'partes', () {
+        for (final (label, build, marker)
+            in <(String, String Function(String), String)>[
+              ('ES', inEs, 'Escribe aquí'),
+              ('EN', inEn, 'Write here'),
+            ]) {
+          final policy = build('$marker $gap fin.');
+          final found = gate.checkPolicyText(policy);
+          expect(found, hasLength(1), reason: '$label $gap');
+          expect(found.single.kind, GateIssueKind.policyGap);
+          expect(found.single.subject, 'política ($label)');
+          expect(
+            found.single.message,
+            contains('línea ${lineOf(policy, marker)}'),
+          );
+        }
+      });
+    }
+
+    for (final name in ['[NOMBRE DE LA APP]', '[APP NAME]', '[ app name ]']) {
+      test('CA-023-01: $name ya no es un hueco admitido: falla en los dos '
+          'modos (el nombre sale de {appName})', () {
+        for (final build in [inEs, inEn]) {
+          final found = gate.checkPolicyText(build('Soy $name fin.'));
+          expect(found, hasLength(1), reason: name);
+          expect(found.single.kind, GateIssueKind.fault);
+          expect(found.single.message, contains(name.trim()));
+          expect(found.single.message, contains('{appName}'));
+        }
+      });
+    }
+
+    for (final other in [
+      '[XYZ]',
+      '[1]',
+      '[x]',
+      '[^1]',
+      '[CONTACTO EXTRA]',
+      '[CONT${zeroWidth}ACTO]',
+      '[Hecho]',
+      '[]',
+      '[ ]',
+      '[PD-2]',
+      '[texto][referencia]',
+    ]) {
+      test('CA-023-01: texto entre corchetes que no es un enlace '
+          '(${other.replaceAll(zeroWidth, '<ZWSP>')}) falla, con su línea', () {
+        for (final (label, build, marker)
+            in <(String, String Function(String), String)>[
+              ('ES', inEs, 'Escribe aquí'),
+              ('EN', inEn, 'Write here'),
+            ]) {
+          final policy = build('$marker $other fin.');
+          final found = gate.checkPolicyText(policy);
+          expect(found, isNotEmpty, reason: '$label $other');
+          expect(found.map((i) => i.kind), everyElement(GateIssueKind.fault));
+          expect(found.first.subject, 'política ($label)');
+          expect(
+            found.first.message,
+            contains('línea ${lineOf(policy, marker)}'),
+          );
+        }
+      });
+    }
+
+    test('CA-023-01: el texto de un enlace no cuenta (enlace, imagen, '
+        'mailto y ruta)', () {
+      for (final ok in [
+        '[Política de privacidad](https://una-app.dev/privacy)',
+        '[escríbenos](mailto:hola@una-app.dev)',
+        '[la ayuda](/help)',
+        '[arriba](#es)',
+        '![logo](logo.png)',
+        '[dos\nlíneas](https://una-app.dev/x)',
+        '[a](b) y [c](d)',
+      ]) {
+        expect(
+          gate.checkPolicyText(inEs('Mira $ok fin.')),
+          isEmpty,
+          reason: ok,
+        );
+        expect(gate.checkPolicyText(inEn('See $ok end.')), isEmpty, reason: ok);
+      }
+    });
+
+    test('CA-023-01: un enlace no esconde una marca ni un hueco dentro de su '
+        'texto', () {
+      final mark = gate.checkPolicyText(inEs('[Pendiente](https://x.dev/a)'));
+      expect(mark.single.kind, GateIssueKind.fault);
+      expect(mark.single.message, contains('marca'));
+      final gap = gate.checkPolicyText(inEs('[[CONTACTO]](mailto:a@x.dev)'));
+      expect(gap.single.kind, GateIssueKind.policyGap);
+    });
+
+    test('CA-023-01: un corchete suelto no se traga el resto del documento '
+        '(un grupo no cruza una línea en blanco)', () {
+      expect(gate.checkPolicyText(inEs('Falta [algo\n\nmás] fin.')), isEmpty);
+      expect(gate.checkPolicyText(inEn('Falta algo]\n\n[más fin.')), isEmpty);
+      // En el mismo párrafo sí es un grupo.
+      expect(
+        gate.checkPolicyText(inEs('Falta [algo\nmás] fin.')),
+        hasLength(1),
+      );
+    });
+
+    test('CA-023-01: {appName} se admite (también junto a un enlace)', () {
+      expect(gate.checkPolicyText(inEs('{appName} no recoge datos.')), isEmpty);
+      expect(
+        gate.checkPolicyText(
+          inEn('{appName} and [the help](https://una-app.dev/help).'),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('CA-023-01: una marca cuenta una sola vez (no también como texto '
+        'entre corchetes) y es un fallo, no un aviso', () {
+      for (final mark in [
+        '[Suposición]',
+        '[Assumption]',
+        '[Pendiente]',
+        '[Pending]',
+        '[Pendiente PD-2]',
+        '[Suposición, PD-9]',
+      ]) {
+        for (final build in [inEs, inEn]) {
+          final found = gate.checkPolicyText(build('Dato $mark fin.'));
+          expect(found, hasLength(1), reason: mark);
+          expect(found.single.kind, GateIssueKind.fault, reason: mark);
+          expect(found.single.message, contains('marca'));
+        }
+      }
+    });
+
+    test('CA-023-01: un fallo no esconde un hueco (cada uno con su clase)', () {
+      final kinds = [
+        for (final i in gate.checkPolicyText(inEs('[CONTACTO] y [XYZ].')))
+          i.kind,
+      ];
+      expect(
+        kinds,
+        unorderedEquals([GateIssueKind.policyGap, GateIssueKind.fault]),
+      );
+    });
+
+    test('CA-023-01: la cabecera y las notas de revisión no cuentan, ni con '
+        'marcas ni con texto entre corchetes', () {
+      final withNotes = _cleanPolicy.replaceFirst(
+        '1. Rellenar',
+        '1. [XYZ] [NOMBRE DE LA APP] [Pendiente] Rellenar',
+      );
+      expect(withNotes, contains('[XYZ] [NOMBRE'));
+      expect(gate.checkPolicyText(withNotes), isEmpty);
+    });
+
+    test(
+      'CA-023-01: dentro de código o de un comentario HTML también cuenta '
+      '(la política publicada no lleva corchetes sueltos en ninguna parte)',
+      () {
+        for (final wrapped in [
+          '`[XYZ]`',
+          '```\n[XYZ]\n```',
+          '<!-- [XYZ] -->',
+        ]) {
+          expect(
+            gate.checkPolicyText(inEs(wrapped)),
+            hasLength(1),
+            reason: wrapped,
+          );
+        }
+      },
+    );
+
+    test('CA-023-01: una política limpia, solo con {appName} y huecos de la '
+        'lista, da solo avisos de identidad', () {
+      final policy = _cleanPolicy
+          .replaceFirst(
+            'Escribe a hola@ejemplo.org.',
+            '{appName}. Responsable: [RESPONSABLE]. Contacto: [CONTACTO]. '
+                'Web: [WEB]. Fecha: [FECHA]. Más en [la ayuda](/help).',
+          )
+          .replaceFirst(
+            'Write to hello@sample.org.',
+            '{appName}. Controller: [CONTROLLER]. Contact: [CONTACT]. '
+                'Website: [WEBSITE]. Date: [DATE]. More in [the help](/help).',
+          );
+      final found = gate.checkPolicyText(policy);
+      expect(found, hasLength(8));
+      expect(found.map((i) => i.kind), everyElement(GateIssueKind.policyGap));
+    });
+  });
+
+  group('CA-023-01: los textos de la web (strings.json y la Ayuda)', () {
+    String strings(Map<String, Object?> value) => jsonEncode(value);
+
+    List<gate.GateIssue> checkJson(String json) =>
+        gate.checkWebStrings(json, subject: 'strings.json');
+    List<gate.GateIssue> checkMd(String md) =>
+        gate.checkWebMarkdown(md, subject: 'help.es.md');
+
+    test('CA-023-01: strings.json con los huecos de la lista da avisos, con la '
+        'clave de cada uno', () {
+      final found = checkJson(
+        strings({
+          'es': {'webContact': 'Contacto: [CONTACTO]'},
+          'en': {'webContact': 'Contact: [CONTACT]'},
+        }),
+      );
+      expect(found, hasLength(2));
+      expect(found.map((i) => i.kind), everyElement(GateIssueKind.policyGap));
+      expect(found.map((i) => i.subject), everyElement('strings.json'));
+      expect(found[0].message, contains('es.webContact'));
+      expect(found[1].message, contains('en.webContact'));
+    });
+
+    test(
+      'CA-023-01: strings.json con {appName}, enlaces, números, nulos y '
+      'listas de textos limpios no da nada (la sintaxis de JSON no cuenta)',
+      () {
+        expect(
+          checkJson(
+            strings({
+              'es': {
+                'webHomeTitle': '{appName}',
+                'webLink': 'Mira [la ayuda](/help)',
+                'n': 3,
+                'x': null,
+                'list': ['uno', 'dos'],
+              },
+            }),
+          ),
+          isEmpty,
+        );
+      },
+    );
+
+    test('CA-023-01: strings.json con texto entre corchetes, una marca o '
+        '[NOMBRE DE LA APP] falla, también dentro de una lista', () {
+      for (final bad in [
+        '[XYZ]',
+        '[Pendiente]',
+        '[NOMBRE DE LA APP]',
+        '[APP NAME]',
+      ]) {
+        for (final json in [
+          strings({
+            'es': {'a': 'Hola $bad'},
+          }),
+          strings({
+            'es': {
+              'a': ['bien', 'Hola $bad'],
+            },
+          }),
+        ]) {
+          final found = checkJson(json);
+          expect(found, hasLength(1), reason: '$bad $json');
+          expect(found.single.kind, GateIssueKind.fault);
+          expect(found.single.subject, 'strings.json');
+          expect(found.single.message, contains('es.a'));
+        }
+      }
+    });
+
+    test('CA-023-01: strings.json que no es JSON válido es un fallo', () {
+      for (final bad in ['{', 'no es json', '[1, 2,]']) {
+        final found = checkJson(bad);
+        expect(found, hasLength(1), reason: bad);
+        expect(found.single.kind, GateIssueKind.fault);
+        expect(found.single.message, contains('JSON'));
+      }
+    });
+
+    test(
+      'CA-023-01: la Ayuda (Markdown) sigue las mismas reglas, con la línea',
+      () {
+        const md = '''
+# Ayuda
+
+Escribe a [CONTACTO]. Mira [la política](/privacy) de {appName}.
+
+<!-- spec 019 -->
+Aquí falta [Pendiente] algo y [XYZ] otra cosa.
+''';
+        final found = checkMd(md);
+        expect(found, hasLength(3));
+        expect(found.map((i) => i.subject), everyElement('help.es.md'));
+        expect(
+          found.where((i) => i.kind == GateIssueKind.policyGap),
+          hasLength(1),
+        );
+        expect(found.where((i) => i.kind == GateIssueKind.fault), hasLength(2));
+        expect(found.map((i) => i.message).join('\n'), contains('línea 3'));
+        expect(found.map((i) => i.message).join('\n'), contains('línea 6'));
+        expect(checkMd('# Ayuda\n\nTodo bien con {appName}.\n'), isEmpty);
+      },
+    );
+
+    group('los archivos (checkWebTextFile / checkWebTexts)', () {
+      late Directory tmp;
+      setUp(() => tmp = Directory.systemTemp.createTempSync('gate_web_'));
+      tearDown(() => tmp.deleteSync(recursive: true));
+
+      String write(String name, String text) {
+        final f = File('${tmp.path}/$name')..writeAsStringSync(text);
+        return f.path;
+      }
+
+      test(
+        'CA-023-01: elige el lector por la extensión y nombra el archivo',
+        () {
+          final json = write('strings.json', '{"es":{"a":"[CONTACTO]"}}');
+          final md = write('help.es.md', 'Escribe a [CONTACTO].\n');
+          expect(gate.checkWebTextFile(json).single.subject, 'strings.json');
+          expect(gate.checkWebTextFile(md).single.subject, 'help.es.md');
+          final other = write('notas.txt', 'hola');
+          final bad = gate.checkWebTextFile(other);
+          expect(bad.single.kind, GateIssueKind.fault);
+          expect(bad.single.subject, 'notas.txt');
+        },
+      );
+
+      test('CA-023-01: ausente, carpeta, vacío o no UTF-8 es un fallo que lo '
+          'nombra (falla cerrada)', () {
+        final missing = gate.checkWebTextFile('${tmp.path}/no-existe.json');
+        expect(missing.single.kind, GateIssueKind.fault);
+        expect(missing.single.subject, 'no-existe.json');
+        expect(missing.single.message, contains('no existe'));
+        Directory('${tmp.path}/dir.md').createSync();
+        expect(
+          gate.checkWebTextFile('${tmp.path}/dir.md').single.message,
+          contains('no es un archivo'),
+        );
+        expect(
+          gate.checkWebTextFile(write('vacio.md', '  \n')).single.message,
+          contains('vací'),
+        );
+        File('${tmp.path}/raro.md').writeAsBytesSync([0xff, 0xfe, 0x41, 0x80]);
+        expect(
+          gate.checkWebTextFile('${tmp.path}/raro.md').single.kind,
+          GateIssueKind.fault,
+        );
+      });
+
+      test(
+        'CA-023-01: qué textos de la web se miran: los dados (obligatorios), '
+        'los del repositorio sin --policy o con --web-defaults, y nada con una '
+        'política de prueba',
+        () {
+          final given = gate.selectWebTexts(
+            explicit: ['a.json'],
+            policyGiven: true,
+            webDefaults: true,
+          );
+          expect(given.$1, ['a.json']);
+          expect(given.$2, isTrue);
+          for (final (policyGiven, webDefaults) in [
+            (false, false),
+            (true, true),
+          ]) {
+            final repo = gate.selectWebTexts(
+              explicit: [],
+              policyGiven: policyGiven,
+              webDefaults: webDefaults,
+            );
+            expect(repo.$1, gate.defaultWebTexts);
+            expect(repo.$2, gate.webTextsRequired);
+          }
+          final none = gate.selectWebTexts(
+            explicit: [],
+            policyGiven: true,
+            webDefaults: false,
+          );
+          expect(none.$1, isEmpty);
+        },
+      );
+
+      test('CA-023-01: los archivos por defecto son los tres de landing/src y '
+          'hoy no hace falta que existan (T-023-07 lo exige)', () {
+        expect(gate.defaultWebTexts, [
+          '../landing/src/strings.json',
+          '../landing/src/help.es.md',
+          '../landing/src/help.en.md',
+        ]);
+        expect(gate.webTextsRequired, isFalse);
+        final present = write('strings.json', '{}');
+        final absent = '${tmp.path}/help.es.md';
+        expect(gate.webTextsToCheck([present, absent], required: false), [
+          present,
+        ]);
+        expect(gate.webTextsToCheck([present, absent], required: true), [
+          present,
+          absent,
+        ]);
+        expect(gate.checkWebTexts([absent], required: false), isEmpty);
+        final required = gate.checkWebTexts([absent], required: true);
+        expect(required.single.kind, GateIssueKind.fault);
+        expect(required.single.subject, 'help.es.md');
+      });
     });
   });
 
@@ -1439,6 +1869,52 @@ void main() {
       },
     );
 
+    group('CA-023-01: qué argumentos le pasa el script a la herramienta', () {
+      /// Ejecuta el script con un `dart` de mentira que escribe sus argumentos, uno por línea.
+      List<String> dartArgs(List<String> args) {
+        final bin = Directory('${tmp.path}/bin')..createSync();
+        File('${bin.path}/dart')
+          ..writeAsStringSync('#!/bin/bash\nprintf "%s\\n" "\$@"\n')
+          ..createSync();
+        Process.runSync('chmod', ['+x', '${bin.path}/dart']);
+        final r = Process.runSync(
+          'bash',
+          ['../tools/check-release-config.sh', ...args],
+          environment: {
+            ...Platform.environment,
+            'PATH': '${bin.path}:${Platform.environment['PATH']}',
+          },
+        );
+        expect(r.exitCode, 0, reason: out(r));
+        return '${r.stdout}'.trim().split('\n');
+      }
+
+      test('CA-023-01: sin --policy ni --web-text pide los textos de la web '
+          'del repositorio', () {
+        final a = dartArgs([]);
+        expect(a, contains('--web-defaults'));
+        expect(a, isNot(contains('--web-text')));
+      });
+
+      test('CA-023-01: con --policy (valores de prueba) no mira la web', () {
+        final a = dartArgs(['--policy', policy(_cleanPolicy).path]);
+        expect(a, isNot(contains('--web-defaults')));
+        expect(a, isNot(contains('--web-text')));
+      });
+
+      test('CA-023-01: --web-text se pasa con su ruta absoluta y sin los '
+          'textos por defecto', () {
+        final f = File('${tmp.path}/h.md')..writeAsStringSync('x');
+        final a = dartArgs(['--web-text', 'h.md']);
+        expect(a, isNot(contains('--web-defaults')));
+        final i = a.indexOf('--web-text');
+        expect(i, isNonNegative);
+        expect(a[i + 1], endsWith('/h.md'));
+        expect(a[i + 1], startsWith('/'));
+        expect(f.existsSync(), isTrue);
+      });
+    });
+
     test(
       'CA-015-13b: pasa con tres dominios propios de prueba (yaml temporal)',
       () {
@@ -1597,7 +2073,7 @@ void main() {
 
       test(
         'CA-020-05: los marcadores de hoy, los huecos y las marcas salen como '
-        'placeholderAddress, policyGap y policyMark, y se conserva la salida ::error::',
+        'placeholderAddress, policyGap y fault (las marcas), y se conserva la salida ::error::',
         () {
           final json = File('${tmp.path}/gate.json');
           final result = _runScript(['--json', json.path]);
@@ -1607,7 +2083,7 @@ void main() {
           expect(data['complete'], isTrue);
           final issues = issuesOf(data);
           final kinds = issues.map((i) => i['kind']).toSet();
-          expect(kinds, {'placeholderAddress', 'policyGap', 'policyMark'});
+          expect(kinds, {'placeholderAddress', 'policyGap', 'fault'});
           expect(
             issues
                 .where((i) => i['kind'] == 'placeholderAddress')
@@ -1686,7 +2162,7 @@ void main() {
         expect(issues.single['subject'], contains('no-existe.md'));
       });
 
-      test('CA-020-11: una marca en la política sale como policyMark con su '
+      test('CA-020-11: una marca en la política sale como fault (CA-023-01) con su '
           'línea y falla', () {
         final json = File('${tmp.path}/gate.json');
         final result = run(
@@ -1701,10 +2177,71 @@ void main() {
         expect(result.exitCode, 1, reason: out(result));
         final issues = issuesOf(readJson(json));
         expect(issues, hasLength(1));
-        expect(issues.single['kind'], 'policyMark');
+        expect(issues.single['kind'], 'fault');
         expect(issues.single['subject'], 'política (ES)');
         expect(issues.single['message'], contains('[Suposición, PD-9]'));
         expect(out(result), contains('::error::política (ES)'));
+      });
+
+      test('CA-023-01: --web-text revisa strings.json y la Ayuda con las '
+          'reglas de la política y lo declara en checks', () {
+        final json = File('${tmp.path}/gate.json');
+        final strings = File('${tmp.path}/strings.json')
+          ..writeAsStringSync('{"es":{"webContact":"Contacto: [CONTACTO]"}}');
+        final help = File('${tmp.path}/help.es.md')
+          ..writeAsStringSync('# Ayuda\n\nMira [XYZ] y {appName}.\n');
+        final result = run(
+          extra: [
+            '--json',
+            json.path,
+            '--web-text',
+            strings.path,
+            '--web-text',
+            help.path,
+          ],
+        );
+        expect(result.exitCode, 1, reason: out(result));
+        final data = readJson(json);
+        expect(
+          data['checks'],
+          containsAll(['addresses', 'policy', 'web-texts']),
+        );
+        final issues = issuesOf(data);
+        expect(issues, hasLength(2));
+        expect(
+          issues.singleWhere((i) => i['subject'] == 'strings.json')['kind'],
+          'policyGap',
+        );
+        expect(
+          issues.singleWhere((i) => i['subject'] == 'help.es.md')['kind'],
+          'fault',
+        );
+        expect(out(result), contains('::error::strings.json'));
+      });
+
+      test('CA-023-01: --web-text con archivos limpios pasa; uno ausente es un '
+          'fallo aunque aún no sean obligatorios por defecto', () {
+        final json = File('${tmp.path}/gate.json');
+        final ok = File('${tmp.path}/help.en.md')
+          ..writeAsStringSync('# Help\n\nAll good in {appName}.\n');
+        final pass = run(extra: ['--json', json.path, '--web-text', ok.path]);
+        expect(pass.exitCode, 0, reason: out(pass));
+        expect(readJson(json)['checks'], contains('web-texts'));
+        final fail = run(
+          extra: ['--json', json.path, '--web-text', '${tmp.path}/falta.md'],
+        );
+        expect(fail.exitCode, 1, reason: out(fail));
+        final issues = issuesOf(readJson(json));
+        expect(issues.single['kind'], 'fault');
+        expect(issues.single['subject'], 'falta.md');
+      });
+
+      test('CA-023-01: con --policy y sin --web-text la web no se revisa (los '
+          'valores de prueba no mezclan archivos del repositorio)', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = run(extra: ['--json', json.path]);
+        expect(result.exitCode, 0, reason: out(result));
+        expect(readJson(json)['checks'], isNot(contains('web-texts')));
       });
 
       test('CA-020-12: un identity.yaml que no existe es un fallo con JSON '
