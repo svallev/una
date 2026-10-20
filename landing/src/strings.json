@@ -1,0 +1,32 @@
+{
+  "es": {
+    "webHomeTitle": "{appName}",
+    "webHomeIntro": "Una sola tarea a la vez. Aquí están la política de privacidad, las licencias de terceros y la ayuda de la app.",
+    "webPageTitle": "{página} · {appName}",
+    "webNotFoundTitle": "Esta página no existe.",
+    "webNotFoundBody": "Puede que la dirección esté mal escrita.",
+    "webContact": "Contacto: [CONTACTO]",
+    "webLastUpdated": "Última actualización: {fecha}",
+    "webBackHome": "Volver al inicio",
+    "webLicensesVersion": "Avisos de la versión {versión}",
+    "webLicensesLatestBuild": "Aún no hay ninguna versión publicada: estos son los avisos de la última compilación.",
+    "webLicensesInApp": "Los textos completos de las licencias también van dentro de la app.",
+    "webSwitchToSpanish": "Leer en español",
+    "webLanguageName": "Español"
+  },
+  "en": {
+    "webHomeTitle": "{appName}",
+    "webHomeIntro": "One task at a time. Here are the app's privacy policy, third-party licenses and help.",
+    "webPageTitle": "{page} · {appName}",
+    "webNotFoundTitle": "This page doesn't exist.",
+    "webNotFoundBody": "The address may be mistyped.",
+    "webContact": "Contact: [CONTACT]",
+    "webLastUpdated": "Last updated: {date}",
+    "webBackHome": "Back to home",
+    "webLicensesVersion": "Notices for version {version}",
+    "webLicensesLatestBuild": "No version has been published yet: these are the notices of the latest build.",
+    "webLicensesInApp": "The full license texts are also included in the app.",
+    "webSwitchToEnglish": "Read in English",
+    "webLanguageName": "English"
+  }
+}

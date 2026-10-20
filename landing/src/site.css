@@ -1,0 +1,126 @@
+/* Estilos de la web (spec 023, CA-023-15). Solo valores de tokens.css (las variables de
+   design/tokens.json): nada de colores, medidas ni fuentes sueltas. `check.mjs` lo comprueba. */
+
+html {
+  background-color: var(--color-paper);
+  color-scheme: light;
+  scroll-behavior: auto;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+body > header, body > main, body > footer {
+  box-sizing: border-box;
+  max-width: var(--size-content-max-width);
+  margin-inline: auto;
+  padding: var(--space-m) var(--space-l);
+}
+
+h1 {
+  margin: var(--space-m) 0 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--font-letter-spacing-tighter);
+  line-height: 1.2;
+}
+
+h2 {
+  margin: var(--space-xl) 0 var(--space-s);
+  padding-top: var(--space-s);
+  border-top: var(--border-width-section) solid var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--font-letter-spacing-tight);
+  line-height: 1.2;
+}
+
+h3 {
+  margin: var(--space-l) 0 var(--space-s);
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+}
+
+h4 {
+  margin: var(--space-m) 0 var(--space-s);
+  font-size: var(--font-size-option);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+}
+
+p {
+  margin: 0 0 var(--space-m);
+}
+
+ul {
+  margin: 0 0 var(--space-m);
+  padding-left: var(--space-l);
+}
+
+li {
+  margin-bottom: var(--space-xs);
+}
+
+ul.links {
+  padding-left: 0;
+  list-style: none;
+}
+
+strong {
+  font-weight: var(--font-weight-bold);
+}
+
+blockquote {
+  margin: 0 0 var(--space-m);
+  padding-left: var(--space-m);
+  border-left: var(--border-width-strong) solid var(--color-ink);
+}
+
+code {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-s);
+}
+
+pre {
+  margin: 0 0 var(--space-m);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-s);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Los enlaces se distinguen sin depender del color (subrayado) y tienen foco visible. */
+a {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: var(--space-xs);
+}
+
+a:focus-visible, h2:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-ink);
+  outline-offset: var(--border-width-focus);
+}
+
+/* Los enlaces que están solos en una línea tienen un objetivo de 44 de alto (P6). */
+.block-link {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-link-button);
+}
+
+footer {
+  margin-top: var(--space-xxl);
+  border-top: var(--border-width-section) solid var(--color-ink);
+  color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-s);
+}
