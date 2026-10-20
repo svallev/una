@@ -1,0 +1,21 @@
+{appName} te enseña una sola tarea a la vez, a pantalla completa, nada más abrir la app. En vez de una lista larga que abruma, ves solo lo que toca ahora; cuando la completas, aparece la siguiente.
+
+Qué puedes hacer
+- Escribir una tarea y elegir si pasa a ser la actual o si va al final de la cola.
+- Adjuntarle una foto (hecha con la cámara del sistema o elegida de tu galería), varias fotos (hasta 10, que pasas con el dedo en un carrusel), un PDF o una página web, y verla a pantalla completa.
+- Completarla manteniendo pulsado un botón: la nota se rompe y pasas a la siguiente. Completar una tarea la borra del todo, sin histórico ni papelera.
+- Eliminar una tarea y deshacerlo durante unos segundos.
+- Ver todas tus tareas y cambiar su orden.
+
+Privacidad
+- Sin cuentas, sin servidor y sin analítica, y sin publicidad. Tus tareas se guardan en tu móvil.
+- No necesita permiso de cámara, de fotos ni de archivos: usa la cámara y el selector del sistema, y solo recibe lo que tú eliges.
+- La tarea web necesita conexión: la página se carga en directo y no se guarda. Crear, ver, completar y eliminar tareas funciona sin conexión.
+- Las notificaciones son opcionales y vienen apagadas. Si las enciendes, tu móvil te muestra de 1 a 3 avisos al día con tu tarea actual; en Android 13 o posterior, el sistema te pide permiso en ese momento. Con el móvil bloqueado, es tu sistema quien decide si la notificación se ve entera.
+
+Accesibilidad
+- Pensada para usarse con TalkBack, teclado o Switch Access: casi todos los gestos tienen una acción alternativa.
+- Respeta el tamaño de letra de Android y la opción de quitar animaciones.
+
+Idiomas
+- Disponible en español e inglés; cambias de idioma en Ajustes, sin reiniciar la app.

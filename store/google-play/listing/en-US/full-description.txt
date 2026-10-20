@@ -1,0 +1,21 @@
+{appName} shows you one task at a time, full screen, as soon as you open the app. Instead of a long list that overwhelms you, you only see what is next; when you complete it, the following one appears.
+
+What you can do
+- Write a task and choose whether it becomes the current one or goes to the end of the queue.
+- Attach a photo (taken with the system camera or picked from your gallery), several photos (up to 10, which you swipe through in a carousel), a PDF or a web page, and see it full screen.
+- Complete it by pressing and holding a button: the note tears and you move on to the next one. Completing a task deletes it completely, with no history or trash.
+- Delete a task and undo it for a few seconds.
+- See all your tasks and change their order.
+
+Privacy
+- No accounts, no server and no analytics, and no ads. Your tasks are kept on your phone.
+- It doesn't need camera, photo or file permissions: it uses the system camera and picker, and only receives what you choose.
+- The web task needs a connection: the page loads live and isn't saved. Creating, viewing, completing and deleting tasks works offline.
+- Notifications are optional and come turned off. If you turn them on, your phone shows 1 to 3 notices a day with your current task; on Android 13 or later, the system asks for permission at that moment. With the phone locked, your system decides whether the notification shows in full.
+
+Accessibility
+- Designed to work with TalkBack, keyboard or Switch Access: almost every gesture has an alternative action.
+- Follows Android's text size and the remove animations option.
+
+Languages
+- Available in Spanish and English; you change language in Settings, with no restart.
