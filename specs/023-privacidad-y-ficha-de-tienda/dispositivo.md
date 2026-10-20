@@ -2,7 +2,7 @@
 
 ## C-023-1 · Capturas y gráfico de funciones (T-023-10, 2026-10-20)
 
-**Estado:** hechas; **a la espera de la revisión del propietario** (8 capturas y el gráfico).
+**Estado:** hechas; **revisión del propietario aplazada el 2026-10-20** (8 capturas y el gráfico): no se sube la app a la tienda por ahora, así que se revisarán antes de F6.
 
 **Cómo se hicieron** [Hecho]:
 
