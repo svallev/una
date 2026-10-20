@@ -1,7 +1,7 @@
 # Respuestas de Play Console fuera de la ficha
 
 - **Spec:** 023, CA-023-12 y CA-023-21. **Tarea:** T-023-04. La declaración de Data Safety, aparte, está en `data-safety.md` (de él salen los identificadores F1 a F12 de las fuentes).
-- **Estado:** **Borrador para la revisión del propietario** (2026-10-20). Nada de esto se rellena en Play Console hasta F6 (proyecto de aprendizaje, sin publicar).
+- **Estado:** **Revisadas y aprobadas por el propietario** (2026-10-20; §9; commit `a40f5e2`). Nada de esto se rellena en Play Console hasta F6 (proyecto de aprendizaje, sin publicar).
 - **Convención:** [Hecho] = leído en la fuente citada; [Suposición] = decisión o interpretación mía (las de la spec se marcan como tales); [Pendiente] = depende de F6 o no se pudo leer. Las páginas se consultaron el **2026-10-20** con `curl -sL` (solo lectura); la Ayuda de Play no muestra su fecha de edición.
 - **Los datos de identidad** (correo de contacto, web, dirección…) son **huecos de identidad**, de la lista cerrada de CA-023-01: `[CONTACTO]`, `[WEB]`, `[RESPONSABLE]`. Hasta F6 no se rellenan.
 
@@ -117,7 +117,7 @@
 5. **Descripción breve:** ≤ 80 caracteres, sin saltos de línea, sin emojis, «Only use periods at the end of sentences if your short description contains multiple sentences», sin mayúsculas de énfasis (P5 y P6). El borrador de la spec («Una sola tarea a la vez, a pantalla completa. Sin cuentas ni analítica.») cumple.
 6. **Metadatos:** P6 prohíbe en el título, el icono y el nombre del desarrollador «emojis, emoticons, or repeated special characters» y «ALL CAPS unless part of your brand name», comparaciones de datos entre apps y testimonios anónimos.
 
-## 8. Para la primera subida (F6): lo que la Ayuda vigente añade (para T-023-12)
+## 8. Para la primera subida (F6): lo que la Ayuda vigente añade (recogido en T-023-12 en `docs/PLAN.md`, fila de F6, y en `/release-checklist`)
 
 [Hecho, 2026-10-20] Para `docs/PLAN.md` (fila de F6) y `/release-checklist`, **además** de la lista cerrada de CA-023-23:
 

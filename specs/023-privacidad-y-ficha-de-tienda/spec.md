@@ -258,7 +258,7 @@ Cada CA dice cómo se verifica: con un **test o una comprobación** que corre en
 | `webSwitchToEnglish` | — | Read in English | Al principio de la mitad en español; escrito en inglés y marcado como inglés |
 | `webSwitchToSpanish` | Leer en español | — | Al principio de la mitad en inglés; escrito en español y marcado como español |
 | `webHomeTitle` | `{appName}` | `{appName}` | Página de inicio |
-| `webHomeIntro` | Una sola tarea a la vez. Aquí están la política de privacidad, las licencias de terceros y la ayuda de la app. | One task at a time. Here are the app's privacy policy, third-party licences and help. | Página de inicio |
+| `webHomeIntro` | Una sola tarea a la vez. Aquí están la política de privacidad, las licencias de terceros y la ayuda de la app. | One task at a time. Here are the app's privacy policy, third-party licenses and help. | Página de inicio (*licenses*, no *licences*: P-023-2 a, aplicado en T-023-06) |
 | `webPageTitle` | {página} · {appName} | {page} · {appName} | Título de cada página en el navegador |
 | `webNotFoundBody` | Puede que la dirección esté mal escrita. | The address may be mistyped. | CL-023-6 |
 | `webContact` | Contacto: [CONTACTO] | Contact: [CONTACT] | Pie de todas las páginas; hueco de identidad hasta F6 |
@@ -267,7 +267,10 @@ Cada CA dice cómo se verifica: con un **test o una comprobación** que corre en
 | `webBackHome` | Volver al inicio | Back to home | |
 | `webLicensesVersion` | Avisos de la versión {versión} | Notices for version {version} | CA-023-16 |
 | `webLicensesLatestBuild` | Aún no hay ninguna versión publicada: estos son los avisos de la última compilación. | No version has been published yet: these are the notices of the latest build. | CL-023-11 |
-| `webLicensesInApp` | Los textos completos de las licencias también van dentro de la app. | The full licence texts are also included in the app. | ADR-0026 |
+| `webLicensesInApp` | Los textos completos de las licencias también van dentro de la app. | The full license texts are also included in the app. | ADR-0026 (*license*: P-023-2 a) |
+| `webLanguageName` | Español | English | **Añadida en la implementación [Suposición, T-023-06]:** nombre del idioma en el `<h2>` de cada mitad de inicio y 404 |
+| `webLicensesFile` | Ver el archivo de avisos como texto | View the notices file as plain text | **Añadida en la implementación [Suposición, T-023-07]:** enlace a `/third-party-notices.txt` |
+| `webNoticesTitle` | — | Third-party notices (full text) | **Añadida en la implementación [Suposición, T-023-07]:** solo en inglés, `<h2>` del bloque de avisos (`lang="en"`, una sola vez) |
 
 ## 8. Fuera de alcance
 

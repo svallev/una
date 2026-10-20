@@ -1,7 +1,7 @@
 # Declaración de Seguridad de los datos (Data safety) de Google Play
 
 - **Spec:** 023, CA-023-05, 06 y 07. **Tarea:** T-023-04.
-- **Estado:** **Borrador para la revisión del propietario** (2026-10-20). Fuente desde la que se rellenará Play Console en F6; hasta entonces no se sube nada (proyecto de aprendizaje, sin publicar).
+- **Estado:** **Revisada y aprobada por el propietario** (2026-10-20, D-1 y D-2: no declarar; commit `a40f5e2`). Fuente desde la que se rellenará Play Console en F6; hasta entonces no se sube nada (proyecto de aprendizaje, sin publicar).
 - **Respuesta global:** **«La app no recoge ni comparte datos de los usuarios»** (*No data collected / No data shared*). Es la que ya decían la constitución (P4) y `threat-model.md` §4; esta revisión la **confirma** con la Ayuda vigente de Play (sin ADR nuevo, CL-023-1 no se activa), con **dos dudas de interpretación** que se dejan a la vista (§5, D-1 y D-2) para que el propietario las confirme.
 - **Convención:** [Hecho] = leído en la fuente citada o comprobado en el repositorio; [Suposición] = interpretación mía; [Pendiente] = no se pudo leer o depende de F6.
 - **Qué recoge la Ayuda de Play como «recoger»:** «"Collect" means transmitting data from your app off a user's device» (F1). Lo que solo se procesa en el móvil no se declara; tampoco lo que sale cifrado de extremo a extremo y solo lo leen emisor y receptor (F1).
@@ -111,8 +111,8 @@ Formato fijo que lee la comprobación de `store/google-play/check.mjs` (T-023-08
 
 [Hecho] El permiso interno `<paquete>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` que Android añade a toda app no se lista (no cuenta). `CAMERA` no se pide (la cámara es la del sistema, 007): se quita de `threat-model.md` §4 al cerrar la 023.
 
-## 7. Qué se cierra con esta declaración (para T-023-12)
+## 7. Qué se cierra con esta declaración (aplicado en T-023-12, 2026-10-20)
 
-- **PD-9:** [Hecho] queda resuelta con la decisión «no se declara» (§4, W-2 y W-3; dudas D-1 y D-2 si el propietario lo confirma) y sus fuentes (F1, F4, F7, 2026-10-20).
+- **PD-9:** [Hecho] **resuelta** con la decisión «no se declara» (§4, W-2 y W-3; D-1 y D-2 confirmadas por el propietario el 2026-10-20) y sus fuentes (F1, F4, F7, 2026-10-20): `docs/PLAN.md` (PD-9), `threat-model.md` §4 y §7 y la política dicen lo mismo.
 - **H-1:** [Hecho] sigue aceptada (`threat-model.md` §7); su nota para Data Safety es W-3.
-- **H-8 / CA-023-07:** [Hecho] W-10. Ojo: `threat-model.md` §4, la spec y los spikes dicen que Android 17 concede el permiso «a las apps con INTERNET»; F6 precisa que es **solo mientras el `targetSdk` sea menor de 37** (hoy 36). Con 37 queda bloqueado por defecto. T-023-12 lo escribe con ese matiz.
+- **H-8 / CA-023-07:** [Hecho] W-10. Ojo: `threat-model.md` §4, la spec y los spikes dicen que Android 17 concede el permiso «a las apps con INTERNET»; F6 precisa que es **solo mientras el `targetSdk` sea menor de 37** (hoy 36). Con 37 queda bloqueado por defecto. [Hecho] T-023-12 lo escribió con ese matiz en `threat-model.md` §4 y en `docs/PLAN.md`.

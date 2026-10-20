@@ -75,7 +75,7 @@ Que **nada se pueda publicar ni entregar a testers sin haber pasado, de forma au
     4. ninguna clase de pruebas en el paquete (`tools/check-apk-no-test-classes.sh`, sin `org/junit` ni `org/hamcrest`);
     5. PDFium fijado (`tools/check-pdfium.sh`);
     6. las licencias completas, con el archivo de avisos emitido y verificado (`tools/check-licenses.sh`) y su prueba negativa;
-    7. el tamaño de descarga (< 25 MB comprimido por ABI);
+    7. el tamaño de descarga (~~< 25 MB~~ **< 20 MB** comprimido por ABI; *enmienda de la spec 023, CA-023-20, T-023-03: el presupuesto baja a 20 MB tras medir 13 MB en arm64*);
     8. la comprobación estática MASTG (CA-020-22).
 
     Las comprobaciones 3, 4, 5 y 8 se pasan sobre los APK **y sobre el AAB**.
@@ -88,7 +88,7 @@ Que **nada se pueda publicar ni entregar a testers sin haber pasado, de forma au
   - **Cuando** corre el trabajo en modo estricto
   - **Entonces** falla, además de por lo de CA-020-02, si:
     - (a) cualquiera de las tres direcciones de `identity.yaml` no sirve para publicar (marcador, dominio reservado, ruta no válida…);
-    - (b) la política de privacidad tiene un hueco (`[NOMBRE DE LA APP]`…) o una **marca de documento** (CA-020-11);
+    - (b) la política de privacidad tiene un hueco (~~`[NOMBRE DE LA APP]`…~~ de la lista cerrada `[RESPONSABLE]`, `[CONTACTO]`, `[FECHA]` o `[WEB]`, y sus versiones en inglés) o una **marca de documento** (CA-020-11); *enmienda de la spec 023, CA-023-01 (T-023-01): el nombre de la app ya no es un hueco (sale de `app/identity.yaml`, la política escribe `{appName}`), cualquier otro texto entre corchetes que no sea un enlace falla en los dos modos, y la misma lista rige para `landing/src/strings.json` y `landing/src/help.{es,en}.md`*;
     - (c) la etiqueta no tiene la forma `vX.Y.Z` (tres números) o **no coincide con la versión de `pubspec.yaml`** (`X.Y.Z+build`);
     - (d) el commit de la etiqueta **no está en la historia de `main`**;
     - (e) el paquete está firmado con el **certificado de depuración** o sin firmar. **[Pendiente, F6]** Cuando exista la clave de subida, se compara además con la huella SHA-256 **pública** de su certificado, guardada en el repositorio (no es un secreto);
@@ -114,7 +114,7 @@ Que **nada se pueda publicar ni entregar a testers sin haber pasado, de forma au
   - **Entonces** son **solo** estos:
     - (a) una dirección de `identity.yaml` que es un marcador o tiene un dominio reservado;
     - (b) el *package name* provisional (CA-020-03 f);
-    - (c) un hueco o una marca de documento en la política;
+    - (c) un hueco ~~o una marca de documento~~ en la política *(enmienda de la spec 023, CA-023-01: solo los cuatro huecos de la lista cerrada; una marca de documento es un fallo)*;
     - (d) la firma de depuración o un paquete sin firmar;
     - (e) en modo testers, que no haya etiqueta.
 
@@ -187,7 +187,7 @@ Que **nada se pueda publicar ni entregar a testers sin haber pasado, de forma au
     - sin distinguir mayúsculas y con o sin espacios dentro de los corchetes;
     - también con texto detrás, como ya se usa en el proyecto (`[Pendiente PD-2]`, `[Suposición, PD-9]`).
 
-    `[Hecho]` no bloquea. Cada marca se informa con su número de línea. Es un aviso de identidad (CA-020-05 c): bloquea en modo estricto y se lista en modo testers. **[Suposición]** `[Pendiente]` y `[Pending]` también bloquean: una política publicada no puede decir que algo está pendiente (Q-020-1). Hoy hay 12 marcas en esas partes (6 en español y 6 en inglés).
+    `[Hecho]` no bloquea. Cada marca se informa con su número de línea. ~~Es un aviso de identidad (CA-020-05 c): bloquea en modo estricto y se lista en modo testers.~~ *Enmienda de la spec 023 (CA-023-01, T-023-01): una marca de documento es ahora un **fallo en los dos modos** (la política ya no tiene ninguna; la clase `policyMark` desaparece), y los avisos de identidad de la política son solo los cuatro huecos de la lista cerrada.* **[Suposición]** `[Pendiente]` y `[Pending]` también bloquean: una política publicada no puede decir que algo está pendiente (Q-020-1). Hoy hay 12 marcas en esas partes (6 en español y 6 en inglés).
   - **Verificable:** un test con una política con cada marca y sus variantes, dentro y fuera de las partes publicadas; y una ejecución con la política real, que da 12 o más avisos.
 
 - **CA-020-12 La puerta falla cerrada**
@@ -310,6 +310,7 @@ Que **nada se pueda publicar ni entregar a testers sin haber pasado, de forma au
     - (e) el `minSdk` no es 26 (D12) o el `targetSdk` está por debajo del mínimo que acepta Google Play (Q-020-3);
     - (f) el paquete contiene algo con forma de **secreto**: claves privadas (`BEGIN … PRIVATE KEY`), claves de API de Google (`AIza…`), claves de AWS (`AKIA…`), *tokens* de GitHub (`ghp_`, `github_pat_`) o archivos de firma (`*.jks`, `*.keystore`, `*.p12`);
     - (g) se pierden ajustes de privacidad de hoy: `MetricsOptOut` de la WebView a `true` (P4) y la afinidad de tarea de la `MainActivity`.
+    - (h) *(añadida por la spec 023, CA-023-19, T-023-02)* cualquier archivo del paquete lleva una ruta absoluta de una carpeta personal (`/Users/<usuario>/…` o `/home/<usuario>/…`, también en UTF-16LE y dentro de zips o gzips anidados); se admite todo lo que cuelga de `/home/runner/` (residual aceptado de Flutter, `threat-model.md` §5).
 
     En modo estricto, además, la firma y el *package name* (CA-020-03 e y f). Cada fallo nombra la regla y el archivo, y nunca imprime el posible secreto entero.
   - **Verificable:** pasos negativos con manifiestos, configuraciones de red y paquetes de prueba (uno por regla); el APK real, en verde.
@@ -457,5 +458,7 @@ Sin textos nuevos en la app (ARB sin cambios). Los mensajes de las herramientas 
   - en los cierres de la 015, 016, 018 y 019, los hallazgos que recoge esta spec pasan a corregidos o a su destino.
 - **Skill `/release-checklist`:** desaparece «Revisar a mano las frases [Suposición]» (la puerta las detecta, CA-020-11), y cambian el orden y la condición de publicación (CA-020-26).
 - **Glosario:** «Puerta de publicación» pasa a ser el trabajo entero y se añaden los términos de la Nomenclatura (hecho en el borrador).
+
+**[Hecho] Enmiendas de la spec 023 (aplicadas en T-023-12, 2026-10-20):** CA-020-02 punto 7 (20 MB, CA-023-20), CA-020-03 (b), CA-020-05 (c) y CA-020-11 (huecos de la lista cerrada y marcas como fallo, CA-023-01); además, el trabajo de publicación gana el paso `gradle-wrapper` (C-5, CA-023-24) y la regla `build-paths` de la estática MASTG (CA-023-19, H-2). Cada una va marcada donde está.
 
 **[Hecho] Aplicadas en T-020-15 (2026-10-14):** spec 015 (CA-015-13b y CA-015-26, como enmiendas marcadas), `docs/PLAN.md` (fila F6, hallazgos de la 012 y cierres de la 014 a la 019), la skill `/release-checklist` y el glosario; además, la frase de CA-020-14 sobre el `gradle-wrapper.jar` (P-020-2 a).
