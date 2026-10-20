@@ -13,7 +13,7 @@ const _dir = '/r'; // carpeta ficticia de los JSON
 
 /// Los `checks` que cada comprobación con clase tiene que declarar en su JSON.
 const _requiredChecks = <String, List<String>>{
-  'identity': ['addresses', 'policy', 'generated'],
+  'identity': ['addresses', 'policy', 'web-texts', 'generated'],
   'package-name': ['package-name'],
   'signature': ['signature'],
   'tag': ['tag'],
@@ -686,7 +686,9 @@ void main() {
           null,
           <String>[],
           ['addresses'],
-          ['addresses', 'policy'], // falta «generated»
+          ['addresses', 'policy'], // faltan «web-texts» y «generated»
+          ['addresses', 'policy', 'generated'], // falta «web-texts» (CA-023-01)
+          ['addresses', 'policy', 'web-texts'], // falta «generated»
           'addresses',
           [1, 2, 3],
         ]) {

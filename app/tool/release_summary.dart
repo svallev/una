@@ -50,7 +50,7 @@ const releaseCheckIds = [
 /// Las comprobaciones que dejan un JSON con clase, y las subcomprobaciones que ese JSON tiene que
 /// declarar haber hecho (`checks`): sin ellas, el JSON está incompleto.
 const classedChecks = <String, List<String>>{
-  'identity': ['addresses', 'policy', 'generated'],
+  'identity': ['addresses', 'policy', 'web-texts', 'generated'],
   'package-name': ['package-name'],
   'signature': ['signature'],
   'tag': ['tag'],

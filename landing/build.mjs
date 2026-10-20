@@ -1,11 +1,13 @@
-// Construye la web de la app (spec 023, CA-023-03, 04, 13 a 15): la página de inicio, la política de
-// privacidad y la página de error, en español e inglés en la misma dirección, sin JavaScript.
+// Construye la web de la app (spec 023, CA-023-03, 04, 13 a 17): la página de inicio, la política de
+// privacidad, las licencias de terceros, la Ayuda y la página de error, en español e inglés en la misma
+// dirección, sin JavaScript.
 //
 //   node landing/build.mjs      escribe landing/dist/
 //
 // Solo módulos de Node, sin `package.json` ni dependencias (P11). Lee `app/identity.yaml` (el nombre,
 // P7), `design/tokens.json` (colores, fuentes y medidas, P12), los títulos de las ARB, el texto de la
-// política (`docs/legal/privacy-policy.md`, la única copia, CA-023-04) y `landing/src/`. Falla cerrada:
+// política (`docs/legal/privacy-policy.md`, la única copia, CA-023-04), el archivo de avisos de terceros
+// (`landing/third-party-notices.txt`, CA-023-16) y `landing/src/` (textos y Ayuda). Falla cerrada:
 // lo que no entiende (Markdown fuera del subconjunto, un enlace raro, un `{…}` sin sustituir, una
 // clave que falta) detiene la construcción en lugar de publicar algo distinto de lo escrito.
 import {
@@ -39,6 +41,9 @@ export function defaultPaths(repoRoot = REPO_ROOT) {
     srcDir: join(landingDir, "src"),
     strings: join(landingDir, "src/strings.json"),
     siteCss: join(landingDir, "src/site.css"),
+    helpEs: join(landingDir, "src/help.es.md"),
+    helpEn: join(landingDir, "src/help.en.md"),
+    notices: join(landingDir, "third-party-notices.txt"),
     buildFile: join(landingDir, "build.mjs"),
     vercelJson: join(landingDir, "vercel.json"),
     fontsDir: join(repoRoot, "app/assets/fonts"),
@@ -349,8 +354,12 @@ export function extractPolicy(md) {
   return { es: half(es, en), en: half(en, notes) };
 }
 
+/** Un enlace `https:` (la política) y cualquier enlace `[texto](destino)` (la Ayuda, que enlaza a la política). */
+const LINK_HTTPS = /\]\(https:/g;
+const LINK_ANY = /\]\([^)]*\)/g;
+
 /** Secciones `##` de una parte con lo que hay que mantener igual en las dos lenguas. */
-function sectionSignatures(half) {
+function sectionSignatures(half, linkPattern = LINK_HTTPS) {
   const sections = [];
   let cur = null;
   const flush = () => {
@@ -377,7 +386,7 @@ function sectionSignatures(half) {
     if (/^\s*- /.test(line)) cur.bullets++;
     block.push(line);
     for (const g of line.match(gapPattern()) ?? []) cur.gaps.push(gapKind(g));
-    cur.links += (line.match(/\]\(https:/g) ?? []).length;
+    cur.links += (line.match(linkPattern) ?? []).length;
   }
   closeBlock();
   flush();
@@ -398,8 +407,11 @@ function gapKind(g) {
  */
 export function comparePolicyStructure(md) {
   const { es, en } = extractPolicy(md);
-  const a = sectionSignatures(es);
-  const b = sectionSignatures(en);
+  return compareSignatures(sectionSignatures(es), sectionSignatures(en));
+}
+
+/** Las diferencias entre las secciones de la parte española [a] y las de la inglesa [b]. */
+function compareSignatures(a, b) {
   const errors = [];
   if (a.length !== b.length) {
     errors.push(`la parte española tiene ${a.length} secciones y la inglesa ${b.length}`);
@@ -450,6 +462,109 @@ export function policyFragments(md, appName) {
   return result;
 }
 
+// ─── La Ayuda ────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Quita los comentarios HTML de [md] (`<!-- … -->`): solo valen los que ocupan líneas enteras (empiezan
+ * la línea y acaban con ella), de una o de varias líneas; cada uno deja una línea en blanco. Cualquier
+ * otro uso (a mitad de un párrafo, anidado, sin cerrar o un cierre suelto) falla. Sirven para anotar
+ * de qué spec sale cada sección de la Ayuda sin publicarlo.
+ */
+export function stripComments(md) {
+  const out = [];
+  let inside = false;
+  for (const line of norm(md).split("\n")) {
+    const open = line.indexOf("<!--");
+    const close = line.indexOf("-->");
+    if (!inside) {
+      if (open < 0) {
+        if (close >= 0) mdFail(`comentario: cierre «-->» sin abrir: «${line.trim().slice(0, 30)}»`);
+        out.push(line);
+        continue;
+      }
+      if (open !== 0) mdFail(`comentario que no empieza la línea: «${line.trim().slice(0, 30)}»`);
+      if (line.indexOf("<!--", 4) >= 0) mdFail(`comentario anidado: «${line.trim().slice(0, 30)}»`);
+      out.push("");
+      if (close < 0) {
+        inside = true;
+        continue;
+      }
+      if (line.slice(close + 3).trim() !== "") mdFail(`comentario seguido de texto en la misma línea: «${line.trim().slice(0, 30)}»`);
+    } else {
+      if (open >= 0) mdFail(`comentario anidado: «${line.trim().slice(0, 30)}»`);
+      if (close >= 0) {
+        if (line.slice(close + 3).trim() !== "") mdFail(`comentario seguido de texto en la misma línea: «${line.trim().slice(0, 30)}»`);
+        inside = false;
+      }
+    }
+  }
+  if (inside) mdFail("comentario sin cerrar («<!--» sin su «-->»)");
+  return out.join("\n");
+}
+
+/**
+ * El HTML de una mitad de la Ayuda ([lang] `es` o `en`) con el nombre de la app, y los huecos que deja.
+ * Tiene que empezar por un único título `# …` (sale como `<h2 id="es|en">`, igual que la política) y
+ * cada tema es un `## …` (`<h3>`). [label] es el archivo, para los mensajes.
+ */
+export function helpFragment(md, appName, lang, label) {
+  try {
+    const text = stripComments(md).replaceAll("{appName}", appName);
+    const converted = convertMarkdown(text, { shift: 1, firstHeadingAttrs: `id="${lang}" tabindex="-1"` });
+    const levels = converted.headings.map((h) => h.level);
+    if (levels[0] !== 2 || levels.filter((l) => l === 2).length !== 1) {
+      throw new BuildError("tiene que empezar por un único título «# …» (y no llevar otro)");
+    }
+    return converted;
+  } catch (e) {
+    if (e instanceof BuildError) throw new BuildError(`${label}: ${e.message}`);
+    throw e;
+  }
+}
+
+/** CA-023-17: la Ayuda en español y en inglés tiene las mismas secciones y los mismos puntos. */
+export function compareHelpStructure(esMd, enMd) {
+  return compareSignatures(
+    sectionSignatures(stripComments(esMd), LINK_ANY),
+    sectionSignatures(stripComments(enMd), LINK_ANY),
+  );
+}
+
+// ─── El archivo de avisos de terceros ────────────────────────────────────────────────────────────
+
+const VERSION_HEADER = /^Versión: (\d+\.\d+\.\d+\+\d+)$/;
+const BUILD_HEADER =
+  /^Compilación de main: ([0123456789abcdef]{40}) \(trabajo de publicación, modo testers, ejecución (\d{1,20})\)$/;
+
+/**
+ * El archivo de avisos (CA-023-16): una cabecera de una línea, una línea en blanco y el archivo que
+ * emite `tools/check-licenses.sh`. La cabecera dice de dónde sale: `Versión: X.Y.Z+N` o
+ * `Compilación de main: <sha> (trabajo de publicación, modo testers, ejecución <id>)`. Devuelve
+ * `{ kind: "version", version, body }` o `{ kind: "build", sha, runId, body }`; lo demás falla.
+ */
+export function parseNotices(text, label = "third-party-notices.txt") {
+  if (!text.trim()) throw new BuildError(`${label}: está vacío`);
+  const nl = text.indexOf("\n");
+  const first = nl < 0 ? text : text.slice(0, nl);
+  let header;
+  const version = VERSION_HEADER.exec(first);
+  const build = BUILD_HEADER.exec(first);
+  if (version) header = { kind: "version", version: version[1] };
+  else if (build) header = { kind: "build", sha: build[1], runId: build[2] };
+  else {
+    throw new BuildError(
+      `${label}: la primera línea tiene que ser la cabecera «Versión: X.Y.Z+N» o «Compilación de main: <sha> (trabajo de publicación, modo testers, ejecución <número>)» (es «${first.slice(0, 60)}»)`,
+    );
+  }
+  if (nl < 0 || text[nl + 1] !== "\n") throw new BuildError(`${label}: tiene que haber una línea en blanco tras la cabecera`);
+  const body = text.slice(nl + 2);
+  if (!body.trim()) throw new BuildError(`${label}: sin cuerpo (falta el archivo de avisos tras la cabecera)`);
+  if (!body.startsWith("Third-party notices")) {
+    throw new BuildError(`${label}: tras la cabecera tiene que venir el archivo de avisos, que empieza por «Third-party notices»`);
+  }
+  return { ...header, body };
+}
+
 // ─── Textos (strings.json) ───────────────────────────────────────────────────────────────────────
 
 /** Las claves de `strings.json` y los marcadores que admite cada una (por idioma). */
@@ -465,9 +580,10 @@ const STRING_KEYS = {
   webLicensesVersion: { es: ["versión"], en: ["version"] },
   webLicensesLatestBuild: { es: [], en: [] },
   webLicensesInApp: { es: [], en: [] },
+  webLicensesFile: { es: [], en: [] },
   webLanguageName: { es: [], en: [] },
 };
-const LANG_ONLY = { webSwitchToSpanish: { es: [] }, webSwitchToEnglish: { en: [] } };
+const LANG_ONLY = { webSwitchToSpanish: { es: [] }, webSwitchToEnglish: { en: [] }, webNoticesTitle: { en: [] } };
 
 export function loadStrings(text, label = "strings.json") {
   let json;
@@ -603,6 +719,9 @@ function loadSite(paths) {
   return { identity, strings, tokens, arb };
 }
 
+/** El archivo de avisos tal como se publica (CA-023-16). */
+export const NOTICES_FILE = "third-party-notices.txt";
+
 function bilingualH1(es, en) {
   return `<span lang="es">${esc(es)}</span> · <span lang="en">${esc(en)}</span>`;
 }
@@ -680,6 +799,42 @@ export function renderSite(paths) {
     footer: footer(s),
   });
 
+  // Licencias de terceros (CA-023-16): la versión (o la última compilación) y el archivo de avisos,
+  // que se publica una sola vez, en inglés, después de las dos mitades.
+  const noticesText = readText(paths.notices, "third-party-notices.txt");
+  const notices = parseNotices(noticesText);
+  const versionLine = (lang) =>
+    notices.kind === "version"
+      ? fill(s[lang].webLicensesVersion, { [lang === "es" ? "versión" : "version"]: notices.version })
+      : s[lang].webLicensesLatestBuild;
+  const licensesBody = (lang) =>
+    [
+      langHeading(lang, s),
+      `<p>${esc(versionLine(lang))}</p>`,
+      `<p>${esc(s[lang].webLicensesInApp)}</p>`,
+      `<p><a class="block-link" href="/${NOTICES_FILE}">${esc(s[lang].webLicensesFile)}</a></p>`,
+    ].join("\n");
+  const noticesSection = `<section lang="en" aria-labelledby="notices">\n<h2 id="notices">${esc(s.en.webNoticesTitle)}</h2>\n<pre>${esc(norm(notices.body))}</pre>\n</section>`;
+  page("licenses/index.html", {
+    title: pageTitle(s, name, arb.es.licenses, arb.en.licenses),
+    h1: bilingualH1(arb.es.licenses, arb.en.licenses),
+    main: `${section("es", s, licensesBody("es"))}\n${section("en", s, licensesBody("en"))}\n${noticesSection}`,
+    footer: footer(s, { backHome: true }),
+  });
+  files.set(NOTICES_FILE, noticesText);
+
+  // Ayuda (CA-023-17): los textos de landing/src/help.{es,en}.md.
+  const help = {
+    es: helpFragment(readText(paths.helpEs, "help.es.md"), name, "es", "help.es.md"),
+    en: helpFragment(readText(paths.helpEn, "help.en.md"), name, "en", "help.en.md"),
+  };
+  page("help/index.html", {
+    title: pageTitle(s, name, arb.es.help, arb.en.help),
+    h1: bilingualH1(arb.es.help, arb.en.help),
+    main: `${section("es", s, help.es.html)}\n${section("en", s, help.en.html)}`,
+    footer: footer(s, { backHome: true }),
+  });
+
   files.set("tokens.css", tokensCss(tokens));
   files.set("site.css", readText(paths.siteCss, "site.css"));
   return { files, meta };
@@ -690,7 +845,8 @@ function findGaps(files) {
   const found = [];
   for (const [file, content] of files) {
     if (!file.endsWith(".html")) continue;
-    const text = content.replace(/<[^>]*>/g, " ");
+    // El bloque de avisos de terceros no es de la identidad: una licencia puede llevar «[DATE]».
+    const text = content.replace(/<pre>[\s\S]*?<\/pre>/g, " ").replace(/<[^>]*>/g, " ");
     const kinds = new Set(text.match(gapPattern()) ?? []);
     for (const g of kinds) found.push({ file, gap: g });
   }

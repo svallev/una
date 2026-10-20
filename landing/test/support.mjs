@@ -6,7 +6,7 @@ import { build, defaultPaths } from "../build.mjs";
 
 /**
  * Un mundo de prueba: copias en una carpeta temporal de lo que los tests modifican (la identidad, la
- * política, `landing/src/` entera, `build.mjs` y `vercel.json`) y la salida en `dist/` temporal. El
+ * política, `landing/src/` entera, el archivo de avisos, `build.mjs` y `vercel.json`) y la salida en `dist/` temporal. El
  * resto (tokens, ARB, fuentes) se lee del repositorio.
  */
 export function world() {
@@ -21,12 +21,16 @@ export function world() {
     srcDir,
     strings: join(srcDir, "strings.json"),
     siteCss: join(srcDir, "site.css"),
+    helpEs: join(srcDir, "help.es.md"),
+    helpEn: join(srcDir, "help.en.md"),
+    notices: join(dir, "third-party-notices.txt"),
     buildFile: join(dir, "build.mjs"),
     vercelJson: join(dir, "vercel.json"),
     out: join(dir, "dist"),
   };
   cpSync(real.identity, paths.identity);
   cpSync(real.policy, paths.policy);
+  cpSync(real.notices, paths.notices);
   cpSync(real.buildFile, paths.buildFile);
   cpSync(real.vercelJson, paths.vercelJson);
   return {
@@ -78,3 +82,12 @@ export function cloneWorld(base) {
 export function specificErrors(errors) {
   return errors.filter((e) => !e.includes("no coincide con lo que construye la web"));
 }
+
+/** Los dos encabezados válidos del archivo de avisos (CA-023-16). */
+export const HEADER_VERSION = "Versión: 1.2.3+4";
+export const HEADER_BUILD =
+  "Compilación de main: 2e835cf9e1d8e1c7e203c90426f28f66e7ba4181 (trabajo de publicación, modo testers, ejecución 38874734623)";
+
+/** Un archivo de avisos de prueba, pequeño, con la cabecera [header] y [body] (el del artefacto). */
+export const fakeNotices = (header = HEADER_BUILD, body = "Third-party notices\nVersion: 0.0.0+0\n\nLicencia de prueba.\n") =>
+  `${header}\n\n${body}`;

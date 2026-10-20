@@ -11,6 +11,7 @@
     "webLicensesVersion": "Avisos de la versión {versión}",
     "webLicensesLatestBuild": "Aún no hay ninguna versión publicada: estos son los avisos de la última compilación.",
     "webLicensesInApp": "Los textos completos de las licencias también van dentro de la app.",
+    "webLicensesFile": "Ver el archivo de avisos como texto",
     "webSwitchToSpanish": "Leer en español",
     "webLanguageName": "Español"
   },
@@ -26,6 +27,8 @@
     "webLicensesVersion": "Notices for version {version}",
     "webLicensesLatestBuild": "No version has been published yet: these are the notices of the latest build.",
     "webLicensesInApp": "The full license texts are also included in the app.",
+    "webLicensesFile": "View the notices file as plain text",
+    "webNoticesTitle": "Third-party notices (full text)",
     "webSwitchToEnglish": "Read in English",
     "webLanguageName": "English"
   }

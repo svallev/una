@@ -1606,14 +1606,42 @@ Aquí falta [Pendiente] algo y [XYZ] otra cosa.
         },
       );
 
-      test('CA-023-01: los archivos por defecto son los tres de landing/src y '
-          'hoy no hace falta que existan (T-023-07 lo exige)', () {
+      test('CA-023-01: los textos reales de la web (strings.json y la Ayuda) '
+          'solo dejan avisos de identidad: ningún fallo', () {
+        final issues = gate.checkWebTexts(
+          gate.defaultWebTexts,
+          required: gate.webTextsRequired,
+        );
+        expect(
+          issues,
+          isNotEmpty,
+          reason:
+              'la Ayuda y el pie llevan el hueco '
+              'del contacto hasta F6',
+        );
+        expect(
+          issues.map((i) => i.kind),
+          everyElement(GateIssueKind.policyGap),
+          reason: issues.map((i) => i.line).join('\n'),
+        );
+        expect(issues.map((i) => i.subject).toSet(), {
+          'strings.json',
+          'help.es.md',
+          'help.en.md',
+        });
+      });
+
+      test('CA-023-01: los archivos por defecto son los tres de landing/src, '
+          'tienen que existir (T-023-07) y existen en el repositorio', () {
         expect(gate.defaultWebTexts, [
           '../landing/src/strings.json',
           '../landing/src/help.es.md',
           '../landing/src/help.en.md',
         ]);
-        expect(gate.webTextsRequired, isFalse);
+        expect(gate.webTextsRequired, isTrue);
+        for (final p in gate.defaultWebTexts) {
+          expect(File(p).existsSync(), isTrue, reason: '$p falta en el repo');
+        }
         final present = write('strings.json', '{}');
         final absent = '${tmp.path}/help.es.md';
         expect(gate.webTextsToCheck([present, absent], required: false), [

@@ -626,9 +626,9 @@ const defaultWebTexts = [
   '../landing/src/help.en.md',
 ];
 
-/// Si los textos de [defaultWebTexts] tienen que existir. **[Pendiente, T-023-07]** pasa a `true`
-/// cuando existan los tres (hasta entonces la web no está construida y no hay nada que mirar).
-const webTextsRequired = false;
+/// Si los textos de [defaultWebTexts] tienen que existir: sí (T-023-07), la web tiene que llevar sus
+/// textos y la Ayuda en español y en inglés para poder publicarse.
+const webTextsRequired = true;
 
 /// Los errores del texto de la web en [path] (`.json` o `.md`): si no se puede leer o no es de un
 /// tipo conocido es un `fault` que nombra el archivo (CA-020-12); si no, los de

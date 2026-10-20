@@ -1,6 +1,7 @@
 // Comprobaciones de la web construida (spec 023): CA-023-04 (la política publicada es la del
-// documento), CA-023-13 (páginas, idiomas), CA-023-14 (sin terceros ni rastreo, cabeceras) y
-// CA-023-15 (tokens, contraste, estructura, foco). Falla cerrada: lo que no entiende es un error.
+// documento), CA-023-13 (páginas, idiomas), CA-023-14 (sin terceros ni rastreo, cabeceras),
+// CA-023-15 (tokens, contraste, estructura, foco) y CA-023-16 (el bloque de avisos de terceros).
+// Falla cerrada: lo que no entiende es un error.
 //
 //   node landing/check.mjs [--dist <carpeta>]      (después de `node landing/build.mjs`)
 //
@@ -12,6 +13,7 @@ import { pathToFileURL } from "node:url";
 import {
   BuildError,
   FONT_DIRS,
+  NOTICES_FILE,
   FONT_FILES,
   defaultPaths,
   kebab,
@@ -20,8 +22,11 @@ import {
   renderSite,
 } from "./build.mjs";
 
-/** Las páginas que tiene que haber (T-023-07 añade las licencias y la Ayuda). */
-export const REQUIRED_PAGES = ["index.html", "privacy/index.html", "404.html"];
+/** Las páginas que tiene que haber: inicio, las tres webs de la app y la de error. */
+export const REQUIRED_PAGES = ["index.html", "privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];
+
+/** La página que lleva, tras las dos mitades, el bloque de avisos de terceros (CA-023-16). */
+const NOTICES_PAGE = "licenses/index.html";
 
 // ─── HTML ────────────────────────────────────────────────────────────────────────────────────────
 
@@ -105,7 +110,10 @@ function checkPage(file, html, meta, errors) {
       if (/^\s*(javascript|data|vbscript):/i.test(href)) fail(`un enlace con ${href.split(":")[0]}:`);
     }
   }
-  for (const re of ANALYTICS) if (re.test(html)) fail(`rastro de analítica (${re})`);
+  // El bloque de avisos de terceros (un `<pre>` con los textos de las licencias) no cuenta: una licencia
+  // puede nombrar cualquier cosa.
+  const scanned = html.replace(/<pre>[\s\S]*?<\/pre>/g, " ");
+  for (const re of ANALYTICS) if (re.test(scanned)) fail(`rastro de analítica (${re})`);
 
   // Estructura: un <h1> y niveles sin saltos.
   const headings = t.filter((x) => /^h[1-6]$/.test(x.name) && !x.closing).map((x) => ({ ...x, level: Number(x.name[1]) }));
@@ -124,8 +132,14 @@ function checkPage(file, html, meta, errors) {
 
   // Los dos idiomas: primero el español, cada uno con su lang y el enlace al otro.
   const sections = t.filter((x) => x.name === "section" && !x.closing);
-  if (sections.length !== 2) {
-    fail(`tiene ${sections.length} <section> (las dos mitades, español e inglés)`);
+  const withNotices = file === NOTICES_PAGE;
+  const expected = withNotices ? 3 : 2;
+  if (sections.length !== expected) {
+    fail(
+      withNotices
+        ? `tiene ${sections.length} <section> (las dos mitades, español e inglés, y el bloque de avisos)`
+        : `tiene ${sections.length} <section> (las dos mitades, español e inglés)`,
+    );
     return;
   }
   const [es, en] = sections;
@@ -150,11 +164,28 @@ function checkPage(file, html, meta, errors) {
   else if (toEn.attrs.lang !== "en") fail('el enlace al inglés no está marcado con lang="en"');
   if (!toEs) fail("falta el enlace «#es» al español al principio de la mitad inglesa");
   else if (toEs.attrs.lang !== "es") fail('el enlace al español no está marcado con lang="es"');
+  if (withNotices) checkNoticesBlock(sections[2], closes[2], t, html, fail);
   const levels = (from, to) =>
     headings.filter((h) => h.start >= from && h.end <= to).map((h) => h.level).join(",");
   if (levels(esFrom, esTo) !== levels(enFrom, enTo)) {
     fail(`los encabezados de la mitad inglesa (${levels(enFrom, enTo)}) no están al mismo nivel que los de la española (${levels(esFrom, esTo)})`);
   }
+}
+
+/**
+ * El bloque de avisos de terceros (CA-023-16): una tercera `<section lang="en" aria-labelledby="notices">`
+ * después de las dos mitades, que empieza por su `<h2 id="notices">` y lleva el texto en un `<pre>`.
+ */
+function checkNoticesBlock(open, close, t, html, fail) {
+  if (open.attrs.lang !== "en") fail('el bloque de avisos (la tercera <section>) no está marcado con lang="en"');
+  if (open.attrs["aria-labelledby"] !== "notices") fail('el bloque de avisos tiene que llevar aria-labelledby="notices"');
+  const from = open.end;
+  const to = close?.start ?? html.length;
+  const inside = (x) => x.start >= from && x.end <= to && !x.closing;
+  if (!t.some((x) => inside(x) && x.name === "h2" && x.attrs.id === "notices")) {
+    fail('el bloque de avisos no empieza por un <h2 id="notices">');
+  }
+  if (!t.some((x) => inside(x) && x.name === "pre")) fail("el bloque de avisos no lleva el texto en un <pre>");
 }
 
 const escapeText = (s) =>
@@ -438,7 +469,7 @@ export function checkSite(paths = defaultPaths(), { dist = paths.out } = {}) {
   }
 
   // Archivos.
-  const needed = [...REQUIRED_PAGES, "tokens.css", "site.css"];
+  const needed = [...REQUIRED_PAGES, "tokens.css", "site.css", NOTICES_FILE];
   for (const d of FONT_DIRS) needed.push(`fonts/${d}/OFL.txt`);
   for (const f of FONT_FILES) needed.push(`fonts/${f.dir}/${f.file}`);
   const missing = new Set(needed.filter((f) => !existsSync(join(dist, f))));

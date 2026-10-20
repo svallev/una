@@ -17,11 +17,11 @@ before(() => {
 });
 after(() => base.cleanup());
 
-const pages = ["index.html", "privacy/index.html", "404.html"];
+const pages = ["index.html", "privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];
 
 describe("CA-023-13: las páginas", () => {
-  test("salen la de inicio, la política y la de error, más los estilos y las fuentes", () => {
-    for (const f of [...pages, "tokens.css", "site.css"]) {
+  test("salen la de inicio, las tres webs de la app y la de error, más los estilos, los avisos y las fuentes", () => {
+    for (const f of [...pages, "tokens.css", "site.css", "third-party-notices.txt"]) {
       assert.ok(existsSync(join(base.dist, f)), `falta ${f}`);
     }
     for (const f of [
@@ -51,7 +51,7 @@ describe("CA-023-13: las páginas", () => {
 
   test("ninguna página lleva JavaScript", () => {
     for (const f of pages) {
-      const html = read(join(base.dist, f));
+      const html = read(join(base.dist, f)).replace(/<pre>[\s\S]*?<\/pre>/g, " "); // los avisos de terceros son texto escapado
       assert.ok(!/<script/i.test(html), `${f} tiene <script>`);
       assert.ok(!/\son[a-z]+\s*=/i.test(html), `${f} tiene un manejador on…`);
     }
@@ -96,8 +96,8 @@ describe("CA-023-13: las páginas", () => {
     assert.deepEqual(checkSite(base.paths), []);
   });
 
-  test("las páginas no pasan de 100 KB (sin las fuentes)", () => {
-    for (const f of pages) {
+  test("las páginas no pasan de 100 KB (sin las fuentes ni la de licencias, que lleva los avisos)", () => {
+    for (const f of pages.filter((p) => p !== "licenses/index.html")) {
       assert.ok(readFileSync(join(base.dist, f)).length < 100_000, f);
     }
   });
@@ -200,6 +200,8 @@ describe("Plan §1.3: huecos de identidad al publicar", () => {
           .replaceAll("[DATE]", "March 3, 2027"),
       );
       edit(w.paths.strings, (t) => t.replace("[CONTACTO]", "hola@ejemplo.org").replace("[CONTACT]", "hola@ejemplo.org"));
+      edit(w.paths.helpEs, (t) => t.replaceAll("[CONTACTO]", "hola@ejemplo.org"));
+      edit(w.paths.helpEn, (t) => t.replaceAll("[CONTACT]", "hola@ejemplo.org"));
       const r = w.build({ VERCEL_ENV: "production" });
       assert.deepEqual(r.warnings, []);
       assert.ok(read(join(w.dist, "index.html")).includes("Contacto: hola@ejemplo.org"));

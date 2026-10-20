@@ -19,7 +19,7 @@
 #   tools/check-release-config.sh                                    (los valores del repositorio)
 #   tools/check-release-config.sh --identity <archivo> --policy <archivo>   (valores de prueba)
 #   tools/check-release-config.sh ... --web-text <archivo>           (un texto de la web de prueba, .json o .md; repetible;
-#                                                                     sin él ni --policy se miran los de landing/src/ si existen)
+#                                                                     sin él ni --policy se miran los tres de landing/src/, que tienen que existir)
 #   tools/check-release-config.sh ... --generated-root <carpeta>     (otra copia de app/ para lo generado)
 #   tools/check-release-config.sh ... --json <archivo>               (además, la lista de errores con su clase)
 #
