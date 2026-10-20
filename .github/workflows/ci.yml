@@ -175,7 +175,7 @@ jobs:
         # Android, unas fuentes, el cuerpo de un .txt o de un OFL) y exige que cada una falle y nombre
         # la entrada; si alguna pasa, este paso falla.
         run: bash ../tools/check-licenses.sh --negative
-      - name: Tamaño de descarga (< 25 MB por ABI)
+      - name: Tamaño de descarga (< 20 MB por ABI)
         # El mismo script que usa el trabajo de publicación (spec 020, CA-020-02): mide cada APK de
         # release ya comprimido, que se parece a la descarga real, y falla cerrado sin APK.
         run: bash tools/check-size.sh

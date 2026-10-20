@@ -120,6 +120,14 @@ jobs:
         continue-on-error: true
         run: bash tools/release/run-check.sh pdfium -- bash tools/check-pdfium.sh $APKS "$AAB"
 
+      - name: Wrapper de Gradle verificado (CA-020-14, CA-023-24)
+        id: gradle-wrapper
+        # Tras compilar, como en ci.yml: el gradle-wrapper.jar lo copia Flutter de su caché al compilar y
+        # aquí se comprueba que es uno de los que publica Gradle y que la suma de la distribución es la fijada.
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        run: bash tools/release/run-check.sh gradle-wrapper -- bash tools/check-gradle-wrapper.sh
+
       - name: Licencias completas y archivo de avisos
         id: licenses
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -129,7 +137,7 @@ jobs:
           bash ../tools/release/run-check.sh licenses -- bash -c
           'bash ../tools/check-licenses.sh && bash ../tools/check-licenses.sh --negative'
 
-      - name: Tamaño de descarga (< 25 MB por ABI)
+      - name: Tamaño de descarga (< 20 MB por ABI)
         id: size
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         continue-on-error: true

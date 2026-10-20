@@ -38,6 +38,7 @@ const releaseCheckIds = [
   'permissions',
   'test-classes',
   'pdfium',
+  'gradle-wrapper',
   'licenses',
   'size',
   'mastg-static',

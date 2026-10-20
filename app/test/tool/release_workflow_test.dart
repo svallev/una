@@ -170,6 +170,7 @@ void main() {
     'permissions',
     'test-classes',
     'pdfium',
+    'gradle-wrapper',
     'licenses',
     'size',
     'mastg-static',
@@ -283,6 +284,7 @@ void main() {
         'permissions': 'tools/check-android-permissions.sh release',
         'test-classes': 'tools/check-apk-no-test-classes.sh',
         'pdfium': 'tools/check-pdfium.sh',
+        'gradle-wrapper': 'tools/check-gradle-wrapper.sh',
         'licenses': 'tools/check-licenses.sh',
         'size': 'tools/check-size.sh',
         'mastg-static': 'tools/check-package.sh',
@@ -297,6 +299,35 @@ void main() {
       expect(run(byId['licenses']!), contains('check-licenses.sh --negative'));
       expect(run(byId['ci-runs']!), contains(r'--sha "$GITHUB_SHA"'));
       expect(run(byId['tag']!), contains(r'--ref "$GITHUB_REF"'));
+    },
+  );
+
+  test('CA-023-24: el wrapper de Gradle se comprueba tras compilar, por el envoltorio y como en ci.yml', () {
+    final step = byId['gradle-wrapper']!;
+    // Después de `flutter build`: el gradle-wrapper.jar lo copia Flutter de su caché al compilar (P-020-2).
+    expect(steps.indexOf(step), greaterThan(steps.indexOf(byId['build']!)));
+    expect(cond(step), contains("steps.build.outcome == 'success'"));
+    expect(cond(step), contains('!cancelled()'));
+    expect(
+      run(step).trim(),
+      'bash tools/release/run-check.sh gradle-wrapper -- bash tools/check-gradle-wrapper.sh',
+    );
+    // Sin `{json}`: no es una comprobación con clase.
+    expect(classedChecks.containsKey('gradle-wrapper'), isFalse);
+    // El mismo script que corre la CI de las PR (CA-020-14).
+    final ci = File('../.github/workflows/ci.yml').readAsStringSync();
+    expect(ci, contains('bash tools/check-gradle-wrapper.sh'));
+  });
+
+  test(
+    'CA-023-20: el paso del tamaño dice «< 20 MB», en este trabajo y en ci.yml',
+    () {
+      expect(byId['size']!['name'], contains('< 20 MB'));
+      expect(byId['size']!['name'], isNot(contains('25 MB')));
+      final ci = File('../.github/workflows/ci.yml').readAsStringSync();
+      expect(ci, contains('Tamaño de descarga (< 20 MB por ABI)'));
+      expect(ci, isNot(contains('25 MB por ABI')));
+      expect(text, isNot(contains('25 MB')));
     },
   );
 
