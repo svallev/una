@@ -976,12 +976,33 @@ void main() {
       });
     }
 
-    test('CA-012-05: el borrador real de hoy falla (huecos ES y EN)', () {
+    test('CA-023-01: la política real solo da avisos de identidad, de la lista '
+        'cerrada y en las dos partes', () {
       final text = File('../docs/legal/privacy-policy.md').readAsStringSync();
-      final errors = checkPolicyText(text);
-      expect(errors, isNotEmpty);
-      expect(errors.join('\n'), contains('[NOMBRE DE LA APP]'));
-      expect(errors.join('\n'), contains('[APP NAME]'));
+      final found = gate.checkPolicyText(text);
+      // Ninguna marca, ningún texto entre corchetes ni `[NOMBRE DE LA APP]`: solo huecos.
+      expect(found.map((i) => i.kind), everyElement(GateIssueKind.policyGap));
+      final gaps = {
+        for (final i in found)
+          RegExp(r'hueco (\[[A-Z]+\])').firstMatch(i.message)![1]!,
+      };
+      expect(
+        gaps,
+        unorderedEquals([
+          '[FECHA]',
+          '[RESPONSABLE]',
+          '[CONTACTO]',
+          '[DATE]',
+          '[CONTROLLER]',
+          '[CONTACT]',
+        ]),
+      );
+      expect(
+        found.map((i) => i.subject).toSet(),
+        unorderedEquals(['política (ES)', 'política (EN)']),
+      );
+      expect(text, isNot(contains('[NOMBRE DE LA APP]')));
+      expect(text, isNot(contains('[APP NAME]')));
     });
 
     test('CA-012-05: falla si falta una de las dos partes', () {
@@ -1177,20 +1198,9 @@ void main() {
       expect(marks(inEs('Falta [Pendiente de revisar')), hasLength(1));
     });
 
-    test('CA-020-11: con la política real hay 12 o más marcas (ES y EN)', () {
+    test('CA-023-01: la política real no lleva ninguna marca de documento', () {
       final text = File('../docs/legal/privacy-policy.md').readAsStringSync();
-      final found = marks(text);
-      expect(found.length, greaterThanOrEqualTo(12));
-      expect(found.where((i) => i.subject == 'política (ES)'), isNotEmpty);
-      expect(found.where((i) => i.subject == 'política (EN)'), isNotEmpty);
-      // Y ninguna cae en la cabecera ni en las notas: su línea es la de una frase de las partes.
-      final notesLine = lineOf(text, '## Notas para la revisión');
-      final headerLine = lineOf(text, '# Política de privacidad (ES)');
-      for (final i in found) {
-        final n = int.parse(RegExp(r'línea (\d+)').firstMatch(i.message)![1]!);
-        expect(n, greaterThan(headerLine));
-        expect(n, lessThan(notesLine));
-      }
+      expect(marks(text), isEmpty);
     });
   });
 
@@ -1855,19 +1865,23 @@ Aquí falta [Pendiente] algo y [XYZ] otra cosa.
 
     String out(ProcessResult r) => '${r.stdout}${r.stderr}';
 
-    test(
-      'CA-012-05: hoy falla (marcadores y huecos) y nombra las tres claves',
-      () {
-        final result = _runScript([]);
-        expect(result.exitCode, 1, reason: out(result));
-        final text = out(result);
-        expect(text, contains('privacyPolicyUrl'));
-        expect(text, contains('thirdPartyLicensesUrl'));
-        expect(text, contains('helpUrl'));
-        expect(text, contains('example.com'));
-        expect(text, contains('[NOMBRE DE LA APP]'));
-      },
-    );
+    test('CA-012-05: hoy falla (marcadores y huecos) y nombra las tres claves; '
+        'CA-023-01: la política ya no tiene marcas ni [NOMBRE DE LA APP]', () {
+      final result = _runScript([]);
+      expect(result.exitCode, 1, reason: out(result));
+      final text = out(result);
+      expect(text, contains('privacyPolicyUrl'));
+      expect(text, contains('thirdPartyLicensesUrl'));
+      expect(text, contains('helpUrl'));
+      expect(text, contains('example.com'));
+      // Los huecos de identidad de la lista cerrada siguen (F6)…
+      expect(text, contains('[FECHA]'));
+      expect(text, contains('[RESPONSABLE]'));
+      // …pero ni marcas de documento ni el nombre de la app como hueco.
+      expect(text, isNot(contains('[NOMBRE DE LA APP]')));
+      expect(text, isNot(contains('lleva la marca')));
+      expect(text, isNot(contains('texto entre corchetes')));
+    });
 
     group('CA-023-01: qué argumentos le pasa el script a la herramienta', () {
       /// Ejecuta el script con un `dart` de mentira que escribe sus argumentos, uno por línea.
@@ -2071,31 +2085,29 @@ Aquí falta [Pendiente] algo y [XYZ] otra cosa.
         },
       );
 
-      test(
-        'CA-020-05: los marcadores de hoy, los huecos y las marcas salen como '
-        'placeholderAddress, policyGap y fault (las marcas), y se conserva la salida ::error::',
-        () {
-          final json = File('${tmp.path}/gate.json');
-          final result = _runScript(['--json', json.path]);
-          expect(result.exitCode, 1, reason: out(result));
-          expect(out(result), contains('::error::privacyPolicyUrl'));
-          final data = readJson(json);
-          expect(data['complete'], isTrue);
-          final issues = issuesOf(data);
-          final kinds = issues.map((i) => i['kind']).toSet();
-          expect(kinds, {'placeholderAddress', 'policyGap', 'fault'});
-          expect(
-            issues
-                .where((i) => i['kind'] == 'placeholderAddress')
-                .map((i) => i['subject']),
-            unorderedEquals(_keys),
-          );
-          for (final i in issues) {
-            expect(i['message'], isA<String>());
-            expect((i['message']! as String), isNotEmpty);
-          }
-        },
-      );
+      test('CA-020-05: los marcadores de hoy y los huecos salen como '
+          'placeholderAddress y policyGap (la política real ya no tiene marcas: '
+          'CA-023-01), y se conserva la salida ::error::', () {
+        final json = File('${tmp.path}/gate.json');
+        final result = _runScript(['--json', json.path]);
+        expect(result.exitCode, 1, reason: out(result));
+        expect(out(result), contains('::error::privacyPolicyUrl'));
+        final data = readJson(json);
+        expect(data['complete'], isTrue);
+        final issues = issuesOf(data);
+        final kinds = issues.map((i) => i['kind']).toSet();
+        expect(kinds, {'placeholderAddress', 'policyGap'});
+        expect(
+          issues
+              .where((i) => i['kind'] == 'placeholderAddress')
+              .map((i) => i['subject']),
+          unorderedEquals(_keys),
+        );
+        for (final i in issues) {
+          expect(i['message'], isA<String>());
+          expect((i['message']! as String), isNotEmpty);
+        }
+      });
 
       test('CA-020-05: una dirección con aviso y fallo a la vez '
           '(https://example.com/%2e) sale como fallo', () {
