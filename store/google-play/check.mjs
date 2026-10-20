@@ -14,10 +14,10 @@ import { BuildError, extractPolicy, gapPattern, readIdentity } from "../../landi
 import { mentionsName } from "../../landing/check.mjs";
 
 /**
- * ¿Se exigen ya el gráfico de funciones y las capturas? Hasta T-023-10 (que las crea) no: si existen se
- * comprueban igual, pero que falten no es un error. T-023-10 lo pone a `true`.
+ * ¿Se exigen el gráfico de funciones y las capturas? Sí desde T-023-10, que las crea (antes, si existían se
+ * comprobaban igual, pero que faltaran no era un error).
  */
-export const GRAPHICS_REQUIRED = false;
+export const GRAPHICS_REQUIRED = true;
 
 class StoreError extends Error {}
 

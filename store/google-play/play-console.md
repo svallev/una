@@ -96,15 +96,15 @@
 
 ## 6. Texto alternativo de los gráficos (CA-023-10) — [Hecho] decidido: se usa (propietario, 2026-10-20)
 
-[Hecho, P5, 2026-10-20] La Ayuda vigente dice, en «Highly recommended», para el gráfico de funciones y para cada captura: «Include alt text with each graphic asset. Alt text is important for screen-reader users» (≤ 140 caracteres, sin «foto de» ni «imagen de»). La spec 023 §6 decía lo contrario; **enmendada el 2026-10-20** por decisión del propietario. Propuesta de textos, para ajustar a las capturas reales en T-023-10 **[Suposición]** (`{appName}` es el nombre de la identidad; en el cuadro de Play Console va ya sustituido):
+[Hecho, P5, 2026-10-20] La Ayuda vigente dice, en «Highly recommended», para el gráfico de funciones y para cada captura: «Include alt text with each graphic asset. Alt text is important for screen-reader users» (≤ 140 caracteres, sin «foto de» ni «imagen de»). La spec 023 §6 decía lo contrario; **enmendada el 2026-10-20** por decisión del propietario. Textos ajustados a las capturas reales en T-023-10 **[Hecho]** (`{appName}` es el nombre de la identidad; en el cuadro de Play Console va ya sustituido):
 
 | Pieza | ES | EN |
 |---|---|---|
-| Gráfico de funciones | `{appName}`: una sola tarea a la vez, a pantalla completa. | `{appName}`: one task at a time, full screen. |
+| Gráfico de funciones | El logotipo «u.» y el nombre `{appName}`. | The "u." logo and the name `{appName}`. |
 | Captura 1: la tarea actual con texto | La tarea actual con su texto a pantalla completa y el botón para completarla. | The current task with its text full screen and the button to complete it. |
 | Captura 2: tarea con foto | Una tarea con una foto a pantalla completa y su texto encima. | A task with a full-screen photo and its text on top. |
-| Captura 3: Todas mis tareas | El listado «Todas mis tareas», con las tareas en orden y la primera destacada. | The "All my tasks" list, with the tasks in order and the first one highlighted. |
-| Captura 4: Ajustes con las notificaciones encendidas | Ajustes con el interruptor de notificaciones encendido y el aviso de privacidad. | Settings with the notifications switch on and the privacy notice. |
+| Captura 3: Todas mis tareas | El listado «Todas mis tareas»: cinco tareas de colores, la primera con una foto y la actual. | The "All my tasks" list: five colored tasks, the first one with a photo and the current one. |
+| Captura 4: Ajustes con las notificaciones encendidas | Ajustes con las notificaciones encendidas y la opción de cuántas recibir al día. | Settings with notifications on and the choice of how many to get per day. |
 
 ## 7. Requisitos de los gráficos que la Ayuda vigente añade a la spec (para T-023-08 y T-023-10)
 
