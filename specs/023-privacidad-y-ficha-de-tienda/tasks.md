@@ -2,7 +2,7 @@
 
 - **Estado:** **Aprobadas** (propietario, 2026-10-19), junto con `plan.md`. Spec **Aprobada** (2026-10-19).
 
-**Siguiente:** T-023-04 (T-023-01 a 03 hechas), en una sesión nueva con `/spec-implement 023` (rama `feat/023-privacidad-y-ficha-de-tienda` desde `main` con este plan fusionado). <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-023-05 (T-023-01 a 04 hechas; T-023-04 con visto bueno del propietario el 2026-10-20), en una sesión nueva con `/spec-implement 023` (rama `feat/023-privacidad-y-ficha-de-tienda`). **Arrastres de T-023-04:** T-023-05 añade a la política una frase de «secure data handling procedures» (ES y EN) y usa los nombres de permisos de `data-safety.md` §6; T-023-08/10: `check.mjs` exige también las capturas sin alfa (PNG de 24 bits) y los textos alternativos (`play-console.md` §6) salen con las capturas; T-023-12: prueba cerrada de 12 testers × 14 días en la lista de F6 y `ACCESS_LOCAL_NETWORK` con el matiz de `targetSdk` < 37 (hoy 36). <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Sin cambios en la app (`lib/`, Android, ARB). Tests primero: en las tareas con test, se escriben antes y fallan por la razón esperada. Los textos que revisa el propietario (política, Data Safety, Play Console, ficha, Ayuda) los presenta el coordinador en el chat al terminar su tarea; la tarea siguiente no empieza sin su visto bueno.
 

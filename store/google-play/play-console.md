@@ -31,7 +31,7 @@
 | **Idioma por defecto** de la ficha | **Español (es-ES)** **[Suposición, spec]** y traducción a inglés (en-US) | P1: «Select a default language and add the name of your app». Los dos idiomas de la app son ES y EN (spec 010). |
 | **Nombre de la app** | `{appName}` (hoy «Una.»; sale de `app/identity.yaml`), ≤ 30 caracteres, sin emojis | P6: «Your app title must be 30 characters or less. Don't use emojis, emoticons, or repeated special characters». El punto final forma parte del nombre de marca. |
 | **App o juego** | App | P1. |
-| **Gratis o de pago** | Gratis **[Suposición]** (la spec no dice nada de precio; la ficha no menciona compras) | P1 pide elegirlo al crear la app. **[Pendiente, propietario]** confirmar al crear la app (P1 no dice que se pueda cambiar después). |
+| **Gratis o de pago** | Gratis **[Hecho]** (confirmado por el propietario, 2026-10-20; la ficha no menciona compras) | P1 pide elegirlo al crear la app. Confirmado; al crear la app (P1 no dice que se pueda cambiar después). |
 | **Correo de contacto** para usuarios | `[CONTACTO]` (hueco de identidad; F6) | P8: «A contact email address is required»; web y teléfono, opcionales; el correo es público en la ficha. |
 | **Categoría** | **Productividad** (*Productivity*) | P4: «Productivity: Notepad, to-do list, keyboard, printing, calendar…». |
 | **Etiquetas** (hasta 5) | **[Pendiente, propietario, F6]** se escogen de la lista de Play Console; P4 menciona etiquetas de accesibilidad (p. ej. *Screen reader-friendly*): proponer solo las que la auditoría 022 respalde | P4: «You should choose tags that are most obviously relevant to your app». |
@@ -94,9 +94,9 @@
 
 **[Suposición]** Resultado esperado: calificación baja (3+ / PEGI 3 / «Everyone»), posiblemente con el aviso «contenido generado por usuarios / acceso a internet» por la tarea web. El propietario ve el resultado al rellenarlo en F6.
 
-## 6. Texto alternativo de los gráficos (CA-023-10) — [Duda D-4]
+## 6. Texto alternativo de los gráficos (CA-023-10) — [Hecho] decidido: se usa (propietario, 2026-10-20)
 
-[Hecho, P5, 2026-10-20] La Ayuda vigente dice, en «Highly recommended», para el gráfico de funciones y para cada captura: «Include alt text with each graphic asset. Alt text is important for screen-reader users» (≤ 140 caracteres, sin «foto de» ni «imagen de»). **La spec 023 §6 dice lo contrario** («Play no admite texto alternativo en ellas»): hay que enmendar la spec o decidir si se usa. Propuesta de textos, para ajustar a las capturas reales en T-023-10 **[Suposición]** (`{appName}` es el nombre de la identidad; en el cuadro de Play Console va ya sustituido):
+[Hecho, P5, 2026-10-20] La Ayuda vigente dice, en «Highly recommended», para el gráfico de funciones y para cada captura: «Include alt text with each graphic asset. Alt text is important for screen-reader users» (≤ 140 caracteres, sin «foto de» ni «imagen de»). La spec 023 §6 decía lo contrario; **enmendada el 2026-10-20** por decisión del propietario. Propuesta de textos, para ajustar a las capturas reales en T-023-10 **[Suposición]** (`{appName}` es el nombre de la identidad; en el cuadro de Play Console va ya sustituido):
 
 | Pieza | ES | EN |
 |---|---|---|
@@ -127,9 +127,9 @@
 4. **Declaraciones de «App content»** que se contestan en F6: privacidad, anuncios, acceso a la app, público objetivo, clasificación de contenido, noticias, COVID-19, Data safety (con el bloque de borrado), funciones financieras, salud, gubernamentales y, al subir el AAB, permisos (§2).
 5. **Si cambia algo del contenido de la app,** rehacer el cuestionario de clasificación (P3).
 
-## 9. Qué se pregunta al propietario
+## 9. Decisiones del propietario (2026-10-20)
 
-1. **D-1 y D-2** (`data-safety.md` §5): la respuesta «no se declara» para la tarea web, Safe Browsing y la consulta de autorrelleno, con su duda. Recomendación: **no declarar**.
-2. **D-4** (§6 y §7): Play pide hoy texto alternativo en los gráficos; la spec dice que no se admite. Recomendación: enmendar la spec y usar los textos de §6.
-3. **§8, punto 1:** la prueba cerrada de 12 testers durante 14 días antes de producción (contradice «sin testers» para la primera subida real).
-4. **Gratis o de pago** (§2): confirmar «gratis».
+1. **D-1 y D-2:** [Hecho] **no se declara** (confirmado).
+2. **D-4:** [Hecho] se enmienda la spec y se usan los textos de §6.
+3. **§8, punto 1:** [Hecho] aceptada la prueba cerrada de 12 testers durante 14 días antes de producción; va a la lista de F6 (CA-023-23, T-023-12).
+4. **Gratis:** [Hecho] confirmada.

@@ -119,7 +119,7 @@ Cada CA dice cómo se verifica: con un **test o una comprobación** que corre en
 - **CA-023-10** · Gráficos de la ficha
   - **Dado** la carpeta `store/google-play/`
   - **Cuando** se pasa la comprobación
-  - **Entonces** están el **icono** de 512 × 512 de la 018 (sin cambios), un **gráfico de funciones** de 1024 × 500, PNG o JPEG, sin transparencia, y **4 capturas de móvil por idioma** (ES y EN), PNG o JPEG, verticales, de **1080 × 1920** (9:16: el emulador de API 37 da 1080 × 2400, que pasa del 2:1 que admite Play), con los lados entre 320 y 3840 px y el largo como mucho el doble del corto. El gráfico de funciones lleva el nombre de la identidad. Las capturas son, en este orden: la **tarea actual** con texto, una **tarea con foto**, **Todas mis tareas** y **Ajustes** con las notificaciones encendidas **[Suposición]**.
+  - **Entonces** están el **icono** de 512 × 512 de la 018 (sin cambios), un **gráfico de funciones** de 1024 × 500, PNG o JPEG, sin transparencia, y **4 capturas de móvil por idioma** (ES y EN), PNG o JPEG, verticales, de **1080 × 1920** (9:16: el emulador de API 37 da 1080 × 2400, que pasa del 2:1 que admite Play), con los lados entre 320 y 3840 px y el largo como mucho el doble del corto. El gráfico de funciones lleva el nombre de la identidad. Las capturas (y el gráfico) son PNG de 24 bits **sin canal alfa** (P5; enmienda del 2026-10-20) y son, en este orden: la **tarea actual** con texto, una **tarea con foto**, **Todas mis tareas** y **Ajustes** con las notificaciones encendidas **[Suposición]**.
   - **Verificable:** test de tamaños, formato y número; casilla C-023-1 del contenido.
 - **CA-023-11** · Capturas con datos ficticios
   - **Dado** las capturas de CA-023-10
@@ -236,7 +236,7 @@ Cada CA dice cómo se verifica: con un **test o una comprobación** que corre en
 
 - **Webs:** estructura con encabezados (uno principal por página), idioma marcado en cada mitad, enlace para saltar al otro idioma al principio, foco visible, contraste AA desde los tokens, sin animaciones, legible al 200 % y a 320 px (CA-023-15; WCAG 2.2 AA, 1.4.4, 1.4.10, 1.4.12, 2.4.7, 2.4.11, 2.5.8, 3.1.1 y 3.1.2). Se comprueban con TalkBack y Chrome en el emulador (C-023-3).
 - **Ayuda:** explica la **alternativa a cada gesto** (mantener pulsado, swipe del carrusel, pellizco, arrastrar en el listado) con las acciones del lector y la lupa del sistema (CA-023-17).
-- **Capturas y gráfico de funciones:** son imágenes de la tienda; Play no admite texto alternativo en ellas. La descripción completa dice lo mismo en texto (CA-023-09).
+- **Capturas y gráfico de funciones:** son imágenes de la tienda. La Ayuda vigente de Play (P5, consultada el 2026-10-20) recomienda un **texto alternativo** (≤ 140 caracteres, sin «foto de» ni «imagen de») para el gráfico y cada captura: se escribe en `store/google-play/play-console.md` §6 y se pega en Play Console en F6. La descripción completa dice lo mismo en texto (CA-023-09). *Enmienda del 2026-10-20 (propietario, al revisar T-023-04): antes decía que Play no admite texto alternativo.*
 - **App:** sin cambios (Q-023-1 a).
 
 ## 7. Textos (ES / EN)
