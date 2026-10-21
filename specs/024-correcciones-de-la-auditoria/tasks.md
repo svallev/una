@@ -1,6 +1,6 @@
 # Tareas — Spec 024: Correcciones de la auditoría
 
-**Siguiente:** T-024-02 <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-024-03 <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Sin textos ni tokens nuevos. Rama de implementación: `feat/024-correcciones-de-la-auditoria`.
 
@@ -27,3 +27,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 | Tareas | Estado | Commit |
 |---|---|---|
 | T-024-01 | Hecha: `systemBarsOnDarkNavStyle` y `AnnotatedRegion(sized)` en `UndoCard` (valor claro solo con `viewPadding.bottom > 0` y card a todo el ancho; si no, `systemBarsStyle`, y la región siempre montada para no recrear la card al girar). 13 tests nuevos en `system_bars_test.dart` (tarea actual, «Todo hecho.», listado, sustitución sin parpadeo, barra a un lado, card estrecha, giro, caducar/Deshacer/segundo plano/salir): fallaban antes (navegación oscura); 3 mutaciones, 2 detectadas (`sized: false` es equivalente en tests). Analyze limpio y `flutter test -j 3` 4493 verdes. **[Pendiente]** reordenar en el listado no tiene test propio (misma salida del árbol); el emulador va en T-024-04. | (este commit) |
+| T-024-02 | Hecha: `systemBarsUnderScrimStyle` y `AnnotatedRegion(sized: false)` en `showUnaSheet`; el punto de arriba SÍ encuentra la región (R-3 no se da, sin contador). Estilo claro arriba solo si el velo llega de lado a lado: `fullWidthRequests > 0` o ancho ≤ `contentMaxWidth` (**desvío del plan**: no `LayoutBuilder`, porque la hoja limita su ancho a 640 y falsearía el visor a ancho completo). 12 tests en `system_bars_test.dart` (5 hojas, hoja que abre otra, cerrar de 3 formas, reducir movimiento, segundo plano, 800×400 con y sin visor) + 20 de contraste desde tokens en `sheet_scrim_contrast_test.dart`; 3 mutaciones detectadas. **[Pendiente]** emulador en T-024-04. | (este commit) |

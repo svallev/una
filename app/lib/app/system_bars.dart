@@ -43,3 +43,18 @@ const systemBarsOnDarkNavStyle = SystemUiOverlayStyle(
   systemNavigationBarIconBrightness: Brightness.light,
   systemNavigationBarContrastEnforced: false,
 );
+
+/// Lo mismo mientras hay una hoja con velo abierta (CA-024-02): el velo (`scrim`) oscurece
+/// lo que queda tras la barra de estado, así que sus iconos son claros; la barra de
+/// navegación queda sobre la hoja (`paper`) y sigue con iconos oscuros, como [systemBarsStyle].
+const systemBarsUnderScrimStyle = SystemUiOverlayStyle(
+  statusBarColor: Colors.transparent,
+  statusBarIconBrightness: Brightness.light,
+  // Solo lo lee iOS: la barra de estado oscura lleva texto claro.
+  statusBarBrightness: Brightness.dark,
+  systemStatusBarContrastEnforced: false,
+  systemNavigationBarColor: Colors.transparent,
+  systemNavigationBarDividerColor: Colors.transparent,
+  systemNavigationBarIconBrightness: Brightness.dark,
+  systemNavigationBarContrastEnforced: false,
+);

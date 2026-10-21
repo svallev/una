@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
+import '../app/system_bars.dart';
 import '../app/theme/tokens.g.dart';
 import 'focus_ring.dart';
+import 'full_width.dart';
 
 /// Hoja del prototipo (`.sheetbg` + `.sheetup`): fondo `scrim`, sube en
 /// `sheetIn` con la curva `sheet` y baja en `sheetOut`; color papel, borde
@@ -37,16 +40,39 @@ Future<T?> showUnaSheet<T>(
     // Y deja libre la barra de navegación del sistema (`padding.bottom`; con el
     // teclado a la vista vale 0): con la navegación de tres botones y el texto
     // al 200 %, el último enlace quedaba a medias bajo ella (spec 015, T-015-14).
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom:
-            MediaQuery.viewInsetsOf(context).bottom +
-            MediaQuery.paddingOf(context).bottom,
+    builder: (context) => ValueListenableBuilder<int>(
+      valueListenable: fullWidthRequests,
+      builder: (context, fullWidth, child) =>
+          AnnotatedRegion<SystemUiOverlayStyle>(
+            // Sin tamaño: vale en cualquier punto mientras la ruta de la hoja esté en el
+            // árbol (CA-024-02). Arriba, iconos claros sobre el velo; abajo, oscuros sobre
+            // la hoja. Al quitarse la ruta vuelve el estilo de `appFrame` (CA-024-03).
+            // Solo si el velo llega de lado a lado: `appFrame` limita el contenido a
+            // `contentMaxWidth` (salvo el visor, `fullWidthRequests`) y, si el velo es más
+            // estrecho que la pantalla, la hora y la batería quedan sobre `paper`.
+            sized: false,
+            value: _scrimSpansScreen(context, fullWidth)
+                ? systemBarsUnderScrimStyle
+                : systemBarsStyle,
+            child: child!,
+          ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom:
+              MediaQuery.viewInsetsOf(context).bottom +
+              MediaQuery.paddingOf(context).bottom,
+        ),
+        child: SingleChildScrollView(child: builder(context)),
       ),
-      child: SingleChildScrollView(child: builder(context)),
     ),
   );
 }
+
+/// Si el velo de la hoja cubre la pantalla de lado a lado: el marco de la app limita el
+/// ancho del contenido (y del velo) salvo que haya una pantalla a ancho completo.
+bool _scrimSpansScreen(BuildContext context, int fullWidthCount) =>
+    fullWidthCount > 0 ||
+    MediaQuery.sizeOf(context).width <= UnaSizes.contentMaxWidth;
 
 /// Enlace subrayado en monoespaciada del prototipo ("Cancelar",
 /// "Seguir editando"). Con el foco del teclado o de un
