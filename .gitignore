@@ -21,6 +21,9 @@ secrets/
 *.secret
 .vercel
 
+# ─── Web de la app (spec 023): lo que construye landing/build.mjs ────
+landing/dist/
+
 # ─── Claude Code (local) ─────────────────────────────────────────────
 .claude/settings.local.json
 .claude/*.local.*

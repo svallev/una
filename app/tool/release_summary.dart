@@ -38,6 +38,7 @@ const releaseCheckIds = [
   'permissions',
   'test-classes',
   'pdfium',
+  'gradle-wrapper',
   'licenses',
   'size',
   'mastg-static',
@@ -49,7 +50,7 @@ const releaseCheckIds = [
 /// Las comprobaciones que dejan un JSON con clase, y las subcomprobaciones que ese JSON tiene que
 /// declarar haber hecho (`checks`): sin ellas, el JSON está incompleto.
 const classedChecks = <String, List<String>>{
-  'identity': ['addresses', 'policy', 'generated'],
+  'identity': ['addresses', 'policy', 'web-texts', 'generated'],
   'package-name': ['package-name'],
   'signature': ['signature'],
   'tag': ['tag'],
@@ -62,9 +63,9 @@ const _both = {ReleaseMode.strict, ReleaseMode.testers};
 const identityWarningTable = <String, Set<ReleaseMode>>{
   // (a) una dirección marcador o con un dominio reservado.
   'identity.placeholderAddress': _both,
-  // (c) un hueco o una marca de documento en la política.
+  // (c) un hueco de identidad en la política o en los textos de la web. Una marca de documento o un
+  // texto entre corchetes ya no es un aviso sino un fallo (spec 023, CA-023-01).
   'identity.policyGap': _both,
-  'identity.policyMark': _both,
   // (b) el package name provisional.
   'package-name.provisional': _both,
   // (d) la firma de depuración o un paquete sin firmar, y, solo en estricto, que aún no haya huella

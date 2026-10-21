@@ -3,7 +3,7 @@
 #
 # [Pendiente PD-2] El identificador (bundle ID / applicationId) NO está aquí a propósito: es permanente
 # y se fija una sola vez al comprar el dominio neutro (ADR y android/app/build.gradle.kts).
-displayName: "Una."   # nombre bajo el icono y en el sistema
+displayName: "Una"    # nombre bajo el icono y en el sistema
 wordmark: "una."      # logotipo dentro de la app
 
 # Direcciones de las tres webs (spec 012, CA-012-04/05; spec 015, CA-015-13a/13b): una sola de cada una

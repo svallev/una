@@ -24,7 +24,12 @@
 //   (e) `minSdkVersion` = 26 y `targetSdkVersion` >= [playMinTargetSdk];
 //   (f) ningún secreto con forma de clave (ASCII y UTF-16LE, en zips y jars anidados y en lo
 //       comprimido con gzip) ni archivo de firma o de claves, salvo la lista de excepciones;
-//   (g) `MetricsOptOut` de la WebView a `true` y `MainActivity` con `taskAffinity=""`.
+//   (g) `MetricsOptOut` de la WebView a `true` y `MainActivity` con `taskAffinity=""`;
+//   (`build-paths`) ninguna ruta de una carpeta personal de la máquina de compilación
+//       (`/Users/<usuario>/…` o `/home/<usuario>/…`, ASCII y UTF-16LE, también en lo anidado y en lo
+//       comprimido) salvo las del runner de GitHub (`/home/runner/…`, residual aceptado de Flutter,
+//       threat-model §5): spec 023, CA-023-19, H-2 de la 020. Un hallazgo por carpeta y entrada; en
+//       la lista de excepciones, la suma es la de `/Users/<usuario>/` (la carpeta, no la ruta).
 //
 // Todo atributo que sea una referencia (`@bool/…`, `@xml/…`) se resuelve con `aapt2 dump resources`;
 // si no se puede, la regla falla. Falla cerrada: un volcado que no se entiende o un archivo que no
@@ -919,6 +924,10 @@ const _secretPatterns = <_SecretPattern>[
 
 const _fileNamePatternId = 'secret-file-name';
 
+/// La regla de las rutas de la máquina de compilación (H-2 de la 020, CA-023-19). Es también el
+/// nombre de su regla en la lista de excepciones.
+const buildPathsId = 'build-paths';
+
 final _compiledPatterns = [
   for (final p in _secretPatterns) (p, RegExp(p.regex)),
 ];
@@ -937,7 +946,11 @@ class SecretAllowlist {
   /// «entrada TAB regla TAB sha256»: una excepción mal escrita no se ignora.
   factory SecretAllowlist.parse(String text) {
     final keys = <String>{};
-    final ids = {for (final p in _secretPatterns) p.id, _fileNamePatternId};
+    final ids = {
+      for (final p in _secretPatterns) p.id,
+      _fileNamePatternId,
+      buildPathsId,
+    };
     final hex = RegExp(r'^[0123456789abcdef]{64}$');
     final lines = const LineSplitter().convert(text);
     for (var i = 0; i < lines.length; i++) {
@@ -1112,7 +1125,7 @@ String sha256Hex(List<int> bytes) {
 String _teaser(String text) =>
     '${text.substring(0, text.length < 4 ? text.length : 4)}…';
 
-/// Los hallazgos de secretos en [packagePath] (un zip: APK o, después, AAB): cada entrada, los zips
+/// Los hallazgos de secretos y de rutas de la máquina de compilación en [packagePath] (un zip: APK o, después, AAB): cada entrada, los zips
 /// y jars anidados y lo comprimido con gzip, leídos con `unzip`. Lo que [allowlist] cubre
 /// exactamente (entrada, regla y suma) no se informa. Si el paquete no se puede leer es un
 /// hallazgo `fault`.
@@ -1334,7 +1347,43 @@ void _scanBytes(
         _report(issues, allowlist, entry, pattern.id, text, pattern.label);
       }
     }
+    // Rutas de la máquina de compilación (H-2): una por carpeta personal y entrada.
+    for (final m in _buildPath.allMatches(view)) {
+      final root = m.group(1)!;
+      if (root == '/home/runner/') continue;
+      if (!seen.add('$buildPathsId\t$root')) continue;
+      _reportBuildPath(issues, allowlist, entry, root, m.group(0)!);
+    }
   }
+}
+
+/// Una carpeta personal en una cadena del paquete: `/Users/<usuario>/` o `/home/<usuario>/`
+/// (grupo 1) y, pegado, el principio de la ruta (hasta 60 caracteres), para el mensaje.
+final _buildPath = RegExp(
+  r'(/(?:Users|home)/[^/\x00-\x20"'
+  "'"
+  r'<>\\:*?|]+/)[^\x00-\x20"'
+  "'"
+  r'<>\\]{0,60}',
+);
+
+void _reportBuildPath(
+  List<PackageIssue> issues,
+  SecretAllowlist allowlist,
+  String entry,
+  String root,
+  String example,
+) {
+  final sha = sha256Hex(utf8.encode(root));
+  if (allowlist.allows(entry, buildPathsId, sha)) return;
+  issues.add(
+    PackageIssue(
+      buildPathsId,
+      entry,
+      'ruta de la máquina de compilación «${example.replaceAll(RegExp(r'[^\x21-\x7e]'), '?')}»',
+      sha256: sha,
+    ),
+  );
 }
 
 void _report(
@@ -1905,7 +1954,7 @@ int runCheckPackage(List<String> args, {StringSink? out, StringSink? err}) {
     }
     final issues = checkPackage(package, aapt2: tool, allowlist: allowlist);
     if (issues.isEmpty) {
-      o.writeln('OK $package: reglas (a) a (g) sin hallazgos');
+      o.writeln('OK $package: reglas (a) a (g) y build-paths sin hallazgos');
       continue;
     }
     status = 1;

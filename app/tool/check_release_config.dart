@@ -1,17 +1,21 @@
-// Puerta de publicación (spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-05 y 09 a 12):
-// falla si alguna de las tres direcciones de `identity.yaml` (política de privacidad, licencias de
-// terceros y ayuda) no sirve para publicar, si dos de ellas son la misma, si el texto de la
-// política sigue con huecos o con marcas de documento (`[Suposición]`, `[Pendiente]`…), o si lo
-// generado desde `identity.yaml` no está al día.
+// Puerta de publicación (spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-05 y 09 a 12;
+// spec 023, CA-023-01): falla si alguna de las tres direcciones de `identity.yaml` (política de
+// privacidad, licencias de terceros y ayuda) no sirve para publicar, si dos de ellas son la misma, si
+// el texto de la política (o los de la web: `landing/src/strings.json` y la Ayuda) sigue con huecos de
+// identidad, con marcas de documento (`[Suposición]`, `[Pendiente]`…) o con texto entre corchetes que
+// no sea un enlace, o si lo generado desde `identity.yaml` no está al día.
 //
 //   dart run tool/check_release_config.dart [--identity <archivo>] [--policy <archivo>]
+//                                           [--web-text <archivo>]... [--web-defaults]
 //                                           [--generated-root <carpeta>] [--json <archivo>]
 //
-// Sin argumentos lee `identity.yaml` y la política de `../docs/legal/privacy-policy.md` (se ejecuta
-// desde `app/`; lo normal es llamarla con `tools/check-release-config.sh`, que pasa
-// `--generated-root` para comprobar también, con `tool/gen_identity.dart --check`, que lo generado
-// desde el yaml está al día). Con una compilación de desarrollo o local NO se usa: los
-// marcadores `https://example.com/…` son normales mientras se desarrolla.
+// Sin argumentos lee `identity.yaml`, la política de `../docs/legal/privacy-policy.md` y los textos de
+// la web de `defaultWebTexts` (se ejecuta desde `app/`; lo normal es llamarla con
+// `tools/check-release-config.sh`, que pasa `--generated-root` para comprobar también, con
+// `tool/gen_identity.dart --check`, que lo generado desde el yaml está al día). Con `--policy` se
+// prueban valores propios y la web solo se mira si se pasa `--web-text` (una o varias veces: `.json` o
+// `.md`; un archivo dado que falta es un fallo) o `--web-defaults`. Con una compilación de desarrollo o
+// local NO se usa: los marcadores `https://example.com/…` son normales mientras se desarrolla.
 //
 // Cada dirección debe ser `https`, sin usuario, sin puerto, sin `?`, `#` ni `\`, con un dominio
 // público solo ASCII (ni una IP ni `localhost`) que no sea un dominio reservado para ejemplos o
@@ -23,8 +27,8 @@
 // tres claves.
 //
 // Cada error lleva una clase ([GateIssueKind]) que usa el resumen del trabajo de publicación
-// (CA-020-05): `placeholderAddress`, `policyGap` y `policyMark` son avisos de identidad; `fault`
-// (todo lo demás) falla en los dos modos. La puerta falla cerrada (CA-020-12): un archivo que falta,
+// (CA-020-05): `placeholderAddress` y `policyGap` son avisos de identidad; `fault` (todo lo demás,
+// también una marca de documento o un texto entre corchetes, CA-023-01) falla en los dos modos. La puerta falla cerrada (CA-020-12): un archivo que falta,
 // está vacío, no es YAML válido o no se puede leer, o lo generado desfasado, es un `fault` que lo
 // nombra; nunca se da por buena una comprobación que no ha podido hacerse. Si una misma clave
 // tiene un aviso y un fallo, todos sus errores son `fault`. Con `--json <archivo>` se escribe además la lista de errores (de forma atómica y al
@@ -39,11 +43,9 @@ enum GateIssueKind {
   /// Una dirección marcador o con un dominio reservado (aviso de identidad, CA-020-05 a).
   placeholderAddress,
 
-  /// Un hueco sin rellenar en la política (aviso de identidad, CA-020-05 c).
+  /// Un hueco de identidad sin rellenar en la política o en un texto de la web (aviso de identidad,
+  /// CA-020-05 c; la lista cerrada es [_gap]).
   policyGap,
-
-  /// Una marca de documento (`[Suposición]`…) en la política (aviso de identidad, CA-020-05 c).
-  policyMark,
 
   /// Todo lo demás: falla en los dos modos.
   fault,
@@ -141,11 +143,24 @@ const _idnTestTlds = [
   'xn--zckzah',
 ];
 
-/// Huecos de la política sin rellenar, en la parte española y en la inglesa.
+/// Los huecos de identidad (CA-023-01), una lista **cerrada** con su versión española y su inglesa:
+/// datos que solo existen en F6. En la política y en los textos de la web son un aviso en el modo
+/// testers y un fallo en el estricto. El nombre de la app **no** es un hueco: sale de
+/// `identity.yaml` y se escribe `{appName}` ([_oldName]).
 final _gap = RegExp(
-  r'\[\s*(NOMBRE DE LA APP|FECHA|RESPONSABLE|CONTACTO|APP NAME|DATE|CONTROLLER|CONTACT)\s*\]',
+  r'\[\s*(RESPONSABLE|CONTROLLER|CONTACTO|CONTACT|FECHA|DATE|WEB|WEBSITE)\s*\]',
   caseSensitive: false,
 );
+
+/// Los antiguos huecos del nombre de la app: ya no se admiten (CA-023-01).
+final _oldName = RegExp(
+  r'\[\s*(NOMBRE DE LA APP|APP NAME)\s*\]',
+  caseSensitive: false,
+);
+
+/// Un grupo de corchetes sin otros dentro y sin una línea en blanco de por medio (un `[` suelto no
+/// se traga el resto del documento).
+final _bracketGroup = RegExp(r'\[(?:(?!\n[ \t]*\n)[^\[\]])*\]');
 
 /// Una marca de documento en la política publicada (CA-020-11): `[Suposición]`, `[Assumption]`,
 /// `[Pendiente]` o `[Pending]`, sin distinguir mayúsculas, con o sin espacios (y sin caracteres
@@ -415,10 +430,97 @@ List<GateIssue> checkIdentity(Object? root) {
   return checkAddresses({for (final key in addressKeys) key: root[key]});
 }
 
+/// Los números de línea (desde 1) de la posición [offset] de [text].
+int _lineAt(String text, int offset) =>
+    '\n'.allMatches(text.substring(0, offset)).length + 1;
+
+/// Los errores de [text] entre [start] y [stop] (CA-023-01), el texto que se publica:
+///
+/// - un hueco de identidad de [_gap] es un `policyGap` (una entrada por hueco distinto, con cuántas
+///   veces sale y dónde la primera);
+/// - una marca de documento (`[Suposición]`, `[Pendiente]`…) es un `fault`, una entrada por marca
+///   (CA-020-11): también dentro de bloques de código y de comentarios HTML (CL-020-9);
+/// - cualquier otro texto entre corchetes que no sea el de un enlace `[texto](dirección)` (incluidos
+///   `[NOMBRE DE LA APP]` y `[APP NAME]`, que ya no son huecos) es un `fault`.
+///
+/// [place] da, para una posición de [text], el lugar que se enseña en el mensaje (`la línea 12` o la
+/// clave de un texto); [published] dice qué es lo que se publica (`una política publicada`).
+List<GateIssue> _scanPart(
+  String text,
+  int start,
+  int stop, {
+  required String subject,
+  required String Function(int offset) place,
+  required String published,
+}) {
+  final part = text.substring(start, stop);
+  final issues = <GateIssue>[];
+
+  // Los huecos de la lista: una entrada por hueco distinto (clave normalizada → texto, veces, dónde).
+  final gaps = <String, (String, int, int)>{};
+  for (final m in _gap.allMatches(part)) {
+    final key = m.group(1)!.toUpperCase();
+    final (shown, count, first) =
+        gaps[key] ?? (m.group(0)!, 0, start + m.start);
+    gaps[key] = (shown, count + 1, first);
+  }
+  for (final (shown, count, first) in gaps.values) {
+    issues.add(
+      GateIssue(
+        GateIssueKind.policyGap,
+        subject,
+        'sigue con el hueco $shown ($count×, primera vez en ${place(first)})',
+      ),
+    );
+  }
+
+  // Las marcas de documento: una entrada por marca, con su lugar.
+  for (final m in _mark.allMatches(part)) {
+    issues.add(
+      GateIssue(
+        GateIssueKind.fault,
+        subject,
+        'lleva la marca ${_markText(part, m)} en ${place(start + m.start)}: '
+        '$published no puede llevar marcas de documento',
+      ),
+    );
+  }
+
+  // El resto de texto entre corchetes: ni hueco de la lista, ni marca (ya dicha), ni enlace.
+  for (final m in _bracketGroup.allMatches(part)) {
+    final isLink = m.end < part.length && part[m.end] == '(';
+    final isMark = _mark.matchAsPrefix(part, m.start) != null;
+    final gap = _gap.matchAsPrefix(part, m.start);
+    final isGap = gap != null && gap.end == m.end;
+    if (isLink || isMark || isGap) continue;
+    final shown = _shorten(m.group(0)!);
+    final old = _oldName.matchAsPrefix(part, m.start);
+    final why = old != null && old.end == m.end
+        ? 'el nombre de la app no es un hueco: sale de `identity.yaml` y se escribe `{appName}`'
+        : 'solo se admiten los huecos de identidad ([RESPONSABLE], [CONTACTO], [FECHA], [WEB] y sus '
+              'versiones en inglés), `{appName}` y los enlaces `[texto](dirección)`';
+    issues.add(
+      GateIssue(
+        GateIssueKind.fault,
+        subject,
+        'lleva el texto entre corchetes $shown en ${place(start + m.start)}: $why',
+      ),
+    );
+  }
+  return issues;
+}
+
+/// [text] acortado a 60 caracteres, para un mensaje.
+String _shorten(String text) {
+  final shown = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return shown.length <= 60 ? shown : '${shown.substring(0, 59)}…';
+}
+
 /// Los huecos que quedan en el texto publicado de la política ([text] es el archivo
 /// entero). Solo cuentan la parte española (`# Política de privacidad (ES)`) y la
 /// inglesa (`# Privacy policy (EN)`); la cabecera y las notas de revisión, que citan los
-/// huecos, no. Vacío = sin huecos. Un hueco es `policyGap`; no encontrar las dos partes, `fault`.
+/// huecos, no. Vacío = sin huecos. Un hueco de identidad es `policyGap`; una marca, texto entre
+/// corchetes que no sea un enlace o no encontrar las dos partes, `fault` (CA-023-01).
 List<GateIssue> checkPolicyText(String text) {
   final es = RegExp(
     r'^#\s+Política de privacidad \(ES\)',
@@ -443,51 +545,139 @@ List<GateIssue> checkPolicyText(String text) {
   ).firstMatch(text.substring(en.start));
   final end = notes == null ? text.length : en.start + notes.start;
 
+  return [
+    for (final (label, start, stop) in [
+      ('ES', es.start, en.start),
+      ('EN', en.start, end),
+    ])
+      ..._scanPart(
+        text,
+        start,
+        stop,
+        subject: 'política ($label)',
+        place: (offset) => 'la línea ${_lineAt(text, offset)}',
+        published: 'una política publicada',
+      ),
+  ];
+}
+
+/// Los errores de un texto de la web en Markdown ([text] es el archivo entero, p. ej. la Ayuda):
+/// las mismas reglas que la política, en todo el archivo (CA-023-01, P-023-1 a). [subject] es el
+/// archivo.
+List<GateIssue> checkWebMarkdown(String text, {required String subject}) =>
+    _scanPart(
+      text,
+      0,
+      text.length,
+      subject: subject,
+      place: (offset) => 'la línea ${_lineAt(text, offset)}',
+      published: 'un texto publicado',
+    );
+
+/// Los errores de `strings.json` ([json] es el archivo entero): las mismas reglas que la política,
+/// sobre cada texto del JSON ya decodificado (los corchetes de la sintaxis no cuentan) y con la
+/// clave de cada uno en el mensaje. Un JSON que no se lee es un `fault`.
+List<GateIssue> checkWebStrings(String json, {required String subject}) {
+  final Object? root;
+  try {
+    root = jsonDecode(json);
+  } on FormatException catch (e) {
+    return [
+      GateIssue(
+        GateIssueKind.fault,
+        subject,
+        'no es JSON válido (${_shorten(e.message)})',
+      ),
+    ];
+  }
   final issues = <GateIssue>[];
-  for (final (label, start, stop) in [
-    ('ES', es.start, en.start),
-    ('EN', en.start, end),
-  ]) {
-    final found =
-        <
-          String,
-          (String, int, int)
-        >{}; // clave normalizada → (texto, veces, línea)
-    for (final m in _gap.allMatches(text.substring(start, stop))) {
-      final key = m.group(1)!.toUpperCase();
-      final line =
-          '\n'.allMatches(text.substring(0, start + m.start)).length + 1;
-      final (shown, count, first) = found[key] ?? (m.group(0)!, 0, line);
-      found[key] = (shown, count + 1, first);
-    }
-    for (final (shown, count, first) in found.values) {
-      issues.add(
-        GateIssue(
-          GateIssueKind.policyGap,
-          'política ($label)',
-          'sigue con el hueco $shown ($count×, primera vez en la línea $first)',
-        ),
-      );
-    }
-    // Las marcas de documento: una entrada por marca, con su línea (CA-020-11). Cuentan también
-    // dentro de bloques de código y de comentarios HTML (CL-020-9): la política publicada no lleva
-    // marcas en ninguna parte.
-    final part = text.substring(start, stop);
-    for (final m in _mark.allMatches(part)) {
-      final at = start + m.start;
-      final line = '\n'.allMatches(text.substring(0, at)).length + 1;
-      issues.add(
-        GateIssue(
-          GateIssueKind.policyMark,
-          'política ($label)',
-          'lleva la marca ${_markText(part, m)} en la línea $line: una política '
-              'publicada no puede llevar marcas de documento',
-        ),
-      );
+  void visit(Object? node, String path) {
+    switch (node) {
+      case final String value:
+        issues.addAll(
+          _scanPart(
+            value,
+            0,
+            value.length,
+            subject: subject,
+            place: (_) => '«$path»',
+            published: 'un texto publicado',
+          ),
+        );
+      case final Map<String, Object?> map:
+        for (final e in map.entries) {
+          visit(e.value, path.isEmpty ? e.key : '$path.${e.key}');
+        }
+      case final List<Object?> list:
+        for (var i = 0; i < list.length; i++) {
+          visit(list[i], path.isEmpty ? '$i' : '$path.$i');
+        }
     }
   }
+
+  visit(root, '');
   return issues;
 }
+
+/// Los textos de la web que la puerta mira por defecto (P-023-1 a; relativos a `app/`).
+const defaultWebTexts = [
+  '../landing/src/strings.json',
+  '../landing/src/help.es.md',
+  '../landing/src/help.en.md',
+];
+
+/// Si los textos de [defaultWebTexts] tienen que existir: sí (T-023-07), la web tiene que llevar sus
+/// textos y la Ayuda en español y en inglés para poder publicarse.
+const webTextsRequired = true;
+
+/// Los errores del texto de la web en [path] (`.json` o `.md`): si no se puede leer o no es de un
+/// tipo conocido es un `fault` que nombra el archivo (CA-020-12); si no, los de
+/// [checkWebStrings] o [checkWebMarkdown].
+List<GateIssue> checkWebTextFile(String path) {
+  final subject = path.split(RegExp(r'[/\\]')).last;
+  final (text, issue) = _readText(path, subject);
+  if (issue != null) return [issue];
+  final lower = subject.toLowerCase();
+  if (lower.endsWith('.json')) return checkWebStrings(text!, subject: subject);
+  if (lower.endsWith('.md')) return checkWebMarkdown(text!, subject: subject);
+  return [
+    GateIssue(
+      GateIssueKind.fault,
+      subject,
+      'no es un texto de la web que sepa leer (solo `.json` y `.md`) ($path)',
+    ),
+  ];
+}
+
+/// Qué textos de la web se miran y si tienen que existir. Los dados ([explicit], `--web-text`) se miran
+/// siempre y tienen que existir; sin ellos, los de [defaultWebTexts] si no se dio otra política
+/// ([policyGiven] falso: son los valores del repositorio) o si se pidió con [webDefaults]
+/// (`--web-defaults`, que añade `tools/check-release-config.sh`), y hacen falta si [webTextsRequired].
+(List<String>, bool) selectWebTexts({
+  required List<String> explicit,
+  required bool policyGiven,
+  required bool webDefaults,
+}) {
+  if (explicit.isNotEmpty) return (explicit, true);
+  return (
+    webDefaults || !policyGiven ? defaultWebTexts : const <String>[],
+    webTextsRequired,
+  );
+}
+
+/// De [paths], los que hay que mirar: todos si [required]; si no, solo los que existen.
+List<String> webTextsToCheck(List<String> paths, {required bool required}) => [
+  for (final p in paths)
+    if (required ||
+        FileSystemEntity.typeSync(p) != FileSystemEntityType.notFound)
+      p,
+];
+
+/// Los errores de los textos de la web de [paths] (ver [webTextsToCheck]).
+List<GateIssue> checkWebTexts(List<String> paths, {required bool required}) => [
+  for (final p in webTextsToCheck(paths, required: required))
+    ...checkWebTextFile(p),
+];
 
 /// El texto de la marca que casa [m] en [part], para el mensaje: desde el corchete hasta el de
 /// cierre en la misma línea (o hasta el final de la línea), acotado a 60 caracteres.
@@ -496,8 +686,7 @@ String _markText(String part, RegExpMatch m) {
   if (end < 0) end = part.length;
   final close = part.indexOf(']', m.end);
   final stop = close >= 0 && close < end ? close + 1 : end;
-  final shown = part.substring(m.start, stop).trim();
-  return shown.length <= 60 ? shown : '${shown.substring(0, 59)}…';
+  return _shorten(part.substring(m.start, stop));
 }
 
 /// Lee [path] como texto UTF-8 (bytes que no lo son: `FileSystemException`, que se atrapa). Devuelve el texto o, si no se puede leer, un `fault` que nombra el
@@ -613,7 +802,8 @@ Never _usage(String message) {
   stderr.writeln('::error::$message');
   stderr.writeln(
     'Uso: dart run tool/check_release_config.dart [--identity <archivo>] '
-    '[--policy <archivo>] [--generated-root <carpeta>] [--json <archivo>]',
+    '[--policy <archivo>] [--web-text <archivo>]... [--web-defaults] '
+    '[--generated-root <carpeta>] [--json <archivo>]',
   );
   exit(2);
 }
@@ -637,6 +827,9 @@ void _writeJson(String path, List<GateIssue> issues, List<String> checks) {
 void main(List<String> args) {
   var identityPath = 'identity.yaml';
   var policyPath = '../docs/legal/privacy-policy.md';
+  var policyGiven = false;
+  var webDefaults = false;
+  final webTexts = <String>[];
   String? generatedRoot;
   String? jsonPath;
   for (var i = 0; i < args.length; i++) {
@@ -647,6 +840,12 @@ void main(List<String> args) {
       case '--policy':
         if (++i >= args.length) _usage('--policy necesita un valor');
         policyPath = args[i];
+        policyGiven = true;
+      case '--web-text':
+        if (++i >= args.length) _usage('--web-text necesita un valor');
+        webTexts.add(args[i]);
+      case '--web-defaults':
+        webDefaults = true;
       case '--generated-root':
         if (++i >= args.length) _usage('--generated-root necesita un valor');
         generatedRoot = args[i];
@@ -660,14 +859,26 @@ void main(List<String> args) {
 
   // Cada comprobación se hace aunque otra haya fallado: el resumen del trabajo de publicación
   // lista todo lo que falla de una vez. Un archivo que no se puede leer es un fallo (CA-020-12).
+  //
+  // Los textos de la web (CA-023-01): los dados con `--web-text` tienen que existir; los de
+  // [defaultWebTexts] solo se miran sin `--policy` (o con `--web-defaults`) y hacen falta si
+  // [webTextsRequired].
+  final (webPaths, webRequired) = selectWebTexts(
+    explicit: webTexts,
+    policyGiven: policyGiven,
+    webDefaults: webDefaults,
+  );
+  final webToCheck = webTextsToCheck(webPaths, required: webRequired);
   final checks = [
     'addresses',
     'policy',
+    if (webToCheck.isNotEmpty) 'web-texts',
     if (generatedRoot != null) 'generated',
   ];
   final issues = <GateIssue>[
     ...checkIdentityFile(identityPath),
     ...checkPolicyFile(policyPath),
+    ...checkWebTexts(webPaths, required: webRequired),
     if (generatedRoot != null) ...checkGenerated(generatedRoot),
   ];
 
@@ -685,7 +896,8 @@ void main(List<String> args) {
   if (issues.isEmpty) {
     stdout.writeln(
       'OK las tres direcciones (${addressKeys.join(', ')}), el texto de la '
-      'política sin huecos ni marcas${generatedRoot != null ? ' y lo generado al día' : ''}',
+      'política${webToCheck.isNotEmpty ? ' y los de la web' : ''} sin huecos ni marcas'
+      '${generatedRoot != null ? ' y lo generado al día' : ''}',
     );
     return;
   }
@@ -694,7 +906,7 @@ void main(List<String> args) {
   }
   stdout.writeln(
     'La puerta de publicación falla (${issues.length}): no publicar esta versión '
-    '(spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-09 a 12).',
+    '(spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-09 a 12; spec 023, CA-023-01).',
   );
   exit(1);
 }

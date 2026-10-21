@@ -2,7 +2,9 @@
 # Estática MASTG del paquete de release (spec 020, CA-020-22): falla si el APK compilado es depurable,
 # admite tráfico en claro, pierde las reglas de copia o de transferencia, expone un proveedor o una
 # ruta de archivos de más, baja del minSdk/targetSdk esperado, lleva algo con forma de secreto o un
-# archivo de firma, o pierde los ajustes de privacidad de hoy (`app/tool/check_package.dart`).
+# archivo de firma, pierde los ajustes de privacidad de hoy o lleva la ruta de una carpeta personal de
+# quien lo compiló (`build-paths`, spec 023, CA-023-19; `/home/runner/` se admite)
+# (`app/tool/check_package.dart`).
 #
 #   tools/check-package.sh                      (los APK de release por ABI de app/build, tras compilar
 #                                                `flutter build apk --release --split-per-abi`)
@@ -17,7 +19,7 @@
 #                                               (escribe el manifiesto como XML; lo usa
 #                                                tools/check-android-permissions.sh --aab)
 #
-# Las excepciones de la regla de secretos están en tools/release/secret-allowlist.txt. Falla cerrada:
+# Las excepciones de la regla de secretos y de `build-paths` están en tools/release/secret-allowlist.txt. Falla cerrada:
 # sin ningún paquete (0 entradas), un paquete que no existe o un volcado de aapt2 que no se entiende
 # es un fallo, nunca un verde. Necesita `dart`, `aapt2` y `unzip`; no instala nada ni usa la red.
 set -euo pipefail

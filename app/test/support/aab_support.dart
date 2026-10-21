@@ -107,3 +107,24 @@ exit 1
   Process.runSync('chmod', ['+x', script.path]);
   return script.path;
 }
+
+/// El resultado de la estática sobre un paquete **real** de release: 0 (CA-020-22). Con uno
+/// compilado en un Mac, la ruta de la carpeta del proyecto (`/Users/<usuario>/…`) hace fallar solo
+/// la regla `build-paths` (spec 023, CA-023-19, Q-023-3 a: se acepta en una entrega a testers); eso
+/// se tolera fuera de la CI, y cualquier otro hallazgo, no. En la CI (`CI=true`, un runner de
+/// GitHub) el resultado tiene que ser 0.
+void expectPassesOrLocalBuildPaths(int code, String output) {
+  if (code == 0) return;
+  final ci = Platform.environment['CI'] == 'true';
+  final errors = const LineSplitter()
+      .convert(output)
+      .where((l) => l.startsWith('::error::'))
+      .toList();
+  expect(
+    !ci &&
+        errors.isNotEmpty &&
+        errors.every((l) => l.contains('(build-paths)')),
+    isTrue,
+    reason: 'código $code\n$output',
+  );
+}

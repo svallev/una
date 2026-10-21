@@ -179,6 +179,33 @@ void main() {
       expect(text, isNot(contains(key.substring(0, 8))));
     }, skip: skip);
 
+    test('CA-023-19: una ruta de compilación en el AAB (también en '
+        'BUNDLE-METADATA/) falla; la del runner de GitHub, no', () {
+      final aab = zipEntries(
+        tmp,
+        'bp',
+        aabEntries(
+          extra: {
+            'BUNDLE-METADATA/com.android.tools.build.debugsymbols/x.sym': utf8
+                .encode('x /Users/ana/p/lib/main.dart x'),
+            'base/lib/arm64-v8a/libapp.so': utf8.encode(
+              'x /home/runner/work/Una/Una/app/lib/main.dart x',
+            ),
+          },
+        ),
+      );
+      final r = run(['--aapt2', fakeAapt2(), aab]);
+      final text = '${r.out}${r.err}';
+      expect(r.code, 1, reason: text);
+      expect(text, contains('(build-paths)'));
+      expect(
+        text,
+        contains('BUNDLE-METADATA/com.android.tools.build.debugsymbols/x.sym'),
+      );
+      expect(text, contains('/Users/ana/p/lib/main.dart'));
+      expect(text, isNot(contains('libapp.so')));
+    }, skip: skip);
+
     test(
       'CA-020-02 (f): un archivo de firma dentro de base/ del AAB falla',
       () {
@@ -208,7 +235,7 @@ void main() {
         '../tools/release/secret-allowlist.txt',
         aab.path,
       ]);
-      expect(r.code, 0, reason: '${r.out}${r.err}');
+      expectPassesOrLocalBuildPaths(r.code, '${r.out}${r.err}');
     }, timeout: const Timeout(Duration(minutes: 4)));
   });
 
