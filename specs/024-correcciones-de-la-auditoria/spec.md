@@ -1,9 +1,9 @@
 # Spec 024: Correcciones de la auditoría
 
-- **Estado:** Borrador (2026-10-21; revisada por `spec-reviewer` el 2026-10-21: 0 altos, 5 medios y 4 bajos, aplicados; queda Q-024-1, §9)
+- **Estado:** Borrador (2026-10-21; revisada por `spec-reviewer` el 2026-10-21: 0 altos, 5 medios y 4 bajos, aplicados; Q-024-1 respondida por el propietario el 2026-10-21)
 - **Reglas de producto:** R8 (arranque y barras del sistema), R15 (idioma), R16 (deshacer al eliminar), R19 (notificaciones)
 - **Pantallas del prototipo:** tableros 2 (Menú), 12 y 13 (Eliminar con deshacer); el resto, sin cambio visual (ver `docs/design/screen-map.md`)
-- **Decisiones y ADR relacionados:** D23, D25, D30; ADR-0020, ADR-0021, ADR-0023, ADR-0025; **ADR nuevo** para la excepción de P6 de la notificación (CA-024-05)
+- **Decisiones y ADR relacionados:** D23, D25, D30; ADR-0020, ADR-0021, ADR-0023, ADR-0025 (criterio de revisión de la voz, que cierra CA-024-05)
 - **Dependencias:** 022 (auditoría, **Implementada**; hallazgos en `specs/022-auditoria-en-dispositivo/informe.md` §4), 014, 015, 019 y 021 (todas en `main`)
 
 > Esta spec describe **qué** y **por qué**, sin tecnología. El **cómo** va en `plan.md`.
@@ -17,7 +17,7 @@ Spec de corrección prevista por la 022 (Q-022-1). Cubre **solo los siete hallaz
 | H-022-04 · iconos oscuros de la barra de navegación sobre la card de deshacer | Baja | **Se corrige** (decisión de la sesión, sin objeción del propietario) | CA-024-01, 03 |
 | H-022-05 · iconos de la barra de estado bajo el velo de la hoja | Baja | **Se corrige** (ídem) | CA-024-02, 03 |
 | H-022-10 · `ca-ES, en-US` abre en inglés | Baja | **Se corrige** (ídem): ya lo pide CA-010-02 | CA-024-04 |
-| H-022-03 · TalkBack lee la notificación con la voz del sistema | Media | **Se queda como está** (propietario: «Lo más fácil que se quede como está»): la notificación sigue en el idioma de la app y se registra como excepción de P6 | CA-024-05 |
+| H-022-03 · TalkBack lee la notificación con la voz del sistema | Media | **Aceptado sin excepción de P6** (propietario, 2026-10-21: «Lo más fácil que se quede como está» y, en Q-024-1, «aceptarlo sin excepción»): la notificación no cambia y no se abre ADR ni constitución nueva | CA-024-05 |
 | H-022-02 · el aviso de notificaciones bloqueadas no se anuncia con TalkBack al 200 % | Media | **Aceptado** (respuesta 3b), como H-022-01 | CA-024-06 |
 | H-022-06 · con la app cerrada, HyperOS no deja mover la alarma al cambiar de huso | Baja | **Sin código**: límite del sistema anotado en la 019, sin ayuda web (respuesta 4a) | CA-024-07 |
 | H-022-07 · aviso retenido tras ~5 h sin abrir la app | Baja | **Sin código**: ídem (respuesta 4a) | CA-024-07 |
@@ -74,15 +74,14 @@ Cerrar lo que la auditoría en dispositivo dejó abierto: que los iconos del sis
   - Con un idioma elegido en Ajustes, la app no mira el sistema (CA-015-09): sin cambio.
   - **Verificable:** la regla de la tabla ya la cumple la app con la lista que recibe (sus tests pasan hoy), así que **manda la casilla C-024-3** (emulador de API 37 con `ca-ES, en-US`, como en K-022-056). Cuando el plan conozca la causa, se añade un test de lo que la app recibe del sistema que falle antes del arreglo.
   - **[Suposición]** la causa es que el sistema entrega a la app la lista ya filtrada o reordenada por los idiomas que la app declara; el plan lo confirma antes de corregir. Contradice la [Suposición] de CA-010-02 («Android entrega la lista completa»), que se enmienda al cerrar (CA-024-08).
-- **CA-024-05** · La notificación se queda en el idioma de la app: excepción de P6 (H-022-03)
-  - **Dado** el criterio de revisión de la voz del ADR-0025 (si un lector no respeta la marca de idioma, la notificación pasa a ser una excepción nueva de P6 o se descarta su cambio de idioma) y la decisión del propietario («Lo más fácil que se quede como está», 2026-10-21)
+- **CA-024-05** · La notificación se queda como está, aceptada sin excepción de P6 (H-022-03)
+  - **Dado** el criterio de revisión de la voz del ADR-0025 (si un lector no respeta la marca de idioma, la notificación pasa a ser una excepción nueva de P6 o se descarta su cambio de idioma) y la decisión del propietario («Lo más fácil que se quede como está» y, en Q-024-1, «aceptarlo sin excepción», 2026-10-21)
   - **Cuando** se cierra la 024
   - **Entonces**:
-    - la notificación **no cambia**: sigue en el idioma de la app y con su marca de idioma (CA-019-21), aunque TalkBack la lea con la voz del sistema;
-    - hay un **ADR nuevo**, que amplía la excepción del ADR-0023 a la notificación, con el mismo alcance: la notificación se oye con la voz del sistema **cuando el idioma de la app no es el primero del sistema** (en los dos sentidos, como mostró H-022-03; WCAG 3.1.2). Mitigación: el texto está en el idioma que eligió la persona; con el sistema y la app en el mismo idioma suena bien; la marca se mantiene por si otro lector o una versión futura la respeta. Criterio de revisión: otro lector la respeta, Android cambia cómo se leen las notificaciones o lo señala la beta;
-    - la **constitución pasa a la 1.11** con la excepción en la lista de P6, y el ADR-0025 enlaza al nuevo en su criterio de revisión;
-    - el ADR y la constitución 1.11 necesitan **la aprobación explícita del propietario** (constitución, cabecera); aprobar esta spec no basta.
-  - **Verificable:** revisión de los documentos (ADR, constitución, ADR-0025, CA-019-21 con una enmienda que apunte al ADR); los tests de la notificación de la 019 siguen en verde sin cambios.
+    - la notificación **no cambia**: sigue en el idioma de la app y con su marca de idioma (CA-019-21), aunque TalkBack la lea con la voz del sistema cuando el idioma de la app no es el primero del sistema;
+    - H-022-03 pasa a **Aceptado por el propietario** con sus palabras, **sin** ADR nuevo ni versión nueva de la constitución; queda registrado que el propietario no siguió ninguna de las dos salidas del criterio de revisión del ADR-0025 y que la notificación no está entre las excepciones de P6 (ver §9);
+    - CA-019-21 y el criterio de revisión del ADR-0025 llevan una nota de una línea que apunta a esta decisión.
+  - **Verificable:** revisión de `informe.md` §4, la spec 019 y la nota del ADR-0025; los tests de la notificación de la 019 siguen en verde sin cambios.
 - **CA-024-06** · El aviso de bloqueo al 200 % queda aceptado (H-022-02)
   - **Dado** H-022-02 (con TalkBack, texto al 200 % y tres botones, el aviso «Las notificaciones están bloqueadas…» se ve pero no se anuncia; con el foco en él, se lee)
   - **Cuando** se cierra la 024
@@ -127,7 +126,7 @@ Cerrar lo que la auditoría en dispositivo dejó abierto: que los iconos del sis
 
 - **Contraste de las barras (WCAG 1.4.11):** CA-024-01 y 02 llevan los iconos del sistema a 3:1 o más en los dos casos que fallaron; la píldora queda fuera, como en CA-021-09.
 - **Sin cambio** en la semántica, el orden de foco, los anuncios, las alternativas a gestos, reducir movimiento ni el texto grande: la card y las hojas no cambian, solo lo que la app pide a las barras del sistema.
-- **Idioma (WCAG 3.1.1/3.1.2):** CA-024-04 hace que la app y la voz de lo que se recorre coincidan con la regla de la 010 también con `ca` primero. CA-024-05 registra la excepción de la notificación (se oye con la voz del sistema) junto a las del ADR-0020 y 0023.
+- **Idioma (WCAG 3.1.1/3.1.2):** CA-024-04 hace que la app y la voz de lo que se recorre coincidan con la regla de la 010 también con `ca` primero. La notificación se oye con la voz del sistema cuando el idioma de la app no es el primero del sistema: aceptado por el propietario sin excepción de P6 (CA-024-05).
 - **Aceptados sin corregir:** H-022-02 (CA-024-06): con TalkBack y el texto al 200 % el aviso de bloqueo no se anuncia solo, pero se ve y se lee con el foco.
 
 ## 7. Textos (ES / EN)
@@ -142,12 +141,12 @@ Cerrar lo que la auditoría en dispositivo dejó abierto: que los iconos del sis
 - La lista de «hallazgos de código ya conocidos» del informe de la 022 (§5): 013-A-M1, B1/M4/M5/M7/M9 de la 015, (d) y (e) de la 016, (3) de la 018, (b) y (c) de la 019, (d) de la 017, N-2 y N-3, C-5, `accessibleNavigation`, enhorabuena y bienvenida (014), `check-recents.sh` en horizontal, test de Chrome del selector, TD-1, TD-2, H-5 y H-6.
 - Cambiar el velo de las hojas, la card o cualquier color del prototipo.
 - Reprogramar la alarma en más eventos del sistema o pedir el inicio automático en HyperOS (H-022-06 y 07, respuesta 4a).
-- Cambiar el idioma de la notificación al del sistema (alternativa descartada en CA-024-05).
+- Cambiar el idioma de la notificación al del sistema (alternativa descartada en CA-024-05), y el ADR o la constitución 1.11 para una excepción de P6 (Q-024-1).
 - Otros dispositivos o marcas (PD-10 cerrada sin verificar, PD-11 aplazada).
 
 ## 9. Preguntas abiertas
 
-- **[Pendiente, propietario] Q-024-1 (H-022-03).** «Lo más fácil que se quede como está» se lee como «la notificación sigue en el idioma de la app, sin tocar la app». El ADR-0025 obliga entonces a registrarla como excepción de P6 (o a descartar el cambio de idioma), y la constitución pide un ADR por excepción. **Recomendación:** lo de CA-024-05, un ADR corto que amplía la excepción del ADR-0023 a la notificación + constitución 1.11 (sin código). Alternativa: aceptar el hallazgo sin excepción, lo que deja la notificación incumpliendo P6 sin excepción aprobada (la ficha de H-022-03 dice que sería **alta**). Se confirma al aprobar la spec; el ADR y la 1.11 se aprueban aparte.
+- **Q-024-1 (H-022-03), respondida (propietario, 2026-10-21): «aceptarlo sin excepción».** Se le presentaron las dos salidas del ADR-0025 (excepción de P6 con ADR y constitución 1.11, recomendada, o descartar el cambio de idioma) y la de aceptarlo sin excepción, con su consecuencia: la ficha de H-022-03 dice que, sin la regla de excepción de Q-022-5, sería **alta** (incumple P6 sin excepción aprobada). El propietario, que es quien decide sobre la constitución, eligió aceptarlo. **[Hecho]** decisión registrada; no se vuelve a abrir salvo que lo señale la beta.
 - **[Suposición, plan]** Causa de H-022-10 (CA-024-04) y si los iconos claros valen para todas las notas con velo (CA-024-02).
 - **Casillas en el Xiaomi (C-024-1 y 2):** necesitan capturas del móvil del propietario, que son privadas (pueden salir otras apps): se le avisa antes de cada una.
 
