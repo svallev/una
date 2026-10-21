@@ -1,6 +1,6 @@
 # Spec 024: Correcciones de la auditoría
 
-- **Estado:** Borrador (2026-10-21; revisada por `spec-reviewer` el 2026-10-21: 0 altos, 5 medios y 4 bajos, aplicados; Q-024-1 respondida por el propietario el 2026-10-21)
+- **Estado:** **Aprobada** por el propietario el 2026-10-21 («aprobada»). Antes Borrador (2026-10-21; revisada por `spec-reviewer` el 2026-10-21: 0 altos, 5 medios y 4 bajos, aplicados; Q-024-1 respondida por el propietario el 2026-10-21)
 - **Reglas de producto:** R8 (arranque y barras del sistema), R15 (idioma), R16 (deshacer al eliminar), R19 (notificaciones)
 - **Pantallas del prototipo:** tableros 2 (Menú), 12 y 13 (Eliminar con deshacer); el resto, sin cambio visual (ver `docs/design/screen-map.md`)
 - **Decisiones y ADR relacionados:** D23, D25, D30; ADR-0020, ADR-0021, ADR-0023, ADR-0025 (criterio de revisión de la voz, que cierra CA-024-05)
