@@ -10,6 +10,8 @@
 //
 //   values/notification_strings.xml     → app_en.arb (inglés: el idioma por defecto de los recursos)
 //   values-es/notification_strings.xml  → app_es.arb
+//   values-ca/notification_strings.xml  → app_es.arb (el catalán abre en español, CA-010-01; el recurso
+//                                          existe para que Android no reordene `ca-ES, en-US`, CA-024-04)
 //
 // El nativo elige el idioma pedido con `createConfigurationContext`, sin depender del idioma del
 // sistema. Sin paquetes (P11): solo `dart:io` y `dart:convert`. No va en `lib/` ni se empaqueta.
@@ -37,6 +39,10 @@ const _fileName = 'notification_strings.xml';
 const _targets = <({String lang, String dir})>[
   (lang: 'en', dir: 'values'),
   (lang: 'es', dir: 'values-es'),
+  // El catalán se trata como español (CA-010-01) y, para que Android no ponga el inglés delante de
+  // `ca-ES` en la lista de idiomas de la actividad (H-022-10, CA-024-04), la app ha de tener
+  // recursos `ca`: mismo texto que `values-es`.
+  (lang: 'es', dir: 'values-ca'),
 ];
 
 const _usage =

@@ -151,6 +151,12 @@ jobs:
         # plugin integration_test, que referencia org.junit sin empaquetarlo, y por eso no se comprueba.
         working-directory: app
         run: bash ../tools/check-apk-no-test-classes.sh build/app/outputs/flutter-apk/app-*-release.apk
+      - name: El APK de release trae recursos en catalán, español e inglés (spec 024, CA-024-04)
+        # Sin values-ca, con `ca-ES, en-US` Android pone el inglés delante y la app sale en inglés
+        # (H-022-10). El APK de debug no vale (trae `ca` de librerías); el de release solo conserva
+        # los recursos que la app usa. Mismo aapt2 que `check-package.sh`; sin red.
+        working-directory: app
+        run: bash ../tools/check-apk-locales.sh build/app/outputs/flutter-apk/app-*-release.apk
       - name: PDFium fijado (tools/pdfium.lock, threat-model §5)
         working-directory: app
         run: bash ../tools/check-pdfium.sh
