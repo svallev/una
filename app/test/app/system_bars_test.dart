@@ -1,4 +1,5 @@
 import 'package:app/app/providers.dart';
+import 'package:app/app/system_bars.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
@@ -589,6 +590,13 @@ void main() {
         bottomInset: 24,
         size: size,
       );
+      // Barra de estado real (T-024-04, H-024-A): la ruta de la hoja recorta su contenido
+      // por debajo de ella, así que el punto donde Flutter lee el estilo de arriba (el
+      // centro de la barra) cae FUERA de la ruta; con margen 0 el fallo no se veía.
+      tester.view
+        ..padding = const FakeViewPadding(top: 28, bottom: 24)
+        ..viewPadding = const FakeViewPadding(top: 28, bottom: 24);
+      await tester.pump();
       await tester.pump();
       expectLightBars();
     }
@@ -739,6 +747,22 @@ void main() {
           () => tester.tap(find.text('Nueva tarea')),
         );
         await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'CA-024-03: la cuenta de hojas con velo sube al abrir y vuelve a 0 al cerrar (sin fugas)',
+      (tester) async {
+        await openApp(tester);
+        expect(scrimSheetsOpen.value, 0);
+        await openMenu(tester);
+        expect(scrimSheetsOpen.value, 1);
+        await closeAndWatch(
+          tester,
+          find.byType(MenuSheet),
+          () => tester.binding.handlePopRoute(),
+        );
+        expect(scrimSheetsOpen.value, 0);
       },
     );
 

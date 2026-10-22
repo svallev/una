@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
+import 'theme/tokens.g.dart';
+
 /// Estilo de las barras con la app abierta (CA-021-09): transparentes, iconos
 /// oscuros sobre `paper` y sin el velo de contraste que añade Android 10+.
 const systemBarsStyle = SystemUiOverlayStyle(
@@ -58,3 +60,18 @@ const systemBarsUnderScrimStyle = SystemUiOverlayStyle(
   systemNavigationBarIconBrightness: Brightness.dark,
   systemNavigationBarContrastEnforced: false,
 );
+
+/// Hojas con velo a la vista (CA-024-02): `showUnaSheet` lo sube antes de abrirlas y lo baja
+/// cuando la ruta termina de irse. `appFrame` pide con él [systemBarsUnderScrimStyle] para la
+/// barra de estado: la región de la propia hoja no llega a ella, porque la ruta recorta su
+/// contenido por debajo de la barra de estado (`useSafeArea`) y Flutter lee el estilo de
+/// arriba en el centro de esa barra (T-024-04, H-024-A).
+final scrimSheetsOpen = ValueNotifier<int>(0);
+
+/// Si el velo de una hoja cubre la pantalla de lado a lado: el marco de la app limita el
+/// ancho del contenido (y del velo) salvo que haya una pantalla a ancho completo
+/// ([fullWidthCount], `fullWidthRequests`); si el velo es más estrecho, la hora y la
+/// batería quedan sobre `paper` y siguen con iconos oscuros.
+bool scrimSpansScreen(BuildContext context, int fullWidthCount) =>
+    fullWidthCount > 0 ||
+    MediaQuery.sizeOf(context).width <= UnaSizes.contentMaxWidth;

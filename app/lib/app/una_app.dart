@@ -423,8 +423,19 @@ Widget appFrame(BuildContext context, Widget? child) {
   // y los iconos son oscuros, con el sistema en claro o en oscuro. El motor
   // pide los iconos oscuros de la barra de navegación desde API 26
   // (`setAppearanceLightNavigationBars`), también en Android 8.0 (P-021-2).
-  return AnnotatedRegion<SystemUiOverlayStyle>(
-    value: systemBarsStyle,
+  //
+  // Con una hoja con velo abierta (CA-024-02) la barra de estado pide iconos claros: la
+  // región de la hoja no llega a esa barra (ver [scrimSheetsOpen]), así que se pide aquí.
+  return ListenableBuilder(
+    listenable: Listenable.merge([scrimSheetsOpen, fullWidthRequests]),
     child: framed,
+    builder: (context, framed) => AnnotatedRegion<SystemUiOverlayStyle>(
+      value:
+          scrimSheetsOpen.value > 0 &&
+              scrimSpansScreen(context, fullWidthRequests.value)
+          ? systemBarsUnderScrimStyle
+          : systemBarsStyle,
+      child: framed!,
+    ),
   );
 }
