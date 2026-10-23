@@ -31,7 +31,8 @@ Que la app hable el idioma del usuario sin preguntar nada: español si el teléf
   - **Dado** que el dispositivo tiene varios idiomas preferidos (p. ej. `fr-FR`, `es-ES`)
   - **Cuando** se abre la app
   - **Entonces** se usa el **primero** de la lista que la app admite (en el ejemplo, español); si no admite ninguno, inglés.
-  - **[Suposición]** Android entrega a la app la lista completa de idiomas preferidos, no solo el primero. Se confirma una vez en el emulador.
+  - ~~**[Suposición]** Android entrega a la app la lista completa de idiomas preferidos, no solo el primero. Se confirma una vez en el emulador.~~
+  - **[Enmienda 2026-10-23, spec 024, CA-024-04 y C-024-3 (H-022-10)]** la suposición era cierta solo en parte: Android entrega la lista, pero **reordenada** si la app no tiene recursos del primer idioma. Con `ca-ES, en-US` y sin `values-ca`, la app recibía `en-US, ca-ES` y salía en inglés. La app lleva ahora `values-ca` (generado, con el texto en español) y el sistema ya no reordena. La regla del criterio no cambia.
 - **CA-010-03** *(Retirado el 2026-09-29: cambio manual de idioma. ~~Pasa a la spec futura de Configuración y perfil~~ **Lo implementa la spec 015 (Ajustes, CA-015-06 a 10; enmienda 2026-10-05)**. Se quitan de la app sus restos y su test)*
 - **CA-010-04 Formatos**
   - **Dado** la app en español y en inglés

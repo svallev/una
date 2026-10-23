@@ -51,7 +51,7 @@ Criterios (peso): privacidad —ninguna copia del texto fuera de la BD— (3), f
 
 ## Consecuencias
 
-- **Criterio de revisión de la voz:** la marca de idioma se probó con un lector y un dispositivo (S7). Si la 022 u otro lector (Samsung Voice Assistant, TalkBack de Android 8 a 12, voz del otro idioma sin instalar) no la respeta, la notificación pasa a ser una excepción nueva de P6 (una versión nueva de la constitución) o se descarta el cambio de idioma de la notificación.
+- **Criterio de revisión de la voz:** la marca de idioma se probó con un lector y un dispositivo (S7). Si la 022 u otro lector (Samsung Voice Assistant, TalkBack de Android 8 a 12, voz del otro idioma sin instalar) no la respeta, la notificación pasa a ser una excepción nueva de P6 (una versión nueva de la constitución) o se descarta el cambio de idioma de la notificación. **Nota (spec 024, CA-024-05, 2026-10-23):** la 022 mostró que TalkBack del Xiaomi no respeta la marca (H-022-03); el propietario no siguió ninguna de las dos salidas y **aceptó dejarla como está** (2026-10-21, Q-024-1), sin excepción de P6 ni versión nueva de la constitución.
 - **Positivas:**
   - Sin dependencias nuevas, sin red, sin esquema nuevo (dos claves de ajustes, CA-019-05).
   - El texto de la tarea solo está en la BD y, mientras dure, en la bandeja (CA-019-23).
