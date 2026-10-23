@@ -62,3 +62,21 @@ Vuelta (CA-024-03): con la hoja cerrada (tocando fuera, con «Atrás» y eligien
 - El Xiaomi (HyperOS) queda para T-024-05.
 
 Emulador restaurado: navegación de gestos, giro libre y sensor a vertical, TalkBack desactivado, idioma `en-US`, fotos de prueba borradas, `pm clear` de la app. Capturas solo en el directorio temporal de la sesión.
+
+## C-024-1 y C-024-2 en el Xiaomi (T-024-05, 2026-10-23)
+
+Xiaomi 2506BPN68G (HyperOS, 1280×2772, navegación **por gestos**), release `app-arm64-v8a-release.apk` compilada con el código de T-024-04 (con el arreglo H-024-A) e instalada con `adb install -r` sobre la app del propietario (mismos datos, `versionCode` 2001). El propietario navegó; el coordinador leyó `dumpsys window | grep mLastAppearance` y midió el contraste de la franja de las barras (reloj, izquierda; píldora, centro) con un lector de PNG propio; cada captura entera se borró del Mac en el mismo comando (**solo números, sin imágenes**; no se guardó nada en el móvil). Con tareas ficticias y reales mezcladas; el propietario no borró las reales.
+
+| Caso | Barra | `mLastAppearance` | Contraste (mínimo 3:1) |
+|---|---|---|---|
+| Hoja «Esta tarea» abierta (nota gris claro) | estado | sin `LIGHT_STATUS_BARS` (iconos claros) | **3,73:1** (reloj, `#f2f2f2` sobre `#7c7c7c`) y **4,17:1** (derecha, `#ffffff`) |
+| Hoja cerrada (CA-024-03) | estado y navegación | `LIGHT_STATUS_BARS LIGHT_NAVIGATION_BARS` | 10,37:1 (estado) y 6,90:1 (píldora) |
+| **Card sobre la tarea actual** (nota azul; el propietario vio otra tarea) | navegación | `LIGHT_STATUS_BARS` (la navegación pasa a iconos claros) | píldora **3,87:1** (`#717171` sobre `#111111`); estado sigue oscuro, 7,75:1 |
+| **Card sobre el listado** (nota naranja claro) | navegación | `LIGHT_STATUS_BARS` | píldora **13,58:1** (`#ffffff` sobre `#2e2e2e`, en el fundido de entrada); estado oscuro, 8,29:1 |
+| Card caducada | estado y navegación | vuelve a `LIGHT_STATUS_BARS LIGHT_NAVIGATION_BARS` | oscuros otra vez (CA-024-03) |
+
+- **[Hecho] HyperOS aclara la píldora** con la card a la vista (pasa a `#717171`…`#ffffff` sobre el fondo casi negro), a diferencia de la 021 con la nota. Es mejor que el mínimo en todos los casos.
+- **Matiz del 3,87:1:** se midió ~1 s después del cambio; en el listado la misma medida salió a 13,58:1. **[Suposición]** que el 3,87:1 es un resto del fundido de entrada o de la tenuidad del trazo de la píldora en HyperOS; sea cual sea, supera 3:1.
+- **[Suposición]** dos medidas posteriores (barra de estado con iconos claros `#f2efec` sobre `#7c5c3c`, 5,31:1) fueron de una hoja abierta sobre la nota naranja, no de la card (la card ya había caducado).
+- **No probado en el Xiaomi** (decisión del propietario, tiene tareas reales): «Todo hecho.» (medido en el emulador, 18,88:1) y la navegación de tres botones (medida en el emulador).
+- Al acabar: nada instalado ni guardado en el móvil salvo la release nueva sobre la anterior; ajustes del sistema sin tocar (la nota de «No molestar» queda en manos del propietario).
