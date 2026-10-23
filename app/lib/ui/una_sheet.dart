@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
+import '../app/system_bars.dart';
 import '../app/theme/tokens.g.dart';
 import 'focus_ring.dart';
+import 'full_width.dart';
 
 /// Hoja del prototipo (`.sheetbg` + `.sheetup`): fondo `scrim`, sube en
 /// `sheetIn` con la curva `sheet` y baja en `sheetOut`; color papel, borde
@@ -13,6 +16,46 @@ Future<T?> showUnaSheet<T>(
   required WidgetBuilder builder,
 }) {
   final reduced = MediaQuery.disableAnimationsOf(context);
+  // Cuenta de hojas con velo para la barra de estado (CA-024-02): sube antes de abrir (el
+  // primer fotograma de la hoja ya la lleva clara) y baja en `_SheetBarsScope`.
+  final count = _SheetCount();
+  final Future<T?> opened;
+  try {
+    opened = _openSheet<T>(context, builder, reduced, count);
+  } catch (_) {
+    count.release();
+    rethrow;
+  }
+  // Red de seguridad: si la ruta se cierra sin llegar a construirse, nadie más lo baja.
+  return opened.whenComplete(() {
+    if (!count.attached) count.release();
+  });
+}
+
+/// Una hoja contada en [scrimSheetsOpen]: se baja una sola vez.
+class _SheetCount {
+  _SheetCount() {
+    scrimSheetsOpen.value++;
+  }
+
+  bool _released = false;
+
+  /// Si la hoja ya se construyó y es `_SheetBarsScope` quien la baja.
+  bool attached = false;
+
+  void release() {
+    if (_released) return;
+    _released = true;
+    scrimSheetsOpen.value--;
+  }
+}
+
+Future<T?> _openSheet<T>(
+  BuildContext context,
+  WidgetBuilder builder,
+  bool reduced,
+  _SheetCount count,
+) {
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
@@ -37,15 +80,85 @@ Future<T?> showUnaSheet<T>(
     // Y deja libre la barra de navegación del sistema (`padding.bottom`; con el
     // teclado a la vista vale 0): con la navegación de tres botones y el texto
     // al 200 %, el último enlace quedaba a medias bajo ella (spec 015, T-015-14).
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom:
-            MediaQuery.viewInsetsOf(context).bottom +
-            MediaQuery.paddingOf(context).bottom,
+    builder: (context) => _SheetBarsScope(
+      count: count,
+      child: ValueListenableBuilder<int>(
+        valueListenable: fullWidthRequests,
+        builder: (context, fullWidth, child) =>
+            AnnotatedRegion<SystemUiOverlayStyle>(
+              // Sin tamaño: vale en cualquier punto de la ruta (CA-024-02). Sirve sobre todo
+              // para la barra de navegación (iconos oscuros sobre la hoja, también con la card
+              // de deshacer debajo); la de estado queda fuera de la ruta (recorte de
+              // `useSafeArea`) y la pide `appFrame` con `scrimSheetsOpen`, con el mismo valor.
+              // Al quitarse la ruta vuelve el estilo de `appFrame` (CA-024-03). Solo si el
+              // velo llega de lado a lado: `appFrame` limita el contenido a `contentMaxWidth`
+              // (salvo el visor, `fullWidthRequests`) y, si es más estrecho, la hora y la
+              // batería quedan sobre `paper`.
+              sized: false,
+              value: scrimSpansScreen(context, fullWidth)
+                  ? systemBarsUnderScrimStyle
+                  : systemBarsStyle,
+              child: child!,
+            ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom:
+                MediaQuery.viewInsetsOf(context).bottom +
+                MediaQuery.paddingOf(context).bottom,
+          ),
+          child: SingleChildScrollView(child: builder(context)),
+        ),
       ),
-      child: SingleChildScrollView(child: builder(context)),
     ),
   );
+}
+
+/// Baja la cuenta de [scrimSheetsOpen] en el fotograma en que la ruta de la hoja termina de
+/// irse (`AnimationStatus.dismissed`, el mismo en que el navegador la quita: CA-024-03), no
+/// al hacer `pop`, y como último recurso al destruirse (en ese caso, un fotograma después:
+/// con el árbol bloqueado no se puede avisar a quien escucha).
+class _SheetBarsScope extends StatefulWidget {
+  const _SheetBarsScope({required this.count, required this.child});
+
+  final _SheetCount count;
+  final Widget child;
+
+  @override
+  State<_SheetBarsScope> createState() => _SheetBarsScopeState();
+}
+
+class _SheetBarsScopeState extends State<_SheetBarsScope> {
+  Animation<double>? _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.count.attached = true;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation == _animation) return;
+    _animation?.removeStatusListener(_onStatus);
+    _animation = animation?..addStatusListener(_onStatus);
+  }
+
+  void _onStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed) widget.count.release();
+  }
+
+  @override
+  void dispose() {
+    _animation?.removeStatusListener(_onStatus);
+    final count = widget.count;
+    WidgetsBinding.instance.addPostFrameCallback((_) => count.release());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Enlace subrayado en monoespaciada del prototipo ("Cancelar",

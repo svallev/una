@@ -11,6 +11,7 @@ import '../../tool/gen_android_strings.dart';
 /// sin tocar el árbol.
 const _resEn = 'android/app/src/main/res/values/notification_strings.xml';
 const _resEs = 'android/app/src/main/res/values-es/notification_strings.xml';
+const _resCa = 'android/app/src/main/res/values-ca/notification_strings.xml';
 
 Map<String, dynamic> _arb(String l, [String root = '.']) =>
     jsonDecode(File('$root/lib/l10n/app_$l.arb').readAsStringSync())
@@ -95,7 +96,35 @@ void main() {
     expect(stringsEs['attachment_pdf'], es['attachmentPdf']);
   });
 
-  test('CA-019-27: generar en una carpeta vacía escribe los dos XML y '
+  test('CA-024-04: values-ca/ lleva el mismo texto en español que values-es/ '
+      '(el catalán abre en español, CA-010-01)', () {
+    final xmlCa = File(_resCa).readAsStringSync();
+    expect(xmlCa, File(_resEs).readAsStringSync());
+    expect(xmlCa, contains('desde app_es.arb'));
+    expect(_strings(xmlCa)['notification_channel_name'], 'Tarea actual');
+  });
+
+  test('CA-024-04: --check falla si falta values-ca/ y generar lo escribe '
+      'igual que values-es/', () {
+    final dir = _appCopy();
+    expect(_run(['--out', dir.path]), 0);
+    File('${dir.path}/$_resCa').deleteSync();
+    final err = StringBuffer();
+    expect(_run(['--check', '--out', dir.path], err: err), 1);
+    expect('$err', contains('values-ca'));
+    expect('$err', isNot(contains('values-es')));
+    expect(File('${dir.path}/$_resCa').existsSync(), isFalse);
+    expect(_run(['--out', dir.path]), 0);
+    expect(
+      File('${dir.path}/$_resCa').readAsStringSync(),
+      File('${dir.path}/$_resEs').readAsStringSync(),
+    );
+    // Editar a mano el catalán también se detecta.
+    File('${dir.path}/$_resCa').writeAsStringSync('<resources/>');
+    expect(_run(['--check', '--out', dir.path]), 1);
+  });
+
+  test('CA-019-27: generar en una carpeta vacía escribe los XML y '
       '--check pasa después; --check no escribe nada', () {
     final dir = _appCopy();
     final err = StringBuffer();

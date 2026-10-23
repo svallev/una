@@ -1,23 +1,34 @@
 import 'package:app/app/providers.dart';
+import 'package:app/app/system_bars.dart';
 import 'package:app/app/theme/tokens.g.dart';
 import 'package:app/app/una_app.dart';
 import 'package:app/data/in_memory_task_repository.dart';
 import 'package:app/features/all_done/all_done_screen.dart';
 import 'package:app/features/app_error/storage_error_screen.dart';
+import 'package:app/features/attachments/attach_sheet.dart';
 import 'package:app/features/complete/celebration_overlay.dart';
 import 'package:app/features/complete/hold_to_complete_button.dart';
+import 'package:app/features/delete/undo_card.dart';
+import 'package:app/features/editor/placement_sheet.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/first_run/welcome_intro.dart';
+import 'package:app/features/menu/menu_sheet.dart';
 import 'package:app/features/settings/settings_screen.dart';
+import 'package:app/features/task_list/task_list_row.dart';
+import 'package:app/features/task_list/task_list_screen.dart';
+import 'package:app/features/web/url_sheet.dart';
+import 'package:app/ui/full_width.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../features/settings/settings_harness.dart';
+import '../features/task_list/list_harness.dart' show handleOf;
 import '../support/app_harness.dart';
 import '../support/fonts.dart';
 import '../support/pump_app.dart';
+import '../support/undo.dart';
 
 /// Spec 021, CA-021-09 (plan §1.3, §5): con la app abierta las barras del sistema son
 /// transparentes (detrás se ve el fondo de la app), con iconos oscuros y sin el velo que
@@ -265,4 +276,568 @@ void main() {
       },
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Spec 024, CA-024-01 y 03 (H-022-04): con la card de deshacer a la vista, los
+  // iconos de la barra de navegación son claros (la card es negra); la barra de
+  // estado no cambia. Al irse la card, vuelve CA-021-09.
+  // ---------------------------------------------------------------------------
+  group('spec 024: card de deshacer', () {
+    const frame = Duration(milliseconds: 16);
+    Finder menuButton() => find.bySemanticsLabel('Menú de la tarea');
+    final card = find.byType(UndoCard);
+
+    /// La barra de navegación con iconos claros y la de estado como siempre.
+    void expectNavLightOnCard() {
+      final style = SystemChrome.latestStyle;
+      expect(style, isNotNull);
+      expect(style!.systemNavigationBarIconBrightness, Brightness.light);
+      expect(style.systemNavigationBarColor, transparent);
+      expect(style.systemNavigationBarDividerColor, transparent);
+      expect(style.systemNavigationBarContrastEnforced, isFalse);
+      // La barra de estado no cambia (CA-021-09).
+      expect(style.statusBarColor, transparent);
+      expect(style.statusBarIconBrightness, Brightness.dark);
+      expect(style.systemStatusBarContrastEnforced, isFalse);
+    }
+
+    Future<InMemoryTaskRepository> openApp(
+      WidgetTester tester, {
+      required List<String> tasks,
+      double bottomInset = 24,
+      Size size = const Size(390, 844),
+    }) async {
+      await forgetStyle(tester);
+      return pumpUnaApp(
+        tester,
+        repo: InMemoryTaskRepository(),
+        tasks: tasks,
+        bottomInset: bottomInset,
+        size: size,
+        clock: TesterClock(tester),
+        overrides: [
+          accessibilityTimeoutsProvider.overrideWithValue(
+            FakeAccessibilityTimeouts(),
+          ),
+        ],
+      );
+    }
+
+    /// Menú → Eliminar en la tarea actual y deja acabar el arrugado.
+    Future<void> deleteCurrent(WidgetTester tester) async {
+      await tester.tap(menuButton());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Eliminar'));
+      await tester.pump(frame);
+      await tester.pump(frame);
+      await tester.pump(UnaMotion.crumple);
+      await tester.pump(frame);
+      await tester.pump(frame);
+    }
+
+    Future<void> openList(WidgetTester tester) async {
+      await tester.tap(menuButton());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Todas mis tareas'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TaskListScreen), findsOneWidget);
+    }
+
+    /// El botón "Eliminar tarea" (segundo icono) de la fila [text].
+    Finder trash(String text) => find
+        .descendant(
+          of: find
+              .ancestor(of: find.text(text), matching: find.byType(TaskListRow))
+              .first,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is CustomPaint &&
+                w.painter.runtimeType.toString() == '_UnaIconPainter',
+          ),
+        )
+        .at(1);
+
+    Future<void> deleteRow(WidgetTester tester, String text) async {
+      await tester.tap(trash(text));
+      await tester.pump();
+      await tester.pump(frame);
+    }
+
+    testWidgets(
+      'CA-024-01: la card sobre la tarea actual pide iconos claros en la navegación y deja la barra de estado',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda']);
+        await tester.pump();
+        expectLightBars();
+        await deleteCurrent(tester);
+        expect(card, findsOneWidget);
+        expectNavLightOnCard();
+      },
+    );
+
+    testWidgets(
+      'CA-024-01 / CL-024-1: la card sobre "Todo hecho." pide iconos claros en la navegación',
+      (tester) async {
+        await openApp(tester, tasks: ['Única']);
+        await deleteCurrent(tester);
+        expect(find.byType(AllDoneScreen), findsOneWidget);
+        expect(card, findsOneWidget);
+        expectNavLightOnCard();
+      },
+    );
+
+    testWidgets(
+      'CA-024-01: la card en el listado pide iconos claros en la navegación',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda', 'Tercera']);
+        await openList(tester);
+        expectLightBars();
+        await deleteRow(tester, 'Segunda');
+        expect(card, findsOneWidget);
+        expectNavLightOnCard();
+      },
+    );
+
+    testWidgets(
+      'CA-024-01 / CL-024-2: una card que sustituye a otra no deja ni un fotograma con iconos oscuros',
+      (tester) async {
+        await openApp(
+          tester,
+          tasks: ['Primera', 'Segunda', 'Tercera', 'Cuarta'],
+        );
+        await openList(tester);
+        await deleteRow(tester, 'Segunda');
+        expectNavLightOnCard();
+        // Pasada la guarda de la card (CL-014-2), otra eliminación.
+        await tester.pump(UnaMotion.doubleTapWindow + frame);
+        await tester.tap(trash('Tercera'));
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(frame);
+          expectNavLightOnCard();
+        }
+        expect(
+          find.descendant(of: card, matching: find.text('Tercera')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'CA-024-01 / CL-024-4: con la barra de navegación a un lado (sin margen abajo) la navegación sigue oscura',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda'], bottomInset: 0);
+        await deleteCurrent(tester);
+        expect(card, findsOneWidget);
+        expectLightBars();
+      },
+    );
+
+    testWidgets(
+      'CA-024-01 / CL-024-4: con la card más estrecha que la pantalla la navegación sigue oscura',
+      (tester) async {
+        await openApp(
+          tester,
+          tasks: ['Primera', 'Segunda'],
+          size: const Size(800, 400),
+        );
+        await deleteCurrent(tester);
+        expect(card, findsOneWidget);
+        expect(tester.getSize(card).width, lessThan(800));
+        expectLightBars();
+      },
+    );
+
+    testWidgets(
+      'CA-024-01 / CL-024-4: girar con la card visible mantiene la regla de cada forma',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda']);
+        await deleteCurrent(tester);
+        expectNavLightOnCard();
+        // Horizontal con tres botones a un lado: sin margen abajo.
+        tester.view
+          ..physicalSize = const Size(844, 390)
+          ..padding = FakeViewPadding.zero
+          ..viewPadding = FakeViewPadding.zero;
+        await tester.pump(frame);
+        await tester.pump(frame);
+        expect(card, findsOneWidget);
+        expectLightBars();
+        // De vuelta a vertical.
+        tester.view
+          ..physicalSize = const Size(390, 844)
+          ..padding = const FakeViewPadding(bottom: 24)
+          ..viewPadding = const FakeViewPadding(bottom: 24);
+        await tester.pump(frame);
+        await tester.pump(frame);
+        expectNavLightOnCard();
+      },
+    );
+
+    testWidgets(
+      'CA-024-03: al caducar la card vuelven los iconos oscuros en el mismo fotograma',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda']);
+        await deleteCurrent(tester);
+        expectNavLightOnCard();
+        var gone = false;
+        for (var i = 0; i < 400 && !gone; i++) {
+          await tester.pump(frame);
+          gone = card.evaluate().isEmpty;
+          if (gone) {
+            expectLightBars();
+          } else {
+            expectNavLightOnCard();
+          }
+        }
+        expect(gone, isTrue);
+      },
+    );
+
+    testWidgets('CA-024-03: al tocar "Deshacer" vuelven los iconos oscuros', (
+      tester,
+    ) async {
+      await openApp(tester, tasks: ['Primera', 'Segunda']);
+      await deleteCurrent(tester);
+      expectNavLightOnCard();
+      await tester.pump(UnaMotion.doubleTapWindow + frame);
+      await tester.tap(
+        find.descendant(of: card, matching: find.text('Deshacer')),
+      );
+      await tester.pump();
+      await tester.pump(frame);
+      expect(card, findsNothing);
+      expectLightBars();
+      // La restauración de la tarea deja un temporizador corto.
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets(
+      'CA-024-03 / CL-024-3: al pasar a segundo plano la card se da por terminada y vuelven los iconos oscuros',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda']);
+        await deleteCurrent(tester);
+        expectNavLightOnCard();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        await tester.pump(frame);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        await tester.pump(frame);
+        expect(card, findsNothing);
+        expectLightBars();
+      },
+    );
+
+    testWidgets(
+      'CA-024-03: al salir de la pantalla (abrir el listado) vuelven los iconos oscuros',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda', 'Tercera']);
+        await deleteCurrent(tester);
+        expectNavLightOnCard();
+        await tester.pump(UnaMotion.doubleTapWindow + frame);
+        await tester.tap(menuButton());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Todas mis tareas'));
+        await tester.pumpAndSettle();
+        expect(find.byType(TaskListScreen), findsOneWidget);
+        expect(card, findsNothing);
+        expectLightBars();
+      },
+    );
+  });
+  // ---------------------------------------------------------------------------
+  // Spec 024, CA-024-02 y 03 (H-022-05): con una hoja con velo abierta, los iconos
+  // de la barra de estado son claros (el velo oscurece lo de detrás) y los de la
+  // navegación siguen oscuros (quedan sobre la hoja, `paper`).
+  // ---------------------------------------------------------------------------
+  group('spec 024: hoja con velo', () {
+    const frame = Duration(milliseconds: 16);
+    Finder menuButton() => find.bySemanticsLabel('Menú de la tarea');
+
+    /// Estado claro (sobre el velo) y navegación oscura (sobre la hoja).
+    void expectStatusLightNavDark() {
+      final style = SystemChrome.latestStyle;
+      expect(style, isNotNull);
+      expect(style!.statusBarColor, transparent);
+      expect(style.statusBarIconBrightness, Brightness.light);
+      expect(style.systemStatusBarContrastEnforced, isFalse);
+      expect(style.systemNavigationBarColor, transparent);
+      expect(style.systemNavigationBarDividerColor, transparent);
+      expect(style.systemNavigationBarIconBrightness, Brightness.dark);
+      expect(style.systemNavigationBarContrastEnforced, isFalse);
+    }
+
+    Future<void> openApp(
+      WidgetTester tester, {
+      List<String> tasks = const ['Primera', 'Segunda'],
+      Size size = const Size(390, 844),
+    }) async {
+      await forgetStyle(tester);
+      await pumpUnaApp(
+        tester,
+        repo: InMemoryTaskRepository(),
+        tasks: tasks,
+        bottomInset: 24,
+        size: size,
+      );
+      // Barra de estado real (T-024-04, H-024-A): la ruta de la hoja recorta su contenido
+      // por debajo de ella, así que el punto donde Flutter lee el estilo de arriba (el
+      // centro de la barra) cae FUERA de la ruta; con margen 0 el fallo no se veía.
+      tester.view
+        ..padding = const FakeViewPadding(top: 28, bottom: 24)
+        ..viewPadding = const FakeViewPadding(top: 28, bottom: 24);
+      await tester.pump();
+      await tester.pump();
+      expectLightBars();
+    }
+
+    testWidgets(
+      'CA-024-02: con la hoja "Esta tarea" abierta sobre la nota la barra de estado es clara y la de navegación oscura',
+      (tester) async {
+        await openApp(tester);
+        await tester.tap(menuButton());
+        await tester.pumpAndSettle();
+        expect(find.text('Eliminar'), findsOneWidget);
+        expectStatusLightNavDark();
+      },
+    );
+
+    /// Abre "Esta tarea" y la deja asentada.
+    Future<void> openMenu(WidgetTester tester) async {
+      await tester.tap(menuButton());
+      await tester.pumpAndSettle();
+      expect(find.text('Eliminar'), findsOneWidget);
+    }
+
+    /// Avanza fotograma a fotograma tras [close] hasta que la hoja [sheet] sale del árbol:
+    /// mientras está, estado claro y navegación oscura; en el fotograma en que deja de
+    /// estar, vuelve lo de siempre (CA-024-03).
+    Future<void> closeAndWatch(
+      WidgetTester tester,
+      Finder sheet,
+      Future<void> Function() close,
+    ) async {
+      await close();
+      var gone = false;
+      for (var i = 0; i < 120 && !gone; i++) {
+        await tester.pump(frame);
+        gone = sheet.evaluate().isEmpty;
+        if (gone) {
+          expectLightBars();
+        } else {
+          expectStatusLightNavDark();
+        }
+      }
+      expect(gone, isTrue, reason: 'la hoja debe acabar de cerrarse');
+    }
+
+    testWidgets(
+      'CA-024-02: con la hoja "Añadir" abierta en el editor la barra de estado es clara y la de navegación oscura',
+      (tester) async {
+        await openApp(tester, tasks: const []);
+        expect(find.byType(TaskEditorScreen), findsOneWidget);
+        await tester.tap(
+          find.bySemanticsLabel('Añadir foto, imagen o archivo'),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(AttachSheet), findsOneWidget);
+        expectStatusLightNavDark();
+      },
+    );
+
+    testWidgets(
+      'CA-024-02 / CL-024-6: "Añadir" abre "Cargar URL": en ningún fotograma hay iconos oscuros arriba',
+      (tester) async {
+        await openApp(tester, tasks: const []);
+        await tester.tap(
+          find.bySemanticsLabel('Añadir foto, imagen o archivo'),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cargar URL'));
+        // Las dos rutas conviven unos fotogramas: siempre hay una hoja con velo.
+        for (var i = 0; i < 60; i++) {
+          await tester.pump(frame);
+          expectStatusLightNavDark();
+        }
+        await tester.pumpAndSettle();
+        expect(find.byType(UrlSheet), findsOneWidget);
+        expect(find.byType(AttachSheet), findsNothing);
+        expectStatusLightNavDark();
+      },
+    );
+
+    testWidgets(
+      'CA-024-02: con "¿Dónde la pones?" abierta la barra de estado es clara y la de navegación oscura',
+      (tester) async {
+        await openApp(tester);
+        await openMenu(tester);
+        await tester.tap(find.text('Nueva tarea'));
+        await tester.pumpAndSettle();
+        expect(find.byType(TaskEditorScreen), findsOneWidget);
+        await tester.enterText(find.byType(TextField), 'Algo nuevo');
+        await tester.pump();
+        await tester.tap(find.text('Continuar'));
+        await tester.pumpAndSettle();
+        expect(find.byType(PlacementSheet), findsOneWidget);
+        expectStatusLightNavDark();
+      },
+    );
+
+    testWidgets(
+      'CA-024-02: con la hoja "Mover" abierta sobre el listado la barra de estado es clara y la de navegación oscura',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda', 'Tercera']);
+        await openMenu(tester);
+        await tester.tap(find.text('Todas mis tareas'));
+        await tester.pumpAndSettle();
+        expect(find.byType(TaskListScreen), findsOneWidget);
+        expectLightBars();
+        await tester.tap(handleOf('Tercera'));
+        await tester.pumpAndSettle();
+        expect(find.text('Mover abajo'), findsNothing);
+        expect(find.text('Mover arriba'), findsOneWidget);
+        expectStatusLightNavDark();
+      },
+    );
+
+    testWidgets(
+      'CA-024-03: al cerrar la hoja tocando fuera vuelven los iconos oscuros al acabar de irse',
+      (tester) async {
+        await openApp(tester);
+        await openMenu(tester);
+        await closeAndWatch(
+          tester,
+          find.byType(MenuSheet),
+          () => tester.tapAt(const Offset(195, 40)),
+        );
+      },
+    );
+
+    testWidgets(
+      'CA-024-03: al cerrar la hoja con "Atrás" vuelven los iconos oscuros al acabar de irse',
+      (tester) async {
+        await openApp(tester);
+        await openMenu(tester);
+        await closeAndWatch(
+          tester,
+          find.byType(MenuSheet),
+          () => tester.binding.handlePopRoute(),
+        );
+      },
+    );
+
+    testWidgets(
+      'CA-024-03: al elegir una opción vuelven los iconos oscuros al acabar de irse la hoja',
+      (tester) async {
+        await openApp(tester, tasks: ['Primera', 'Segunda', 'Tercera']);
+        await openMenu(tester);
+        await closeAndWatch(
+          tester,
+          find.byType(MenuSheet),
+          () => tester.tap(find.text('Nueva tarea')),
+        );
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'CA-024-03: la cuenta de hojas con velo sube al abrir y vuelve a 0 al cerrar (sin fugas)',
+      (tester) async {
+        await openApp(tester);
+        expect(scrimSheetsOpen.value, 0);
+        await openMenu(tester);
+        expect(scrimSheetsOpen.value, 1);
+        await closeAndWatch(
+          tester,
+          find.byType(MenuSheet),
+          () => tester.binding.handlePopRoute(),
+        );
+        expect(scrimSheetsOpen.value, 0);
+      },
+    );
+
+    testWidgets(
+      'CA-024-03: con reducir movimiento la hoja se va en el acto y vuelven los iconos oscuros',
+      (tester) async {
+        await forgetStyle(tester);
+        await pumpUnaApp(
+          tester,
+          repo: InMemoryTaskRepository(),
+          tasks: ['Primera', 'Segunda'],
+          bottomInset: 24,
+          reduced: true,
+        );
+        await tester.pump();
+        await openMenu(tester);
+        expectStatusLightNavDark();
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        await tester.pump(frame);
+        expect(find.byType(MenuSheet), findsNothing);
+        expectLightBars();
+      },
+    );
+
+    testWidgets(
+      'CA-024-03 / CL-024-11: pasar a segundo plano y volver con la hoja abierta mantiene los iconos claros arriba',
+      (tester) async {
+        await openApp(tester);
+        await openMenu(tester);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump(frame);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        await tester.pump(frame);
+        expect(find.byType(MenuSheet), findsOneWidget);
+        expectStatusLightNavDark();
+      },
+    );
+
+    testWidgets(
+      'CA-024-02 / CL-024-4: con el velo más estrecho que la pantalla (800x400, sin visor) la barra de estado sigue oscura',
+      (tester) async {
+        await openApp(tester, size: const Size(800, 400));
+        await openMenu(tester);
+        expect(find.byType(MenuSheet), findsOneWidget);
+        expectLightBars();
+      },
+    );
+
+    testWidgets(
+      'CA-024-02 / CL-024-4: con una pantalla a ancho completo (visor) el velo llega de lado a lado y la barra de estado es clara',
+      (tester) async {
+        await openApp(tester, size: const Size(800, 400));
+        fullWidthRequests.value++;
+        addTearDown(() => fullWidthRequests.value = 0);
+        await tester.pump(frame);
+        await openMenu(tester);
+        expectStatusLightNavDark();
+        // Si el visor se va con la hoja abierta, el velo vuelve a ser más estrecho.
+        fullWidthRequests.value = 0;
+        await tester.pump(frame);
+        await tester.pump(frame);
+        expectLightBars();
+      },
+    );
+  });
 }

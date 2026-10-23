@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/semantics.dart' show FocusSemanticEvent;
 import 'package:flutter/services.dart';
 
+import '../../app/system_bars.dart';
 import '../../app/theme/tokens.g.dart';
 import '../../domain/entities/task.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -316,38 +317,59 @@ class _UndoCardState extends State<UndoCard> with TickerProviderStateMixin {
         child: FadeTransition(
           opacity: _entered,
           alwaysIncludeSemantics: true,
-          // `Material` (no `ColoredBox`): la card se monta sin `Scaffold`
-          // encima y sin él el texto sale con el estilo de reserva
-          // (subrayado doble amarillo).
-          child: Material(
-            color: UnaColors.ink,
-            // Abajo, la barra queda encima del margen del sistema y el negro
-            // llega al borde (P-014-2); a los lados, el contenido y la barra
-            // quedan dentro (barra de navegación, recorte de la cámara).
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _content(context, l10n, label),
-                  RepaintBoundary(
-                    child: SizedBox(
-                      height: UnaSizes.undoBar,
-                      child: CustomPaint(
-                        key: UndoCard.barKey,
-                        painter: _BarPainter(_fraction, color),
+          child: LayoutBuilder(
+            builder: (context, constraints) =>
+                AnnotatedRegion<SystemUiOverlayStyle>(
+                  // Con tamaño: solo vale donde está la card. Si la barra de navegación
+                  // está abajo y la card llega de lado a lado, ocupa su franja y los
+                  // iconos son claros (CA-024-01); si no (barra a un lado, card más
+                  // estrecha que la pantalla) pide lo de siempre. La región se queda
+                  // siempre en el árbol: así girar no recrea la card.
+                  sized: true,
+                  value: _coversNavigationBar(context, constraints)
+                      ? systemBarsOnDarkNavStyle
+                      : systemBarsStyle,
+                  // `Material` (no `ColoredBox`): la card se monta sin `Scaffold`
+                  // encima y sin él el texto sale con el estilo de reserva
+                  // (subrayado doble amarillo).
+                  child: Material(
+                    color: UnaColors.ink,
+                    // Abajo, la barra queda encima del margen del sistema y el negro
+                    // llega al borde (P-014-2); a los lados, el contenido y la barra
+                    // quedan dentro (barra de navegación, recorte de la cámara).
+                    child: SafeArea(
+                      top: false,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _content(context, l10n, label),
+                          RepaintBoundary(
+                            child: SizedBox(
+                              height: UnaSizes.undoBar,
+                              child: CustomPaint(
+                                key: UndoCard.barKey,
+                                painter: _BarPainter(_fraction, color),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
           ),
         ),
       ),
     );
   }
+
+  /// La card ocupa la franja de la barra de navegación (CA-024-01): la barra está
+  /// abajo (el margen del sistema de abajo es `> 0`; a un lado vale 0) y la card llega
+  /// de lado a lado de la pantalla (`contentMaxWidth` no la acorta).
+  bool _coversNavigationBar(BuildContext context, BoxConstraints constraints) =>
+      MediaQuery.viewPaddingOf(context).bottom > 0 &&
+      constraints.maxWidth >= MediaQuery.sizeOf(context).width;
 
   Widget _content(BuildContext context, AppLocalizations l10n, String label) {
     final scaler = MediaQuery.textScalerOf(context);
