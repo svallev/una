@@ -1,6 +1,6 @@
 # Tareas — Spec 024: Correcciones de la auditoría
 
-**Siguiente:** el cierre de la spec (sección «Cierre»: `/i18n-check`, `/tokens-validate`, `/security-check`, `a11y-reviewer` y `security-reviewer` sobre `git diff main...HEAD`, DoD y spec **Implementada**); T-024-01 a 06 hechas <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** nada; T-024-01 a 06 hechas y spec **Implementada** (cierre hecho el 2026-10-23). Queda abrir la PR cuando el propietario lo confirme (sin push todavía) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Sin textos ni tokens nuevos. Rama de implementación: `feat/024-correcciones-de-la-auditoria`.
 
@@ -15,10 +15,12 @@ Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias a
 
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde o su casilla/revisión hecha.
-- [ ] `/i18n-check`, `/tokens-validate`, `/security-check`; `a11y-reviewer` y `security-reviewer` sobre `git diff main...HEAD`.
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada**.
+- [x] Todos los CA de la spec tienen test en verde o su casilla/revisión hecha (CA-024-01 a 04 con tests y casillas C-024-1 a 3; CA-024-05 a 08 por revisión de documentos, T-024-06).
+- [x] `/i18n-check` (sin textos ARB nuevos), `/tokens-validate` (`validate-tokens` verde, sin valores sueltos en el diff), `/security-check`; `security-reviewer`: **0 hallazgos**; `a11y-reviewer`: 0 altos y 4 puntos que no bloquean, registrados abajo.
+- [x] Definition of Done: `analyze --fatal-infos` limpio, formato sin cambios, `flutter test -j 3` 4543 verdes (222 saltados), CI con `check-apk-locales.sh`.
+- [x] Spec marcada como **Implementada**.
+
+**Revisión de a11y (2026-10-23):** (1) H-022-03, ya aceptado sin excepción de P6; con CA-024-04 lo notan más quienes tienen catalán primero (app en español, voz del sistema en catalán) y conviene que la lista de F6 lo recuerde como limitación conocida. (2) H-022-02, ya aceptado. (3) **[Pendiente, bajo]** horizontal con tres botones y la card: `_coversNavigationBar` devuelve `false` con la barra a un lado, pero la card negra llega parcialmente a su franja; 3,29:1 en el emulador, sin medir en el Xiaomi. (4) **[Pendiente, bajo]** sin probar en el Xiaomi «Todo hecho.», tres botones ni TalkBack. Ninguno bloquea.
 
 ## Estado
 
