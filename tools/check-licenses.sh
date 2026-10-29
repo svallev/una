@@ -434,6 +434,7 @@ so_entry() {
     libflutter.so) echo "notices:skia" ;;    # el motor de Flutter (Skia, ICU, HarfBuzz…)
     libdartjni.so) echo "notices:jni" ;;     # paquete jni
     libpdfium.so) echo "asset:pdfium.txt" ;;
+    libpdfrx_pdfium_gate.so) echo "notices:pdfium_dart" ;;  # candado de pdfium_dart (MIT), compilado de su C
     libsqlite3.so) echo "asset:sqlite.txt" ;;
     *) echo unknown ;;
   esac
