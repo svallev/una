@@ -2691,18 +2691,19 @@ class $$TasksTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (attachmentsRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       TaskRow,
                       $TasksTable,
-                      AttachmentRow
+                      AttachmentRow,
+                      $AttachmentsTable
                     >(
                       currentTable: table,
                       referencedTable: $$TasksTableReferences
                           ._attachmentsRefsTable(db),
                       managerFromTypedResult: (p0) =>
                           $$TasksTableReferences(db, table, p0).attachmentsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.taskId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'task_id',
                       typedResults: items,
                     ),
                 ];
