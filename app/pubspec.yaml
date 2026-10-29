@@ -16,7 +16,7 @@ dependencies:
   flutter_riverpod: ^3.4.3
   intl: ^0.20.3
   path_provider: ^2.1.6
-  pdfrx: 2.6.5
+  pdfrx: 2.10.1
   uuid: ^4.6.0
   # Spec 009 (ADR-0007/0016): WebView del sistema para la tarea web. Fijadas (P11).
   webview_flutter: 4.14.1
