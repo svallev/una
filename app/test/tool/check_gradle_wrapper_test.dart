@@ -12,13 +12,13 @@ const _realLock = '../tools/gradle-wrapper.lock';
 const _realProperties = 'android/gradle/wrapper/gradle-wrapper.properties';
 const _realJar = 'android/gradle/wrapper/gradle-wrapper.jar';
 
-// Lo que publica Gradle (https://gradle.org/release-checksums/, comprobado el 2026-10-14).
+// Lo que publica Gradle (https://gradle.org/release-checksums/, comprobado el 2026-11-01).
 const _distSum9 =
-    '46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf';
+    'a1bb7e9651ef09e4cd9a62d471564e0ee23b5757e5f21fd7358d7cfc21018fdf';
 const _jarSum210 =
     '16caeaf66d57a0d1d2087fef6a97efa62de8da69afa5b908f40db35afc4342da';
 const _jarSum9 =
-    '238e777fcddd7e34f9708186085def2abd6e08e658505b38718d79d74c21abd5';
+    '3b8a25775a69158b5ad2b1d17a80a88dc7b40a352a73eb27d06c612a7ce68e98';
 
 const _goodJar = 'contenido de un jar de prueba';
 const _distFile = 'gradle-9.8.0-all.zip';
@@ -324,12 +324,12 @@ void main() {
   group('CA-020-14: los archivos reales del repositorio', () {
     test('CA-020-14: el lock lleva las sumas que publica Gradle', () {
       final lock = File(_realLock).readAsStringSync();
-      expect(lock, contains('distribution gradle-9.8.0-all.zip $_distSum9'));
+      expect(lock, contains('distribution gradle-9.8.2-all.zip $_distSum9'));
       expect(lock, contains('wrapper-jar 2.10 $_jarSum210'));
-      expect(lock, contains('wrapper-jar 9.8.0 $_jarSum9'));
+      expect(lock, contains('wrapper-jar 9.8.2 $_jarSum9'));
     });
 
-    test('CA-020-14: gradle-wrapper.properties lleva la suma de gradle-9.8.0-all.zip', () {
+    test('CA-020-14: gradle-wrapper.properties lleva la suma de gradle-9.8.2-all.zip', () {
       final props = File(_realProperties).readAsStringSync();
       expect(
         props,
@@ -337,7 +337,7 @@ void main() {
           RegExp('^distributionSha256Sum=$_distSum9\$', multiLine: true),
         ),
       );
-      expect(props, contains('gradle-9.8.0-all.zip'));
+      expect(props, contains('gradle-9.8.2-all.zip'));
     });
 
     test('CA-020-14: las propiedades reales pasan con un jar de prueba que el '
