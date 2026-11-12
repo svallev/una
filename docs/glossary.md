@@ -108,6 +108,10 @@ Fuente única de términos. El **código usa la columna "Código"**, los textos 
 | Clasificación de contenido | Content rating | — *(spec 023)* | Cuestionario de IARC en Play Console que da la edad recomendada por país. |
 | Público objetivo | Target audience | — *(spec 023)* | Grupos de edad para los que está pensada la app, declarados en Play Console. |
 | Webs de la app | App web pages | `landing/`, `privacyPolicyUrl`, `thirdPartyLicensesUrl`, `helpUrl` *(spec 023)* | Las tres páginas que abren las filas de Ajustes: Política de privacidad, Licencias de terceros y Ayuda; una dirección cada una, con ES y EN en la misma página. |
+| Landing | Landing page | `landing/` *(spec 025)* | La página de inicio de la web: cuenta la app en siete escenas y lleva a las tiendas. Sustituye a la página de inicio mínima de la 023; no es una de las tres «webs de la app». |
+| Escena | Scene | — *(spec 025)* | Cada uno de los siete pasos de la landing, con su titular, su entradilla y su color de fondo. |
+| Recorrido | Journey | — *(spec 025)* | El avance en profundidad de la landing ligado al scroll: los elementos vienen de frente y nos sobrepasan. Con «reducir movimiento» no existe y las escenas se leen una debajo de otra. |
+| Insignia de tienda | Store badge | — *(spec 025)* | La imagen oficial «Disponible en Google Play» o «Descárgalo en el App Store»; no se altera. |
 | Huecos de identidad | Identity placeholders | `[RESPONSABLE]`, `[CONTACTO]`, `[FECHA]`, `[WEB]` y sus versiones en inglés *(spec 023)* | Lista **cerrada** de datos que solo existen en F6 (responsable, contacto, fecha de publicación, dirección de la web); se escriben entre corchetes en la política, el pie de las webs y la Ayuda. Son avisos de identidad: la puerta de publicación los lista en modo testers y falla con ellos en modo estricto. El nombre de la app **no** es un hueco: sale de `app/identity.yaml` (`{appName}`). |
 | Indicador de función | Feature flag | `FeatureFlag` | Interruptor local para funcionalidades a medio hacer. |
 | Fecha límite *(futuro)* | Due date | `dueDate` | Bloque 1 de la hoja de ruta. |
