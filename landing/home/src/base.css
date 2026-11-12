@@ -1,0 +1,19 @@
+/* Andamiaje de T-025-01: lo justo para que haya algo que desplazar. Lo sustituyen T-025-05 a 07. */
+html,
+body {
+  margin: 0;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-family-display);
+}
+
+.journey {
+  min-height: 400svh;
+  padding: var(--space-l);
+}
+
+.moving {
+  margin: 0;
+  font-size: var(--font-size-hero);
+  font-weight: var(--font-weight-black);
+}

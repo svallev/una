@@ -15,6 +15,7 @@ let port;
 before(async () => {
   w = world();
   w.build();
+  await w.buildHome();
   // Fuera de dist/ hay un secreto que nunca puede salir.
   writeFileSync(join(w.dir, "secret.txt"), "SECRETO-FUERA-DE-DIST");
   mkdirSync(join(w.dir, "outside"));
@@ -55,18 +56,21 @@ function raw(requestLine, { host = `127.0.0.1:${port}`, extra = "" } = {}) {
 }
 const get = (path, options) => raw(`GET ${path}`, options);
 
-const required = () => JSON.parse(read(w.paths.vercelJson)).headers[0].headers;
+/** Las cabeceras de la regla de `vercel.json` con [source] (por defecto, la de todo menos la página de inicio). */
+const required = (source = "/(.+)") => JSON.parse(read(w.paths.vercelJson)).headers.find((r) => r.source === source).headers;
+const cspOf = (source) => required(source).find((h) => h.key === "Content-Security-Policy").value;
 
 describe("sirve lo construido", () => {
   test("escucha solo en 127.0.0.1", () => {
     assert.equal(server.address().address, "127.0.0.1");
   });
 
-  test("la página de inicio, con todas las cabeceras de vercel.json", async () => {
+  test("CA-025-12: la página de inicio, con todas las cabeceras de su regla de vercel.json («/», con script-src 'self')", async () => {
     const r = await get("/");
     assert.equal(r.status, 200);
     assert.match(r.headers["content-type"], /^text\/html/);
-    for (const h of required()) {
+    assert.match(r.headers["content-security-policy"], /script-src 'self'/);
+    for (const h of required("/")) {
       assert.equal(r.headers[h.key.toLowerCase()], h.value, `falta o difiere ${h.key}`);
     }
     assert.ok(!("set-cookie" in r.headers));
@@ -91,6 +95,25 @@ describe("sirve lo construido", () => {
     }
   });
 
+  test("CA-025-12: el resto de páginas, con la regla estricta (sin script-src)", async () => {
+    for (const p of ["/privacy", "/help", "/licenses", "/tokens.css"]) {
+      const r = await get(p);
+      assert.equal(r.status, 200, p);
+      for (const h of required()) assert.equal(r.headers[h.key.toLowerCase()], h.value, `${p}: falta o difiere ${h.key}`);
+      assert.doesNotMatch(r.headers["content-security-policy"], /script-src/, p);
+    }
+  });
+
+  test("CA-025-12: el programa de la página de inicio se sirve como text/javascript (con nosniff no se ejecutaría con otro tipo)", async () => {
+    const html = (await get("/")).body;
+    const src = /<script type="module" crossorigin src="(\/assets\/[^"]+\.js)"><\/script>/.exec(html)?.[1];
+    assert.ok(src, "la página de inicio no carga su programa de /assets/");
+    const r = await get(src);
+    assert.equal(r.status, 200);
+    assert.equal(r.headers["content-type"], "text/javascript; charset=utf-8");
+    assert.equal(r.headers["x-content-type-options"], "nosniff");
+  });
+
   test("la cadena de consulta no cuenta", async () => {
     assert.equal((await get("/privacy?x=1#y")).status, 200);
   });
@@ -113,7 +136,7 @@ describe("sirve lo construido", () => {
     const r = await get("/no-existe");
     assert.equal(r.status, 404);
     assert.ok(r.body.includes("Esta página no existe."));
-    assert.equal(r.headers["content-security-policy"], required().find((h) => h.key === "Content-Security-Policy").value);
+    assert.equal(r.headers["content-security-policy"], cspOf("/(.+)"));
   });
 
   test("una carpeta sin index no se lista", async () => {

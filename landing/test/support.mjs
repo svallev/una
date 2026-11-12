@@ -1,13 +1,15 @@
 // Ayudas de los tests de la web (spec 023). No es un test: no acaba en `.test.mjs`.
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { build, defaultPaths } from "../build.mjs";
+import { basename, join } from "node:path";
+import { build, buildHome, defaultPaths } from "../build.mjs";
 
 /**
  * Un mundo de prueba: copias en una carpeta temporal de lo que los tests modifican (la identidad, la
  * política, `landing/src/` entera, el archivo de avisos, `build.mjs` y `vercel.json`) y la salida en `dist/` temporal. El
- * resto (tokens, ARB, fuentes) se lee del repositorio.
+ * resto (tokens, ARB, fuentes) se lee del repositorio. La página de inicio (spec 025) se construye aparte, con
+ * `buildHome` (Vite, asíncrona): el mundo lleva una copia de `landing/home/` sin `gen/` y un enlace a
+ * `landing/node_modules/`, para que Vite encuentre las dependencias.
  */
 export function world() {
   const real = defaultPaths();
@@ -33,12 +35,20 @@ export function world() {
   cpSync(real.notices, paths.notices);
   cpSync(real.buildFile, paths.buildFile);
   cpSync(real.vercelJson, paths.vercelJson);
+  paths.homeDir = join(dir, "home");
+  cpSync(real.homeDir, paths.homeDir, {
+    recursive: true,
+    filter: (from) => !(from === join(real.homeDir, "gen") || basename(from) === ".DS_Store"),
+  });
+  symlinkSync(join(real.landingDir, "node_modules"), join(dir, "node_modules"), "dir");
   return {
     dir,
     paths,
     dist: paths.out,
     /** Construye (sin `VERCEL_ENV`) y devuelve el resultado de `build`. */
     build: (env = {}) => build(paths, { env }),
+    /** Construye la página de inicio con Vite (después de `build`). */
+    buildHome: () => buildHome(paths),
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   };
 }
@@ -71,6 +81,7 @@ export function cloneWorld(base) {
     paths,
     dist: paths.out,
     build: (env = {}) => build(paths, { env }),
+    buildHome: () => buildHome(paths),
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   };
 }

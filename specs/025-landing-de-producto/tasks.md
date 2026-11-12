@@ -36,3 +36,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-025-01 | Hecha: `package.json`/lockfile/`.npmrc` (3 deps exactas, `npm ci --ignore-scripts` probado), `home/` mínima (GSAP+ScrollTrigger+Lenis), `build()` síncrona sin inicio + `buildHome` (Vite, raíz `home/gen/`), cabecera de GSAP conservada, `prepare-body.js` importado antes que gsap; `vercel.json` con `/(.+)` y `/` (+`script-src 'self'`) e `installCommand`; `serve.mjs` por ruta y `.js`; `checkSite` solo las 4 páginas (tests de la 023 pasados a `404.html`). 401 tests verdes. Consola de Chrome: **[Pendiente] coordinador**. **[Pendiente]** la CI falla hasta T-025-12 (sin `npm ci`); reglas de la de inicio en `check.mjs`, T-025-03 | (este) |

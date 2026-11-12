@@ -17,10 +17,11 @@ before(() => {
 });
 after(() => base.cleanup());
 
-const pages = ["index.html", "privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];
+// Las páginas sin JavaScript. La de inicio la construye Vite desde la spec 025: sus tests, en `home-*.test.mjs`.
+const pages = ["privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];
 
 describe("CA-023-13: las páginas", () => {
-  test("salen la de inicio, las tres webs de la app y la de error, más los estilos, los avisos y las fuentes", () => {
+  test("salen las tres webs de la app y la de error, más los estilos, los avisos y las fuentes", () => {
     for (const f of [...pages, "tokens.css", "site.css", "third-party-notices.txt"]) {
       assert.ok(existsSync(join(base.dist, f)), `falta ${f}`);
     }
@@ -57,18 +58,6 @@ describe("CA-023-13: las páginas", () => {
     }
   });
 
-  test("la página de inicio enlaza a las tres webs con los títulos de las ARB", () => {
-    const html = read(join(base.dist, "index.html"));
-    for (const [href, es, en] of [
-      ["/privacy", "Política de privacidad", "Privacy policy"],
-      ["/licenses", "Licencias de terceros", "Third-party licenses"],
-      ["/help", "Ayuda", "Help"],
-    ]) {
-      assert.ok(html.includes(`<a class="block-link" href="${href}">${es}</a>`), `falta el enlace en español a ${href}`);
-      assert.ok(html.includes(`<a class="block-link" href="${href}">${en}</a>`), `falta el enlace en inglés a ${href}`);
-    }
-  });
-
   test("la página de error está en los dos idiomas y vuelve al inicio", () => {
     const html = read(join(base.dist, "404.html"));
     assert.ok(html.includes("Esta página no existe."));
@@ -89,7 +78,6 @@ describe("CA-023-13: las páginas", () => {
 
   test("el título del navegador lleva los dos idiomas y el nombre", () => {
     assert.match(read(join(base.dist, "privacy/index.html")), new RegExp(`<title>Política de privacidad · ${name.replace(".", "\\.")} / Privacy policy · ${name.replace(".", "\\.")}</title>`));
-    assert.match(read(join(base.dist, "index.html")), new RegExp(`<title>${name.replace(".", "\\.")}</title>`));
   });
 
   test("la comprobación pasa con lo construido", () => {
@@ -115,7 +103,6 @@ describe("CA-023-13: el nombre sale de la identidad", () => {
         const left = text.split("\n").find((line) => mentionsName(line, name));
         assert.equal(left, undefined, `${f} sigue con el nombre anterior`);
       }
-      assert.match(read(join(w.dist, "index.html")), /<h1>Zorro<\/h1>/);
       assert.match(read(join(w.dist, "privacy/index.html")), /Zorro <strong>no recoge datos tuyos/);
       assert.deepEqual(checkSite(w.paths), []);
     } finally {
@@ -228,7 +215,7 @@ describe("Plan §1.3: huecos de identidad al publicar", () => {
       edit(w.paths.helpEn, (t) => t.replaceAll("[CONTACT]", "hola@ejemplo.org"));
       const r = w.build({ VERCEL_ENV: "production" });
       assert.deepEqual(r.warnings, []);
-      assert.ok(read(join(w.dist, "index.html")).includes("Contacto: hola@ejemplo.org"));
+      assert.ok(read(join(w.dist, "404.html")).includes("Contacto: hola@ejemplo.org"));
     } finally {
       w.cleanup();
     }

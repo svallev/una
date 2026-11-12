@@ -1,10 +1,11 @@
-// Construye la web de la app (spec 023, CA-023-03, 04, 13 a 17): la página de inicio, la política de
-// privacidad, las licencias de terceros, la Ayuda y la página de error, en español e inglés en la misma
-// dirección, sin JavaScript.
+// Construye la web de la app (spec 023, CA-023-03, 04, 13 a 17): la política de privacidad, las licencias de
+// terceros, la Ayuda y la página de error, en español e inglés en la misma dirección, sin JavaScript; y, con
+// Vite, la página de inicio (spec 025, ADR-0027) desde `landing/home/`.
 //
-//   node landing/build.mjs      escribe landing/dist/
+//   npm ci --ignore-scripts      (una vez, en landing/)
+//   node landing/build.mjs       escribe landing/dist/
 //
-// Solo módulos de Node, sin `package.json` ni dependencias (P11). Lee `app/identity.yaml` (el nombre,
+// Las cuatro páginas usan solo módulos de Node (P11); Vite se carga solo para la de inicio. Lee `app/identity.yaml` (el nombre,
 // P7), `design/tokens.json` (colores, fuentes y medidas, P12), los títulos de las ARB, el texto de la
 // política (`docs/legal/privacy-policy.md`, la única copia, CA-023-04), el archivo de avisos de terceros
 // (`landing/third-party-notices.txt`, CA-023-16) y `landing/src/` (textos y Ayuda). Falla cerrada:
@@ -47,6 +48,7 @@ export function defaultPaths(repoRoot = REPO_ROOT) {
     buildFile: join(landingDir, "build.mjs"),
     vercelJson: join(landingDir, "vercel.json"),
     fontsDir: join(repoRoot, "app/assets/fonts"),
+    homeDir: join(landingDir, "home"),
     out: join(landingDir, "dist"),
   };
 }
@@ -765,20 +767,7 @@ export function renderSite(paths) {
     files.set(file, shell(spec));
   };
 
-  // Inicio.
-  const homeTitle = fill(s.es.webHomeTitle, { appName: name });
-  const links = (lang) =>
-    ["privacy", "licenses", "help"]
-      .map((k) => `<li><a class="block-link" href="/${k}">${esc(arb[lang][k])}</a></li>`)
-      .join("\n");
-  const homeBody = (lang) =>
-    `${langHeading(lang, s)}\n<p>${esc(s[lang].webHomeIntro)}</p>\n<ul class="links">\n${links(lang)}\n</ul>`;
-  page("index.html", {
-    title: homeTitle,
-    h1: esc(homeTitle),
-    main: `${section("es", s, homeBody("es"))}\n${section("en", s, homeBody("en"))}`,
-    footer: footer(s),
-  });
+  // La página de inicio ya no sale de aquí: la construye Vite desde `landing/home/` (spec 025, `buildHome`).
 
   // Política: el texto es el de docs/legal/privacy-policy.md (CA-023-04).
   const policy = policyFragments(readText(paths.policy, "privacy-policy.md"), name);
@@ -895,11 +884,67 @@ export function build(paths = defaultPaths(), { env = process.env } = {}) {
   return { warnings, files: [...files.keys(), ...copies.map(([, to]) => to.slice(paths.out.length + 1))] };
 }
 
+// ─── La página de inicio (spec 025) ──────────────────────────────────────────────────────────────
+
+/** La carpeta de lo generado para Vite (fuera de git): `landing/home/gen/`. */
+export const homeGenDir = (paths) => join(paths.homeDir, "gen");
+
+/** `index.template.html` con sus `{{marcadores}}` rellenos (escapados). Falla si queda alguno. */
+export function renderHomeHtml(template, identity) {
+  const values = { title: identity.displayName, name: identity.displayName };
+  const html = template.replace(/\{\{([a-zA-Z]+)\}\}/g, (m, key) => {
+    if (!(key in values)) throw new BuildError(`index.template.html: marcador desconocido ${m}`);
+    return esc(values[key]);
+  });
+  if (/\{\{|\}\}/.test(html)) throw new BuildError("index.template.html: queda un marcador sin rellenar");
+  return html;
+}
+
+/**
+ * Escribe `landing/home/gen/` (lo que Vite construye: la página con el nombre de la identidad y los tokens).
+ * Devuelve la lista de archivos escritos.
+ */
+export function writeHomeGen(paths = defaultPaths()) {
+  const identity = readIdentity(readText(paths.identity, "identity.yaml"), basename(paths.identity));
+  const tokens = JSON.parse(readText(paths.tokens, "tokens.json"));
+  const template = readText(join(paths.homeDir, "index.template.html"), "index.template.html");
+  const gen = homeGenDir(paths);
+  const files = new Map([
+    ["index.html", renderHomeHtml(template, identity)],
+    ["tokens.css", tokensCss(tokens)],
+  ]);
+  rmSync(gen, { recursive: true, force: true });
+  mkdirSync(gen, { recursive: true });
+  for (const [file, content] of files) writeFileSync(join(gen, file), content);
+  return [...files.keys()];
+}
+
+/**
+ * Construye la página de inicio con Vite (por su API) dentro de `paths.out`, después de `build`, que ya vació
+ * la carpeta y escribió las otras cuatro páginas. La configuración es la de `landing/home/vite.config.mjs`,
+ * que escribe en `landing/home/../dist`: tiene que ser `paths.out`.
+ */
+export async function buildHome(paths = defaultPaths()) {
+  if (resolve(paths.homeDir, "..", "dist") !== resolve(paths.out)) {
+    throw new BuildError(`la página de inicio se construye en ${resolve(paths.homeDir, "..", "dist")}, no en ${paths.out}`);
+  }
+  writeHomeGen(paths);
+  let vite;
+  try {
+    vite = await import("vite");
+  } catch (e) {
+    throw new BuildError(`no se puede cargar Vite (¿falta «npm ci --ignore-scripts» en landing/?): ${e.message}`);
+  }
+  const config = (await import(pathToFileURL(join(paths.homeDir, "vite.config.mjs")).href)).default;
+  await vite.build({ ...config, configFile: false });
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const { warnings, files } = build();
     for (const w of warnings) console.warn(w);
-    console.log(`Web construida en landing/dist (${files.length} archivos).`);
+    await buildHome();
+    console.log(`Web construida en landing/dist (${files.length} archivos y la página de inicio).`);
   } catch (e) {
     if (!(e instanceof BuildError)) throw e;
     console.error(`error: ${e.message}`);

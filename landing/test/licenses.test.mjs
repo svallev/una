@@ -188,8 +188,7 @@ describe("CA-023-16: la página de licencias", () => {
     }
   });
 
-  test("la página de inicio ya enlazaba a /licenses: ahora existe", () => {
-    assert.ok(read(join(base.dist, "index.html")).includes('href="/licenses"'));
+  test("la página de licencias existe (desde la spec 025, la enlaza el pie de la página de inicio, CA-025-20)", () => {
     assert.ok(existsSync(licenses(base)));
   });
 

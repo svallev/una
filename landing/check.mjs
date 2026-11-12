@@ -22,8 +22,13 @@ import {
   renderSite,
 } from "./build.mjs";
 
-/** Las páginas que tiene que haber: inicio, las tres webs de la app y la de error. */
-export const REQUIRED_PAGES = ["index.html", "privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];
+/**
+ * Las páginas sin JavaScript que tiene que haber: las tres webs de la app y la de error. La de inicio la
+ * construye Vite (spec 025) y no pasa estas reglas: `HOME_PAGE` solo se exige al comprobar `dist/` entera
+ * desde la línea de órdenes (T-025-03 le pone sus propias reglas).
+ */
+export const REQUIRED_PAGES = ["privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];
+export const HOME_PAGE = "index.html";
 
 /** La página que lleva, tras las dos mitades, el bloque de avisos de terceros (CA-023-16). */
 const NOTICES_PAGE = "licenses/index.html";
@@ -358,6 +363,8 @@ const CSP = {
   "form-action": "'none'",
   "frame-ancestors": "'none'",
 };
+/** La de la página de inicio: la misma más programas del propio origen (spec 025, CA-025-12). */
+const HOME_CSP = { ...CSP, "script-src": "'self'" };
 const PERMISSIONS = ["accelerometer", "autoplay", "camera", "display-capture", "geolocation", "gyroscope", "interest-cohort", "magnetometer", "microphone", "payment", "usb"];
 
 function checkVercel(path, errors) {
@@ -375,12 +382,23 @@ function checkVercel(path, errors) {
   if (json.buildCommand !== "node build.mjs") fail('buildCommand tiene que ser "node build.mjs"');
   if (json.outputDirectory !== "dist") fail('outputDirectory tiene que ser "dist"');
   for (const key of ["rewrites", "redirects", "routes"]) if (key in json) fail(`la web no necesita «${key}»`);
-  if (!Array.isArray(json.headers) || json.headers.length !== 1 || json.headers[0].source !== "/(.*)") {
-    fail('tiene que haber una sola regla de cabeceras, con source "/(.*)" (todas las rutas)');
+  // Dos reglas que no se solapan (spec 025, plan §6.1): «/(.+)», la de siempre, para todo menos la página de
+  // inicio, y «/», la misma con `script-src 'self'`. T-025-03 exige además que sean iguales salvo esa directiva.
+  const sources = Array.isArray(json.headers) ? json.headers.map((r) => r?.source) : [];
+  if (sources.length !== 2 || !sources.includes("/(.+)") || !sources.includes("/")) {
+    fail('tiene que haber dos reglas de cabeceras, con source "/(.+)" (todo menos la página de inicio) y "/" (la página de inicio)');
     return;
   }
+  for (const rule of json.headers) {
+    const home = rule.source === "/";
+    checkHeaderRule(rule, home ? HOME_CSP : CSP, home ? (msg) => fail(`${msg} (regla «/»)`) : fail);
+  }
+}
+
+/** Las cabeceras de una regla de `vercel.json`, con la CSP [cspSpec]. */
+function checkHeaderRule(rule, cspSpec, fail) {
   const headers = new Map();
-  for (const h of json.headers[0].headers ?? []) headers.set(h.key.toLowerCase(), h.value);
+  for (const h of rule.headers ?? []) headers.set(h.key.toLowerCase(), h.value);
   if (headers.has("set-cookie")) fail("pone una cookie (Set-Cookie): la web no usa cookies");
   if (/noindex/i.test(headers.get("x-robots-tag") ?? "")) fail("X-Robots-Tag: noindex (la política tiene que poder encontrarse)");
   const need = (key, ok, expected) => {
@@ -407,11 +425,11 @@ function checkVercel(path, errors) {
         return [name, sources.sort().join(" ")];
       }),
     );
-    for (const [d, v] of Object.entries(CSP)) {
+    for (const [d, v] of Object.entries(cspSpec)) {
       if (!actual.has(d)) fail(`Content-Security-Policy: falta ${d} ${v}`);
       else if (actual.get(d) !== v) fail(`Content-Security-Policy: ${d} tiene que ser ${v} (es ${actual.get(d)})`);
     }
-    for (const d of actual.keys()) if (!(d in CSP)) fail(`Content-Security-Policy: ${d} no se admite`);
+    for (const d of actual.keys()) if (!(d in cspSpec)) fail(`Content-Security-Policy: ${d} no se admite`);
   }
 
   const perms = headers.get("permissions-policy");
@@ -538,10 +556,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const at = args.indexOf("--dist");
   const dist = at >= 0 ? args[at + 1] : paths.out;
   const errors = checkSite(paths, { dist });
+  if (!existsSync(join(dist, HOME_PAGE))) errors.push(`${HOME_PAGE}: falta la página de inicio (¿se ejecutó landing/build.mjs?)`);
   if (errors.length > 0) {
     for (const e of errors) console.error(`error: ${e}`);
     console.error(`\n${errors.length} error(es) en la web.`);
     process.exit(1);
   }
-  console.log(`Web comprobada (${REQUIRED_PAGES.length} páginas): sin errores.`);
+  console.log(`Web comprobada (${REQUIRED_PAGES.length} páginas y la de inicio): sin errores.`);
 }

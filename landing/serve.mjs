@@ -1,5 +1,6 @@
-// Servidor local de la web (spec 023, casillas C-023-2 a 4): sirve `landing/dist/` con las mismas
-// cabeceras de `vercel.json` y las reglas de `cleanUrls` / `404.html`, sin desplegar nada.
+// Servidor local de la web (spec 023, casillas C-023-2 a 4; spec 025): sirve `landing/dist/` con las mismas
+// cabeceras de `vercel.json` (por ruta: «/» lleva la CSP de la página de inicio) y las reglas de
+// `cleanUrls` / `404.html`, sin desplegar nada.
 //
 //   node landing/serve.mjs [--port 4173]      (después de `node landing/build.mjs`)
 //
@@ -15,6 +16,8 @@ import { defaultPaths } from "./build.mjs";
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
+  // Con `nosniff`, un módulo servido con otro tipo no se ejecuta (spec 025).
+  ".js": "text/javascript; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".ttf": "font/ttf",
@@ -23,21 +26,38 @@ const TYPES = {
   ".svg": "image/svg+xml",
 };
 
-/** Las cabeceras de la regla de `vercel.json`; solo admite la de todas las rutas (falla cerrada). */
+/** Qué rutas abarca cada `source` que sé servir (el resto hace fallar el arranque). */
+const SOURCES = {
+  "/(.*)": () => true,
+  "/(.+)": (path) => path !== "/",
+  "/": (path) => path === "/",
+};
+
+/**
+ * Las reglas de cabeceras de `vercel.json` (falla cerrada con un `source` que no conoce). Devuelve una
+ * función que da las cabeceras de una ruta: las de todas las reglas que la abarcan, en orden, como Vercel.
+ */
 function loadHeaders(vercelJson) {
   const json = JSON.parse(readFileSync(vercelJson, "utf8"));
   const rules = json.headers ?? [];
-  if (rules.length !== 1 || rules[0].source !== "/(.*)") {
-    throw new Error(`vercel.json: solo sé servir una regla de cabeceras con source "/(.*)" (hay ${rules.length})`);
+  if (rules.length === 0) throw new Error("vercel.json: no hay ninguna regla de cabeceras");
+  for (const r of rules) {
+    if (!(r.source in SOURCES)) {
+      throw new Error(`vercel.json: no sé servir la regla de cabeceras con source "${r.source}" (solo ${Object.keys(SOURCES).join(", ")})`);
+    }
   }
-  return Object.fromEntries(rules[0].headers.map((h) => [h.key, h.value]));
+  return (path) => {
+    const out = {};
+    for (const r of rules) if (SOURCES[r.source](path)) for (const h of r.headers) out[h.key] = h.value;
+    return out;
+  };
 }
 
 /** Crea el servidor (sin ponerlo a escuchar). */
 export function createLandingServer({ dist, vercelJson }) {
   if (!existsSync(dist) || !statSync(dist).isDirectory()) throw new Error(`dist/ no existe: ${dist}`);
   const root = realpathSync(dist);
-  const headers = loadHeaders(vercelJson);
+  const headersFor = loadHeaders(vercelJson);
 
   /** El archivo que sirve [clean] (una ruta ya decodificada y sin `..`), o `null`. */
   function resolveFile(clean) {
@@ -53,6 +73,8 @@ export function createLandingServer({ dist, vercelJson }) {
   }
 
   return createServer((req, res) => {
+    // Las cabeceras dependen de la ruta pedida (sin la consulta): «/» lleva la CSP de la página de inicio.
+    const headers = headersFor((req.url ?? "").split(/[?#]/)[0]);
     const send = (status, body, extra = {}) => {
       const data = Buffer.from(body);
       res.writeHead(status, { ...headers, "Content-Length": data.length, ...extra });
