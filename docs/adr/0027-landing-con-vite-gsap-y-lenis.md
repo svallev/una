@@ -1,6 +1,6 @@
 # ADR-0027: La landing de producto se construye con Vite y lleva GSAP y Lenis al navegador
 
-- **Estado:** Propuesto
+- **Estado:** **Aceptado** (propietario, 2026-11-13, al aprobar el plan de la spec 025). Comprobación previa hecha el 2026-11-12: ningún paquete hace peticiones ni guarda nada (`specs/025-landing-de-producto/plan.md` §4). Antes Propuesto (2026-11-12)
 - **Fecha:** 2026-11-12
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** spec 025 (landing de producto), spec 023 (webs de la app), ADR-0009 (monorepo y `landing/`, **enmendado aquí**), ADR-0010 (Vercel), ADR-0026 (licencias de terceros), P4, P11 y P12 de la constitución, amenaza T-18 y §5 de `docs/security/threat-model.md`
@@ -73,6 +73,6 @@ Se revisa si: la licencia de GSAP cambia o resulta no encajar; alguno de los dos
 
 **Pendiente o que dispararía revisar la decisión**
 
-- La comprobación de que ningún paquete hace peticiones (arriba), **antes de aceptar**. El texto de la licencia de GSAP ya está leído (2026-11-12, arriba): encaja; quedan para la revisión legal los Términos de Servicio de Webflow que incorpora.
+- **[Hecho, 2026-11-12]** La comprobación de que ningún paquete hace peticiones (plan de la 025, §4): en `gsap` y `lenis` no hay ninguna API de red ni de almacenamiento; el único `fetch(` del programa construido es el relleno de `modulepreload` de Vite, que se desactiva. Al minificar se perdía la cabecera de copyright de GSAP: el plan la conserva y un test lo exige. El texto de la licencia de GSAP ya está leído (2026-11-12, arriba): encaja; quedan para la revisión legal los Términos de Servicio de Webflow que incorpora.
 - Riesgo nuevo para el registro de `docs/PLAN.md`: «dependencias de npm en la web» (probabilidad baja, impacto medio; mitigaciones de arriba).
 - La constitución **no cambia**: P4 y P3 siguen hablando de la app; P11 se cumple con la justificación y la excepción de este ADR; P12, con los tokens nuevos.

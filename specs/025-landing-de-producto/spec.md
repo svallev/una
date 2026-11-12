@@ -1,6 +1,6 @@
 # Spec 025: Landing de producto
 
-- **Estado:** **Aprobada** (propietario, 2026-11-12: «aprobada», tras responder Q-025-1, 2, 5, 6 y 8 a 13 con la opción recomendada y aprobar los textos nuevos del §7; quedan Q-025-3, antes de F6, y Q-025-4 y 7, del plan). Antes **Borrador** (2026-11-12; revisión del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 19 importantes y 12 menores; sin aplicar, por menores, la renumeración de los CA y seis términos del glosario)
+- **Estado:** **Aprobada**, con la **enmienda del 2026-11-13** (propietario, al responder las preguntas del plan, `plan.md` §8: sin insignias oficiales hasta que haya ficha, CA-025-02, 08 y 21; la palabra destacada sobre naranja se queda como está, **aceptada sin excepción de P6**, CA-025-15; límite de peso de 450 KB, CA-025-17; Q-025-4 y 7 resueltas y Q-025-3 pasa a F6; tras las revisiones del plan: el teclado completa sin mantener, CA-025-07, y la comprobación de «fuera de pantalla» pasa a la casilla, CA-025-16; lo transparente desaparece y el lector, en el recorrido, solo lee la escena a la vista, CA-025-15). Aprobada antes (propietario, 2026-11-12: «aprobada», tras responder Q-025-1, 2, 5, 6 y 8 a 13 con la opción recomendada y aprobar los textos nuevos del §7; quedan Q-025-3, antes de F6, y Q-025-4 y 7, del plan). Antes **Borrador** (2026-11-12; revisión del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 19 importantes y 12 menores; sin aplicar, por menores, la renumeración de los CA y seis términos del glosario)
 - **Reglas de producto:** R1 (una tarea a la vez), R8 (abrir y ver la tarea actual con su adjunto), R15 (idioma) y R18 (Ajustes: pantalla siempre activa y bloquear zoom): la landing las **cuenta**, no las cambia.
 - **Pantallas del prototipo:** **sin diseño en el prototipo.** El diseño es el de la maqueta hecha con el propietario entre el 2026-11-11 y el 2026-11-12 (carpeta `UnaWeb/www`, versión A), que esta spec describe; se registra como desviación **DEV-59** en `docs/design/prototype-deviations.md` al implementar. Las pantallas de la app que la landing enseña sí son las del prototipo (tableros de la tarea actual, el listado y Ajustes).
 - **Decisiones y ADR relacionados:** ADR-0009 (monorepo y `landing/`; **enmendado por el ADR-0027**), **ADR-0027** (herramientas y bibliotecas de la landing, **Propuesto**), ADR-0010 (Vercel), ADR-0026 (licencias de terceros; **la página de licencias publica además los avisos del código de la web**, §10), D17 (Android primero), P-012-2 (una sola dirección para ES y EN), spec 023 (webs de la app; **enmendada en el §10**).
@@ -52,13 +52,13 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
 
     | # | Escena | Qué dice | Qué se ve |
     |---|---|---|---|
-    | 1 | Portada | Una tarea a la vez | El nombre, las insignias de las tiendas, y dos móviles: el listado y la tarea actual |
+    | 1 | Portada | Una tarea a la vez | El nombre, los rótulos de las tiendas (CA-025-08), y dos móviles: el listado y la tarea actual |
     | 2 | Demasiadas | Tienes demasiadas cosas pendientes | Filas del listado sueltas, por todas partes |
     | 3 | Solo una | Solo una. Hasta que la termines | Un móvil con la tarea actual y su botón de completar, que se puede usar (el móvil de prueba, CA-025-07) |
     | 4 | Siempre a mano | Tu foto, tu PDF, tu web. Siempre a mano | Cuatro móviles en abanico: una tarea con foto, una con varias fotos, una con PDF y una con web |
     | 5 | Pantalla activa | La pantalla no se apaga | Un móvil apoyado con un adjunto a la vista, el reloj que avanza y la fila «Pantalla siempre activa» encendida |
     | 6 | Mesa de luz | Tu pantalla, mesa de luz | Un móvil tumbado con una foto, un papel encima en el que se calca la figura y la fila «Bloquear zoom» encendida |
-    | 7 | Cierre | Empieza por una. | El icono de la app, las insignias de las tiendas, dos móviles (una tarea con foto y una de texto) y el pie con Ayuda, Privacidad y Licencias |
+    | 7 | Cierre | Empieza por una. | El icono de la app, los rótulos de las tiendas (CA-025-08), dos móviles (una tarea con foto y una de texto) y el pie con Ayuda, Privacidad y Licencias |
 
   - Hay **un** encabezado principal (el de la portada) y uno de segundo nivel por cada una de las otras seis escenas.
   - **Verificable:** test (siete escenas, su orden, sus encabezados y sus textos en ES y EN, §7).
@@ -94,17 +94,18 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
   - **Verificable:** test (los textos compartidos coinciden con los de la app; los dominios que aparecen son reservados para ejemplos) y revisión del propietario anotada (C-025-3).
 - **CA-025-07** · Se puede probar «mantener pulsado»
   - **Dado** la escena «Solo una»
-  - **Cuando** se mantiene pulsado el botón de completar del **móvil de prueba** (con el dedo, el ratón o, con el foco en él, Intro o espacio) **1,2 s**, lo mismo que en la app (glosario, «Mantener pulsado»)
-  - **Entonces** la tarea se completa como en la app (sello, la nota se rasga) y aparece la siguiente tarea de ejemplo; soltar antes lo cancela. Una **activación sin pulsación mantenida** (la del lector de pantalla, el control por voz o un conmutador) la completa también, y se anuncia que está hecha. Junto al botón, la palabra «Pruébalo» y una flecha invitan a hacerlo. Si nadie lo ha tocado, la primera vez que se llega a la escena **se completa sola una vez** (la **demostración automática**), sin anunciarse al lector; con «reducir movimiento», no hay demostración automática y completar cambia de tarea sin animación.
-  - **Verificable:** test (pulsación larga, cancelación, teclado, activación del lector, una sola demostración, sin demostración con «reducir movimiento»).
+  - **Cuando** se mantiene pulsado el botón de completar del **móvil de prueba** (con el dedo o el ratón) **1,2 s**, lo mismo que en la app (glosario, «Mantener pulsado»)
+  - **Entonces** la tarea se completa como en la app (sello, la nota se rasga) y aparece la siguiente tarea de ejemplo; soltar antes lo cancela. Con el foco en el botón, **Intro o espacio la completan al pulsarlos, sin mantener** (WCAG 2.1.1; **enmienda del 2026-11-13**, P-025-5 del plan). Cualquier otra **activación que no sea una pulsación de dedo o ratón sobre el botón** (la del lector de pantalla, el control por voz o un conmutador) la completa también. En todos los casos se anuncia que está hecha. Junto al botón, la palabra «Pruébalo» y una flecha invitan a hacerlo. Si nadie lo ha tocado, la primera vez que se llega a la escena **se completa sola una vez** (la **demostración automática**), sin anunciarse al lector; con «reducir movimiento», no hay demostración automática y completar cambia de tarea sin animación.
+  - **Verificable:** test (pulsación larga, cancelación, teclado sin mantener, activación sin pulsación, una sola demostración, sin demostración con «reducir movimiento»).
 
 ### Las tiendas y el idioma
 
-- **CA-025-08** · Insignias de las tiendas
+- **CA-025-08** · Las tiendas: rótulo propio hasta que haya ficha (**enmendado el 2026-11-13**, Q-025-7)
   - **Dado** la portada y el cierre
   - **Cuando** se miran
-  - **Entonces** enseñan las **insignias oficiales** de Google Play y de App Store, sin alterar y en el idioma de la página cuando la tienda la ofrece en ese idioma. Mientras una tienda **no tenga dirección** de ficha: su insignia **no es un enlace** y su texto alternativo dice «muy pronto»; mientras falte alguna de las dos, en la portada se lee **un** rótulo «Muy pronto» sobre las insignias y en el cierre lo dice la entradilla (como en la maqueta). Cuando la dirección existe, la insignia enlaza a la ficha y su texto alternativo deja de decirlo; con las dos, el rótulo desaparece. Las direcciones salen de la identidad de la app, no están escritas en la página. **[Pendiente Q-025-3]** Hasta conseguir la insignia española de App Store se admite la inglesa en la página en español, con el texto alternativo de la imagen que se ve, marcado como inglés. **[Pendiente Q-025-7]** Todo este criterio depende de que las normas de las insignias admitan enseñarlas sin ficha.
-  - **Verificable:** test con dirección y sin ella (enlace, texto alternativo, «Muy pronto»).
+  - **Entonces** enseñan **un rótulo propio por tienda**, con su nombre («App Store» y «Google Play», en ese orden) y el estilo de la página; **no** llevan las insignias oficiales ni ningún logotipo de las tiendas (las normas de Apple solo admiten su insignia para apps ya disponibles en el App Store; leídas el 2026-11-12, `plan.md` §8). Mientras una tienda **no tenga dirección** de ficha: su rótulo **no es un enlace**; mientras falte alguna de las dos, en la portada se lee **un** «Muy pronto» sobre los rótulos y en el cierre lo dice la entradilla. Cuando la dirección existe, el rótulo **enlaza a la ficha**; con las dos, «Muy pronto» desaparece. Las direcciones salen de la identidad de la app, no están escritas en la página. **[Pendiente, F6]** Al publicar cada ficha, su rótulo se cambia por la insignia oficial, sin alterar, con App Store la primera, Google Play igual o mayor, en el idioma de la página (Q-025-3) y con la línea de crédito de marcas que piden las normas; va a la lista cerrada de F6.
+  - **Lectura del resto de la spec:** donde otros criterios, casos límite o el §6 dicen «insignias» (CA-025-10, 14 y 16, CL-025-2, §6, §8), se lee «rótulos de las tiendas» hasta F6.
+  - **Verificable:** test con dirección y sin ella (enlace, «Muy pronto», ninguna imagen de las tiendas).
 - **CA-025-09** · Español e inglés
   - **Dado** una primera visita
   - **Cuando** se abre la landing
@@ -127,10 +128,10 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
   - **Dado** la landing, con el recorrido o sin él
   - **Cuando** se revisa contra WCAG 2.2 AA
   - **Entonces**:
-    - con cada escena en reposo, el texto tiene contraste **4,5:1** o más con su fondo y los titulares grandes **3:1** o más, en **cada** color de fondo de las siete escenas; cuentan también la cabecera, «Muy pronto», las notas pequeñas y la palabra destacada de cada titular;
+    - con cada escena en reposo, el texto tiene contraste **4,5:1** o más con su fondo y los titulares grandes **3:1** o más, en **cada** color de fondo de las siete escenas; cuentan también la cabecera, «Muy pronto», las notas pequeñas y la palabra destacada de cada titular. **Única salvedad (propietario, 2026-11-13: «se queda como está»; aceptada sin excepción de P6, como H-022-03):** la palabra destacada de los titulares de las escenas 2 y 5, `paperFiber` sobre el naranja, da **2,31:1** y no llega a 3:1; no se cambia. El resto del titular (tinta, 8,01:1) sí cumple, y la palabra lleva su relieve en tinta. El test la admite por lista cerrada (ese par y ningún otro);
     - todo se alcanza con **teclado**, en el orden en que se lee; el foco se ve siempre, **la cabecera fija nunca lo tapa** (WCAG 2.4.11), y cuando llega a un elemento de otra escena, **esa escena se pone a la vista**;
     - el texto visible del botón de completar forma parte de su nombre para el lector (WCAG 2.5.3);
-    - los móviles y las ilustraciones tienen una descripción breve de lo que enseñan, o se ocultan al lector si solo decoran; el lector recorre las siete escenas en orden sin encontrarse cosas ocultas ni repetidas;
+    - los móviles y las ilustraciones tienen una descripción breve de lo que enseñan, o se ocultan al lector si solo decoran; el lector no encuentra cosas ocultas ni repetidas. **Enmienda del 2026-11-13 (P-025-7 del plan, opción b):** en el recorrido, lo que llega a transparente desaparece (no se pinta, no se enfoca y el lector no lo lee), así que al leer de corrido el lector encuentra la escena a la vista, la cabecera y el pie, y pasa a las demás desplazando la página, con la cabecera o con el teclado; en la versión de «reducir movimiento» (CA-025-10) lee las siete en orden. **Aceptado por el propietario sin excepción de P6**, como la palabra destacada sobre naranja: es un incumplimiento conocido de WCAG 2.4.3 para quien use lector sin activar «reducir movimiento»;
     - se lee al **200 %** de zoom y a **320 px** de ancho sin desplazamiento horizontal;
     - la cabecera (inicio, idioma, descargar), el botón de completar y los enlaces del pie tienen un objetivo de **44 × 44** o más.
   - **Verificable:** test (contraste calculado de cada par texto/fondo, encabezados, descripciones, orden) y casilla C-025-5 (teclado, TalkBack con Chrome, zoom); `a11y-reviewer` al cerrar.
@@ -138,7 +139,7 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
   - **Dado** un ancho de **320 a 1920 px**, en vertical y en horizontal
   - **Cuando** se ve cada escena en reposo
   - **Entonces** su titular, su entradilla y su elemento principal (el móvil, el abanico, las insignias) se ven **enteros**, sin cortarse ni taparse entre sí ni con la cabecera, y sin desplazamiento horizontal. En pantallas estrechas pueden ocultarse elementos **secundarios** (por ejemplo, el segundo móvil de la portada), nunca el titular ni las insignias.
-  - **Verificable:** casilla C-025-6 (las siete escenas a 320, 390, 768, 1280 y 1920 px, ES y EN) y test de que ningún elemento marcado como principal queda fuera de la pantalla a esos anchos.
+  - **Verificable:** casilla C-025-6 (las siete escenas a 320, 390, 768, 1280 y 1920 px, ES y EN), que es la que comprueba que nada principal queda fuera de la pantalla; y test de que ninguna regla de CSS oculta un elemento marcado como principal a esos anchos (**enmienda del 2026-11-13**, P-025-6 del plan: sin navegador en los tests no se puede medir dónde cae cada elemento).
 
 ### Privacidad, identidad y mantenimiento
 
@@ -160,7 +161,7 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
 - **CA-025-17** · Ligera y fluida
   - **Dado** una primera visita sin nada en caché
   - **Cuando** se carga la landing
-  - **Entonces** todo lo que descarga pesa **600 KB o menos** comprimido **[Suposición: la maqueta ronda los 350 KB; el plan lo mide y ajusta el número antes de aprobar el plan]**, y el recorrido va **sin tirones a la vista** en Chrome de escritorio, en Chrome de Android (emulador y el Xiaomi), en Safari de macOS y en Firefox. Safari de iOS queda **sin verificar y aceptado** hasta que haya un iPhone (Q-025-11 a). Si en un navegador el recorrido no puede ir bien, ese navegador recibe la versión de CA-025-10 antes que una página rota **[Pendiente, plan: cómo se decide y qué se anota como «sin tirones» en C-025-8, por ejemplo los fotogramas por segundo de una grabación de 10 s]**.
+  - **Entonces** todo lo que descarga pesa **450 KB o menos** comprimido (**[Hecho]** medido en la maqueta el 2026-11-12: unos 365 KB; el límite bajó de 600 a 450 el 2026-11-13, Q-025-4), y el recorrido va **sin tirones a la vista** en Chrome de escritorio, en Chrome de Android (emulador y el Xiaomi), en Safari de macOS y en Firefox. Safari de iOS queda **sin verificar y aceptado** hasta que haya un iPhone (Q-025-11 a). Si en un navegador el recorrido no puede ir bien, ese navegador recibe la versión de CA-025-10 antes que una página rota **[Pendiente, plan: cómo se decide y qué se anota como «sin tirones» en C-025-8, por ejemplo los fotogramas por segundo de una grabación de 10 s]**.
   - **Verificable:** test del peso de la web construida y casilla C-025-8 (un navegador por fila, con lo medido).
 - **CA-025-18** · Código de terceros, con criterio
   - **Dado** el código de terceros que la landing lleva al navegador o usa para construirse
@@ -180,7 +181,7 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
 - **CA-025-21** · Imágenes con origen conocido
   - **Dado** cada imagen, ilustración, fuente e insignia de la landing
   - **Cuando** se revisa
-  - **Entonces** es **propia** (hecha para este proyecto) o tiene su **origen y su licencia anotados** en el repositorio; las insignias son las oficiales y se usan según las normas de cada tienda (tamaño mínimo, margen, sin modificar), con la fuente y la fecha de consulta anotadas. No entra ningún archivo que la página no use.
+  - **Entonces** es **propia** (hecha para este proyecto) o tiene su **origen y su licencia anotados** en el repositorio. **No entra ninguna insignia ni logotipo de las tiendas** hasta que haya ficha (CA-025-08); cuando entren, serán las oficiales, según las normas de cada tienda (tamaño mínimo, margen, sin modificar), con la fuente y la fecha de consulta anotadas. No entra ningún archivo que la página no use.
   - **Verificable:** test (cada archivo publicado está en la lista de orígenes y se usa) y revisión del propietario.
 - **CA-025-22** · Documentación al día
   - **Dado** los documentos del §11
@@ -196,10 +197,10 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
 | CL-025-2 | Se llega con una dirección que señala el cierre (un enlace guardado o compartido) | Se abre en el cierre, con las insignias a la vista; también con «reducir movimiento» y sin JavaScript. |
 | CL-025-3 | El navegador no deja guardar nada (modo privado estricto, almacenamiento bloqueado) | La página funciona igual; solo no recuerda el idioma en la siguiente visita. Sin errores a la vista. |
 | CL-025-4 | El idioma del navegador no es español ni inglés | La regla de la app (CA-025-09). |
-| CL-025-5 | Se cambia de idioma en mitad del recorrido | La página pasa al otro idioma y sigue en la misma escena **[Suposición; hoy vuelve a la portada: el plan lo mide y, si cuesta, se pregunta]**. |
+| CL-025-5 | Se cambia de idioma en mitad del recorrido | La página pasa al otro idioma y sigue en la misma escena (`plan.md` §7.2). |
 | CL-025-6 | Se usa el teclado (flechas, espacio, AvPág, Inicio, Fin) | Avanza y retrocede por las escenas como el scroll (CA-025-04). |
 | CL-025-7 | Se activa «reducir movimiento» con la página abierta | Al recargar, la versión de CA-025-10. **[Suposición]** No hace falta que cambie en caliente. |
-| CL-025-8 | Solo una tienda tiene ya ficha | Esa insignia enlaza; la otra sigue sin enlace y con «muy pronto» en su texto alternativo, y el rótulo y la entradilla del cierre dicen cuál falta (CA-025-08; texto en Q-025-6). |
+| CL-025-8 | Solo una tienda tiene ya ficha | Ese rótulo enlaza; el otro sigue sin enlace, «Muy pronto» sigue en la portada y la entradilla del cierre dice cuál falta (CA-025-08; texto en Q-025-6). |
 | CL-025-9 | La app cambia el texto del botón de completar o el nombre de un ajuste | La landing cambia con ella o el test de CA-025-06 falla. |
 | CL-025-10 | Cambia el nombre de la app | La landing lo toma de la identidad (CA-025-14); se revisan las imágenes en las que se vea y los titulares que juegan con él («Una tarea a la vez», «Solo una», «Empieza por una»). |
 | CL-025-11 | Se imprime la página o se abre en un lector simplificado | Se lee el contenido de CA-025-11 o el de CA-025-10; no una portada suelta. **[Suposición]** Sin hoja de impresión cuidada. |
@@ -217,7 +218,7 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
 
 | Estado | Cuándo | Qué ve el usuario |
 |---|---|---|
-| Sin fichas en las tiendas | Hasta F6 | Las dos insignias con «Muy pronto» (CA-025-08) |
+| Sin fichas en las tiendas | Hasta F6 | Los dos rótulos con «Muy pronto» (CA-025-08) |
 | Sin JavaScript o con el programa roto | CL-025-12 | El contenido de CA-025-11 |
 | Antes de que arranque el programa | Un instante, en cualquier navegador | Como mucho, el contenido de CA-025-11 (español primero); el idioma declarado es correcto en cada momento **[Pendiente, plan: que no se llegue a ver un salto]** |
 | Mientras cargan las fuentes o las imágenes | Conexión lenta | El titular de la portada se lee desde el primer momento, sin saltos de tamaño llamativos al llegar la fuente; las imágenes reservan su sitio |
@@ -230,8 +231,8 @@ Que quien llega a la web de la app entienda en menos de un minuto qué hace (una
 - **Foco y teclado:** CA-025-15 y CL-025-6. Nada se mueve solo más de 5 s salvo las oscilaciones suaves de los elementos en reposo, que con «reducir movimiento» no están (WCAG 2.2.2); la demostración automática ocurre una sola vez.
 - **Lector de pantalla:** un encabezado principal y seis de segundo nivel; los titulares se leen como una frase, no letra a letra ni por líneas sueltas; los móviles llevan una descripción de la pantalla que enseñan; el aviso «Muy pronto» forma parte del nombre de cada insignia; el cambio de idioma dice cuál está elegido.
 - **Texto grande y pantallas pequeñas:** CA-025-15 y 16.
-- **Contraste:** se calcula con cada color de fondo (CA-025-15); si un par no llega, cambia el color del texto, no se acepta.
-- **Sin excepción a P6.** Si al implementar alguna parte no puede cumplir, se para y se pregunta.
+- **Contraste:** se calcula con cada color de fondo (CA-025-15); si un par no llega, cambia el color del texto, no se acepta. **Salvedades aceptadas por el propietario el 2026-11-13:** la palabra destacada sobre naranja (2,31:1), que se queda como está, y la lectura de corrido del lector en el recorrido, que solo alcanza la escena a la vista (CA-025-15).
+- **Sin excepción a P6**, ni ADR ni constitución nueva para esas dos salvedades: el propietario las acepta como hizo con H-022-03 (spec 024, Q-024-1). **Consecuencia que se le dijo:** son incumplimientos conocidos de WCAG 1.4.3 (dos titulares) y 2.4.3 (el lector en el recorrido); los revisores lo señalarán y se responde con esta línea. Si al implementar alguna otra parte no puede cumplir, se para y se pregunta.
 
 ## 7. Textos (ES / EN)
 
@@ -245,8 +246,9 @@ Los textos son los de la maqueta del 2026-11-12, en dos archivos (español e ing
 | `navLanguage` | Idioma | Language | Nombre del control ES / EN |
 | `navHint` | Baja | Scroll | Pista en la portada |
 | `storeSoon` | Muy pronto | Coming soon | CA-025-08 |
-| `storeGooglePlayAlt` | Disponible en Google Play | Get it on Google Play | Texto alternativo |
-| `storeAppStoreAlt` | Descárgalo en el App Store | Download on the App Store | Texto alternativo |
+| `storeAppStore` / `storeGooglePlay` | App Store / Google Play | App Store / Google Play | Texto de cada rótulo (CA-025-08): son nombres propios, iguales en los dos idiomas |
+| `storeGooglePlayAlt` | Disponible en Google Play | Get it on Google Play | **No entra hasta F6:** texto alternativo de la insignia oficial |
+| `storeAppStoreAlt` | Descárgalo en el App Store | Download on the App Store | **No entra hasta F6:** texto alternativo de la insignia oficial |
 | `heroTitle` | Una tarea a la vez | One task at a time | |
 | `heroLead` | La app de tareas que solo te enseña la que toca ahora. Cuando la terminas, aparece la siguiente. | The to-do app that only shows you the task that matters now. Finish it and the next one appears. | |
 | `manyTitle` | Tienes demasiadas cosas pendientes | You have too many things to do | |
@@ -270,7 +272,7 @@ Los textos son los de la maqueta del 2026-11-12, en dos archivos (español e ing
 | `footerNav` | Ayuda y privacidad | Help and privacy | Nombre del pie para el lector **[Suposición: se queda así aunque el pie lleve también Licencias]** |
 | `navHome` | {appName}, inicio | {appName}, home | Nombre del logotipo para el lector |
 | `navLanguageEs` / `navLanguageEn` | Español / English | Español / English | Nombre de cada botón del control de idioma, cada uno en su idioma (Q-025-6) |
-| `storeSoonAlt` | (muy pronto) | (coming soon) | Se añade al texto alternativo de la insignia sin ficha |
+| `storeSoonAlt` | (muy pronto) | (coming soon) | Se añade al nombre del rótulo sin ficha para el lector (§6) |
 | `taskDone` | Tarea completada | Task completed | Anuncio al completar en el móvil de prueba (CA-025-07) |
 | `endLeadPlayOnly` | Ya en Google Play. Muy pronto en App Store. | Now on Google Play. Coming soon to the App Store. | **[Aprobado, propietario, 2026-11-12]** Solo cuando esa tienda tenga ficha (CL-025-8); hoy no se usa |
 | `endLeadAppStoreOnly` | Ya en App Store. Muy pronto en Google Play. | Now on the App Store. Coming soon to Google Play. | **[Aprobado, propietario, 2026-11-12]** Solo cuando esa tienda tenga ficha (CL-025-8); hoy no se usa |
@@ -300,13 +302,13 @@ Los textos son los de la maqueta del 2026-11-12, en dos archivos (español e ing
 - **Q-025-2 [Resuelta, propietario, 2026-11-12: a)] · La insignia de App Store.** D17 dice «Android primero; iOS al final **si se decide**», y la landing dice «Muy pronto en Google Play y App Store».
   - **a) (Recomendado)** Se mantiene (decisión del 2026-11-11), y se anota en `docs/PLAN.md` que la landing promete iOS; si se descarta iOS antes de publicar la web, se quita la insignia.
   - **b)** Solo Google Play hasta que iOS esté decidido.
-- **Q-025-3 [Pendiente, propietario, antes de F6] · Insignia de App Store en español.** La maqueta usa la inglesa en los dos idiomas porque no se pudo descargar la española. Se consigue la oficial antes de publicar; mientras, CA-025-08 admite la inglesa.
-- **Q-025-4 [Pendiente, plan] · El peso** de CA-025-17 (600 KB) y si el cambio de idioma conserva la escena (CL-025-5).
+- **Q-025-3 [Pendiente, F6 entera desde el 2026-11-13: hasta entonces no hay insignias] · Insignia de App Store en español.** La maqueta usa la inglesa en los dos idiomas porque no se pudo descargar la española. Se consigue la oficial antes de publicar; mientras, CA-025-08 admite la inglesa.
+- **Q-025-4 [Resuelta, plan y propietario, 2026-11-13] · El peso** de CA-025-17: **450 KB** (medidos unos 365). El cambio de idioma **conserva la escena** (CL-025-5; `plan.md` §7.2).
 - **Q-025-5 [Resuelta, propietario, 2026-11-12: a)] · Los textos de la app que enseña la landing.** En la maqueta algunos no coinciden con los de la app: el botón de completar en inglés dice «Tap to complete» (la app, «Press to complete»), el menú se llama «Menú» (la app, «Menú de la tarea») y la ayuda del listado tiene dos frases (la app, tres).
   - **a) (Recomendado)** Lista cerrada de textos que la landing toma de la app tal cual (botón de completar, menú, título y ayuda del listado, «Nueva tarea», los dos títulos de «hecho», y los nombres y subtítulos de los dos ajustes); el plan la fija con sus claves.
   - **b)** La landing puede recortar textos de la app (por ejemplo, la ayuda del listado) y se anota cuáles.
 - **Q-025-6 [Resuelta, propietario, 2026-11-12: entran los de la maqueta y «Español» / «English»; los textos nuevos del §7, aprobados] · Textos que faltan en el §7** (P7). Los que ya están en la maqueta entran en la tabla tal cual al aprobar: el nombre del logotipo («{appName}, inicio» / «{appName}, home»), el del pie («Ayuda y privacidad» / «Help and privacy»), el anuncio «Tarea completada» / «Task completed», las nueve descripciones de los móviles y del icono, y «(muy pronto)» / «(coming soon)» en el texto alternativo. **Faltan por redactar y aprobar:** los nombres de los botones ES / EN para el lector (propuesta: «Español» y «English», cada uno en su idioma), el título del bloque de avisos del código de la web en `/licenses`, y la entradilla del cierre con una o con las dos fichas publicadas. Dos claves de la maqueta no se usan («Capítulos» y «Zoom bloqueado»): no entran salvo que se diga.
-- **Q-025-7 [Pendiente, plan, antes de implementar; el propietario acepta el 2026-11-12 que lo lea el plan] · Las normas de las insignias.** CA-025-21 exige usarlas según las normas de cada tienda; la maqueta recorta el margen de las de Google y las enseña sin enlace para una app sin publicar. **[Suposición sin comprobar]** Las normas podrían pedir que la insignia enlace a una ficha, y una línea de atribución de marcas en el pie. El plan lee las normas vigentes de las dos, con fuente y fecha; si no admiten el uso sin ficha, **se para y se pregunta** (salidas: el texto «Muy pronto en Google Play y App Store» sin insignias, o insignias solo con ficha).
+- **Q-025-7 [Resuelta, propietario, 2026-11-13: sin insignias oficiales hasta que haya ficha; rótulos propios, CA-025-08 enmendado; normas leídas el 2026-11-12, `plan.md` §8] · Las normas de las insignias.** CA-025-21 exige usarlas según las normas de cada tienda; la maqueta recorta el margen de las de Google y las enseña sin enlace para una app sin publicar. **[Suposición sin comprobar]** Las normas podrían pedir que la insignia enlace a una ficha, y una línea de atribución de marcas en el pie. El plan lee las normas vigentes de las dos, con fuente y fecha; si no admiten el uso sin ficha, **se para y se pregunta** (salidas: el texto «Muy pronto en Google Play y App Store» sin insignias, o insignias solo con ficha).
 - **Q-025-8 [Resuelta, propietario, 2026-11-12: a)] · «Siempre a mano» y la tarea web.** La escena 4 dice «sin […] volver a cargarlo», pero la tarea web necesita conexión y se carga cada vez (ADR-0016; la ficha ya tuvo que decirlo, CA-023-09).
   - **a) (Recomendado)** Una nota en la escena 4, como las de las escenas 5 y 6: «La web necesita conexión.» / «Web pages need a connection.»
   - **b)** Quitar «ni volver a cargarlo» / «and no reloading».
@@ -326,7 +328,7 @@ Los textos son los de la maqueta del 2026-11-12, en dos archivos (español e ing
 - **Q-025-13 [Resuelta, propietario, 2026-11-12: a)] · Nota bajo P11 en la constitución.** La excepción de licencia de GSAP queda en el ADR-0027 y en `threat-model.md` §5.
   - **a) (Recomendado)** Basta con eso: GSAP no entra en la app.
   - **b)** Además, una nota bajo P11 (constitución 1.11), como las de P3 y P6.
-- **[Hecho, para que el propietario lo sepa]** La línea base cambiará en un punto por el §6: la palabra destacada de los titulares de las escenas 2 y 5, crema sobre naranja, da un contraste de unos 2,4:1 **[Suposición: cálculo aproximado del revisor]** y CA-025-15 pide 3:1; cambia el color del texto o el del fondo.
+- **[Resuelto, propietario, 2026-11-13: se queda como está; medido 2,31:1; CA-025-15 y §6]** Decía: la línea base cambiará en un punto por el §6: la palabra destacada de los titulares de las escenas 2 y 5, crema sobre naranja, da un contraste de unos 2,4:1 **[Suposición: cálculo aproximado del revisor]** y CA-025-15 pide 3:1; cambia el color del texto o el del fondo.
 - **[Suposición]** Se confirman al aprobar (si no se dice nada, se quedan así): la regla de idioma de la app para la primera visita (CA-025-09); español primero en el contenido sin JavaScript (CA-025-11); los colores cálidos entran en los tokens (CA-025-14); las ilustraciones que simulan contenido del usuario quedan fuera de los tokens, colores y fuentes incluidos, y se anota en DEV-59 (CA-025-14, lectura de P12); los avisos de licencia del código de la web van en la página de licencias (CA-025-18); el estado fijo con «reducir movimiento» (CA-025-10); la demostración automática no se anuncia al lector (CA-025-07).
 
 ## 10. Enmiendas a la spec 023 (anotadas en ella el 2026-11-12, al aprobar esta)
