@@ -6,6 +6,7 @@ import { detectLang, applyMeta } from '../shared/locale.js';
 import { SCENES, HOLD } from '../shared/story.js';
 import { buildChrome } from '../shared/chrome.js';
 import { createJourney, sceneAt, reduceMotion, gsap } from '../shared/journey.js';
+import { pickMode, TALL_ENOUGH } from '../shared/mode.js';
 import { setupHold } from './hold.js';
 import { pageHtml } from './page.js';
 
@@ -45,7 +46,10 @@ scenes.forEach((sc) => {
 
 const hold = setupHold(document.getElementById('solo'), { animate: !reduceMotion });
 
-if (reduceMotion) {
+// Recorrido solo si no se pide reducir movimiento y la ventana es bastante alta para que cada escena quepa
+// entera; si no, apilada (CL-025-13, `mode.js`).
+const tall = window.matchMedia(TALL_ENOUGH);
+if (pickMode({ reduceMotion, tallEnough: tall.matches }) === 'stacked') {
   // Sin cámara: paneles apilados, cada uno con su fondo (y los interruptores encendidos, `page.js`). La demo
   // sigue funcionando sin animación.
   const chrome = buildChrome({ onGoTo: (i) => scenes[i].scrollIntoView() });
@@ -56,6 +60,8 @@ if (reduceMotion) {
   scenes.forEach((sc) => io.observe(sc));
 } else {
   startStage();
+  // Si al girar o cambiar de tamaño deja de caber, se vuelve a cargar y sale apilada (no se vuelve al recorrido).
+  tall.addEventListener('change', () => { if (!tall.matches) location.reload(); });
 }
 // Ya montada: se deja ver (`base.css`).
 document.documentElement.classList.add('is-ready');
