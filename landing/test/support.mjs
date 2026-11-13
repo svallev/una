@@ -6,7 +6,7 @@ import { build, buildHome, defaultPaths } from "../build.mjs";
 
 /**
  * Un mundo de prueba: copias en una carpeta temporal de lo que los tests modifican (la identidad, la
- * política, `landing/src/` entera, el archivo de avisos, `build.mjs` y `vercel.json`) y la salida en `dist/` temporal. El
+ * política, `landing/src/` entera, los dos archivos de avisos, `build.mjs` y `vercel.json`) y la salida en `dist/` temporal. El
  * resto (tokens, ARB, fuentes) se lee del repositorio. La página de inicio (spec 025) se construye aparte, con
  * `buildHome` (Vite, asíncrona): el mundo lleva una copia de `landing/home/` sin `gen/`, un enlace a
  * `landing/node_modules/`, para que Vite encuentre las dependencias, y `landing/package.json`.
@@ -26,6 +26,7 @@ export function world() {
     helpEs: join(srcDir, "help.es.md"),
     helpEn: join(srcDir, "help.en.md"),
     notices: join(dir, "third-party-notices.txt"),
+    webNotices: join(dir, "web-notices.txt"),
     buildFile: join(dir, "build.mjs"),
     vercelJson: join(dir, "vercel.json"),
     out: join(dir, "dist"),
@@ -33,6 +34,7 @@ export function world() {
   cpSync(real.identity, paths.identity);
   cpSync(real.policy, paths.policy);
   cpSync(real.notices, paths.notices);
+  cpSync(real.webNotices, paths.webNotices);
   cpSync(real.buildFile, paths.buildFile);
   cpSync(real.vercelJson, paths.vercelJson);
   paths.homeDir = join(dir, "home");

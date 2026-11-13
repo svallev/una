@@ -4,7 +4,7 @@
 // cambian.
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { after, before, describe, test } from "node:test";
 import { checkHome, checkSite } from "../check.mjs";
 import { cloneWorld, edit, read, specificErrors, world } from "./support.mjs";
@@ -78,12 +78,48 @@ describe("CA-025-12: checkHome, cada regla con un caso que falla", () => {
     ["EventSource", 'new EventSource("/x")'],
     ["import() dinámico", 'import("/x.js")'],
     ["eval", 'eval("1")'],
+    ["sessionStorage", 'sessionStorage.setItem("k","v")'],
+    ["indexedDB", 'indexedDB.open("x")'],
+    ["document.cookie", 'document.cookie="k=v"'],
+    ["cookieStore", 'cookieStore.set("k","v")'],
+    ["caches.open", 'caches.open("x")'],
   ]) {
     homeFails(`el programa usa ${label}`, (w) => edit(programOf(w), (t) => `${t}\n;${code};`), new RegExp(`usa ${label.replace(/[.()]/g, "\\$&")} `));
   }
   homeFails("el programa nombra un dominio externo", (w) => edit(programOf(w), (t) => `${t}\n;const u="https://evil.example/p";`), /dominio externo \(«evil\.example»\)/);
   homeFails("el programa apunta a un mapa", (w) => edit(programOf(w), (t) => `${t}\n//# sourceMappingURL=x.js.map`), /mapa de código/);
   homeFails("el programa lleva analítica", (w) => edit(programOf(w), (t) => `${t}\n;const u="plausible";`), /anal[ií]tica/);
+});
+
+describe("CA-025-12 y CA-025-13: lo único que guarda la página de inicio es el idioma (lo que dice la política)", () => {
+  const SRC = join(import.meta.dirname, "../home/src");
+  const sources = () =>
+    all(SRC)
+      .filter((f) => f.endsWith(".js"))
+      .map((f) => [f.split(sep).join("/"), read(join(SRC, f))]);
+
+  test("en el código propio, solo locale.js usa localStorage, con la clave «una-lang»", () => {
+    const users = sources().filter(([, code]) => /\blocalStorage\b/.test(code)).map(([f]) => f);
+    assert.deepEqual(users, ["shared/locale.js"]);
+    const code = read(join(SRC, "shared/locale.js"));
+    assert.match(code, /^const KEY = 'una-lang';$/m);
+    assert.deepEqual([...code.matchAll(/localStorage\.(\w+)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`), ["getItem(KEY)", "setItem(KEY, next)"]);
+  });
+
+  test("lo guardado solo puede ser «es» o «en»: se guarda al cambiar con ES / EN y se lee pasando por pickLang", async () => {
+    const { pickLang } = await import("../home/src/shared/i18n.js");
+    for (const v of ["es", "en", "ca-ES", "fr", "<script>", ""]) assert.ok(["es", "en"].includes(pickLang(v)), v);
+    const chrome = read(join(SRC, "shared/chrome.js"));
+    assert.match(chrome, /setLang\(b\.dataset\.lang\)/);
+    const code = read(join(SRC, "shared/locale.js"));
+    assert.match(code, /return pickLang\(fromUrl \|\| stored \|\| navigator\.language \|\| 'es'\);/);
+  });
+
+  test("en el programa construido, «localStorage» aparece solo en la lectura y la escritura del idioma", () => {
+    const code = readFileSync(programOf(base), "utf8");
+    assert.equal(code.match(/\blocalStorage\b/g)?.length, 2);
+    assert.equal(code.match(/una-lang/g)?.length, 1);
+  });
 });
 
 describe("CA-025-12: dos reglas de cabeceras; la de «/» solo añade script-src y estilos en línea", () => {

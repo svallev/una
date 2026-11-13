@@ -139,11 +139,11 @@ function checkPage(file, html, meta, errors) {
   // Los dos idiomas: primero el español, cada uno con su lang y el enlace al otro.
   const sections = t.filter((x) => x.name === "section" && !x.closing);
   const withNotices = file === NOTICES_PAGE;
-  const expected = withNotices ? 3 : 2;
+  const expected = withNotices ? 4 : 2;
   if (sections.length !== expected) {
     fail(
       withNotices
-        ? `tiene ${sections.length} <section> (las dos mitades, español e inglés, y el bloque de avisos)`
+        ? `tiene ${sections.length} <section> (las dos mitades, español e inglés, el código de esta web y el bloque de avisos)`
         : `tiene ${sections.length} <section> (las dos mitades, español e inglés)`,
     );
     return;
@@ -170,11 +170,31 @@ function checkPage(file, html, meta, errors) {
   else if (toEn.attrs.lang !== "en") fail('el enlace al inglés no está marcado con lang="en"');
   if (!toEs) fail("falta el enlace «#es» al español al principio de la mitad inglesa");
   else if (toEs.attrs.lang !== "es") fail('el enlace al español no está marcado con lang="es"');
-  if (withNotices) checkNoticesBlock(sections[2], closes[2], t, html, fail);
+  if (withNotices) {
+    checkWebCodeBlock(sections[2], closes[2], t, html, fail);
+    checkNoticesBlock(sections[3], closes[3], t, html, fail);
+  }
   const levels = (from, to) =>
     headings.filter((h) => h.start >= from && h.end <= to).map((h) => h.level).join(",");
   if (levels(esFrom, esTo) !== levels(enFrom, enTo)) {
     fail(`los encabezados de la mitad inglesa (${levels(enFrom, enTo)}) no están al mismo nivel que los de la española (${levels(esFrom, esTo)})`);
+  }
+}
+
+/**
+ * El bloque del código de esta web (spec 025, CA-025-18): una tercera `<section aria-labelledby="web-code">`, tras
+ * las dos mitades y antes de los avisos de la app, con su `<h2 id="web-code">` y el texto en un `<pre lang="en">`.
+ */
+function checkWebCodeBlock(open, close, t, html, fail) {
+  if (open.attrs["aria-labelledby"] !== "web-code") fail('el bloque del código de esta web (la tercera <section>) tiene que llevar aria-labelledby="web-code"');
+  const from = open.end;
+  const to = close?.start ?? html.length;
+  const inside = (x) => x.start >= from && x.end <= to && !x.closing;
+  if (!t.some((x) => inside(x) && x.name === "h2" && x.attrs.id === "web-code")) {
+    fail('el bloque del código de esta web no empieza por un <h2 id="web-code">');
+  }
+  if (!t.some((x) => inside(x) && x.name === "pre" && x.attrs.lang === "en")) {
+    fail('el bloque del código de esta web no lleva el texto en un <pre lang="en">');
   }
 }
 
@@ -539,8 +559,8 @@ function checkHandWrittenName(paths, identity, errors) {
 // ─── La página de inicio (spec 025) ──────────────────────────────────────────────────────────────
 
 /**
- * Lo que el programa de la página de inicio no puede usar: ninguna forma de pedir algo a la red (CA-025-12) ni
- * de ejecutar texto. Es la lista de lo que se busca, no de lo permitido.
+ * Lo que el programa de la página de inicio no puede usar: ninguna forma de pedir algo a la red (CA-025-12), de
+ * guardar algo más que el idioma ni de ejecutar texto. Es la lista de lo que se busca, no de lo permitido.
  */
 const FORBIDDEN_APIS = [
   [/\bfetch\s*\(/, "fetch("],
@@ -554,6 +574,12 @@ const FORBIDDEN_APIS = [
   [/\bimport\s*\(/, "import() dinámico"],
   [/\bserviceWorker\b/, "serviceWorker"],
   [/\beval\s*\(/, "eval"],
+  // Lo que guarda (CA-025-12 y la política, CA-025-13): solo el idioma, en `localStorage`; nada más.
+  [/\bsessionStorage\b/, "sessionStorage"],
+  [/\bindexedDB\b/, "indexedDB"],
+  [/\bcookieStore\b/, "cookieStore"],
+  [/\.cookie\b/, "document.cookie"],
+  [/\bcaches\s*\.\s*open\b/, "caches.open"],
   [/\bnew\s+Function\b/, "new Function"],
 ];
 
@@ -618,7 +644,7 @@ const RESOURCE_ATTRS = ["src", "srcset", "poster", "data", "action", "formaction
 /** El programa construido: sin API de red, sin dominios externos, sin analítica y sin mapas. */
 function checkProgram(file, code, errors) {
   const fail = (msg) => errors.push(`${file}: ${msg}`);
-  for (const [re, api] of FORBIDDEN_APIS) if (re.test(code)) fail(`usa ${api} (CA-025-12: sin red)`);
+  for (const [re, api] of FORBIDDEN_APIS) if (re.test(code)) fail(`usa ${api} (CA-025-12: sin red y sin guardar más que el idioma)`);
   for (const m of code.matchAll(/\b(?:https?|wss?):\/\/([A-Za-z0-9.-]+)/g)) {
     if (!PROGRAM_HOSTS.has(m[1].toLowerCase())) fail(`nombra un dominio externo («${m[1]}»)`);
   }

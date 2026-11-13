@@ -8,7 +8,7 @@
 // Las cuatro páginas usan solo módulos de Node (P11); Vite se carga solo para la de inicio. Lee `app/identity.yaml` (el nombre,
 // P7), `design/tokens.json` (colores, fuentes y medidas, P12), los títulos de las ARB, el texto de la
 // política (`docs/legal/privacy-policy.md`, la única copia, CA-023-04), el archivo de avisos de terceros
-// (`landing/third-party-notices.txt`, CA-023-16) y `landing/src/` (textos y Ayuda). Falla cerrada:
+// (`landing/third-party-notices.txt`, CA-023-16), el de la propia web (`landing/web-notices.txt`, CA-025-18) y `landing/src/` (textos y Ayuda). Falla cerrada:
 // lo que no entiende (Markdown fuera del subconjunto, un enlace raro, un `{…}` sin sustituir, una
 // clave que falta) detiene la construcción en lugar de publicar algo distinto de lo escrito.
 import {
@@ -45,6 +45,7 @@ export function defaultPaths(repoRoot = REPO_ROOT) {
     helpEs: join(landingDir, "src/help.es.md"),
     helpEn: join(landingDir, "src/help.en.md"),
     notices: join(landingDir, "third-party-notices.txt"),
+    webNotices: join(landingDir, "web-notices.txt"),
     buildFile: join(landingDir, "build.mjs"),
     vercelJson: join(landingDir, "vercel.json"),
     fontsDir: join(repoRoot, "app/assets/fonts"),
@@ -567,6 +568,22 @@ export function parseNotices(text, label = "third-party-notices.txt") {
   return { ...header, body };
 }
 
+/**
+ * Los avisos del código de terceros de la propia web (spec 025, CA-025-18): `landing/web-notices.txt`, escrito a
+ * mano, en inglés. Empieza por «Third-party code in this website» y nombra cada paquete que va al navegador en
+ * una línea `Package: <nombre> <versión>` (los tests la cruzan con `package.json`). Devuelve `{ body, packages }`.
+ */
+export function parseWebNotices(text, label = "web-notices.txt") {
+  const body = norm(text);
+  if (!body.trim()) throw new BuildError(`${label}: está vacío`);
+  if (!body.startsWith("Third-party code in this website\n")) {
+    throw new BuildError(`${label}: tiene que empezar por la línea «Third-party code in this website»`);
+  }
+  const packages = [...body.matchAll(/^Package: (\S+) (\S+)/gm)].map((m) => ({ name: m[1], version: m[2] }));
+  if (packages.length === 0) throw new BuildError(`${label}: no nombra ningún paquete (líneas «Package: <nombre> <versión>»)`);
+  return { body, packages };
+}
+
 // ─── Textos (strings.json) ───────────────────────────────────────────────────────────────────────
 
 /** Las claves de `strings.json` y los marcadores que admite cada una (por idioma). */
@@ -582,7 +599,7 @@ const STRING_KEYS = {
   webLicensesInApp: { es: [], en: [] },
   webLicensesFile: { es: [], en: [] },
   webLanguageName: { es: [], en: [] },
-  // Título del bloque de avisos del código de la web en /licenses (spec 025, CA-025-18; se usa desde T-025-11).
+  // Título del bloque de avisos del código de la web en /licenses (spec 025, CA-025-18).
   licensesWebTitle: { es: [], en: [] },
 };
 const LANG_ONLY = { webSwitchToSpanish: { es: [] }, webSwitchToEnglish: { en: [] }, webNoticesTitle: { en: [] } };
@@ -806,11 +823,15 @@ export function renderSite(paths) {
       `<p>${esc(s[lang].webLicensesInApp)}</p>`,
       `<p><a class="block-link" href="/${NOTICES_FILE}">${esc(s[lang].webLicensesFile)}</a></p>`,
     ].join("\n");
+  // El código de la propia web (spec 025, CA-025-18): corto, antes de los avisos de la app, con el título en los
+  // dos idiomas y el texto en inglés.
+  const webNotices = parseWebNotices(readText(paths.webNotices, "web-notices.txt"));
+  const webSection = `<section aria-labelledby="web-code">\n<h2 id="web-code">${bilingualH1(s.es.licensesWebTitle, s.en.licensesWebTitle)}</h2>\n<pre lang="en">${esc(webNotices.body)}</pre>\n</section>`;
   const noticesSection = `<section lang="en" aria-labelledby="notices">\n<h2 id="notices">${esc(s.en.webNoticesTitle)}</h2>\n<pre>${esc(norm(notices.body))}</pre>\n</section>`;
   page("licenses/index.html", {
     title: pageTitle(s, name, arb.es.licenses, arb.en.licenses),
     h1: bilingualH1(arb.es.licenses, arb.en.licenses),
-    main: `${section("es", s, licensesBody("es"))}\n${section("en", s, licensesBody("en"))}\n${noticesSection}`,
+    main: `${section("es", s, licensesBody("es"))}\n${section("en", s, licensesBody("en"))}\n${webSection}\n${noticesSection}`,
     footer: footer(s, { backHome: true }),
   });
   files.set(NOTICES_FILE, noticesText);

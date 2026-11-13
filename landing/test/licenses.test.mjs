@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
-import { build, defaultPaths, parseNotices } from "../build.mjs";
+import { build, defaultPaths, parseNotices, parseWebNotices } from "../build.mjs";
 import { checkSite } from "../check.mjs";
 import { HEADER_BUILD, HEADER_VERSION, cloneWorld, edit, fakeNotices, read, specificErrors, world } from "./support.mjs";
 
@@ -123,7 +123,7 @@ describe("CA-023-16: la página de licencias", () => {
     assert.ok(html.includes("The full license texts are also included in the app."));
   });
 
-  test("tiene las dos mitades y, después, el bloque de avisos en inglés, una sola vez", () => {
+  test("tiene las dos mitades, el código de esta web (spec 025) y, después, el bloque de avisos en inglés, una sola vez", () => {
     const marker = "AVISO-UNICO-DE-PRUEBA";
     const { w } = withNotices(fakeNotices(HEADER_BUILD, `Third-party notices\n${marker}\n`));
     try {
@@ -131,11 +131,12 @@ describe("CA-023-16: la página de licencias", () => {
       const es = html.indexOf('<section lang="es" aria-labelledby="es">');
       const en = html.indexOf('<section lang="en" aria-labelledby="en">');
       const notices = html.indexOf('<section lang="en" aria-labelledby="notices">');
-      assert.ok(es >= 0 && en > es && notices > en, "orden: español, inglés y avisos");
+      const web = html.indexOf('<section aria-labelledby="web-code">');
+      assert.ok(es >= 0 && en > es && web > en && notices > web, "orden: español, inglés, código de esta web y avisos");
       assert.equal(html.split(marker).length - 1, 1, "los avisos se publican una sola vez");
       assert.ok(html.indexOf(marker) > notices);
       assert.match(html, /<h2 id="notices">[^<]+<\/h2>\n<pre>Third-party notices\n/);
-      assert.equal(html.split('<section ').length - 1, 3);
+      assert.equal(html.split('<section ').length - 1, 4);
     } finally {
       w.cleanup();
     }
@@ -273,4 +274,110 @@ describe("CA-023-16: la comprobación de la web", () => {
   });
   fails("un <script> en un aviso sin escapar", (w) => edit(licenses(w), (t) => t.replace("<pre>", "<pre><script>1</script>")), /script/);
   fails("la cabecera del archivo con otro formato", (w) => edit(w.paths.notices, (t) => t.replace(/^[^\n]*/, "Versión: x")), /cabecera/);
+});
+
+// ─── El código de esta web (spec 025, CA-025-18) ──────────────────────────────────────────────────
+
+describe("CA-025-18: cada pieza de terceros que va al navegador tiene su aviso, con su versión", () => {
+  const LANDING = join(import.meta.dirname, "..");
+  const pkg = JSON.parse(read(join(LANDING, "package.json")));
+  const real = () => read(defaultPaths().webNotices);
+  const squash = (t) => t.replace(/\s+/g, " ").trim();
+
+  test("web-notices.txt nombra exactamente las dependencias de navegador de package.json, con su versión", () => {
+    const { packages } = parseWebNotices(real());
+    assert.deepEqual(
+      packages.map((p) => `${p.name} ${p.version}`).sort(),
+      Object.entries(pkg.dependencies).map(([n, v]) => `${n} ${v}`).sort(),
+    );
+  });
+
+  test("Lenis: el texto de su LICENSE (MIT), tal cual viene en el paquete", () => {
+    const license = read(join(LANDING, "node_modules/lenis/LICENSE"));
+    assert.ok(squash(real()).includes(squash(license)), "falta el texto de la licencia de Lenis");
+  });
+
+  test("GSAP: su aviso de copyright, el mismo que lleva el paquete, y el enlace a su licencia", () => {
+    const core = read(join(LANDING, "node_modules/gsap/gsap-core.js"));
+    const copyright = /@license (Copyright [^\n]+)/.exec(core)?.[1];
+    assert.ok(copyright, "no se encontró el aviso en gsap-core.js");
+    assert.ok(real().includes(copyright), `falta «${copyright}»`);
+    assert.ok(real().includes("Subject to the terms at https://gsap.com/standard-license"));
+  });
+
+  test("sin caracteres de control ni de dirección", () => {
+    const bad = [...real()].filter((c) => {
+      const n = c.codePointAt(0);
+      return (n < 32 && c !== "\n") || n === 127 || (n >= 0x202a && n <= 0x202e) || (n >= 0x2066 && n <= 0x2069) || n === 0x200e || n === 0x200f;
+    });
+    assert.deepEqual(bad, []);
+  });
+
+  test("/licenses lo publica en su bloque, con el título en los dos idiomas, entre las mitades y los avisos de la app", () => {
+    const html = read(licenses(base));
+    const block = /<section aria-labelledby="web-code">\n<h2 id="web-code"><span lang="es">Código de esta web<\/span> · <span lang="en">Code of this website<\/span><\/h2>\n<pre lang="en">([\s\S]*?)<\/pre>\n<\/section>/.exec(html);
+    assert.ok(block, "falta el bloque «Código de esta web»");
+    const unescape = (t) => t.replaceAll("&quot;", '"').replaceAll("&#39;", "'").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+    assert.equal(unescape(block[1]), real());
+    assert.ok(block.index > html.indexOf('<section lang="en" aria-labelledby="en">'));
+    assert.ok(block.index < html.indexOf('<section lang="en" aria-labelledby="notices">'));
+  });
+
+  test("el <pre> del código de esta web escapa el HTML", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.webNotices, (t) => `${t}\n<script>alert(1)</script>\n`);
+      w.build();
+      const html = read(licenses(w));
+      assert.ok(html.includes("&lt;script&gt;alert(1)&lt;/script&gt;"));
+      assert.deepEqual(checkSite(w.paths), []);
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  for (const [label, mutate, pattern] of [
+    ["sin archivo", (w) => rmSync(w.paths.webNotices), /web-notices\.txt/],
+    ["vacío", (w) => writeFileSync(w.paths.webNotices, "  \n"), /está vacío/],
+    ["sin la primera línea", (w) => edit(w.paths.webNotices, (t) => t.replace("Third-party code in this website\n", "")), /Third-party code in this website/],
+    ["sin ningún paquete", (w) => edit(w.paths.webNotices, (t) => t.replaceAll("Package: ", "Paquete: ")), /ningún paquete/],
+  ]) {
+    test(`la construcción falla: ${label}`, () => {
+      const w = cloneWorld(base);
+      try {
+        mutate(w);
+        assert.throws(() => w.build(), pattern);
+      } finally {
+        w.cleanup();
+      }
+    });
+  }
+
+  for (const [label, mutate, pattern] of [
+    ["sin el bloque", (t) => t.replace(/<section aria-labelledby="web-code">[\s\S]*?<\/section>\n/, ""), /tiene 3 <section>/],
+    ["sin su aria-labelledby", (t) => t.replace('<section aria-labelledby="web-code">', "<section>"), /aria-labelledby="web-code"/],
+    ["sin su <h2>", (t) => t.replace('<h2 id="web-code">', '<h2 id="otro">'), /<h2 id="web-code">/],
+    ["con el <pre> sin lang", (t) => t.replace('<pre lang="en">', "<pre>"), /<pre lang="en">/],
+  ]) {
+    test(`la comprobación falla: ${label}`, () => {
+      const w = cloneWorld(base);
+      try {
+        edit(licenses(w), mutate);
+        const errors = specificErrors(checkSite(w.paths));
+        assert.ok(errors.some((e) => pattern.test(e)), `ningún error casa ${pattern}:\n${errors.join("\n")}`);
+      } finally {
+        w.cleanup();
+      }
+    });
+  }
+
+  test("un aviso cambiado en el archivo sin reconstruir falla", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.webNotices, (t) => t.replace("Package: lenis", "Package: lenis-otro"));
+      assert.ok(checkSite(w.paths).some((e) => /^licenses\/index\.html: no coincide/.test(e)));
+    } finally {
+      w.cleanup();
+    }
+  });
 });

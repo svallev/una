@@ -227,3 +227,88 @@ test("CA-023-04: la copia de la política no existe en landing/ (una sola fuente
   const src = readFileSync(join(base.paths.landingDir, "build.mjs"), "utf8");
   assert.ok(!src.includes("En pocas palabras"), "el texto de la política está copiado en build.mjs");
 });
+
+// ─── La política y la página de inicio (spec 025, CA-025-13) ────────────────────────────────────────
+
+/** La sección [title] (`## …`) de la mitad [half], sin el título. */
+function policySection(half, title) {
+  const at = half.indexOf(`\n## ${title}\n`);
+  assert.ok(at >= 0, `no está la sección «${title}»`);
+  const rest = half.slice(at + title.length + 5);
+  const end = rest.indexOf("\n## ");
+  return end < 0 ? rest : rest.slice(0, end);
+}
+
+describe("CA-025-13: la política dice la verdad sobre la página de inicio", () => {
+  const halves = () => extractPolicy(policyText());
+  const SECTIONS = { es: "Esta web", en: "This website" };
+  const SAYS = {
+    es: [
+      /webs de la app\*\* \(la página de inicio, esta política, la ayuda y las licencias de terceros\)/,
+      /sin cookies, sin analítica y sin recursos de otros sitios/,
+      /\*\*La página de inicio usa JavaScript\*\*: un programa, servido desde la propia web, para la animación y para el idioma/,
+      /GSAP y Lenis/,
+      /\*\*Lo único que guarda la página de inicio es el idioma que eliges\*\*/,
+      /en tu navegador .* no lo envía a ningún sitio/,
+      /Esta política, la ayuda y las licencias funcionan sin JavaScript\./,
+    ],
+    en: [
+      /app's websites\*\* \(the home page, this policy, the help and the third-party licenses\)/,
+      /no cookies, no analytics and no resources from other sites/,
+      /\*\*The home page uses JavaScript\*\*: a program, served from the website itself, for the animation and the language/,
+      /GSAP and Lenis/,
+      /\*\*The only thing the home page stores is the language you choose\*\*/,
+      /in your browser .* doesn't send it anywhere/,
+      /This policy, the help and the licenses work without JavaScript\./,
+    ],
+  };
+
+  for (const lang of ["es", "en"]) {
+    test(`«${SECTIONS[lang]}» (${lang}): programa propio, solo el idioma guardado, sin cookies ni analítica, y las otras páginas sin JavaScript`, () => {
+      const text = policySection(halves()[lang], SECTIONS[lang]);
+      for (const re of SAYS[lang]) assert.match(text, re);
+    });
+  }
+
+  test("ya no dice que todas las webs funcionan sin JavaScript (en ninguna de las dos mitades)", () => {
+    const { es, en } = halves();
+    assert.doesNotMatch(es, /webs funcionan[^.\n]*sin JavaScript/);
+    assert.doesNotMatch(en, /websites work[^.\n]*no JavaScript/);
+  });
+
+  test("el resumen del principio también cuenta la página de inicio entre las webs", () => {
+    const { es, en } = halves();
+    assert.match(policySection(es, "En pocas palabras"), /\(la página de inicio, esta política, la ayuda y las licencias\)/);
+    assert.match(policySection(en, "In short"), /\(the home page, this policy, the help and the licenses\)/);
+  });
+
+  test("las dos mitades siguen con la misma estructura y «Esta web» con las mismas viñetas", () => {
+    assert.deepEqual(comparePolicyStructure(policyText()), []);
+    const bullets = (t) => t.split("\n").filter((l) => l.startsWith("- ")).length;
+    const { es, en } = halves();
+    assert.equal(bullets(policySection(es, "Esta web")), bullets(policySection(en, "This website")));
+    assert.equal(bullets(policySection(es, "Esta web")), 7);
+  });
+
+  test("la fecha sigue siendo el hueco hasta F6 (CA-023-04)", () => {
+    const md = policyText();
+    assert.ok(md.includes("**Última actualización:** [FECHA]"));
+    assert.ok(md.includes("**Last updated:** [DATE]"));
+  });
+
+  test("las notas de revisión anotan el cambio y su fuente (CA-023-02)", () => {
+    const md = policyText();
+    const notes = md.slice(md.indexOf("## Notas para la revisión"));
+    assert.match(notes, /^18\. \*\*La página de inicio \(spec 025, CA-025-12 y 13/m);
+    for (const source of ["landing/home/src/shared/locale.js", "una-lang", "landing/web-notices.txt", "ADR-0027", "landing/check.mjs"]) {
+      assert.ok(notes.includes(source), `las notas no citan ${source}`);
+    }
+  });
+
+  test("lo publicado en /privacy lleva el texto nuevo en los dos idiomas", () => {
+    const html = read(join(base.dist, "privacy/index.html"));
+    assert.ok(html.includes("<strong>La página de inicio usa JavaScript</strong>"));
+    assert.ok(html.includes("<strong>The home page uses JavaScript</strong>"));
+    assert.ok(!html.includes("una-lang"), "las notas de revisión no se publican");
+  });
+});
