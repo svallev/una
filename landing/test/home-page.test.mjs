@@ -214,3 +214,11 @@ describe("CA-025-15: el nombre del botón de completar contiene su texto visible
     });
   }
 });
+
+describe("T-025-07c: si el programa no arranca, la página no se queda en blanco", () => {
+  test("el cuerpo oculto a la espera del programa se enseña solo a los 2 s", () => {
+    const css = readFileSync(new URL("../home/src/shared/base.css", import.meta.url), "utf8");
+    assert.match(css, /html:not\(\.is-ready\) body \{ visibility: hidden; animation: reveal 0s 2s forwards; \}/);
+    assert.match(css, /@keyframes reveal \{ to \{ visibility: visible; \} \}/);
+  });
+});

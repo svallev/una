@@ -38,8 +38,10 @@ button { font: inherit; color: inherit; }
 ::selection { background: var(--yellow); color: var(--ink); }
 :focus-visible { outline: 3px solid var(--cream); outline-offset: 3px; }
 /* La página llega escrita (versión apilada, la que se ve sin JavaScript). Con JavaScript no se pinta hasta
-   que el programa la monta (`main.js` pone .is-ready), para no ver un instante la versión apilada. */
-@media (scripting: enabled) { html:not(.is-ready) body { visibility: hidden; } }
+   que el programa la monta (`main.js` pone .is-ready), para no ver un instante la versión apilada. Si el
+   programa no arranca (error, bloqueado), a los 2 s se enseña igualmente la versión apilada: nunca en blanco. */
+@media (scripting: enabled) { html:not(.is-ready) body { visibility: hidden; animation: reveal 0s 2s forwards; } }
+@keyframes reveal { to { visibility: visible; } }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ic { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; flex: none; }
 
