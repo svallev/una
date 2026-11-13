@@ -2,7 +2,7 @@
 
 - **Spec:** `specs/025-landing-de-producto/spec.md` (estado: Aprobada)
 - **ADR aplicables:** ADR-0027 (Vite, GSAP y Lenis; **Propuesto**, se acepta al aprobar este plan), ADR-0009 (enmendado por el 0027), ADR-0010 (Vercel), ADR-0026 (licencias de terceros)
-- **Estado del plan:** **Aprobado** (propietario, 2026-11-13, al responder P-025-1 a 7, §8 y §9; la spec quedó enmendada ese día). Revisado por `security-reviewer` (2 bloqueantes, 5 importantes y 6 menores) y `a11y-reviewer` (2 bloqueantes, 7 importantes y 4 menores) el 2026-11-13, todo aplicado o resuelto por el propietario. ADR-0027 **Aceptado** el mismo día (§4). Antes Borrador (2026-11-12).
+- **Estado del plan:** **Enmendada por el propietario el 2026-11-13 durante la implementación** (la web se ve y se comporta como la maqueta; ver `tasks.md`, «Enmienda del propietario», que manda donde choque). **Aprobado** (propietario, 2026-11-13, al responder P-025-1 a 7, §8 y §9; la spec quedó enmendada ese día). Revisado por `security-reviewer` (2 bloqueantes, 5 importantes y 6 menores) y `a11y-reviewer` (2 bloqueantes, 7 importantes y 4 menores) el 2026-11-13, todo aplicado o resuelto por el propietario. ADR-0027 **Aceptado** el mismo día (§4). Antes Borrador (2026-11-12).
 - **Origen del código:** la maqueta `UnaWeb/www`, versión A (solo lectura): `a/index.html`, `src/a/*` y `src/shared/*` (unas 1.700 líneas). No entran `b/`, `src/b/`, `propuestas/`, `index.html` (el selector), `.agents/`, `skills-lock.json` ni `three`.
 
 ## 1. Resumen del enfoque
