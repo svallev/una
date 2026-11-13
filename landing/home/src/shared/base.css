@@ -129,7 +129,7 @@ html:not(.fx) .hint { display: none; }
 .split .extras { justify-content: flex-start; }
 @media (max-width: 860px) {
   .big { font-size: clamp(46px, 14.5vw, 96px); }
-  .split { grid-template-columns: 1fr; justify-items: center; gap: 22px; }
+  .split { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 22px; }
   .split .big, .split .lead { text-align: center; }
   .split .lead { margin-inline: auto; }
   .split .copy { align-items: center; }

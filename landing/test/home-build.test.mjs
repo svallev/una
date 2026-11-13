@@ -79,7 +79,9 @@ describe("CA-025-01: build.mjs escribe home/gen/ para Vite", () => {
     try {
       edit(w.paths.identity, (t) => t.replace(/appStoreUrl: "[^"]*"/, 'appStoreUrl: "https://apps.apple.com/app/id1"'));
       await w.buildHome();
-      const code = read(join(w.dist, "assets", readdirSync(join(w.dist, "assets")).find((f) => f.endsWith(".js"))));
+      // El programa que enlaza la página: la copia conserva el de la base (Vite no vacía dist/).
+      const script = read(join(w.dist, "index.html")).match(/src="\/assets\/([^"]+\.js)"/)[1];
+      const code = read(join(w.dist, "assets", script));
       assert.ok(code.includes("https://apps.apple.com/app/id1"), "la dirección de la identidad no llega al programa");
       assert.ok(!code.includes("/img/badges/"), "quedan insignias");
     } finally {

@@ -93,7 +93,7 @@
   .sc--muchas .obj--l { --x: 28% !important; }
   .sc--muchas .obj--r { --x: 72% !important; }
   .sc--muchas .obj--r .row { margin-top: -62px; }
-  .split--hold, .split--rev { grid-template-columns: 1fr; }
+  .split--hold, .split--rev { grid-template-columns: minmax(0, 1fr); }
   .split--rev > .fan, .split--rev > .table { order: 2; }
   .fan { --open: 0.76; width: 92vw; height: 44svh; }
   .sc--amano .lead { display: none; }
