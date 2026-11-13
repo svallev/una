@@ -1,0 +1,171 @@
+{
+  "meta": {
+    "title": "{app} — One task at a time",
+    "description": "{app} is a to-do app that only shows you the task that matters now. With your photo, PDF or web page always at hand."
+  },
+  "nav": {
+    "home": "{app}, home",
+    "download": "Download",
+    "lang": "Language",
+    "scenes": "Chapters",
+    "hint": "Scroll"
+  },
+  "store": {
+    "soon": "Coming soon",
+    "appStore": "App Store",
+    "googlePlay": "Google Play"
+  },
+  "scenes": {
+    "hero": {
+      "title": "*One*|task|at a time",
+      "lead": "The to-do app that only shows you the task that matters now. Finish it and the next one appears."
+    },
+    "muchas": {
+      "title": "You have|*too many*|things to do",
+      "lead": "And you can only do one thing at a time."
+    },
+    "una": {
+      "title": "Just *one*.|Until|it's done",
+      "lead": "The current task fills the whole screen, like a sticky note. You don't move on to the next one until you complete it.",
+      "try": "Try it"
+    },
+    "amano": {
+      "title": "Your photo, PDF,|web page.|*Always at hand*",
+      "lead": "Attach what you need to see: the timetable, the recipe, the map. Open the app and it's there, full screen, with no digging through your gallery and no reloading.",
+      "chips": [
+        "Photos",
+        "PDF",
+        "Web"
+      ]
+    },
+    "activa": {
+      "title": "The screen|*stays on*",
+      "lead": "If you want. Turn on “Keep screen on” and what you attached stays in view, at a glance, without touching your phone.",
+      "note": "Off by default. Works while a photo, PDF or web page is on screen.",
+      "switch": "Keep screen on"
+    },
+    "luz": {
+      "title": "Your screen,|*a light table*",
+      "lead": "Turn on “Lock zoom” and the photo stays put: no zooming, no scrolling. Lay a sheet of paper on top and trace.",
+      "note": "Images only.",
+      "switch": "Lock zoom",
+      "locked": "Zoom locked"
+    },
+    "fin": {
+      "title": "Start|with *one*.",
+      "lead": "Coming soon to Google Play and the App Store."
+    }
+  },
+  "app": {
+    "complete": "Tap to complete",
+    "done": "Task completed",
+    "pdfTitle": "Yoghurt cake",
+    "screenAlt": "The app showing the current task full screen",
+    "menu": "Menu",
+    "completeA11y": "Press and hold to complete the task",
+    "success1": "Well done!",
+    "success2": "Task completed.",
+    "allTasks": "All tasks",
+    "allTasksHint": "The first one is your current task. Drag another one above it to take its place.",
+    "newTask": "New task",
+    "keepAwakeHint": "Images, documents and web",
+    "lockZoomHint": "Images only: no zoom or scroll",
+    "pdfTask": "Bake the Sunday cake",
+    "pdfFile": "yoghurt-cake.pdf",
+    "pdfServes": "Serves 8 · 50 minutes",
+    "pdfIngredientsTitle": "Ingredients",
+    "pdfIngredients": [
+      "1 plain yoghurt",
+      "3 eggs",
+      "2 measures of sugar",
+      "3 measures of flour",
+      "1 measure of olive oil",
+      "1 sachet of baking powder"
+    ],
+    "pdfStepsTitle": "Method",
+    "pdfSteps": [
+      "Preheat the oven to 180 °C.",
+      "Whisk the eggs with the sugar until pale.",
+      "Add the yoghurt and oil, then the flour and baking powder.",
+      "Pour into a greased tin and bake for about 35 minutes."
+    ],
+    "traceTask": "Draw the player for the tournament poster",
+    "traceAlt": "A task with a picture of a basketball player to trace",
+    "listAlt": "The list of all tasks in the app",
+    "iconAlt": "{app} app icon",
+    "golfTask": "Saturday tournament: the course map",
+    "golfAlt": "A task with a full-screen golf course map",
+    "golfTitle": "North Course · 9 holes · Par 36",
+    "golfHouse": "Clubhouse",
+    "lineupTask": "Festival: who plays and when",
+    "lineupAlt": "A task with a full-screen music festival poster",
+    "lineupDates": "10–12 July 2027",
+    "lineupDays": [
+      "Friday 10",
+      "Saturday 11",
+      "Sunday 12"
+    ],
+    "lineupFoot": "Three days · two stages · by the lake",
+    "bookTask": "Finish the book-club book",
+    "bookAlt": "A task with a full-screen book cover",
+    "bookTitle": [
+      "The garden",
+      "of quiet",
+      "hours"
+    ],
+    "bookKind": "A novel",
+    "progTask": "Go to the 11:30 talk",
+    "progAlt": "A task with a full-screen conference programme PDF",
+    "progFile": "conference-programme.pdf",
+    "progTitle": "Product Design Days",
+    "progMeta": "Saturday 14 March · Main Hall",
+    "progRows": [
+      "09:00|Registration and coffee|Lobby",
+      "09:30|Designing for one thing|Elena Ruiz Soto · Room A",
+      "10:15|What we learned by removing features|Íñigo Barrena · Room A",
+      "11:00|Break|Terrace",
+      "11:30|Accessibility, no excuses|Carla Montiel · Room B",
+      "12:15|Type on small screens|Hugo Ferrán · Room A",
+      "13:00|Lunch|Courtyard",
+      "15:00|Workshop: paper prototypes|Noa Castaño · Room 2",
+      "16:30|Panel: privacy by default|Room A",
+      "17:30|Closing remarks|Main Hall"
+    ],
+    "pdfAlt": "A task with a full-screen recipe PDF",
+    "pdfNotesTitle": "Notes",
+    "pdfNotes": [
+      "Let it cool for 10 minutes before turning out.",
+      "Keeps for three days, covered, at room temperature.",
+      "Even better with lemon zest."
+    ],
+    "routeHost": "example.com/trails/river",
+    "routeName": "River trail",
+    "routeStats": "8.4 km · 2 h 10 min · +120 m",
+    "routeAlt": "A task with a full-screen web page showing a trail map",
+    "routeStreets": [
+      "River Walk",
+      "Mill Street",
+      "Linden Avenue",
+      "Riverside Park"
+    ],
+    "routeStart": "Start",
+    "routeEnd": "Finish"
+  },
+  "tasks": [
+    "Call Marta to confirm Thursday's appointment",
+    "Send Lucía the revised quote",
+    "Buy light bulbs for the hallway",
+    "Read chapter 3 before Thursday",
+    "Book the car inspection",
+    "Return the book to the library",
+    "Buy Mum's present",
+    "Pay the gym membership"
+  ],
+  "footer": {
+    "help": "Help",
+    "privacy": "Privacy",
+    "licenses": "Licenses",
+    "legal": "© 2026 {app}",
+    "nav": "Help, privacy and licenses"
+  }
+}

@@ -1,6 +1,4 @@
-// Iconos de la página de inicio (spec 025), copiados de la maqueta: los de la app (`app/lib/ui/una_icons.dart`),
-// en una caja de 24, de trazo y con puntas cuadradas. Siempre ocultos al lector (`aria-hidden`): el nombre lo
-// da el texto de al lado. Sin `style=` (la CSP lo bloquearía): el trazo y el tamaño, en el CSS (`.ic`).
+// Iconos de la app (Una/app/lib/ui/una_icons.dart): caja de 24, trazo, puntas cuadradas.
 const PATHS = {
   check: ['M4 12.5l5 5L20 6.5'],
   arrowDown: ['M12 4v15M6 13l6 6 6-6'],

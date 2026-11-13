@@ -1,0 +1,171 @@
+/* Versión A: escenario CSS 3D. La cámara avanza en Z con el scroll y atraviesa cada escena.
+   Las piezas son pantallas reales de la app dentro de móviles (device.css). */
+
+/* ---------- Objetos colocados en profundidad ---------- */
+.obj { position: absolute; z-index: 2; left: var(--x); top: var(--y); transform: translate(-50%, -50%) translateZ(var(--z, 0px)) rotateY(var(--ry, 0deg)) rotate(var(--r, 0deg)); }
+
+/* Un móvil dentro de una columna: lleva su propia perspectiva para poder girarse */
+.device { position: relative; perspective: 1400px; display: grid; place-items: center; }
+.device > .phone { transform: rotateY(var(--ry, -12deg)) rotateZ(var(--rz, 1.5deg)); }
+
+/* Tipos de adjunto, en línea bajo la entradilla */
+.kinds { list-style: none; margin: 24px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; font-size: 16px; font-weight: 700; }
+.kinds li { display: flex; align-items: center; gap: 8px; }
+.kinds .ic { width: 20px; height: 20px; }
+
+/* ---------- Portada ---------- */
+.sc--hero .phone { --pw: clamp(170px, min(18vw, 30svh), 280px); }
+
+/* ---------- Demasiadas: filas reales de la lista ---------- */
+.sc--muchas .row { --fs: 17px; }
+
+/* ---------- Solo una: la demo dentro del móvil ---------- */
+.phone--hold { --pw: clamp(200px, min(24vw, 34svh), 300px); }
+.split--hold { grid-template-columns: minmax(0, 1fr) auto; }
+/* La invitación a probar: una palabra y una flecha fina que baja, se curva hacia arriba y sube hasta el botón */
+.try { position: absolute; z-index: 6; right: calc(100% - 40px); bottom: calc(10.5% - 25px); margin: 0; display: flex; align-items: flex-start; gap: 4px; white-space: nowrap; font: 900 28px/1 var(--face); letter-spacing: -0.03em; transform-origin: 100% 100%; pointer-events: none; }
+.try span { display: block; margin-top: -2px; transform: rotate(-7deg); }
+.try__arrow { flex: none; width: 150px; height: 77px; overflow: visible; fill: none; stroke: currentColor; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+/* Un filo claro por debajo, para que la punta se lea sobre el marco del móvil y sobre el botón lleno */
+.try__halo { stroke: #FFFDF3; stroke-width: 7; }
+
+.hold__note { position: absolute; inset: 0; background: var(--note); transition: background-color 200ms ease; }
+.hold__btn { cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: transform 80ms ease, box-shadow 80ms ease; }
+.hold__label, .hold__fill { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 12); }
+.hold__fill { background: var(--ink); color: #FFFFFF; clip-path: inset(0 100% 0 0); transition: clip-path 280ms ease; }
+.hold.is-holding .hold__fill { clip-path: inset(0 0 0 0); transition: clip-path 1200ms linear; }
+.hold.is-holding .hold__btn { transform: translate(calc(var(--u) * 4), calc(var(--u) * 4)); box-shadow: calc(var(--u) * 1) calc(var(--u) * 1) 0 var(--ink); }
+.hold__btn:focus-visible { outline: calc(var(--u) * 3) solid var(--ink); outline-offset: calc(var(--u) * 3); }
+
+.hold__stamp { position: absolute; z-index: 6; left: 50%; top: 44%; width: calc(var(--u) * 88); aspect-ratio: 1; display: grid; place-items: center; background: var(--ink); box-shadow: calc(var(--u) * 6) calc(var(--u) * 6) 0 #FFFFFF; transform: translate(-50%, -50%) scale(0) rotate(-8deg); pointer-events: none; }
+.hold__stamp svg { width: calc(var(--u) * 50); height: calc(var(--u) * 50); fill: none; stroke: #FFFFFF; stroke-width: 3.2; stroke-linecap: square; }
+.hold.is-done .hold__stamp { transform: translate(-50%, -50%) scale(1) rotate(-8deg); transition: transform 550ms var(--ease-stamp); }
+.hold.is-tearing .hold__stamp { transform: translate(-50%, 260%) scale(0.9) rotate(14deg); opacity: 0; transition: transform 700ms cubic-bezier(0.55, 0, 1, 0.45), opacity 500ms ease 200ms; }
+.hold__confetti { position: absolute; z-index: 7; left: 50%; top: 44%; pointer-events: none; }
+.hold__confetti span { position: absolute; width: calc(var(--u) * 14); height: calc(var(--u) * 14); margin: calc(var(--u) * -7); background: var(--k); border: calc(var(--u) * 2) solid var(--ink); animation: confetti 1100ms var(--ease-confetti) both; }
+@keyframes confetti { to { transform: translate(var(--dx), var(--dy)) rotate(var(--dr)); opacity: 0; } }
+
+/* La nota se rasga: dos mitades con borde irregular que caen; debajo ya está la siguiente */
+.hold.is-tearing .hold__note--cur { visibility: hidden; }
+.hold__tear { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.hold__half { position: absolute; inset: 0; background: var(--note); }
+.hold__half--l { clip-path: polygon(0 0, 53% 0, 48% 9%, 55% 19%, 47% 30%, 54% 41%, 46% 52%, 53% 63%, 47% 74%, 54% 85%, 48% 100%, 0 100%); animation: tear-l 1250ms cubic-bezier(0.3, 0, 0.2, 1) both; }
+.hold__half--r { clip-path: polygon(53% 0, 100% 0, 100% 100%, 48% 100%, 54% 85%, 47% 74%, 53% 63%, 46% 52%, 54% 41%, 47% 30%, 55% 19%, 48% 9%); animation: tear-r 1250ms cubic-bezier(0.3, 0, 0.2, 1) both; }
+@keyframes tear-l { 18% { transform: translate(-1.5%, 0.5%) rotate(-1.5deg); } to { transform: translate(-22%, 92%) rotate(-16deg); } }
+@keyframes tear-r { 18% { transform: translate(1.5%, 0.5%) rotate(1.5deg); } to { transform: translate(24%, 96%) rotate(18deg); } }
+
+/* ---------- Siempre a mano: abanico de móviles ---------- */
+.fan { --spread: 1; position: relative; width: min(40vw, 560px); height: min(66svh, 600px); }
+.sc--amano .big { font-size: clamp(44px, 5.6vw, 104px); }
+.sc--luz .big { font-size: clamp(52px, 7.4vw, 136px); }
+@media (min-width: 861px) { .split .ln { white-space: nowrap; } }
+.fan__card { position: absolute; left: 50%; bottom: 0; transform-origin: 50% 135%; transform: translateX(-50%) translateX(calc(var(--tx) * var(--spread) * var(--open, 1))) rotate(calc(var(--rot) * var(--spread) * var(--open, 1))); }
+.sc--amano .phone { --pw: clamp(130px, min(12.5vw, 25svh), 210px); }
+.split--rev .copy { justify-self: stretch; }
+
+/* ---------- Pantalla siempre activa ---------- */
+.split--rev { grid-template-columns: auto minmax(0, 1fr); }
+.sc--activa .phone { --pw: clamp(170px, min(19vw, 28svh), 260px); }
+.device .setting { position: absolute; z-index: 3; bottom: -11%; right: 30%; white-space: nowrap; }
+.sc--activa .device { --ry: -14deg; --rz: 1.5deg; padding-left: 8vw; }
+
+/* ---------- Mesa de luz: el móvil tumbado, con un papel encima ---------- */
+.table { position: relative; perspective: 1500px; display: grid; place-items: center; width: min(40vw, 500px); }
+.table__tilt { transform: rotateX(46deg) rotateZ(20deg); transform-style: preserve-3d; }
+.sc--luz .phone { --pw: clamp(160px, min(19vw, 30svh), 250px); }
+/* El papel cubre la pantalla; su trazo usa la misma geometría que la imagen, así que cae justo encima. */
+.lightbox__paper { position: absolute; z-index: 2; inset: 0; background: rgba(255, 253, 243, 0.64); }
+.lightbox__paper svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: #2E2B27; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.lightbox__paper svg * { stroke-dasharray: 1; stroke-dashoffset: var(--draw, 0); }
+.table .setting { position: absolute; z-index: 3; left: 50%; bottom: -2%; transform: translateX(-50%); }
+
+/* ---------- Cierre: el icono de la app ---------- */
+.appicon { width: clamp(96px, 11vw, 148px); aspect-ratio: 1; margin-bottom: 26px; border-radius: 23%; overflow: hidden; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.appicon img { width: 100%; height: 100%; }
+.sc--fin .phone { --pw: clamp(150px, min(16vw, 27svh), 240px); }
+
+/* ---------- Móvil ---------- */
+@media (max-width: 860px) {
+  .obj--m0 { display: none; }
+  /* Demasiadas: filas estrechas, dentro de la pantalla y sin profundidad */
+  .sc--muchas .row { --fs: 11.5px; width: 170px; }
+  .sc--muchas .obj { --z: 0px !important; }
+  .sc--muchas .obj--l { --x: 28% !important; }
+  .sc--muchas .obj--r { --x: 72% !important; }
+  .sc--muchas .obj--r .row { margin-top: -62px; }
+  .split--hold, .split--rev { grid-template-columns: 1fr; }
+  .split--rev > .fan, .split--rev > .table { order: 2; }
+  .fan { --open: 0.76; width: 92vw; height: 44svh; }
+  .sc--amano .lead { display: none; }
+  .sc--activa .device { padding-left: 0; }
+  .phone--hold { --pw: min(44vw, 23svh); }
+  .sc--una .lead { display: none; }
+  .try { right: calc(100% - 30px); bottom: calc(9.5% - 15px); flex-direction: column; align-items: flex-start; gap: 0; font-size: 18px; }
+  .try span { margin: 0 0 2px -30px; font-size: 16px; }
+  .try__arrow { width: 88px; height: 45px; stroke-width: 4.5; }
+  .try__halo { stroke-width: 9; }
+  .sc--amano .phone { --pw: min(29vw, 17svh); }
+  .sc--activa .phone { --pw: min(36vw, 22svh); }
+  .device { gap: 14px; }
+  .device .setting { position: relative; right: auto; bottom: auto; transform: scale(0.8); margin: -8px 0 -6px; }
+  /* Portada: el móvil entero bajo las insignias */
+  .sc--hero .obj--hero-r { --x: 50% !important; --y: 81% !important; --z: 0px !important; --ry: 0deg !important; --r: -4deg !important; }
+  .sc--hero .phone { --pw: min(32vw, 15svh); }
+  .sc--hero .copy { margin-top: -37svh; }
+  .table { width: 92vw; }
+  .sc--luz .phone { --pw: min(34vw, 21svh); }
+  .table { display: flex; flex-direction: column; align-items: center; }
+  .table .setting { position: relative; left: auto; bottom: auto; transform: scale(0.8); margin-top: -4svh; }
+  .kinds { margin-top: 14px; font-size: 14px; gap: 8px 16px; }
+  .appicon { margin-bottom: 16px; }
+}
+
+/* ---------- Escenario (solo con html.fx: hay JavaScript y no se pide reducir movimiento) ---------- */
+.fx .journey { height: calc(var(--n) * 115svh); }
+.fx .stage { position: sticky; top: 0; height: 100svh; overflow: hidden; perspective: 1000px; background: var(--bg0); }
+.fx .world { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+.fx .sc { position: absolute; inset: 0; min-height: 0; background: none; overflow: visible; transform-style: preserve-3d; visibility: hidden; padding: 92px var(--margin) 64px; }
+.fx .sc__inner { height: 100%; transform-style: preserve-3d; }
+/* Escena ya sobrepasada: su texto ha cruzado la cámara (las piezas con fondo propio se ocultan una a una) */
+.fx .sc.is-past .sc__inner > :not(.obj), .fx .sc.is-past > .end { visibility: hidden; }
+/* La opacidad va en las piezas, no en la escena: la opacidad en un contenedor 3D lo aplana. */
+.fx .sc__inner > *, .fx .sc > .end { opacity: var(--o, 0); }
+
+/* ---------- Entrada escalonada (todas las escenas) ----------
+   Nada sube, gira ni se desliza de lado: cada pieza nace pequeña en su sitio, como si estuviera
+   lejos, y crece hacia la cámara. Todas tardan lo mismo; lo que cambia es cuándo empiezan, muy seguidas, para
+   que se solapen. Orden: icono, líneas del titular, piezas (móviles, filas), entradilla, extras,
+   insignias, ajuste y pie. */
+.fx .ln { perspective: none; }
+.fx .ln__i, .fx .lead, .fx .kinds li, .fx .fine, .fx .try, .fx .stores__soon, .fx .badge, .fx .appicon, .fx .setting,
+.fx .obj__f > *, .fx .device > .phone, .fx .fan__card > .phone, .fx .table__tilt > .phone {
+  transition: opacity 300ms ease, transform 900ms var(--ease-depth);
+  transition-delay: var(--d, 0ms);
+}
+.fx .appicon { --d: 0ms; }
+.fx .ln__i { --d: calc(70ms + var(--i, 0) * 70ms); }
+.fx .obj__f > * { --d: calc(150ms + var(--k, 0) * 80ms); }
+.fx .device > .phone, .fx .table__tilt > .phone { --d: 150ms; }
+.fx .fan__card > .phone { --d: calc(150ms + var(--k, 0) * 70ms); }
+.fx .lead { --d: 220ms; }
+.fx .kinds li { --d: calc(290ms + var(--k, 0) * 60ms); }
+.fx .try, .fx .fine, .fx .stores__soon { --d: 290ms; }
+.fx .badge--appStore { --d: 300ms; transform-origin: 100% 0; }
+.fx .badge--googlePlay { --d: 360ms; transform-origin: 0 0; }
+.fx .setting { --d: 380ms; }
+.fx .sc > .end { transition: opacity 450ms ease 440ms; }
+
+/* Estado de salida: lejos, pequeño y transparente */
+.fx .sc:not(.is-in) :is(.ln__i, .lead, .kinds li, .fine, .try, .stores__soon, .badge, .appicon, .setting) { opacity: 0; transform: scale(0.12); }
+.fx .sc:not(.is-in) .obj__f > * { opacity: 0; transform: scale(0.1); }
+.fx .sc:not(.is-in) .device > .phone { opacity: 0; transform: rotateY(var(--ry, -12deg)) rotateZ(var(--rz, 1.5deg)) scale(0.1); }
+.fx .sc:not(.is-in) :is(.fan__card, .table__tilt) > .phone { opacity: 0; transform: scale(0.1); }
+.fx .sc:not(.is-in) > .end { opacity: 0; transition-delay: 0ms; }
+/* Al salir de una escena no hace falta escalonar */
+.fx .sc:not(.is-in) * { --d: 0ms !important; }
+
+/* Movimiento suave solo en la escena activa */
+.fx .sc.is-on .obj__f { animation: float var(--bob, 6s) ease-in-out infinite; }
+.fx .sc.is-on .x3d { animation: wobble 3.6s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes wobble { 0%, 100% { transform: perspective(600px) rotateX(8deg) rotateY(-9deg); } 50% { transform: perspective(600px) rotateX(-5deg) rotateY(9deg) translateY(-0.03em); } }

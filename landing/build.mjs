@@ -21,7 +21,6 @@ import {
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { endLeadKey } from "./home/src/stores.js";
 
 export class BuildError extends Error {}
 export class MarkdownError extends BuildError {}
@@ -641,20 +640,13 @@ export const FONT_FILES = [
 export const FONT_DIRS = [...new Set(FONT_FILES.map((f) => f.dir))];
 
 /**
- * `tokens.css`: las variables de `design/tokens.json` (rem para texto y espacios) y las fuentes. Con [landing]
- * (solo la página de inicio, spec 025) lleva además los fondos del grupo `landing` (`--landing-…`) y los colores
- * de nota de la paleta clásica (`--palette-classic-0…4`); el de las otras cuatro páginas no cambia.
+ * `tokens.css`: las variables de `design/tokens.json` (rem para texto y espacios) y las fuentes (las cuatro
+ * páginas sin JavaScript; la de inicio trae sus propios estilos, los de la maqueta).
  */
-export function tokensCss(tokens, { landing = false } = {}) {
+export function tokensCss(tokens) {
   const vars = [];
   const emit = (name, value) => vars.push(`  --${name}: ${value};`);
   for (const [k, v] of Object.entries(tokens.color)) if (!k.startsWith("$")) emit(`color-${kebab(k)}`, v.$value);
-  if (landing) {
-    if (!tokens.landing) throw new BuildError("tokens.json: falta el grupo «landing» (spec 025)");
-    for (const [k, v] of Object.entries(tokens.landing)) if (!k.startsWith("$")) emit(`landing-${kebab(k)}`, v.$value);
-    // Los colores de nota de la paleta clásica (la palabra destacada, las notas y el botón «Descargar»).
-    for (const [k, v] of Object.entries(tokens.palette.classic)) if (!k.startsWith("$")) emit(`palette-classic-${k}`, v.$value);
-  }
   for (const [k, v] of Object.entries(tokens.font.family)) if (!k.startsWith("$")) emit(`font-family-${kebab(k)}`, familyValue(v.$value));
   for (const [k, v] of Object.entries(tokens.font.weight)) if (!k.startsWith("$")) emit(`font-weight-${kebab(k)}`, v.$value);
   for (const [k, v] of Object.entries(tokens.font.size)) if (!k.startsWith("$")) emit(`font-size-${kebab(k)}`, dim(v.$value, true));
@@ -901,94 +893,6 @@ export function build(paths = defaultPaths(), { env = process.env } = {}) {
 export const homeGenDir = (paths) => join(paths.homeDir, "gen");
 
 /**
- * `index.template.html` con sus `{{marcadores}}` rellenos. Los de texto se escapan; `{{static}}` es el HTML
- * del contenido sin JavaScript ([staticHtml], ya escapado). La cabeza va en español (el `<html lang="es">` de
- * la plantilla) hasta que el programa fija el idioma (plan §2.2). Falla si queda algún marcador.
- */
-export function renderHomeHtml(template, { identity, strings, themeColor = "", staticHtml = "" }) {
-  const text = {
-    title: withAppName(strings.es.metaTitle, identity.displayName),
-    description: withAppName(strings.es.metaDescription, identity.displayName),
-    themeColor,
-  };
-  const html = template.replace(/\{\{([a-zA-Z]+)\}\}/g, (m, key) => {
-    if (key === "static") return staticHtml;
-    if (!(key in text)) throw new BuildError(`index.template.html: marcador desconocido ${m}`);
-    return esc(text[key]);
-  });
-  if (/\{\{|\}\}/.test(html.replace(staticHtml, ""))) throw new BuildError("index.template.html: queda un marcador sin rellenar");
-  return html;
-}
-
-const withAppName = (text, appName) => String(text).replaceAll("{appName}", () => appName);
-
-/** Un fondo del grupo `landing` de los tokens (`#RRGGBB`); falla si no está. */
-function landingColor(tokens, name) {
-  const value = tokens.landing?.[name]?.$value;
-  if (typeof value !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(value)) throw new BuildError(`tokens.json: falta «landing.${name}» (spec 025)`);
-  return value;
-}
-
-/** Lo que se lee de un titular de la página de inicio: sin `*` (palabra destacada) ni `|` (saltos de línea). */
-export const plainTitle = (text) => String(text).replaceAll("*", "").split("|").map((s) => s.trim()).join(" ");
-
-/** Los textos de la página de inicio (`landing/home/src/strings.{es,en}.json`, spec 025 §7). */
-export function loadHomeStrings(paths) {
-  const out = {};
-  for (const lang of ["es", "en"]) {
-    const label = `strings.${lang}.json`;
-    try {
-      out[lang] = JSON.parse(readText(join(paths.homeDir, "src", label), label));
-    } catch (e) {
-      if (e instanceof BuildError) throw e;
-      throw new BuildError(`${label}: no es JSON válido (${e.message})`);
-    }
-  }
-  return out;
-}
-
-// La entradilla del cierre según las fichas que ya hay (CA-025-08, CL-025-8) sigue la misma regla que el
-// programa de la página de inicio: viene de `home/src/stores.js` (sin dependencias del navegador).
-export { endLeadKey };
-
-/** Las escenas cuyas propuestas lee el contenido sin JavaScript (las cuatro de CA-025-11), en orden. */
-export const STATIC_PROPOSALS = ["one", "handy", "awake", "light"];
-/** Los enlaces del contenido sin JavaScript (CA-025-11), con la clave de su texto. */
-export const STATIC_LINKS = [
-  ["/help", "footerHelp"],
-  ["/privacy", "footerPrivacy"],
-  ["/licenses", "footerLicenses"],
-];
-
-/**
- * El contenido sin JavaScript de la página de inicio (spec 025, CA-025-11; plan §2.2): el nombre (el único
- * `h1`) y, en español y después en inglés, cada mitad marcada con su idioma, qué hace (`heroTitle`,
- * `heroLead`), las cuatro propuestas (titular y entradilla de las escenas 3 a 6), dónde estará disponible (la
- * entradilla del cierre) y los enlaces a Ayuda, Privacidad y Licencias. Solo textos del §7, escapados.
- */
-export function staticHtml({ appName, strings, stores }) {
-  const lead = endLeadKey(stores);
-  const text = (lang, key) => {
-    const value = strings[lang]?.[key];
-    if (typeof value !== "string" || value === "") throw new BuildError(`strings.${lang}.json: falta «${key}» (contenido sin JavaScript)`);
-    return esc(withAppName(value, appName));
-  };
-  const half = (lang) =>
-    [
-      `<section lang="${lang}" aria-labelledby="static-${lang}">`,
-      `<h2 id="static-${lang}">${plainTitle(text(lang, "heroTitle"))}</h2>`,
-      `<p>${text(lang, "heroLead")}</p>`,
-      ...STATIC_PROPOSALS.flatMap((id) => [`<h3>${plainTitle(text(lang, `${id}Title`))}</h3>`, `<p>${text(lang, `${id}Lead`)}</p>`]),
-      `<p>${text(lang, lead)}</p>`,
-      `<ul>`,
-      ...STATIC_LINKS.map(([href, key]) => `<li><a href="${href}">${text(lang, key)}</a></li>`),
-      `</ul>`,
-      `</section>`,
-    ].join("\n");
-  return [`<div class="static" id="static">`, `<h1 tabindex="-1">${esc(appName)}</h1>`, half("es"), half("en"), `</div>`].join("\n");
-}
-
-/**
  * Las direcciones de las fichas de las tiendas (spec 025, CA-025-08; plan §6.1), de `identity.yaml`: las dos
  * claves tienen que estar; vacía (`""`) quiere decir «sin ficha todavía» (`null`). Si no está vacía, tiene que
  * ser `https://` con el anfitrión exacto de su tienda, sin usuario, contraseña ni puerto, y sin caracteres que
@@ -1026,46 +930,8 @@ export function storeUrls(identity, label = "identity.yaml") {
 }
 
 /**
- * Los textos que la página de inicio toma de la app tal cual (spec 025, CA-025-06; lista cerrada del plan §2.3),
- * por su clave en las ARB. `successTitle1` y `successTitle2` también son de la lista, pero la versión A no los
- * enseña y no se publican (plan §2.3: «no hay texto sin usar»).
- */
-export const HOME_APP_TEXT_KEYS = [
-  "completeButton",
-  "menuButton",
-  "listTitle",
-  "listHelp",
-  "listNewTask",
-  "settingsKeepAwake",
-  "settingsKeepAwakeHint",
-  "settingsLockZoom",
-  "settingsLockZoomHint",
-];
-
-/** Los textos de [HOME_APP_TEXT_KEYS] en las dos ARB; falla si falta alguno o no es texto. */
-export function homeAppTexts(paths) {
-  const out = {};
-  for (const [lang, path] of [["es", paths.arbEs], ["en", paths.arbEn]]) {
-    let json;
-    try {
-      json = JSON.parse(readText(path, `app_${lang}.arb`));
-    } catch (e) {
-      if (e instanceof BuildError) throw e;
-      throw new BuildError(`app_${lang}.arb: no es JSON válido (${e.message})`);
-    }
-    out[lang] = {};
-    for (const key of HOME_APP_TEXT_KEYS) {
-      if (typeof json[key] !== "string" || json[key] === "") throw new BuildError(`app_${lang}.arb: falta «${key}» (lo usa la página de inicio)`);
-      out[lang][key] = json[key];
-    }
-  }
-  return out;
-}
-
-/**
- * `gen/site.json`, lo que el programa de la página de inicio importa de la app (P7, CA-025-06, 08 y 14): el
- * nombre y el logotipo (`identity.yaml`), las direcciones de las tiendas (`null` sin ficha) y los textos de la
- * app de [HOME_APP_TEXT_KEYS] en los dos idiomas.
+ * `gen/site.json`, lo que la página de inicio toma de la identidad (`identity.yaml`): el nombre, el logotipo y
+ * las direcciones de las tiendas (`null` sin ficha).
  */
 export function homeSite(paths) {
   const identity = readIdentity(readText(paths.identity, "identity.yaml"), basename(paths.identity));
@@ -1073,36 +939,16 @@ export function homeSite(paths) {
     appName: identity.displayName,
     wordmark: identity.wordmark,
     stores: storeUrls(identity, basename(paths.identity)),
-    app: homeAppTexts(paths),
   };
 }
 
-/**
- * Escribe `landing/home/gen/` (lo que Vite construye: la página con el nombre de la identidad, `site.json` y
- * los tokens con los fondos de la página de inicio). Devuelve la lista de archivos escritos.
- */
+/** Escribe `landing/home/gen/site.json` (lo único que Vite necesita generado). Devuelve la lista de archivos. */
 export function writeHomeGen(paths = defaultPaths()) {
-  const identity = readIdentity(readText(paths.identity, "identity.yaml"), basename(paths.identity));
-  const tokens = JSON.parse(readText(paths.tokens, "tokens.json"));
-  const template = readText(join(paths.homeDir, "index.template.html"), "index.template.html");
   const gen = homeGenDir(paths);
-  const site = homeSite(paths);
-  const strings = loadHomeStrings(paths);
-  const html = renderHomeHtml(template, {
-    identity,
-    strings,
-    themeColor: landingColor(tokens, "magenta"),
-    staticHtml: staticHtml({ appName: identity.displayName, strings, stores: site.stores }),
-  });
-  const files = new Map([
-    ["index.html", html],
-    ["site.json", `${JSON.stringify(site, null, 2)}\n`],
-    ["tokens.css", tokensCss(tokens, { landing: true })],
-  ]);
   rmSync(gen, { recursive: true, force: true });
   mkdirSync(gen, { recursive: true });
-  for (const [file, content] of files) writeFileSync(join(gen, file), content);
-  return [...files.keys()];
+  writeFileSync(join(gen, "site.json"), `${JSON.stringify(homeSite(paths), null, 2)}\n`);
+  return ["site.json"];
 }
 
 /**

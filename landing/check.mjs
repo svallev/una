@@ -1,8 +1,8 @@
 // Comprobaciones de la web construida (spec 023): CA-023-04 (la política publicada es la del
 // documento), CA-023-13 (páginas, idiomas), CA-023-14 (sin terceros ni rastreo, cabeceras),
 // CA-023-15 (tokens, contraste, estructura, foco) y CA-023-16 (el bloque de avisos de terceros); y, con su
-// propio juego de reglas (`checkHome`), la página de inicio de la spec 025 (CA-025-12 y CA-025-14), la única
-// con programa. Falla cerrada: lo que no entiende es un error.
+// propio juego de reglas (`checkHome`), la página de inicio de la spec 025 (CA-025-12), la única con
+// programa. Falla cerrada: lo que no entiende es un error.
 //
 //   node landing/check.mjs [--dist <carpeta>]      (después de `node landing/build.mjs`)
 //
@@ -364,8 +364,13 @@ const CSP = {
   "form-action": "'none'",
   "frame-ancestors": "'none'",
 };
-/** La de la página de inicio: la misma más programas del propio origen (spec 025, CA-025-12). */
-const HOME_CSP = { ...CSP, "script-src": "'self'" };
+/**
+ * La de la página de inicio (spec 025, segunda enmienda): la misma con programas del propio origen y estilos en
+ * línea (la maqueta usa atributos `style=`).
+ */
+const HOME_CSP = { ...CSP, "script-src": "'self'", "style-src": "'self' 'unsafe-inline'" };
+/** Las directivas en que la CSP de la página de inicio puede ser distinta de la de las demás. */
+const HOME_CSP_EXTRA = ["script-src", "style-src"];
 /** Cómo instala Vercel las dependencias de la página de inicio (lo mismo que la CI). */
 const INSTALL_COMMAND = "npm ci --ignore-scripts";
 const PERMISSIONS = ["accelerometer", "autoplay", "camera", "display-capture", "geolocation", "gyroscope", "interest-cohort", "magnetometer", "microphone", "payment", "usb"];
@@ -387,8 +392,8 @@ function checkVercel(path, errors) {
   if (json.installCommand !== INSTALL_COMMAND) fail(`installCommand tiene que ser "${INSTALL_COMMAND}" (es ${JSON.stringify(json.installCommand)})`);
   if (json.outputDirectory !== "dist") fail('outputDirectory tiene que ser "dist"');
   for (const key of ["rewrites", "redirects", "routes"]) if (key in json) fail(`la web no necesita «${key}»`);
-  // Dos reglas que no se solapan (spec 025, plan §6.1): «/(.+)», la de siempre, para todo menos la página de
-  // inicio, y «/», la misma con `script-src 'self'`; iguales en todo lo demás.
+  // Dos reglas que no se solapan (spec 025): «/(.+)», la de siempre, para todo menos la página de inicio, y «/»,
+  // la misma con `script-src 'self'` y `style-src 'self' 'unsafe-inline'`; iguales en todo lo demás.
   const sources = Array.isArray(json.headers) ? json.headers.map((r) => r?.source) : [];
   if (sources.length !== 2 || !sources.includes("/(.+)") || !sources.includes("/")) {
     fail('tiene que haber dos reglas de cabeceras, con source "/(.+)" (todo menos la página de inicio) y "/" (la página de inicio)');
@@ -402,9 +407,9 @@ function checkVercel(path, errors) {
   const home = headerMap(json.headers.find((r) => r.source === "/"));
   for (const key of new Set([...rest.keys(), ...home.keys()])) {
     const [a, b] = key === "content-security-policy"
-      ? [cspText(rest.get(key)), cspText(home.get(key), { without: "script-src" })]
+      ? [cspText(rest.get(key), { without: HOME_CSP_EXTRA }), cspText(home.get(key), { without: HOME_CSP_EXTRA })]
       : [rest.get(key), home.get(key)];
-    if (a !== b) fail(`las dos reglas de cabeceras tienen que ser iguales salvo script-src de «/»: ${key} difiere («${rest.get(key) ?? "falta"}» frente a «${home.get(key) ?? "falta"}»)`);
+    if (a !== b) fail(`las dos reglas de cabeceras tienen que ser iguales salvo script-src y style-src de «/»: ${key} difiere («${rest.get(key) ?? "falta"}» frente a «${home.get(key) ?? "falta"}»)`);
   }
 }
 
@@ -417,13 +422,13 @@ function headerMap(rule) {
   return out;
 }
 
-/** Una CSP en forma comparable (directivas y orígenes ordenados), sin la directiva [without]. */
-function cspText(value, { without } = {}) {
+/** Una CSP en forma comparable (directivas y orígenes ordenados), sin las directivas de [without]. */
+function cspText(value, { without = [] } = {}) {
   if (typeof value !== "string") return value;
   return value
     .split(";")
     .map((d) => d.trim().split(/\s+/).filter(Boolean))
-    .filter((d) => d.length > 0 && d[0] !== without)
+    .filter((d) => d.length > 0 && !without.includes(d[0]))
     .map(([name, ...rest]) => [name, ...rest.sort()].join(" "))
     .sort()
     .join("; ");
@@ -534,10 +539,8 @@ function checkHandWrittenName(paths, identity, errors) {
 // ─── La página de inicio (spec 025) ──────────────────────────────────────────────────────────────
 
 /**
- * Las API de red y de almacenamiento (y la ejecución de texto) que el programa de la página de inicio no puede
- * usar (CA-025-12, plan §6.1). Es la lista de lo que se busca, no de lo permitido: el programa solo puede usar
- * `localStorage` (el idioma elegido, CA-025-09) y `history.replaceState` (quitar el `#` de la dirección, plan
- * §7.2); cualquier otra forma de pedir algo a la red o de guardar algo en el navegador falla.
+ * Lo que el programa de la página de inicio no puede usar: ninguna forma de pedir algo a la red (CA-025-12) ni
+ * de ejecutar texto. Es la lista de lo que se busca, no de lo permitido.
  */
 const FORBIDDEN_APIS = [
   [/\bfetch\s*\(/, "fetch("],
@@ -547,100 +550,41 @@ const FORBIDDEN_APIS = [
   [/\bWebTransport\b/, "WebTransport"],
   [/\bEventSource\b/, "EventSource"],
   [/\bRTC(?:PeerConnection|DataChannel)\b/, "WebRTC"],
-  [/\bnew\s+Request\b/, "new Request"],
   [/\bimportScripts\b/, "importScripts"],
   [/\bimport\s*\(/, "import() dinámico"],
-  [/\b(?:Shared)?Worker\s*\(/, "Worker"],
   [/\bserviceWorker\b/, "serviceWorker"],
-  [/\bBroadcastChannel\b/, "BroadcastChannel"],
-  [/\bpostMessage\b/, "postMessage"],
-  [/\bwindow\.open\b/, "window.open"],
-  [/\bnew\s+Image\b/, "new Image"],
-  [/\bsessionStorage\b/, "sessionStorage"],
-  [/\bindexedDB\b/, "indexedDB"],
-  [/\bcookie/i, "cookies"],
-  [/\bcaches\b/, "Cache Storage"],
-  [/\bnavigator\.storage\b/, "navigator.storage"],
-  [/\bpushState\b/, "history.pushState"],
   [/\beval\s*\(/, "eval"],
   [/\bnew\s+Function\b/, "new Function"],
-  [/\bdocument\.write/, "document.write"],
 ];
 
-/** Una dirección `data:` con su tipo (`data:image/png;…`); `{data:x}` del código minificado no lo es. */
-const DATA_URL = /\bdata:\s*[a-z]+\/[a-z0-9.+-]+[;,]/i;
-
-/** Atributos que cargan un recurso (además de `src` del programa y `href` de la hoja de estilo). */
-const RESOURCE_ATTRS = ["src", "srcset", "poster", "data", "action", "formaction", "background", "xlink:href", "ping", "manifest"];
-
-/** Los titulares que juegan con el nombre y usan la palabra «una» (CA-025-14: lista cerrada). */
-const NAME_HEADLINES = new Set(["heroTitle", "oneTitle", "endTitle"]);
-/** `metaTitle` es «{appName} — <titular>»: solo se admite la segunda mitad. */
-const META_TITLE_SEPARATOR = " — ";
+/**
+ * Los dominios que puede nombrar el programa sin pedirles nada: el espacio de nombres de SVG (GSAP), la web de
+ * GSAP en su aviso de licencia y sus mensajes, y las fichas de las tiendas (enlaces, de `identity.yaml`, que
+ * `build.mjs` valida). Cualquier otro dominio es un error.
+ */
+const PROGRAM_HOSTS = new Set(["www.w3.org", "gsap.com", "apps.apple.com", "play.google.com"]);
 
 /** Las rutas de [dir] (relativas, con «/»), recursivas. */
 const filesOf = (dir) => [...walk(dir)].map((f) => relative(dir, f).split(sep).join("/"));
 
 /**
- * El segundo juego de reglas (spec 025, CA-025-12 y CA-025-14; plan §6.1): la página de inicio, que construye
- * Vite y sí lleva un programa. Las otras cuatro páginas siguen con las de `checkSite`, sin cambios. Comprueba
- * `dist/` entera por patrón y cuenta (la página, un programa y una hoja de estilo en `assets/`, nada más que
- * lo de las otras cuatro), la página (programa solo del propio origen y por `src`; sin estilos ni manejadores
- * en línea; sin `data:`), la hoja de estilo, el programa (sin API de red ni de almacenamiento salvo las
- * admitidas, sin mapas) y el nombre de la app a mano en las fuentes de `landing/home/`.
+ * El juego de reglas de la página de inicio (spec 025, segunda enmienda): la de la maqueta, que construye Vite
+ * y sí lleva programa. Lo mínimo: un único `<script type="module" src>` del propio origen, sin nada escrito
+ * dentro; sin recursos de otro origen; ningún mapa de código en `dist/`; y, en el programa, sin API de red ni
+ * dominios externos. La CSP se comprueba en `vercel.json` (`checkSite`).
  */
 export function checkHome(paths = defaultPaths(), { dist = paths.out } = {}) {
   const errors = [];
-  let site;
-  let identity;
-  try {
-    identity = readIdentity(readFileSync(paths.identity, "utf8"));
-    site = renderSite(paths);
-  } catch (e) {
-    if (!(e instanceof BuildError)) throw e;
-    return [`no se puede construir la web desde sus fuentes: ${e.message}`];
-  }
-
-  // Archivos: lo de las otras cuatro páginas, la página de inicio y un programa y una hoja en assets/.
-  const others = new Set([...site.files.keys(), ...FONT_DIRS.map((d) => `fonts/${d}/OFL.txt`), ...FONT_FILES.map((f) => `fonts/${f.dir}/${f.file}`)]);
   const found = existsSync(dist) ? filesOf(dist) : [];
-  const assets = { js: [], css: [] };
-  for (const f of found) {
-    if (others.has(f) || f === HOME_PAGE) continue;
-    const asset = /^assets\/[A-Za-z0-9_-]+\.(js|css)$/.exec(f);
-    if (asset) assets[asset[1]].push(f);
-    else if (f.endsWith(".map")) errors.push(`${f}: mapa de código en la web publicada (CA-025-12)`);
-    else if (f.endsWith(".html")) errors.push(`${f}: página HTML de más (solo las cuatro de siempre y la de inicio)`);
-    else errors.push(`${f}: archivo no esperado en dist/ (solo un programa y una hoja de estilo en assets/ para la página de inicio)`);
+  for (const f of found) if (f.endsWith(".map")) errors.push(`${f}: mapa de código en la web publicada (CA-025-12)`);
+  if (!found.includes(HOME_PAGE)) {
+    errors.push(`${HOME_PAGE}: falta la página de inicio (¿se ejecutó landing/build.mjs?)`);
+    return errors;
   }
-  for (const [kind, list] of Object.entries(assets)) {
-    if (list.length !== 1) errors.push(`assets/: tiene ${list.length} archivo(s) .${kind} (tiene que haber uno: ${list.join(", ") || "ninguno"})`);
-  }
-  const js = assets.js.length === 1 ? assets.js[0] : null;
-  const css = assets.css.length === 1 ? assets.css[0] : null;
-
-  if (!found.includes(HOME_PAGE)) errors.push(`${HOME_PAGE}: falta la página de inicio (¿se ejecutó landing/build.mjs?)`);
-  else checkHomePage(HOME_PAGE, readFileSync(join(dist, HOME_PAGE), "utf8"), { js, css }, errors);
-  if (css) checkHomeCss(css, readFileSync(join(dist, css), "utf8"), errors);
-  if (js) checkProgram(js, readFileSync(join(dist, js), "utf8"), errors);
-
-  checkHomeName(paths, identity, errors);
-  return errors;
-}
-
-/** La página de inicio construida (`dist/index.html`). */
-function checkHomePage(file, html, { js, css }, errors) {
+  const html = readFileSync(join(dist, HOME_PAGE), "utf8");
+  const fail = (msg) => errors.push(`${HOME_PAGE}: ${msg}`);
   const t = tags(html);
-  const fail = (msg) => errors.push(`${file}: ${msg}`);
 
-  if (!/<html\s[^>]*\blang="[a-z]{2,3}(-[A-Za-z0-9]+)?"/.test(html)) fail("el <html> no lleva lang");
-  const viewport = t.find((x) => x.name === "meta" && x.attrs.name === "viewport");
-  if (!viewport) fail("falta <meta name=\"viewport\">");
-  else if (/user-scalable|maximum-scale|minimum-scale/i.test(viewport.attrs.content ?? "")) fail(`el viewport limita el zoom (${viewport.attrs.content}): 1.4.4`);
-  const title = /<title>([^<]*)<\/title>/.exec(html);
-  if (!title || !title[1].trim()) fail("falta el <title>");
-
-  // El programa: uno, del propio origen, por src, sin nada escrito dentro.
   const scripts = t.filter((x) => x.name === "script" && !x.closing);
   if (scripts.length !== 1) fail(`tiene ${scripts.length} <script> (tiene que haber uno: el programa de assets/)`);
   for (const s of scripts) {
@@ -650,130 +594,36 @@ function checkHomePage(file, html, { js, css }, errors) {
     if (s.attrs.type !== "module") fail(`un <script> que no es type="module" («${s.attrs.type ?? ""}»)`);
     if (!src) fail("un <script> sin src (los programas, solo del propio origen y por src)");
     else if (!isLocal(src)) fail(`un <script> de otro origen («${src}»)`);
-    else if (js && src !== `/${js}`) fail(`el <script> no carga el programa de assets/ («${src}» en lugar de «/${js}»)`);
+    else if (!found.includes(src.replace(/^\//, ""))) fail(`el <script> carga un programa que no está en dist/ («${src}»)`);
+    else checkProgram(src.replace(/^\//, ""), readFileSync(join(dist, src.replace(/^\//, "")), "utf8"), errors);
   }
 
   for (const x of t) {
     if (x.closing) continue;
     for (const [attr, value] of Object.entries(x.attrs)) {
       if (/^on/.test(attr)) fail(`<${x.name}> lleva el manejador en línea ${attr} (la CSP lo bloquearía)`);
-      if (attr === "style") fail(`<${x.name}> lleva style en línea (la CSP lo bloquearía)`);
-      if (attr === "srcdoc") fail(`<${x.name}> lleva srcdoc`);
-      if (/^\s*data:/i.test(value) || /url\(\s*['"]?\s*data:/i.test(value)) fail(`<${x.name} ${attr}> con una dirección data: (cada recurso, su archivo)`);
-      if (RESOURCE_ATTRS.includes(attr) && x.name !== "script") {
-        for (const url of attr === "srcset" ? value.split(",").map((s) => s.trim().split(/\s+/)[0]) : [value]) {
-          if (url && !isLocal(url)) fail(`<${x.name} ${attr}> de otro origen («${url}»)`);
-        }
+      if ((RESOURCE_ATTRS.includes(attr) || (x.name === "link" && attr === "href")) && value && !isLocal(value)) {
+        fail(`<${x.name} ${attr}> de otro origen («${value}»): la web no usa recursos de terceros`);
       }
     }
-    if (x.name === "style") fail("tiene un <style> en línea (la CSP lo bloquearía)");
-    else if (FRAMES.includes(x.name)) fail(`tiene un <${x.name}> (nada incrustado)`);
-    else if (x.name === "form") fail("tiene un <form> (la web no tiene formularios)");
-    else if (x.name === "base") fail("tiene un <base>");
-    else if (x.name === "meta" && "http-equiv" in x.attrs) fail("tiene un <meta http-equiv>");
-    else if (x.name === "link") {
-      const href = x.attrs.href ?? "";
-      if (x.attrs.rel !== "stylesheet") fail(`<link rel="${x.attrs.rel ?? ""}"> no admitido (solo la hoja de estilo de assets/)`);
-      else if (!href || !isLocal(href)) fail(`<link> a otro origen («${href}»): la web no usa recursos de terceros`);
-      else if (css && href !== `/${css}`) fail(`el <link> no carga la hoja de estilo de assets/ («${href}» en lugar de «/${css}»)`);
-    } else if (x.name === "a" && /^\s*(javascript|data|vbscript):/i.test(x.attrs.href ?? "")) {
-      fail(`un enlace con ${(x.attrs.href ?? "").trim().split(":")[0]}:`);
-    }
+    if (FRAMES.includes(x.name)) fail(`tiene un <${x.name}> (nada incrustado)`);
   }
   for (const re of ANALYTICS) if (re.test(html)) fail(`rastro de analítica (${re})`);
-}
-
-/** La hoja de estilo de la página de inicio: sin recursos de otro origen, sin `data:` ni `@import`. */
-function checkHomeCss(file, text, errors) {
-  const fail = (msg) => errors.push(`${file}: ${msg}`);
-  const clean = text.replace(/\/\*[\s\S]*?\*\//g, "");
-  if (/@import/i.test(clean)) fail("@import (la web no carga hojas de otro sitio)");
-  for (const m of clean.matchAll(/url\(\s*(['"]?)([^)'"]*)\1\s*\)/gi)) {
-    if (/^\s*data:/i.test(m[2])) fail(`url(${m[2].slice(0, 40)}…): dirección data: (cada recurso, su archivo)`);
-    else if (!isLocal(m[2])) fail(`url(${m[2]}): recurso de otro origen`);
-  }
-  if (/sourceMappingURL/.test(text)) fail("apunta a un mapa de código (sourceMappingURL)");
-  for (const re of ANALYTICS) if (re.test(text)) fail(`rastro de analítica (${re})`);
-}
-
-/** El programa construido: sin API de red ni de almacenamiento salvo las admitidas, sin `data:`, sin mapas. */
-function checkProgram(file, code, errors) {
-  const fail = (msg) => errors.push(`${file}: ${msg}`);
-  for (const [re, api] of FORBIDDEN_APIS) {
-    if (re.test(code)) fail(`usa ${api} (CA-025-12: solo localStorage para el idioma y history.replaceState)`);
-  }
-  if (DATA_URL.test(code)) fail("lleva una dirección data: (cada recurso, su archivo)");
-  if (/sourceMappingURL/.test(code)) fail("apunta a un mapa de código (sourceMappingURL)");
-  for (const re of ANALYTICS) if (re.test(code)) fail(`rastro de analítica (${re})`);
-}
-
-/**
- * El HTML que genera el programa de la página de inicio (las pantallas de la app, las escenas), que no está en
- * `dist/` y `checkHome` no ve (plan §6.1): las mismas reglas de etiquetas que la página. Sin estilos ni
- * manejadores en línea, sin `<style>`, `<script>`, marcos, formularios, `<base>`, `<meta>` ni `<link>`, sin
- * `javascript:` ni `data:` y sin recursos ni enlaces de otro origen (los rótulos de las tiendas se comprueban
- * aparte, en `stores.js`). Devuelve los errores, con [label] delante.
- */
-export function checkMarkup(label, html) {
-  const errors = [];
-  const fail = (msg) => errors.push(`${label}: ${msg}`);
-  for (const x of tags(html)) {
-    if (x.closing) continue;
-    for (const [attr, value] of Object.entries(x.attrs)) {
-      if (/^on/.test(attr)) fail(`<${x.name}> lleva el manejador en línea ${attr}`);
-      if (attr === "style") fail(`<${x.name}> lleva style en línea (la CSP lo bloquearía)`);
-      if (attr === "srcdoc") fail(`<${x.name}> lleva srcdoc`);
-      if (/^\s*(javascript|vbscript):/i.test(value)) fail(`<${x.name} ${attr}> con ${value.trim().split(":")[0]}:`);
-      if (/^\s*data:/i.test(value) || /url\(\s*['"]?\s*data:/i.test(value)) fail(`<${x.name} ${attr}> con una dirección data:`);
-      if ((RESOURCE_ATTRS.includes(attr) || attr === "href") && value && !isLocal(value)) fail(`<${x.name} ${attr}> de otro origen («${value}»)`);
-    }
-    if (["style", "script", "base", "meta", "link", "form"].includes(x.name) || FRAMES.includes(x.name)) fail(`tiene un <${x.name}>`);
-  }
   return errors;
 }
 
-/**
- * El nombre de la app escrito a mano en las fuentes de la página de inicio (P7, CA-025-14): la plantilla, la
- * configuración de Vite y `src/` (sin `gen/`, que se genera desde la identidad, ni `public/`). En los textos
- * (`strings.*.json`) se mira cada valor, y los titulares que juegan con el nombre (`heroTitle`, `oneTitle`,
- * `endTitle` y la segunda mitad de `metaTitle`) se admiten por lista cerrada.
- */
-function checkHomeName(paths, identity, errors) {
-  if (!existsSync(paths.homeDir)) return;
-  const skip = new Set(["gen", "public", "node_modules"]);
-  const names = [identity.displayName, identity.wordmark];
-  const report = (where, name) => errors.push(`${where}: el nombre de la app «${name}» está escrito a mano (sale de app/identity.yaml, P7)`);
-  for (const rel of filesOf(paths.homeDir)) {
-    if (skip.has(rel.split("/")[0]) || !/\.(html|m?js|css|json)$/.test(rel)) continue;
-    const text = readFileSync(join(paths.homeDir, rel), "utf8");
-    const label = `landing/home/${rel}`;
-    if (/(^|\/)strings\.[a-z]+\.json$/.test(rel)) {
-      let json;
-      try {
-        json = JSON.parse(text);
-      } catch (e) {
-        errors.push(`${label}: no es JSON válido (${e.message})`);
-        continue;
-      }
-      for (const [key, value] of stringValues(json)) {
-        if (NAME_HEADLINES.has(key)) continue;
-        const checked = key === "metaTitle" && value.includes(META_TITLE_SEPARATOR) ? value.slice(0, value.indexOf(META_TITLE_SEPARATOR)) : value;
-        for (const name of names) if (mentionsName(checked, name)) report(`${label} («${key}»)`, name);
-      }
-      continue;
-    }
-    text.split("\n").forEach((line, i) => {
-      for (const name of names) if (mentionsName(line, name)) report(`${label}:${i + 1}`, name);
-    });
-  }
-}
+/** Atributos que cargan un recurso. */
+const RESOURCE_ATTRS = ["src", "srcset", "poster", "data", "action", "formaction", "background", "xlink:href", "ping", "manifest"];
 
-/** Los textos de un JSON de textos, con su clave (la ruta con puntos: `alt.icon`, `sample.tasks.0`). */
-function* stringValues(value, key = "") {
-  if (typeof value === "string") yield [key, value];
-  else if (value && typeof value === "object") {
-    for (const [k, v] of Object.entries(value)) yield* stringValues(v, key ? `${key}.${k}` : k);
+/** El programa construido: sin API de red, sin dominios externos, sin analítica y sin mapas. */
+function checkProgram(file, code, errors) {
+  const fail = (msg) => errors.push(`${file}: ${msg}`);
+  for (const [re, api] of FORBIDDEN_APIS) if (re.test(code)) fail(`usa ${api} (CA-025-12: sin red)`);
+  for (const m of code.matchAll(/\b(?:https?|wss?):\/\/([A-Za-z0-9.-]+)/g)) {
+    if (!PROGRAM_HOSTS.has(m[1].toLowerCase())) fail(`nombra un dominio externo («${m[1]}»)`);
   }
+  if (/sourceMappingURL/.test(code)) fail("apunta a un mapa de código (sourceMappingURL)");
+  for (const re of ANALYTICS) if (re.test(code)) fail(`rastro de analítica (${re})`);
 }
 
 // ─── Todo junto ──────────────────────────────────────────────────────────────────────────────────

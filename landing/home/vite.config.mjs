@@ -1,14 +1,11 @@
-// Construcción de la página de inicio (spec 025, plan §2). La lanza `landing/build.mjs` (por la API de Vite)
-// después de escribir `gen/`; no se usa sola. Sin `plugins` (lo exige un test, plan §6.1).
-//
-// La raíz es `gen/` porque Vite escribe el HTML en `dist/` con la misma ruta relativa a la raíz: con la raíz
-// en `home/`, `gen/index.html` acabaría en `dist/gen/index.html`.
+// Construcción de la página de inicio (spec 025): la versión A de la maqueta. La lanza `landing/build.mjs` (por
+// la API de Vite) después de escribir `gen/site.json`; no se usa sola. Sin `plugins`.
 import { fileURLToPath } from "node:url";
 
 const here = (path) => fileURLToPath(new URL(path, import.meta.url));
 
 export default {
-  root: here("./gen"),
+  root: here("."),
   publicDir: here("./public"),
   base: "/",
   logLevel: "warn",

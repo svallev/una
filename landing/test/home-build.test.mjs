@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
-import { BuildError, buildHome, homeGenDir, readIdentity, renderHomeHtml, writeHomeGen } from "../build.mjs";
+import { BuildError, buildHome, homeGenDir, readIdentity, writeHomeGen } from "../build.mjs";
 import { cloneWorld, edit, read, world } from "./support.mjs";
 
 const FIXTURES = join(import.meta.dirname, "fixtures/023");
@@ -39,36 +39,52 @@ describe("CA-025-01: cinco páginas, la de inicio es la landing", () => {
     assert.ok(!html.includes('href="/site.css"'), "lleva la hoja de las páginas sin JavaScript");
   });
 
-  test("el nombre del título y del encabezado sale de la identidad (CA-025-14)", () => {
-    const html = read(join(base.dist, "index.html"));
-    assert.match(html, new RegExp(`<title>${identity.displayName} — [^<]+</title>`), html);
-    assert.ok(html.includes(`>${identity.displayName}</h1>`), html);
+  test("lleva los archivos de public/ que usa la versión A de la maqueta, y nada de la variante B", () => {
+    for (const f of ["favicon.png", "img/icon-512.png", "fonts/Archivo-Variable.woff2", "fonts/SpaceMono-Regular.woff2", "fonts/SpaceMono-Bold.woff2"]) {
+      assert.ok(existsSync(join(base.dist, f)), `falta ${f}`);
+    }
+    for (const f of ["b/index.html", "img/badges", "propuestas"]) assert.ok(!existsSync(join(base.dist, f)), `sobra ${f}`);
   });
 });
 
 describe("CA-025-01: build.mjs escribe home/gen/ para Vite", () => {
-  test("otro nombre en la identidad cambia la página generada", () => {
+  test("site.json lleva el nombre, el logotipo y las tiendas de la identidad (sin ficha, null)", () => {
     const w = cloneWorld(base);
     try {
-      edit(w.paths.identity, (t) => t.replace(/displayName: "[^"]*"/, 'displayName: "Zorro <b>"'));
-      assert.deepEqual(writeHomeGen(w.paths).sort(), ["index.html", "site.json", "tokens.css"]);
-      const html = read(join(homeGenDir(w.paths), "index.html"));
-      assert.ok(html.includes("<title>Zorro &lt;b&gt; — "), "el nombre no se escapa o no se usa");
-      assert.ok(html.includes('<h1 tabindex="-1">Zorro &lt;b&gt;</h1>'), "el nombre del contenido sin JavaScript");
-      assert.ok(!html.includes(`<title>${identity.displayName} — `), "sigue el nombre anterior");
-      assert.match(read(join(homeGenDir(w.paths), "tokens.css")), /--color-paper:/);
+      edit(w.paths.identity, (t) => t.replace(/displayName: "[^"]*"/, 'displayName: "Zorro"').replace(/googlePlayUrl: "[^"]*"/, 'googlePlayUrl: "https://play.google.com/store/apps/details?id=x"'));
+      assert.deepEqual(writeHomeGen(w.paths), ["site.json"]);
+      const site = JSON.parse(read(join(homeGenDir(w.paths), "site.json")));
+      assert.deepEqual(site, {
+        appName: "Zorro",
+        wordmark: identity.wordmark,
+        stores: { appStoreUrl: null, googlePlayUrl: "https://play.google.com/store/apps/details?id=x" },
+      });
     } finally {
       w.cleanup();
     }
   });
 
-  test("un marcador desconocido o mal cerrado en la plantilla hace fallar la construcción", () => {
-    const strings = { es: { metaTitle: "{appName} — t", metaDescription: "d" }, en: {} };
-    const opts = { identity: { displayName: "A & B" }, strings };
-    assert.throws(() => renderHomeHtml("<p>{{otro}}</p>", opts), BuildError);
-    assert.throws(() => renderHomeHtml("<p>{{name}}</p>", opts), BuildError);
-    assert.throws(() => renderHomeHtml("<p>{{title}</p>", opts), BuildError);
-    assert.equal(renderHomeHtml("<p>{{title}}</p>", opts), "<p>A &amp; B — t</p>");
+  test("una dirección de tienda que no es de su tienda hace fallar la construcción", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.identity, (t) => t.replace(/appStoreUrl: "[^"]*"/, 'appStoreUrl: "https://evil.example/app"'));
+      assert.throws(() => writeHomeGen(w.paths), BuildError);
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  test("las tiendas: App Store primero, un rótulo de texto sin imágenes y «muy pronto» sin dirección", async () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.identity, (t) => t.replace(/appStoreUrl: "[^"]*"/, 'appStoreUrl: "https://apps.apple.com/app/id1"'));
+      await w.buildHome();
+      const code = read(join(w.dist, "assets", readdirSync(join(w.dist, "assets")).find((f) => f.endsWith(".js"))));
+      assert.ok(code.includes("https://apps.apple.com/app/id1"), "la dirección de la identidad no llega al programa");
+      assert.ok(!code.includes("/img/badges/"), "quedan insignias");
+    } finally {
+      w.cleanup();
+    }
   });
 
   test("Vite no escribe fuera de la dist/ de al lado de home/", async () => {
