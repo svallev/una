@@ -41,7 +41,7 @@ describe("CA-025-01: cinco páginas, la de inicio es la landing", () => {
 
   test("el nombre del título y del encabezado sale de la identidad (CA-025-14)", () => {
     const html = read(join(base.dist, "index.html"));
-    assert.ok(html.includes(`<title>${identity.displayName}</title>`), html);
+    assert.match(html, new RegExp(`<title>${identity.displayName} — [^<]+</title>`), html);
     assert.ok(html.includes(`>${identity.displayName}</h1>`), html);
   });
 });
@@ -53,8 +53,9 @@ describe("CA-025-01: build.mjs escribe home/gen/ para Vite", () => {
       edit(w.paths.identity, (t) => t.replace(/displayName: "[^"]*"/, 'displayName: "Zorro <b>"'));
       assert.deepEqual(writeHomeGen(w.paths).sort(), ["index.html", "site.json", "tokens.css"]);
       const html = read(join(homeGenDir(w.paths), "index.html"));
-      assert.ok(html.includes("<title>Zorro &lt;b&gt;</title>"), "el nombre no se escapa o no se usa");
-      assert.ok(!html.includes(`<title>${identity.displayName}</title>`), "sigue el nombre anterior");
+      assert.ok(html.includes("<title>Zorro &lt;b&gt; — "), "el nombre no se escapa o no se usa");
+      assert.ok(html.includes('<h1 tabindex="-1">Zorro &lt;b&gt;</h1>'), "el nombre del contenido sin JavaScript");
+      assert.ok(!html.includes(`<title>${identity.displayName} — `), "sigue el nombre anterior");
       assert.match(read(join(homeGenDir(w.paths), "tokens.css")), /--color-paper:/);
     } finally {
       w.cleanup();
@@ -62,9 +63,12 @@ describe("CA-025-01: build.mjs escribe home/gen/ para Vite", () => {
   });
 
   test("un marcador desconocido o mal cerrado en la plantilla hace fallar la construcción", () => {
-    assert.throws(() => renderHomeHtml("<p>{{otro}}</p>", identity), BuildError);
-    assert.throws(() => renderHomeHtml("<p>{{title}</p>", identity), BuildError);
-    assert.equal(renderHomeHtml("<p>{{name}}</p>", { displayName: "A & B" }), "<p>A &amp; B</p>");
+    const strings = { es: { metaTitle: "{appName} — t", metaDescription: "d" }, en: {} };
+    const opts = { identity: { displayName: "A & B" }, strings };
+    assert.throws(() => renderHomeHtml("<p>{{otro}}</p>", opts), BuildError);
+    assert.throws(() => renderHomeHtml("<p>{{name}}</p>", opts), BuildError);
+    assert.throws(() => renderHomeHtml("<p>{{title}</p>", opts), BuildError);
+    assert.equal(renderHomeHtml("<p>{{title}}</p>", opts), "<p>A &amp; B — t</p>");
   });
 
   test("Vite no escribe fuera de la dist/ de al lado de home/", async () => {

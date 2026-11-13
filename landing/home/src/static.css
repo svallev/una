@@ -1,0 +1,95 @@
+/* El contenido sin JavaScript (spec 025, CA-025-11 y CL-025-12; plan §2.2). No es un <noscript>: tiene que
+   verse también si el programa no llega o falla. Sin JavaScript (`scripting: none`) se ve al instante; si
+   no, aparece a los 2 s, salvo que el programa lo quite antes al terminar de montar (`boot.js`). Mientras el
+   programa monta, `is-mounting` lo saca del dibujo; si el montaje falla, `is-shown` lo enseña al momento.
+
+   El retardo no es una animación de movimiento: ninguna regla de «reducir movimiento» lo puede anular (lo
+   comprueba `home-static.test.mjs`). Solo valores de tokens. */
+
+html {
+  background-color: var(--landing-magenta);
+  color-scheme: light;
+}
+
+.static {
+  visibility: hidden;
+  animation: static-reveal 0s linear 2s forwards;
+  box-sizing: border-box;
+  max-width: var(--size-content-max-width);
+  margin-inline: auto;
+  padding: var(--space-xxl) var(--space-l);
+  color: var(--color-paper);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+@keyframes static-reveal {
+  to {
+    visibility: visible;
+  }
+}
+
+@media (scripting: none) {
+  .static {
+    visibility: visible;
+    animation: none;
+  }
+}
+
+.static.is-shown {
+  visibility: visible;
+  animation: none;
+}
+
+.static.is-mounting {
+  display: none;
+}
+
+.static h1 {
+  margin: 0;
+  font-size: var(--font-size-hero);
+  font-weight: var(--font-weight-black);
+  line-height: 1.1;
+}
+
+.static h2 {
+  margin: var(--space-xxl) 0 var(--space-s);
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.2;
+}
+
+.static h3 {
+  margin: var(--space-l) 0 var(--space-xs);
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+}
+
+.static p {
+  margin: 0 0 var(--space-m);
+}
+
+.static ul {
+  margin: var(--space-l) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.static a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-min-touch-target);
+  min-width: var(--size-min-touch-target);
+  color: var(--color-paper);
+  font-weight: var(--font-weight-bold);
+  text-decoration: underline;
+}
+
+.static a:focus-visible,
+.static h1:focus-visible {
+  outline: var(--border-width-section) solid var(--color-paper);
+  outline-offset: var(--space-xxs);
+}

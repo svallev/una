@@ -897,15 +897,101 @@ export function build(paths = defaultPaths(), { env = process.env } = {}) {
 /** La carpeta de lo generado para Vite (fuera de git): `landing/home/gen/`. */
 export const homeGenDir = (paths) => join(paths.homeDir, "gen");
 
-/** `index.template.html` con sus `{{marcadores}}` rellenos (escapados). Falla si queda alguno. */
-export function renderHomeHtml(template, identity) {
-  const values = { title: identity.displayName, name: identity.displayName };
+/**
+ * `index.template.html` con sus `{{marcadores}}` rellenos. Los de texto se escapan; `{{static}}` es el HTML
+ * del contenido sin JavaScript ([staticHtml], ya escapado). La cabeza va en español (el `<html lang="es">` de
+ * la plantilla) hasta que el programa fija el idioma (plan §2.2). Falla si queda algún marcador.
+ */
+export function renderHomeHtml(template, { identity, strings, themeColor = "", staticHtml = "" }) {
+  const text = {
+    title: withAppName(strings.es.metaTitle, identity.displayName),
+    description: withAppName(strings.es.metaDescription, identity.displayName),
+    themeColor,
+  };
   const html = template.replace(/\{\{([a-zA-Z]+)\}\}/g, (m, key) => {
-    if (!(key in values)) throw new BuildError(`index.template.html: marcador desconocido ${m}`);
-    return esc(values[key]);
+    if (key === "static") return staticHtml;
+    if (!(key in text)) throw new BuildError(`index.template.html: marcador desconocido ${m}`);
+    return esc(text[key]);
   });
-  if (/\{\{|\}\}/.test(html)) throw new BuildError("index.template.html: queda un marcador sin rellenar");
+  if (/\{\{|\}\}/.test(html.replace(staticHtml, ""))) throw new BuildError("index.template.html: queda un marcador sin rellenar");
   return html;
+}
+
+const withAppName = (text, appName) => String(text).replaceAll("{appName}", () => appName);
+
+/** Un fondo del grupo `landing` de los tokens (`#RRGGBB`); falla si no está. */
+function landingColor(tokens, name) {
+  const value = tokens.landing?.[name]?.$value;
+  if (typeof value !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(value)) throw new BuildError(`tokens.json: falta «landing.${name}» (spec 025)`);
+  return value;
+}
+
+/** Lo que se lee de un titular de la página de inicio: sin `*` (palabra destacada) ni `|` (saltos de línea). */
+export const plainTitle = (text) => String(text).replaceAll("*", "").split("|").map((s) => s.trim()).join(" ");
+
+/** Los textos de la página de inicio (`landing/home/src/strings.{es,en}.json`, spec 025 §7). */
+export function loadHomeStrings(paths) {
+  const out = {};
+  for (const lang of ["es", "en"]) {
+    const label = `strings.${lang}.json`;
+    try {
+      out[lang] = JSON.parse(readText(join(paths.homeDir, "src", label), label));
+    } catch (e) {
+      if (e instanceof BuildError) throw e;
+      throw new BuildError(`${label}: no es JSON válido (${e.message})`);
+    }
+  }
+  return out;
+}
+
+/**
+ * La entradilla del cierre según las fichas que ya hay (CA-025-08, CL-025-8): sin ninguna, `endLead`; con una,
+ * la que dice cuál falta; con las dos, `endLeadBoth`. [stores] es el de [storeUrls] (`null` = sin ficha).
+ */
+export function endLeadKey(stores) {
+  const play = Boolean(stores.googlePlayUrl);
+  const apple = Boolean(stores.appStoreUrl);
+  if (play && apple) return "endLeadBoth";
+  if (play) return "endLeadPlayOnly";
+  if (apple) return "endLeadAppStoreOnly";
+  return "endLead";
+}
+
+/** Las escenas cuyas propuestas lee el contenido sin JavaScript (las cuatro de CA-025-11), en orden. */
+export const STATIC_PROPOSALS = ["one", "handy", "awake", "light"];
+/** Los enlaces del contenido sin JavaScript (CA-025-11), con la clave de su texto. */
+export const STATIC_LINKS = [
+  ["/help", "footerHelp"],
+  ["/privacy", "footerPrivacy"],
+  ["/licenses", "footerLicenses"],
+];
+
+/**
+ * El contenido sin JavaScript de la página de inicio (spec 025, CA-025-11; plan §2.2): el nombre (el único
+ * `h1`) y, en español y después en inglés, cada mitad marcada con su idioma, qué hace (`heroTitle`,
+ * `heroLead`), las cuatro propuestas (titular y entradilla de las escenas 3 a 6), dónde estará disponible (la
+ * entradilla del cierre) y los enlaces a Ayuda, Privacidad y Licencias. Solo textos del §7, escapados.
+ */
+export function staticHtml({ appName, strings, stores }) {
+  const lead = endLeadKey(stores);
+  const text = (lang, key) => {
+    const value = strings[lang]?.[key];
+    if (typeof value !== "string" || value === "") throw new BuildError(`strings.${lang}.json: falta «${key}» (contenido sin JavaScript)`);
+    return esc(withAppName(value, appName));
+  };
+  const half = (lang) =>
+    [
+      `<section lang="${lang}" aria-labelledby="static-${lang}">`,
+      `<h2 id="static-${lang}">${plainTitle(text(lang, "heroTitle"))}</h2>`,
+      `<p>${text(lang, "heroLead")}</p>`,
+      ...STATIC_PROPOSALS.flatMap((id) => [`<h3>${plainTitle(text(lang, `${id}Title`))}</h3>`, `<p>${text(lang, `${id}Lead`)}</p>`]),
+      `<p>${text(lang, lead)}</p>`,
+      `<ul>`,
+      ...STATIC_LINKS.map(([href, key]) => `<li><a href="${href}">${text(lang, key)}</a></li>`),
+      `</ul>`,
+      `</section>`,
+    ].join("\n");
+  return [`<div class="static" id="static">`, `<h1 tabindex="-1">${esc(appName)}</h1>`, half("es"), half("en"), `</div>`].join("\n");
 }
 
 /**
@@ -1006,9 +1092,17 @@ export function writeHomeGen(paths = defaultPaths()) {
   const tokens = JSON.parse(readText(paths.tokens, "tokens.json"));
   const template = readText(join(paths.homeDir, "index.template.html"), "index.template.html");
   const gen = homeGenDir(paths);
+  const site = homeSite(paths);
+  const strings = loadHomeStrings(paths);
+  const html = renderHomeHtml(template, {
+    identity,
+    strings,
+    themeColor: landingColor(tokens, "magenta"),
+    staticHtml: staticHtml({ appName: identity.displayName, strings, stores: site.stores }),
+  });
   const files = new Map([
-    ["index.html", renderHomeHtml(template, identity)],
-    ["site.json", `${JSON.stringify(homeSite(paths), null, 2)}\n`],
+    ["index.html", html],
+    ["site.json", `${JSON.stringify(site, null, 2)}\n`],
     ["tokens.css", tokensCss(tokens, { landing: true })],
   ]);
   rmSync(gen, { recursive: true, force: true });
