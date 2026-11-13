@@ -114,6 +114,21 @@ describe("sirve lo construido", () => {
     assert.equal(r.headers["x-content-type-options"], "nosniff");
   });
 
+  test("CA-025-12: /help, una ruta que no existe y el programa de /assets/ reciben la CSP estricta (solo «/» lleva script-src)", async () => {
+    const src = /src="(\/assets\/[^"]+\.js)"/.exec((await get("/")).body)?.[1];
+    assert.ok(src, "la página de inicio no carga su programa de /assets/");
+    for (const [p, status] of [["/help", 200], ["/no-existe", 404], [src, 200], ["/?x=1", 200]]) {
+      const r = await get(p);
+      assert.equal(r.status, status, p);
+      const strict = p.startsWith("/?") ? cspOf("/") : cspOf("/(.+)");
+      assert.equal(r.headers["content-security-policy"], strict, `${p}: CSP`);
+      if (!p.startsWith("/?")) assert.doesNotMatch(r.headers["content-security-policy"], /script-src/, p);
+      for (const h of required(p.startsWith("/?") ? "/" : "/(.+)")) {
+        assert.equal(r.headers[h.key.toLowerCase()], h.value, `${p}: falta o difiere ${h.key}`);
+      }
+    }
+  });
+
   test("la cadena de consulta no cuenta", async () => {
     assert.equal((await get("/privacy?x=1#y")).status, 200);
   });
