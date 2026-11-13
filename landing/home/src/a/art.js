@@ -2,8 +2,8 @@
 // el mapa de un campo de golf, el cartel de un festival, la portada de un libro y el mapa de una ruta.
 // Todo es inventado (nombres de grupos, autora, calles) para no usar material de terceros.
 import { t } from '../shared/i18n.js';
+import { esc } from '../shared/html.js';
 
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const svg = (inner, extra = '') =>
   `<svg viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" aria-hidden="true" ${extra}>${inner}</svg>`;
 

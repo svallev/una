@@ -969,6 +969,38 @@ export async function buildHome(paths = defaultPaths()) {
   }
   const config = (await import(pathToFileURL(join(paths.homeDir, "vite.config.mjs")).href)).default;
   await vite.build({ ...config, configFile: false });
+  const index = join(paths.out, "index.html");
+  writeFileSync(index, await fillHomePage(readFileSync(index, "utf8"), paths));
+}
+
+/** La marca de `landing/home/index.html` donde va la página entera. */
+export const HOME_PAGE_MARK = "<!-- page -->";
+
+/**
+ * Escribe en el `index.html` que deja Vite la página entera en el idioma por defecto (cabecera, las siete
+ * escenas y el pie) y su idioma, título y descripción, con los mismos constructores que usa el programa
+ * (`landing/home/src/a/page.js`): sin JavaScript se ve la versión apilada; con él, el programa la anima.
+ * Necesita `gen/site.json` (`writeHomeGen`).
+ */
+export async function fillHomePage(html, paths = defaultPaths()) {
+  const from = (...path) => import(pathToFileURL(join(paths.homeDir, "src", ...path)).href);
+  const page = await from("a", "page.js");
+  // El escape de la página de inicio, el mismo que usan sus constructores.
+  const { esc } = await from("shared", "html.js");
+  const meta = page.pageMeta();
+  const once = (text, pattern, replacement, what) => {
+    let n = 0;
+    const out = text.replace(pattern, () => {
+      n += 1;
+      return replacement;
+    });
+    if (n !== 1) throw new BuildError(`landing/home/index.html: tiene que haber un(a) ${what} y hay ${n}`);
+    return out;
+  };
+  let out = once(html, /<html lang="[^"]*">/g, `<html lang="${esc(meta.lang)}">`, '<html lang="…">');
+  out = once(out, /<title>[^<]*<\/title>/g, `<title>${esc(meta.title)}</title>`, "<title>");
+  out = once(out, /<meta name="description" content="[^"]*">/g, `<meta name="description" content="${esc(meta.description)}">`, '<meta name="description">');
+  return once(out, new RegExp(HOME_PAGE_MARK, "g"), page.pageHtml(), `marca ${HOME_PAGE_MARK}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

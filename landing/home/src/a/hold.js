@@ -1,6 +1,7 @@
 import { t } from '../shared/i18n.js';
 import { icon } from '../shared/icons.js';
 import { NOTE } from '../shared/story.js';
+import { esc } from '../shared/html.js';
 import { phone, statusBar, chromeBar, noteSize } from './app-ui.js';
 
 // Empieza en rosa: la escena tiene el fondo amarillo y una nota amarilla se perdería.
@@ -8,24 +9,36 @@ const COLORS = [NOTE.pink, NOTE.orange, NOTE.yellow, NOTE.green, NOTE.blue];
 const HOLD_MS = 1200;
 const TEAR_MS = 1250;
 
-const label = () => `${icon('check')}<span>${t('app.complete')}</span>`;
+const label = () => `${icon('check')}<span>${esc(t('app.complete'))}</span>`;
 
-/** El móvil de la demo: la pantalla de la tarea actual, con su botón de verdad. */
+/** La tarea número `i` de la demo: su texto y su color (la lista da la vuelta). */
+const noteAt = (tasks, i) => ({ text: tasks[i % tasks.length], color: COLORS[i % COLORS.length] });
+
+/** Cada nota de la demo, ya con su tarea. La de debajo (`next`) solo se ve al rasgarse la de encima. */
+const noteHtml = (kind, { text, color }) =>
+  `<div class="hold__note hold__note--${kind}" style="--note:${color}"${kind === 'next' ? ' aria-hidden="true"' : ''}><div class="app__body"><p class="app__text" style="--fs:${noteSize(text)}">${esc(text)}</p></div></div>`;
+
+/**
+ * El móvil de la demo: la pantalla de la tarea actual, con su botón de verdad. El nombre del botón es su
+ * texto visible (WCAG 2.5.3) y cómo se usa va en su descripción.
+ */
 export function holdHtml() {
+  const tasks = t('tasks');
   const screen = `<div class="app hold">
-    <div class="hold__note hold__note--next"><div class="app__body"><p class="app__text"></p></div></div>
-    <div class="hold__note hold__note--cur"><div class="app__body"><p class="app__text"></p></div></div>
+    ${noteHtml('next', noteAt(tasks, 1))}
+    ${noteHtml('cur', noteAt(tasks, 0))}
     ${statusBar()}${chromeBar()}
     <div class="hold__tear" aria-hidden="true"></div>
     <div class="hold__stamp" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
     <div class="hold__confetti" aria-hidden="true"></div>
-    <div class="app__cta"><button class="app__btn hold__btn" type="button" aria-label="${t('app.completeA11y')}">
+    <div class="app__cta"><button class="app__btn hold__btn" type="button" aria-describedby="solo-how">
       <span class="hold__label">${label()}</span><span class="hold__fill" aria-hidden="true">${label()}</span>
     </button></div>
     <span class="app__home" aria-hidden="true"></span>
+    <span class="vh" id="solo-how">${esc(t('app.completeA11y'))}</span>
     <span class="vh" aria-live="polite"></span>
   </div>`;
-  return phone(screen, { cls: 'phone--hold' }).replace('class="phone phone--hold"', 'class="phone phone--hold" id="solo"');
+  return phone(screen, { cls: 'phone--hold', id: 'solo', open: true });
 }
 
 /** Mantener pulsado para completar: con el dedo, el ratón o el teclado (Intro o espacio). */
@@ -44,8 +57,8 @@ export function setupHold(root, { animate = true } = {}) {
   let touched = false;
 
   const fill = (note, i) => {
-    const text = tasks[i % tasks.length];
-    note.style.setProperty('--note', COLORS[i % COLORS.length]);
+    const { text, color } = noteAt(tasks, i);
+    note.style.setProperty('--note', color);
     const p = note.querySelector('.app__text');
     p.textContent = text;
     p.style.setProperty('--fs', noteSize(text));

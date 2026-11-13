@@ -1,5 +1,6 @@
 // Construcción de la página de inicio (spec 025): la versión A de la maqueta. La lanza `landing/build.mjs` (por
-// la API de Vite) después de escribir `gen/site.json`; no se usa sola. Sin `plugins`.
+// la API de Vite) después de escribir `gen/site.json`, y luego escribe la página entera en la marca de
+// `index.html` (`fillHomePage`); no se usa sola. Sin `plugins`.
 import { fileURLToPath } from "node:url";
 
 const here = (path) => fileURLToPath(new URL(path, import.meta.url));

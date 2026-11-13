@@ -1,14 +1,13 @@
 import '../shared/base.css';
 import './device.css';
 import './scene.css';
-import { t } from '../shared/i18n.js';
-import { SCENES, NOTE, HOLD } from '../shared/story.js';
-import { icon } from '../shared/icons.js';
-import { buildChrome, copyHtml, storesHtml, footerHtml } from '../shared/chrome.js';
+import { lang, useLang } from '../shared/i18n.js';
+import { detectLang, applyMeta } from '../shared/locale.js';
+import { SCENES, HOLD } from '../shared/story.js';
+import { buildChrome } from '../shared/chrome.js';
 import { createJourney, sceneAt, reduceMotion, gsap } from '../shared/journey.js';
-import { phone, textTask, photoTask, pdfTask, webTask, listScreen, listRow, settingRow } from './app-ui.js';
-import { golfMap, lineupPoster, bookCover, routeMap, athlete } from './art.js';
-import { holdHtml, setupHold } from './hold.js';
+import { setupHold } from './hold.js';
+import { pageHtml } from './page.js';
 
 const N = SCENES.length;
 // Distancia en Z entre escenas. Es corta a propósito: la siguiente escena empieza a llegar
@@ -22,90 +21,20 @@ const DRIFT = SCENES.map(() => [0, 0]);
 // un poco antes, cuando ya se ve unas 17 veces más grande.
 const PASS = 940;
 
-const tasks = t('tasks');
-const COLORS = [NOTE.yellow, NOTE.blue, NOTE.pink, NOTE.green, NOTE.orange];
-
-/** Pieza colocada en el espacio de la escena. */
-const obj = (inner, { x, y, z = 0, r = 0, ry = 0, bob = 6, cls = '' }) =>
-  `<div class="obj ${cls}" data-z="${z}" style="--x:${x}%;--y:${y}%;--z:${z}px;--r:${r}deg;--ry:${ry}deg;--bob:${bob}s"><div class="obj__f">${inner}</div></div>`;
-
-// Filas sueltas de "Todas las tareas" alrededor del titular: [x%, y%, giro, z, ancho, solo escritorio]
-const ROWS = [
-  [14, 14, -5, 200, 330, 0], [86, 12, 4, -120, 310, 0], [6, 46, 3, -180, 300, 1], [93, 31, -4, 120, 320, 1],
-  [15, 83, 4, 260, 330, 0], [86, 86, -5, -140, 300, 0],
-];
-
-/** La tarea de la mesa de luz: la imagen de un jugador de baloncesto y, encima, el papel donde se calca. */
-function traceScreen() {
-  const { art, trace } = athlete();
-  const screen = photoTask({ caption: t('app.traceTask'), art });
-  return screen.replace('<div class="app__media">', `<div class="lightbox__paper">${trace}</div><div class="app__media">`);
-}
-
-const BUILD = {
-  hero: (s, i) => `
-    ${obj(phone(listScreen(tasks.slice(0, 5), COLORS), { label: t('app.listAlt') }), { x: 16, y: 56, z: -320, ry: 24, r: -4, cls: 'obj--m0' })}
-    ${obj(phone(textTask(tasks[0], NOTE.yellow), { label: t('app.screenAlt') }), { x: 83, y: 54, z: 0, ry: -24, r: 3, bob: 7, cls: 'obj--hero-r' })}
-    ${copyHtml(s, i, storesHtml())}`,
-
-  muchas: (s, i) => `
-    ${ROWS.map(([x, y, r, z, w, desk], k) => obj(`<div style="--w:${w}px">${listRow(tasks[(k + 1) % tasks.length], COLORS[k % COLORS.length])}</div>`, { x, y, r, z, bob: 5 + (k % 4) * 0.8, cls: `${desk ? 'obj--m0' : ''} ${x < 50 ? 'obj--l' : 'obj--r'}` })).join('')}
-    ${copyHtml(s, i)}`,
-
-  una: (s, i) => `
-    <div class="split split--hold">
-      ${copyHtml(s, i)}
-      <div class="device">
-        ${holdHtml()}
-        <p class="try"><span>${t('scenes.una.try')}</span><svg class="try__arrow" viewBox="0 0 140 72" aria-hidden="true"><path class="try__halo" d="M4 14 C20 62 90 70 128 26"/><path class="try__halo" d="M113 32 L128 26 L124.5 41.5"/><path d="M4 14 C20 62 90 70 128 26"/><path d="M113 32 L128 26 L124.5 41.5"/></svg></p>
-      </div>
-    </div>`,
-
-  amano: (s, i) => `
-    <div class="split split--rev">
-      <div class="fan" aria-hidden="false">
-        <div class="fan__card" style="--rot:-15deg;--tx:-52%">${phone(photoTask({ art: golfMap(), caption: t('app.golfTask') }), { label: t('app.golfAlt') })}</div>
-        <div class="fan__card" style="--rot:-5deg;--tx:-17%">${phone(photoTask({ art: lineupPoster(), caption: t('app.lineupTask'), dots: 3 }), { label: t('app.lineupAlt') })}</div>
-        <div class="fan__card" style="--rot:5deg;--tx:17%">${phone(pdfTask({ kind: 'programme' }), { label: t('app.progAlt') })}</div>
-        <div class="fan__card" style="--rot:15deg;--tx:52%">${phone(webTask({ art: routeMap() }), { label: t('app.routeAlt') })}</div>
-      </div>
-      ${copyHtml(s, i, `<ul class="kinds">${t('scenes.amano.chips').map((c, k) => `<li>${icon(['image', 'document', 'link'][k])}${c}</li>`).join('')}</ul>`)}
-    </div>`,
-
-  activa: (s, i) => `
-    <div class="split">
-      ${copyHtml(s, i, `<p class="fine">${t('scenes.activa.note')}</p>`)}
-      <div class="device">
-        ${phone(pdfTask(), { label: t('app.pdfAlt') })}
-        ${settingRow(t('scenes.activa.switch'), t('app.keepAwakeHint'), 'phone')}
-      </div>
-    </div>`,
-
-  luz: (s, i) => `
-    <div class="split split--rev">
-      <div class="table">
-        <div class="table__tilt">${phone(traceScreen(), { label: t('app.traceAlt') })}</div>
-        ${settingRow(t('scenes.luz.switch'), t('app.lockZoomHint'), 'magnifierMinus')}
-      </div>
-      ${copyHtml(s, i, `<p class="fine">${t('scenes.luz.note')}</p>`)}
-    </div>`,
-
-  fin: (s, i) => `
-    ${obj(phone(photoTask({ art: bookCover(), caption: t('app.bookTask') }), { label: t('app.bookAlt') }), { x: 12, y: 56, z: -360, ry: 24, r: -4, cls: 'obj--m0' })}
-    ${obj(phone(textTask(tasks[1], NOTE.blue)), { x: 88, y: 53, z: -140, ry: -24, r: 3, bob: 7, cls: 'obj--m0' })}
-    ${copyHtml(s, i, storesHtml({ label: false })).replace('<div class="copy">', `<div class="copy"><div class="appicon"><img src="/img/icon-512.png" width="512" height="512" alt="${t('app.iconAlt')}"></div>`)}`,
-};
-
 // ---------- Montaje ----------
+// La construcción deja la página escrita en el idioma por defecto (`page.js`): se usa tal cual y solo se
+// vuelve a escribir si el idioma es otro (o si no está, con el servidor de desarrollo de Vite).
+useLang(detectLang());
+if (document.documentElement.lang !== lang || !document.getElementById('journey')) {
+  document.querySelectorAll('body > .top, #journey, body > .hint').forEach((el) => el.remove());
+  document.body.insertAdjacentHTML('afterbegin', pageHtml());
+  document.documentElement.lang = lang;
+}
+applyMeta();
+
 const journey = document.getElementById('journey');
 const stage = document.getElementById('stage');
 const world = document.getElementById('world');
-
-world.innerHTML = SCENES.map((s, i) => `
-  <section class="sc sc--${s.id}${s.ink ? ' sc--ink' : ''}" id="${s.id}" style="--bg:${s.bg}" aria-labelledby="h-${s.id}">
-    <div class="sc__inner">${BUILD[s.id](s, i)}</div>
-    ${i === N - 1 ? footerHtml() : ''}
-  </section>`).join('');
 
 const scenes = [...world.querySelectorAll('.sc')];
 // Orden de entrada dentro de cada escena: líneas del titular (--i) y piezas repetidas (--k)
@@ -117,8 +46,8 @@ scenes.forEach((sc) => {
 const hold = setupHold(document.getElementById('solo'), { animate: !reduceMotion });
 
 if (reduceMotion) {
-  // Sin cámara: paneles apilados, cada uno con su fondo. La demo sigue funcionando sin animación.
-  document.querySelectorAll('.sw').forEach((sw) => sw.classList.add('is-on'));
+  // Sin cámara: paneles apilados, cada uno con su fondo (y los interruptores encendidos, `page.js`). La demo
+  // sigue funcionando sin animación.
   const chrome = buildChrome({ onGoTo: (i) => scenes[i].scrollIntoView() });
   // La cabecera toma el tono del panel que queda bajo ella
   const io = new IntersectionObserver((entries) => {
@@ -128,6 +57,8 @@ if (reduceMotion) {
 } else {
   startStage();
 }
+// Ya montada: se deja ver (`base.css`).
+document.documentElement.classList.add('is-ready');
 
 function startStage() {
   document.documentElement.classList.add('fx');

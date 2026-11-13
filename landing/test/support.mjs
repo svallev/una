@@ -8,8 +8,8 @@ import { build, buildHome, defaultPaths } from "../build.mjs";
  * Un mundo de prueba: copias en una carpeta temporal de lo que los tests modifican (la identidad, la
  * política, `landing/src/` entera, el archivo de avisos, `build.mjs` y `vercel.json`) y la salida en `dist/` temporal. El
  * resto (tokens, ARB, fuentes) se lee del repositorio. La página de inicio (spec 025) se construye aparte, con
- * `buildHome` (Vite, asíncrona): el mundo lleva una copia de `landing/home/` sin `gen/` y un enlace a
- * `landing/node_modules/`, para que Vite encuentre las dependencias.
+ * `buildHome` (Vite, asíncrona): el mundo lleva una copia de `landing/home/` sin `gen/`, un enlace a
+ * `landing/node_modules/`, para que Vite encuentre las dependencias, y `landing/package.json`.
  */
 export function world() {
   const real = defaultPaths();
@@ -41,6 +41,8 @@ export function world() {
     filter: (from) => !(from === join(real.homeDir, "gen") || basename(from) === ".DS_Store"),
   });
   symlinkSync(join(real.landingDir, "node_modules"), join(dir, "node_modules"), "dir");
+  // `build.mjs` importa los módulos de `home/src/` (`fillHomePage`): `"type": "module"`, como en `landing/`.
+  cpSync(join(real.landingDir, "package.json"), join(dir, "package.json"));
   return {
     dir,
     paths,

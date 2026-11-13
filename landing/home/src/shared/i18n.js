@@ -1,21 +1,25 @@
-import es from './strings.es.json';
-import en from './strings.en.json';
+// Los textos de la página en español e inglés. Sin nada del navegador: lo usan la construcción
+// (`landing/build.mjs`, en el idioma por defecto) y el programa (en el que detecta `locale.js`).
+import es from './strings.es.json' with { type: 'json' };
+import en from './strings.en.json' with { type: 'json' };
 import { APP_NAME } from './config.js';
+import { esc } from './html.js';
 
 const DICT = { es, en };
-const KEY = 'una-lang';
 
-function detect() {
-  const fromUrl = new URLSearchParams(location.search).get('lang');
-  let stored = null;
-  try { stored = localStorage.getItem(KEY); } catch { /* sin almacenamiento */ }
-  const wanted = fromUrl || stored || navigator.language || 'es';
-  // Igual que la app: español y catalán abren en español; el resto, en inglés.
-  return /^(es|ca)/i.test(wanted) ? 'es' : 'en';
+/** El idioma del HTML que genera la construcción. */
+export const DEFAULT_LANG = 'es';
+
+/** El idioma de los textos (`t`). Lo cambia `useLang`. */
+export let lang = DEFAULT_LANG;
+
+export function useLang(next) {
+  if (!Object.hasOwn(DICT, next)) throw new Error(`idioma desconocido: ${next}`);
+  lang = next;
 }
 
-export const lang = detect();
-document.documentElement.lang = lang;
+/** Igual que la app: español y catalán abren en español; el resto, en inglés. */
+export const pickLang = (wanted) => (/^(es|ca)/i.test(wanted) ? 'es' : 'en');
 
 const fill = (value, vars) =>
   String(value).replace(/\{(\w+)\}/g, (_, k) => (k === 'app' ? APP_NAME : vars?.[k] ?? `{${k}}`));
@@ -28,21 +32,6 @@ export function t(key, vars) {
   return fill(value, vars);
 }
 
-export function setLang(next) {
-  if (next === lang) return;
-  try { localStorage.setItem(KEY, next); } catch { /* sin almacenamiento */ }
-  const url = new URL(location.href);
-  url.searchParams.delete('lang');
-  location.replace(url);
-}
-
-export function applyMeta() {
-  document.title = t('meta.title');
-  document.querySelector('meta[name="description"]')?.setAttribute('content', t('meta.description'));
-}
-
-const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
 /** Titular: "|" separa líneas y *así* marca la palabra en 3D. */
 export function parseTitle(key) {
   return t(key).split('|').map((line) =>
@@ -52,7 +41,7 @@ export function parseTitle(key) {
 export function titleHtml(key) {
   return parseTitle(key).map((parts) =>
     `<span class="ln"><span class="ln__i">${parts.map((p) =>
-      p.strong ? `<span class="x3d">${escapeHtml(p.text)}</span>` : escapeHtml(p.text)).join('')}</span></span>`).join(' ');
+      p.strong ? `<span class="x3d">${esc(p.text)}</span>` : esc(p.text)).join('')}</span></span>`).join(' ');
 }
 
 export function titleText(key) {

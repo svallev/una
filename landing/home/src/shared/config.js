@@ -1,6 +1,6 @@
 // Identidad y enlaces. El nombre, el logotipo y las direcciones de las tiendas salen de `app/identity.yaml`:
 // `landing/build.mjs` los escribe en `gen/site.json` antes de construir con Vite.
-import site from '../../gen/site.json';
+import site from '../../gen/site.json' with { type: 'json' };
 
 export const APP_NAME = site.appName;
 export const WORDMARK = site.wordmark;
