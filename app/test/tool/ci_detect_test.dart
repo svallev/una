@@ -64,6 +64,11 @@ void main() {
       'landing/src/site.css',
       'landing/test/build.test.mjs',
       'landing/third-party-notices.txt',
+      'landing/package.json',
+      'landing/package-lock.json',
+      'landing/.npmrc',
+      'landing/home/src/main.js',
+      'landing/home/index.html',
       'store/google-play/check.mjs',
       'store/google-play/data-safety.md',
       'store/google-play/play-console.md',
@@ -157,6 +162,18 @@ void main() {
         build: false,
         web: true,
       );
+    });
+
+    test('CA-025-19: las dependencias y la página de inicio de landing/ no compilan la app', () async {
+      for (final f in [
+        'landing/package.json',
+        'landing/package-lock.json',
+        'landing/home/src/main.js',
+        'landing/home/src/a/page.js',
+        'landing/home/index.html',
+      ]) {
+        await _expectFlags([f], build: false, web: true);
+      }
     });
 
     test('CA-023-18: el icono y el gráfico de funciones los leen los tests de la app', () async {
@@ -435,8 +452,11 @@ void main() {
       expect(text, isNot(contains('secrets.')));
       expect(text, isNot(contains('vercel')));
       expect(body, isNot(contains('deploy')));
-      expect(body, isNot(contains('npm ')));
-      expect(body, isNot(contains('npx ')));
+      // La única orden de npm es `npm ci --ignore-scripts` (CA-025-19); nunca `npm install` ni `npx`.
+      expect(body, isNot(contains('npm install')));
+      expect(body, isNot(contains('npm i ')));
+      expect(body, isNot(contains('npx')));
+      expect(RegExp(r'\bnpm\b').allMatches(body).length, 1, reason: body);
       for (final s in stepsOf(web)) {
         final uses = s['uses'] as String?;
         if (uses == null) continue;
@@ -466,6 +486,22 @@ void main() {
       expect(runs, contains('store/google-play/test/*.test.mjs'));
       // `node --test landing/test` (una carpeta) falla en Node 24: se pasa el glob de la shell.
       expect(runs, isNot(contains('node --test landing/test ')));
+    });
+
+    test('CA-025-19: «Web y ficha» instala landing/ con npm ci --ignore-scripts antes de construir', () {
+      final steps = stepsOf(web).toList();
+      final npm = steps.indexWhere((s) => run(s).contains('npm'));
+      final build = steps.indexWhere(
+        (s) => run(s).contains('node landing/build.mjs'),
+      );
+      expect(npm, greaterThanOrEqualTo(0));
+      expect(build, greaterThan(npm));
+      expect(run(steps[npm]).trim(), 'npm ci --ignore-scripts');
+      expect(steps[npm]['working-directory'], 'landing');
+      // Con el Node del runner, como el resto del trabajo: sin `setup-node`.
+      for (final s in steps) {
+        expect('${s['uses'] ?? ''}', isNot(contains('setup-node')));
+      }
     });
 
     test('CA-023-18: «Web y ficha» exige un mínimo de tests ejecutados', () {

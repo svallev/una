@@ -211,6 +211,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Dependencias de la página de inicio (Vite, GSAP, Lenis; spec 025)
+        # Solo lo que fija `landing/package-lock.json`, sin scripts de instalación (`.npmrc` también lo
+        # dice). Con el Node del runner, como el resto del trabajo. Nunca `npm install` ni `npx`.
+        working-directory: landing
+        run: npm ci --ignore-scripts
       - name: Construir la web
         run: node landing/build.mjs
       - name: Comprobar la web (HTML, contraste, enlaces, textos, dist al día)
