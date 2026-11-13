@@ -11,7 +11,7 @@ const tokensUrl = argTokens > 0 ? process.argv[argTokens + 1] : new URL("../desi
 const tokens = JSON.parse(readFileSync(tokensUrl, "utf8"));
 const errors = [];
 
-const required = ["color", "palette", "font", "space", "size", "border", "shadow", "motion"];
+const required = ["color", "palette", "landing", "font", "space", "size", "border", "shadow", "motion"];
 for (const g of required) if (!tokens[g]) errors.push(`Falta el grupo "${g}"`);
 
 const hex = (v) => {
@@ -139,9 +139,64 @@ checks.push(["notificaciones/número de la opción marcada (ink/switchOn)", ink,
 nonTextChecks.push(["opciones al día/marca de selección (ink) / relleno de la opción marcada (switchOn)", ink, switchOn]);
 nonTextChecks.push(["opciones al día/marca de selección (ink) / papel de las demás opciones", ink, paper]);
 
+// 4e. Página de inicio de la web (spec 025, CA-025-14 y CA-025-15; plan §6.2). Los cuatro fondos de
+//     `landing` con lo que va encima en cada escena:
+//     - texto (≥ 4,5:1): paper sobre los magentas (entradillas, «Muy pronto», notas, pie) e ink sobre
+//       orange y yellow;
+//     - titular (texto grande, ≥ 3:1): la palabra destacada, palette.classic.0 sobre los magentas y
+//       landing.magenta sobre yellow;
+//     - no textual (≥ 3:1, WCAG 1.4.11): el anillo de foco (paper sobre los magentas, ink sobre orange
+//       y yellow) y los bordes de tinta (rótulos de las tiendas, móviles) sobre los cuatro fondos.
+//     **Una sola salvedad, con nombre** (propietario, 2026-11-13, sin excepción de P6): la palabra
+//     destacada paperFiber sobre orange (escenas 2 y 5), 2,31:1. No hace fallar; si algún día llega a
+//     3:1, sí falla, para que se quite de aquí. Cualquier otro par por debajo, falla.
+const largeTextChecks = [];
+const knownShortfalls = [];
+const landing = tokens.landing ?? {};
+const landingColor = (key) => {
+  const value = hex(landing[key]?.$value ?? "");
+  if (!value) errors.push(`Falta el color landing.${key} (o no es hex)`);
+  return value;
+};
+const magenta = landingColor("magenta");
+const magentaDeep = landingColor("magentaDeep");
+const orange = landingColor("orange");
+const yellow = landingColor("yellow");
+const note = hex(tokens.palette?.classic?.[0]?.$value ?? "");
+const fiber = hex(C.paperFiber.$value);
+if (magenta && magentaDeep && orange && yellow && note) {
+  for (const [bgName, bg] of [["magenta", magenta], ["magentaDeep", magentaDeep]]) {
+    checks.push([`landing/texto (paper) / ${bgName}`, paper, bg]);
+    largeTextChecks.push([`landing/palabra destacada (palette.classic.0) / ${bgName}`, note, bg]);
+    nonTextChecks.push([`landing/anillo de foco (paper) / ${bgName}`, paper, bg]);
+  }
+  for (const [bgName, bg] of [["orange", orange], ["yellow", yellow]]) {
+    checks.push([`landing/texto (ink) / ${bgName}`, ink, bg]);
+    nonTextChecks.push([`landing/anillo de foco (ink) / ${bgName}`, ink, bg]);
+  }
+  for (const [bgName, bg] of [["magenta", magenta], ["magentaDeep", magentaDeep], ["orange", orange], ["yellow", yellow]]) {
+    nonTextChecks.push([`landing/borde de tinta (ink) / ${bgName}`, ink, bg]);
+  }
+  largeTextChecks.push(["landing/palabra destacada (landing.magenta) / yellow", magenta, yellow]);
+  knownShortfalls.push(["landing/palabra destacada (paperFiber) / orange", fiber, orange, 3]);
+}
+
 for (const [name, fg, bg] of checks) {
   const r = ratio(fg, bg);
   if (r < 4.5) errors.push(`Contraste insuficiente ${name}: ${r.toFixed(2)} (< 4.5)`);
+}
+for (const [name, fg, bg] of largeTextChecks) {
+  const r = ratio(fg, bg);
+  if (r < 3) errors.push(`Contraste insuficiente (texto grande) ${name}: ${r.toFixed(2)} (< 3)`);
+}
+const shortfallNotes = [];
+for (const [name, fg, bg, min] of knownShortfalls) {
+  const r = ratio(fg, bg);
+  if (r >= min) {
+    errors.push(`La salvedad ${name} ya no hace falta (${r.toFixed(2)} ≥ ${min}): quítala de validate-tokens y de docs/design/tokens.md`);
+  } else {
+    shortfallNotes.push(`${name}: ${r.toFixed(2)} (< ${min}), salvedad aceptada (spec 025, CA-025-15)`);
+  }
 }
 for (const [name, fg, bg] of nonTextChecks) {
   const r = ratio(fg, bg);
@@ -153,6 +208,7 @@ if (errors.length) {
   process.exit(1);
 }
 console.log(
-  `✅ tokens.json válido (${checks.length} combinaciones de contraste AA de texto y ` +
-    `${nonTextChecks.length} no textuales comprobadas)`,
+  `✅ tokens.json válido (${checks.length} combinaciones de contraste AA de texto, ` +
+    `${largeTextChecks.length} de texto grande y ${nonTextChecks.length} no textuales comprobadas)`,
 );
+for (const n of shortfallNotes) console.log(`   salvedad: ${n}`);

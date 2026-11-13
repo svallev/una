@@ -51,7 +51,7 @@ describe("CA-025-01: build.mjs escribe home/gen/ para Vite", () => {
     const w = cloneWorld(base);
     try {
       edit(w.paths.identity, (t) => t.replace(/displayName: "[^"]*"/, 'displayName: "Zorro <b>"'));
-      assert.deepEqual(writeHomeGen(w.paths).sort(), ["index.html", "tokens.css"]);
+      assert.deepEqual(writeHomeGen(w.paths).sort(), ["index.html", "site.json", "tokens.css"]);
       const html = read(join(homeGenDir(w.paths), "index.html"));
       assert.ok(html.includes("<title>Zorro &lt;b&gt;</title>"), "el nombre no se escapa o no se usa");
       assert.ok(!html.includes(`<title>${identity.displayName}</title>`), "sigue el nombre anterior");

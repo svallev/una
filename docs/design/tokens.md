@@ -25,6 +25,7 @@ flowchart LR
 |---|---|---|
 | `color` | ink, paper, line, surface, textMuted, disabled, error, dangerFill, paperFiber, onInk, onInkMuted, undoTrack, scrim, placeholder, pressed, selection, switchOn | `error #B3241A` para texto; `dangerFill #FF5A4E` para el botón Eliminar (texto en ink). `onInkMuted #D9D6CF` (etiqueta) y `undoTrack #3A3936` (pista de la barra de tiempo), de la card de deshacer (spec 014); `switchOn #FFDC58`, pista encendida y pomo apagado del interruptor de Ajustes (spec 015) |
 | `palette` | `classic` (por defecto), `neon`, `mono` × 5 índices | Una tarea nueva nunca repite el color de la tarea actual |
+| `landing` | `magenta` `#D4145A`, `magentaDeep` `#B8146E`, `orange` `#FF8A1F`, `yellow` `#FFD21F` | Solo la página de inicio de la web (spec 025, CA-025-14): los fondos cálidos de la maqueta del 2026-11-12, sin cambios. **No salen en `tokens.g.dart`** (la app no los tiene; `gen_tokens.dart` solo lee sus grupos) ni en el `tokens.css` de las otras cuatro páginas; en el de la de inicio son `--landing-…` |
 | `font` | Archivo (500–900), Space Mono (400/700); tamaños; interletrado; cortes de longitud de nota | Las fuentes se **empaquetan** (licencia OFL); nunca se cargan de Google Fonts. **[Hecho]** `app/assets/fonts/`, desde github.com/google/fonts @ `23e54b51`: Archivo variable (ejes wght y wdth; `FontWeight` fija el grosor), Space Mono 400/700 |
 | `space` | 2 · 4 · 8 · 12 · 16 · 20 · 24 · 28 · 40 | 24 es el margen lateral |
 | `size` | objetivo táctil de 44, icono de 22, trazo de 2,4, ancho máximo del contenido de 600 (tablets, CL-001-7); card de deshacer: 112 de contenido + barra de 6, botón de 44 y entrada de 24, separaciones de 14 y 3, relleno de 14 del botón, icono "deshacer" de 18 con trazo de 2,8 y desplazamiento de 2 al pulsar (spec 014); Ajustes (spec 015): interruptor de 54 × 32 con pomo de 22 a 2 de la esquina y recorrido de 22, filas de 60 (`settingsRow`), 64 (`settingsRowSwitch`), 76 (`settingsRowSwitchHint`) y 52 con sangría de 38 (`settingsRowSub`, `settingsRowSubIndent`), separadores de 4 (`separatorBlock`) y 1 (`separatorRow`) en `color.disabled` | En Android se usan 48 dp por las pautas de Material ("Deshacer" se ve de 44 y su zona táctil mide 48) |
@@ -59,10 +60,26 @@ Se multiplica por el `textScaler` del sistema con un **límite de ×1,6** para l
 
 **Varias imágenes (spec 016, CA-016-06 y CA-016-22; WCAG 1.4.3 y 1.4.11), calculado el 2026-10-06:** etiqueta «{n} fotos» (`photoCountText` blanco sobre `photoCountFill` tinta): 18,88 (texto, ≥ 4,5:1 sea cual sea la foto, porque el fondo es opaco). Puntos del carrusel (borde de tinta de 2, relleno de tinta el actual y `photoDotLight` blanco los demás, **halo blanco de 1,5 por fuera**, DEV-53): el borde de tinta contra el papel 16,74 y contra la superficie 18,88; contra el halo 18,88. Sobre una foto cualquiera, la tinta o el halo llegan a ≥ 3:1 contra **cualquier gris** (`validate-tokens` recorre los 256 grises): el peor caso es un gris medio de luminancia ≈ 0,19, **4,35:1**. «Blanco sobre papel» (1,12) no se exige: los puntos no se dibujan sobre el papel, y el estado lo da el relleno, no el color (WCAG 1.4.1). Tokens de movimiento y forma: `motion.duration.photoSwipe` (280 ms) y `motion.easing.photoSwipe` (`cubic-bezier(.2,.8,.2,1)`), puntos (`size.photoDot` 9, `border.width.photoDot` 2, `size.photoDotGap` 6, `border.width.photoDotHalo` 1,5) y pila (`motion.photoStackTiltTop/Middle/Back` -1°/4°/-5°, `size.photoStackMiddleDx/Dy` +12/+6 y `photoStackBackDx/Dy` -10/-8, `motion.photoStackWidthFactor` 0,86, `motion.photoStackMaxHeightFactor` 0,84, `border.width.photoStack` 3, `shadow.photoStack` 5/5 de tinta y `font.size.photoCount` 12). Los umbrales de los gestos del carrusel **no** son tokens (van en `photo_swipe.dart`).
 
+**Página de inicio de la web (spec 025, CA-025-15; plan §6.2), calculado el 2026-11-13:** sobre los magentas el texto es `paper` y la palabra destacada `palette.classic.0`; sobre `orange` y `yellow`, el texto es `ink` y la palabra destacada `paperFiber` (orange) o `landing.magenta` (yellow).
+
+| Fondo | Encima | Ratio | Resultado |
+|---|---|---|---|
+| `magenta` | `paper` (entradilla, «Muy pronto», notas, pie, anillo de foco) | 4,60 | AA |
+| `magenta` | `palette.classic.0` (palabra destacada) | 4,11 | AA, **solo titular** (texto grande) |
+| `magentaDeep` | `paper` / `palette.classic.0` | 5,54 / 4,94 | AA |
+| `orange` | `ink` (texto y anillo de foco) | 8,01 | AA |
+| `orange` | `paperFiber` (palabra destacada, escenas 2 y 5) | **2,31** | **Falla (< 3).** Salvedad aceptada por el propietario el 2026-11-13, sin excepción de P6 (CA-025-15): se queda como está; el resto del titular es tinta (8,01) y la palabra lleva su relieve en tinta |
+| `yellow` | `ink` (texto y anillo de foco) | 13,03 | AA |
+| `yellow` | `landing.magenta` (palabra destacada, escenas 3 y 6) | 3,58 | AA, **solo titular** (texto grande) |
+| los cuatro | `ink` (bordes de los rótulos y de los móviles, no textual) | 3,64 · 3,02 · 8,01 · 13,03 | ≥ 3:1 (magenta, magentaDeep, orange, yellow) |
+
+`validate-tokens` comprueba estos pares (texto ≥ 4,5, titular ≥ 3, no textual ≥ 3) y lleva `paperFiber`/`orange` como **salvedad con nombre**: no hace fallar, pero falla si algún día llega a 3:1 (para que se quite). Cualquier otro par por debajo falla.
+
 `line` y `disabled` no transmiten información por sí solos: los controles siempre tienen borde `ink`.
 
 ## Validación
 
 - `node tools/validate-tokens.mjs --tokens <archivo>` valida otro archivo (una copia modificada). **[Hecho]** (T-015-01) El validador falla si se acerca el pomo a la pista encendida (`switchOn` `#555555`: 2,53) o se aclara `ink` (`#999999`: el borde de la pista, 2,53).
 - La skill `/tokens-validate` y un test de CI comprueban que el JSON es válido, que están todos los grupos obligatorios, que el contraste de la tabla anterior se cumple (texto ≥ 4,5:1; la barra de la card de deshacer sobre su pista, ≥ 3:1 con todas las paletas) y que el archivo generado está sincronizado. **[Hecho]** (T-014-01) El validador falla si se oscurece `onInkMuted` (`#555555`: 2,53) o se aclara `undoTrack` (`#C8C8C8`: 1,02 – 1,54).
+- **[Hecho]** (T-025-02) El validador falla si se quita el grupo `landing` o uno de sus fondos, si se aclara `magenta` (texto, palabra destacada y anillo de foco), si se oscurece `magentaDeep` (`#5A0A36`: el borde de tinta), si se oscurece `yellow` (texto y palabra destacada) o si se oscurece `orange` (`#7A3A00`: el texto en tinta, y la salvedad deja de hacer falta). Los tests están en `landing/test/home-tokens.test.mjs`.
 - **[Hecho]** (T-016-01) El validador falla si se aclara la tinta del punto (`photoDotInk` `#999999`: 2,53 contra el papel y 1,69 sobre un gris), se quita el halo (`border.width.photoDotHalo`), se aclara el halo (`#999999`: 2,58 sobre un gris) o se aclara el fondo de la etiqueta (`photoCountFill` `#888888`: 3,54).

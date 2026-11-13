@@ -571,8 +571,6 @@ export function parseNotices(text, label = "third-party-notices.txt") {
 
 /** Las claves de `strings.json` y los marcadores que admite cada una (por idioma). */
 const STRING_KEYS = {
-  webHomeTitle: { es: ["appName"], en: ["appName"] },
-  webHomeIntro: { es: [], en: [] },
   webPageTitle: { es: ["página", "appName"], en: ["page", "appName"] },
   webNotFoundTitle: { es: [], en: [] },
   webNotFoundBody: { es: [], en: [] },
@@ -584,6 +582,8 @@ const STRING_KEYS = {
   webLicensesInApp: { es: [], en: [] },
   webLicensesFile: { es: [], en: [] },
   webLanguageName: { es: [], en: [] },
+  // Título del bloque de avisos del código de la web en /licenses (spec 025, CA-025-18; se usa desde T-025-11).
+  licensesWebTitle: { es: [], en: [] },
 };
 const LANG_ONLY = { webSwitchToSpanish: { es: [] }, webSwitchToEnglish: { en: [] }, webNoticesTitle: { en: [] } };
 
@@ -639,11 +639,19 @@ export const FONT_FILES = [
 ];
 export const FONT_DIRS = [...new Set(FONT_FILES.map((f) => f.dir))];
 
-/** `tokens.css`: las variables de `design/tokens.json` (rem para texto y espacios) y las fuentes. */
-export function tokensCss(tokens) {
+/**
+ * `tokens.css`: las variables de `design/tokens.json` (rem para texto y espacios) y las fuentes. Con [landing]
+ * (solo la página de inicio, spec 025) lleva además los fondos del grupo `landing` (`--landing-…`); el de las
+ * otras cuatro páginas no cambia.
+ */
+export function tokensCss(tokens, { landing = false } = {}) {
   const vars = [];
   const emit = (name, value) => vars.push(`  --${name}: ${value};`);
   for (const [k, v] of Object.entries(tokens.color)) if (!k.startsWith("$")) emit(`color-${kebab(k)}`, v.$value);
+  if (landing) {
+    if (!tokens.landing) throw new BuildError("tokens.json: falta el grupo «landing» (spec 025)");
+    for (const [k, v] of Object.entries(tokens.landing)) if (!k.startsWith("$")) emit(`landing-${kebab(k)}`, v.$value);
+  }
   for (const [k, v] of Object.entries(tokens.font.family)) if (!k.startsWith("$")) emit(`font-family-${kebab(k)}`, familyValue(v.$value));
   for (const [k, v] of Object.entries(tokens.font.weight)) if (!k.startsWith("$")) emit(`font-weight-${kebab(k)}`, v.$value);
   for (const [k, v] of Object.entries(tokens.font.size)) if (!k.startsWith("$")) emit(`font-size-${kebab(k)}`, dim(v.$value, true));
@@ -901,8 +909,97 @@ export function renderHomeHtml(template, identity) {
 }
 
 /**
- * Escribe `landing/home/gen/` (lo que Vite construye: la página con el nombre de la identidad y los tokens).
- * Devuelve la lista de archivos escritos.
+ * Las direcciones de las fichas de las tiendas (spec 025, CA-025-08; plan §6.1), de `identity.yaml`: las dos
+ * claves tienen que estar; vacía (`""`) quiere decir «sin ficha todavía» (`null`). Si no está vacía, tiene que
+ * ser `https://` con el anfitrión exacto de su tienda, sin usuario, contraseña ni puerto, y sin caracteres que
+ * no van en una dirección; lo demás falla. Se mira el texto crudo, no solo lo que normaliza `URL` (que
+ * decodifica `%` en el anfitrión y quita `:443`).
+ */
+export const STORE_HOSTS = { appStoreUrl: "apps.apple.com", googlePlayUrl: "play.google.com" };
+
+export function storeUrls(identity, label = "identity.yaml") {
+  const out = {};
+  for (const [key, host] of Object.entries(STORE_HOSTS)) {
+    const value = identity[key];
+    if (typeof value !== "string") throw new BuildError(`${label}: falta «${key}» (vacía, "", hasta que haya ficha)`);
+    if (value === "") {
+      out[key] = null;
+      continue;
+    }
+    const bad = (why) => new BuildError(`${label}: «${key}» no es una dirección de ficha de ${host} (${why}): «${value}»`);
+    if (/[\s"'<>`\\{}|^\u0000-\u001f\u007f-\uffff]/.test(value)) throw bad("caracteres no válidos");
+    const raw = /^https:\/\/([^/?#]*)(?:[/?#]|$)/.exec(value);
+    if (!raw) throw bad("tiene que empezar por https://");
+    if (raw[1] !== host) throw bad(`el anfitrión tiene que ser exactamente ${host}, sin usuario ni puerto`);
+    let url;
+    try {
+      url = new URL(value);
+    } catch {
+      throw bad("no se puede leer");
+    }
+    if (url.protocol !== "https:" || url.hostname !== host || url.port !== "" || url.username !== "" || url.password !== "") {
+      throw bad(`el anfitrión tiene que ser exactamente ${host}, sin usuario ni puerto`);
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Los textos que la página de inicio toma de la app tal cual (spec 025, CA-025-06; lista cerrada del plan §2.3),
+ * por su clave en las ARB. `successTitle1` y `successTitle2` también son de la lista, pero la versión A no los
+ * enseña y no se publican (plan §2.3: «no hay texto sin usar»).
+ */
+export const HOME_APP_TEXT_KEYS = [
+  "completeButton",
+  "menuButton",
+  "listTitle",
+  "listHelp",
+  "listNewTask",
+  "settingsKeepAwake",
+  "settingsKeepAwakeHint",
+  "settingsLockZoom",
+  "settingsLockZoomHint",
+];
+
+/** Los textos de [HOME_APP_TEXT_KEYS] en las dos ARB; falla si falta alguno o no es texto. */
+export function homeAppTexts(paths) {
+  const out = {};
+  for (const [lang, path] of [["es", paths.arbEs], ["en", paths.arbEn]]) {
+    let json;
+    try {
+      json = JSON.parse(readText(path, `app_${lang}.arb`));
+    } catch (e) {
+      if (e instanceof BuildError) throw e;
+      throw new BuildError(`app_${lang}.arb: no es JSON válido (${e.message})`);
+    }
+    out[lang] = {};
+    for (const key of HOME_APP_TEXT_KEYS) {
+      if (typeof json[key] !== "string" || json[key] === "") throw new BuildError(`app_${lang}.arb: falta «${key}» (lo usa la página de inicio)`);
+      out[lang][key] = json[key];
+    }
+  }
+  return out;
+}
+
+/**
+ * `gen/site.json`, lo que el programa de la página de inicio importa de la app (P7, CA-025-06, 08 y 14): el
+ * nombre y el logotipo (`identity.yaml`), las direcciones de las tiendas (`null` sin ficha) y los textos de la
+ * app de [HOME_APP_TEXT_KEYS] en los dos idiomas.
+ */
+export function homeSite(paths) {
+  const identity = readIdentity(readText(paths.identity, "identity.yaml"), basename(paths.identity));
+  return {
+    appName: identity.displayName,
+    wordmark: identity.wordmark,
+    stores: storeUrls(identity, basename(paths.identity)),
+    app: homeAppTexts(paths),
+  };
+}
+
+/**
+ * Escribe `landing/home/gen/` (lo que Vite construye: la página con el nombre de la identidad, `site.json` y
+ * los tokens con los fondos de la página de inicio). Devuelve la lista de archivos escritos.
  */
 export function writeHomeGen(paths = defaultPaths()) {
   const identity = readIdentity(readText(paths.identity, "identity.yaml"), basename(paths.identity));
@@ -911,7 +1008,8 @@ export function writeHomeGen(paths = defaultPaths()) {
   const gen = homeGenDir(paths);
   const files = new Map([
     ["index.html", renderHomeHtml(template, identity)],
-    ["tokens.css", tokensCss(tokens)],
+    ["site.json", `${JSON.stringify(homeSite(paths), null, 2)}\n`],
+    ["tokens.css", tokensCss(tokens, { landing: true })],
   ]);
   rmSync(gen, { recursive: true, force: true });
   mkdirSync(gen, { recursive: true });
