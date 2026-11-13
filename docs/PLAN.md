@@ -349,6 +349,7 @@ Probabilidad (P) e impacto (I): Baja/Media/Alta.
 | 4 | ~~Histórico visible y borrable~~ (retirado por el ADR-0012), theming (paletas), ~~alertas (notificaciones locales)~~ **adelantadas a la spec 019 (F4b)** | `palette.*`, flag `notifications` |
 | 5 | ~~Configuración completa, páginas legales y ayuda~~ **adelantadas a la spec 015 (F4b: Ajustes)**; exportar/importar `.zip` | Pantalla Configuración, ADR-0004 |
 | — | Landing | ADR-0009 (`landing/`); **spec 025** (`specs/025-landing-de-producto/`, **Aprobada** el 2026-11-12) y ADR-0027 (Propuesto hasta aprobar el plan) |
+| — | Páginas de contenido | **spec 026** (sin escribir; decisiones del propietario del 2026-11-14): Ayuda, Privacidad y Licencias rehechas como páginas de contenido de la misma web que la landing: spec aparte de la 025, que se cierra antes; cabecera de la landing (logotipo que vuelve a la portada, ES/EN, «Descargar») y enlace visible «← Volver al inicio»; pie de la landing; **sin JavaScript** y con la CSP estricta de hoy (la app las abre desde Ajustes); índice al principio en Privacidad y Ayuda y fecha de «última actualización» bajo el título de la política. Referencia de estructura: las páginas legales de superplay.co. Se empieza con `/spec-new` en una sesión nueva |
 | — | Widgets de pantalla de inicio y bloqueo | ADR-0001 (home_widget), ADR-0005 (clase de protección) |
 | Mucho después | Cuentas, sincronización, compartir | UUIDv7, `updatedAt`, tombstones, `TaskRepository` |
 
