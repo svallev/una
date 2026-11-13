@@ -21,6 +21,7 @@ import {
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { endLeadKey } from "./home/src/stores.js";
 
 export class BuildError extends Error {}
 export class MarkdownError extends BuildError {}
@@ -641,8 +642,8 @@ export const FONT_DIRS = [...new Set(FONT_FILES.map((f) => f.dir))];
 
 /**
  * `tokens.css`: las variables de `design/tokens.json` (rem para texto y espacios) y las fuentes. Con [landing]
- * (solo la página de inicio, spec 025) lleva además los fondos del grupo `landing` (`--landing-…`); el de las
- * otras cuatro páginas no cambia.
+ * (solo la página de inicio, spec 025) lleva además los fondos del grupo `landing` (`--landing-…`) y los colores
+ * de nota de la paleta clásica (`--palette-classic-0…4`); el de las otras cuatro páginas no cambia.
  */
 export function tokensCss(tokens, { landing = false } = {}) {
   const vars = [];
@@ -651,6 +652,8 @@ export function tokensCss(tokens, { landing = false } = {}) {
   if (landing) {
     if (!tokens.landing) throw new BuildError("tokens.json: falta el grupo «landing» (spec 025)");
     for (const [k, v] of Object.entries(tokens.landing)) if (!k.startsWith("$")) emit(`landing-${kebab(k)}`, v.$value);
+    // Los colores de nota de la paleta clásica (la palabra destacada, las notas y el botón «Descargar»).
+    for (const [k, v] of Object.entries(tokens.palette.classic)) if (!k.startsWith("$")) emit(`palette-classic-${k}`, v.$value);
   }
   for (const [k, v] of Object.entries(tokens.font.family)) if (!k.startsWith("$")) emit(`font-family-${kebab(k)}`, familyValue(v.$value));
   for (const [k, v] of Object.entries(tokens.font.weight)) if (!k.startsWith("$")) emit(`font-weight-${kebab(k)}`, v.$value);
@@ -944,18 +947,9 @@ export function loadHomeStrings(paths) {
   return out;
 }
 
-/**
- * La entradilla del cierre según las fichas que ya hay (CA-025-08, CL-025-8): sin ninguna, `endLead`; con una,
- * la que dice cuál falta; con las dos, `endLeadBoth`. [stores] es el de [storeUrls] (`null` = sin ficha).
- */
-export function endLeadKey(stores) {
-  const play = Boolean(stores.googlePlayUrl);
-  const apple = Boolean(stores.appStoreUrl);
-  if (play && apple) return "endLeadBoth";
-  if (play) return "endLeadPlayOnly";
-  if (apple) return "endLeadAppStoreOnly";
-  return "endLead";
-}
+// La entradilla del cierre según las fichas que ya hay (CA-025-08, CL-025-8) sigue la misma regla que el
+// programa de la página de inicio: viene de `home/src/stores.js` (sin dependencias del navegador).
+export { endLeadKey };
 
 /** Las escenas cuyas propuestas lee el contenido sin JavaScript (las cuatro de CA-025-11), en orden. */
 export const STATIC_PROPOSALS = ["one", "handy", "awake", "light"];

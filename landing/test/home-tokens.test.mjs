@@ -47,6 +47,14 @@ describe("CA-025-14: los fondos de la página de inicio son tokens", () => {
     assert.ok(!tokensCss(tokens).includes("--landing"), "el tokens.css de las otras páginas cambió");
   });
 
+  test("el tokens.css de la página de inicio lleva los colores de nota de la paleta clásica; el de las otras cuatro, no", () => {
+    const home = tokensCss(tokens, { landing: true });
+    for (const [k, v] of Object.entries(tokens.palette.classic)) {
+      if (!k.startsWith("$")) assert.ok(home.includes(`--palette-classic-${k}: ${v.$value};`), `falta --palette-classic-${k}`);
+    }
+    assert.ok(!tokensCss(tokens).includes("--palette"), "el tokens.css de las otras páginas cambió");
+  });
+
   test("home/gen/tokens.css es el de la página de inicio", () => {
     const w = world();
     try {
