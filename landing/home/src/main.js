@@ -7,6 +7,7 @@ import "./prepare-body.js"; // el primero: antes de que ScrollTrigger se registr
 import "lenis/dist/lenis.css";
 import "../gen/tokens.css";
 import "./base.css";
+import "./device.css";
 import "./static.css";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";

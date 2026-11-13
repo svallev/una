@@ -708,6 +708,31 @@ function checkProgram(file, code, errors) {
 }
 
 /**
+ * El HTML que genera el programa de la página de inicio (las pantallas de la app, las escenas), que no está en
+ * `dist/` y `checkHome` no ve (plan §6.1): las mismas reglas de etiquetas que la página. Sin estilos ni
+ * manejadores en línea, sin `<style>`, `<script>`, marcos, formularios, `<base>`, `<meta>` ni `<link>`, sin
+ * `javascript:` ni `data:` y sin recursos ni enlaces de otro origen (los rótulos de las tiendas se comprueban
+ * aparte, en `stores.js`). Devuelve los errores, con [label] delante.
+ */
+export function checkMarkup(label, html) {
+  const errors = [];
+  const fail = (msg) => errors.push(`${label}: ${msg}`);
+  for (const x of tags(html)) {
+    if (x.closing) continue;
+    for (const [attr, value] of Object.entries(x.attrs)) {
+      if (/^on/.test(attr)) fail(`<${x.name}> lleva el manejador en línea ${attr}`);
+      if (attr === "style") fail(`<${x.name}> lleva style en línea (la CSP lo bloquearía)`);
+      if (attr === "srcdoc") fail(`<${x.name}> lleva srcdoc`);
+      if (/^\s*(javascript|vbscript):/i.test(value)) fail(`<${x.name} ${attr}> con ${value.trim().split(":")[0]}:`);
+      if (/^\s*data:/i.test(value) || /url\(\s*['"]?\s*data:/i.test(value)) fail(`<${x.name} ${attr}> con una dirección data:`);
+      if ((RESOURCE_ATTRS.includes(attr) || attr === "href") && value && !isLocal(value)) fail(`<${x.name} ${attr}> de otro origen («${value}»)`);
+    }
+    if (["style", "script", "base", "meta", "link", "form"].includes(x.name) || FRAMES.includes(x.name)) fail(`tiene un <${x.name}>`);
+  }
+  return errors;
+}
+
+/**
  * El nombre de la app escrito a mano en las fuentes de la página de inicio (P7, CA-025-14): la plantilla, la
  * configuración de Vite y `src/` (sin `gen/`, que se genera desde la identidad, ni `public/`). En los textos
  * (`strings.*.json`) se mira cada valor, y los titulares que juegan con el nombre (`heroTitle`, `oneTitle`,
