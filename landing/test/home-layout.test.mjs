@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { MIN_JOURNEY_HEIGHT } from "../home/src/shared/mode.js";
+import { titleHtml } from "../home/src/shared/i18n.js";
 
 const src = join(dirname(fileURLToPath(import.meta.url)), "..", "home", "src");
 const css = (...path) => readFileSync(join(src, ...path), "utf8");
@@ -102,4 +103,13 @@ test("CA-025-16: vertical y escritorio no dependen de la orientación (sus bloqu
     // Solo un bloque con orientación: el de horizontal bajo.
     assert.equal(text.split("orientation").length - 1, text === css("a", "scene.css") ? 1 : 0);
   }
+});
+
+test("CA-025-16: en horizontal bajo, el titular de la escena 3 va en dos líneas exactas («Just ONE.» / «Until it's done»)", () => {
+  const body = block(css("a", "scene.css"), LANDSCAPE_LOW);
+  // La primera línea, sola; las otras dos, juntas y sin partirse (el espacio entre ellas lo pone titleHtml).
+  assert.match(declarations(body, "html:not(.fx) .sc--una .ln:first-child"), /display:\s*block/);
+  assert.match(declarations(body, "html:not(.fx) .sc--una .big"), /white-space:\s*nowrap/);
+  // Las líneas de titleHtml van separadas por un espacio: «Until» y «it's done» no se pegan.
+  assert.match(titleHtml("scenes.una.title"), /<\/span><\/span> <span class="ln">/);
 });
