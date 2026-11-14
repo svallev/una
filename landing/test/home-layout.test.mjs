@@ -90,8 +90,8 @@ test("CA-025-16, CL-025-13: el bloque de horizontal bajo solo toca la versión a
 
 test("CA-025-16, CL-025-13: en horizontal bajo, texto y móvil van lado a lado y el titular se mide por el alto", () => {
   const body = block(css("a", "scene.css"), LANDSCAPE_LOW);
-  assert.match(declarations(body, "html:not(.fx) .split"), /grid-template-columns:\s*minmax\(0, 1fr\) auto/);
-  assert.match(declarations(body, "html:not(.fx) .split--rev"), /grid-template-columns:\s*auto minmax\(0, 1fr\)/);
+  assert.match(declarations(body, "html:not(.fx) .split"), /grid-template-columns:\s*minmax\(0, max-content\) auto/);
+  assert.match(declarations(body, "html:not(.fx) .split--rev"), /grid-template-columns:\s*auto minmax\(0, max-content\)/);
   assert.match(declarations(body, "html:not(.fx) .big"), /font-size:[^;]*svh/);
   // Sin un salto por línea del titular: las líneas se juntan si caben.
   assert.match(declarations(body, "html:not(.fx) .ln"), /display:\s*inline/);
@@ -112,4 +112,42 @@ test("CA-025-16: en horizontal bajo, el titular de la escena 3 va en dos líneas
   assert.match(declarations(body, "html:not(.fx) .sc--una .big"), /white-space:\s*nowrap/);
   // Las líneas de titleHtml van separadas por un espacio: «Until» y «it's done» no se pegan.
   assert.match(titleHtml("scenes.una.title"), /<\/span><\/span> <span class="ln">/);
+});
+
+test("CA-025-16: en horizontal bajo, texto y móvil se agrupan en el centro (sin el centro vacío)", () => {
+  const split = declarations(block(css("a", "scene.css"), LANDSCAPE_LOW), "html:not(.fx) .split");
+  // Columnas a su medida (ninguna `1fr` que empuje el móvil al borde) y el sobrante, a los dos lados.
+  assert.doesNotMatch(split, /1fr/);
+  assert.match(split, /justify-content:\s*center/);
+});
+
+test("CA-025-16: en horizontal bajo, el contenido respeta la cámara perforada (zona segura a los lados)", () => {
+  const meta = readFileSync(join(src, "..", "index.html"), "utf8").match(/<meta name="viewport" content="([^"]*)"/);
+  assert.ok(meta, "falta <meta name=viewport> en home/index.html");
+  // Sin `viewport-fit=cover` el navegador no da los márgenes de la zona segura.
+  assert.match(meta[1], /viewport-fit=cover/);
+  const body = block(css("a", "scene.css"), LANDSCAPE_LOW);
+  for (const selector of ["html:not(.fx) .sc", "html:not(.fx) .sc > .end"]) {
+    const d = declarations(body, selector);
+    assert.match(d, /max\(var\(--margin\), env\(safe-area-inset-left, 0px\)\)/, `${selector} sin zona segura izquierda`);
+    assert.match(d, /max\(var\(--margin\), env\(safe-area-inset-right, 0px\)\)/, `${selector} sin zona segura derecha`);
+  }
+});
+
+test("CA-025-16: en horizontal bajo, la escena 3 cabe en la ventana y su móvil no sube bajo la cabecera", () => {
+  const una = declarations(block(css("a", "scene.css"), LANDSCAPE_LOW), "html:not(.fx) .sc--una");
+  // La cabecera fija mide 64 px (16 + botón de 48 + 16): el contenido empieza al menos 8 px por debajo.
+  const top = Number(una.match(/padding-top:\s*(\d+)px/)?.[1]);
+  assert.ok(top >= 72, `padding-top de la escena 3: ${top}`);
+  // Móvil + rellenos ≤ 100svh: el móvil mide 2,264 veces su ancho; con 33svh, 0,33 × 2,264 ≈ 75 % del alto,
+  // y los rellenos (≤ 92 px) caben en el 25 % que queda a partir de 360 px de alto.
+  const bottom = Number(una.match(/padding-bottom:\s*(\d+)px/)?.[1]);
+  const pw = declarations(block(css("a", "scene.css"), LANDSCAPE_LOW), "html:not(.fx) .sc--una .phone--hold").match(/(\d+)svh/);
+  assert.ok(pw, "el móvil de la escena 3 no se mide por el alto");
+  assert.ok(Number(pw[1]) / 100 * 2.264 * 360 + top + bottom <= 360, `no cabe a 360 px: ${pw[1]}svh, ${top}+${bottom}`);
+});
+
+test("CA-025-16: en horizontal bajo, las escenas 3 y 4 van sin entradilla, como en vertical (también a más de 860 de ancho)", () => {
+  const body = block(css("a", "scene.css"), LANDSCAPE_LOW);
+  assert.match(declarations(body, "html:not(.fx) .sc--una .lead, html:not(.fx) .sc--amano .lead"), /display:\s*none/);
 });

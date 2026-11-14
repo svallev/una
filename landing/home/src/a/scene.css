@@ -125,7 +125,9 @@
    una columna, titulares a 14,5vw y una línea por `.ln`. En horizontal hay ancho de sobra y poco alto: texto y
    móvil lado a lado, titulares medidos también por el alto, entradillas más anchas y móviles según el alto. */
 @media (orientation: landscape) and (max-height: 539px) {
-  html:not(.fx) .sc { padding: 84px var(--margin) 28px; }
+  /* A los lados, también la zona segura (cámara perforada en horizontal; `viewport-fit=cover` en index.html) */
+  html:not(.fx) .sc { padding: 84px max(var(--margin), env(safe-area-inset-right, 0px)) 28px max(var(--margin), env(safe-area-inset-left, 0px)); }
+  html:not(.fx) .sc > .end { left: max(var(--margin), env(safe-area-inset-left, 0px)); right: max(var(--margin), env(safe-area-inset-right, 0px)); }
   html:not(.fx) .sc--fin { padding-bottom: 64px; }
   html:not(.fx) .big { font-size: clamp(34px, min(7vw, 13svh), 96px); }
   html:not(.fx) .ln { display: inline; }
@@ -133,9 +135,9 @@
   html:not(.fx) .stores { margin-top: 16px; gap: 8px; }
   html:not(.fx) .extras, html:not(.fx) .kinds { margin-top: 12px; }
   html:not(.fx) .badge { height: 44px; min-width: 132px; padding: 0 16px; font-size: 16px; }
-  /* Dos columnas, como en escritorio */
-  html:not(.fx) .split { grid-template-columns: minmax(0, 1fr) auto; justify-items: stretch; gap: clamp(20px, 4vw, 56px); }
-  html:not(.fx) .split--rev { grid-template-columns: auto minmax(0, 1fr); }
+  /* Dos columnas, como en escritorio, a su medida y agrupadas en el centro (sin el centro vacío) */
+  html:not(.fx) .split { grid-template-columns: minmax(0, max-content) auto; justify-content: center; justify-items: stretch; gap: clamp(20px, 12vw - 48px, 72px); }
+  html:not(.fx) .split--rev { grid-template-columns: auto minmax(0, max-content); }
   html:not(.fx) .split--rev > .fan, html:not(.fx) .split--rev > .table { order: 0; }
   html:not(.fx) .split .big, html:not(.fx) .split .lead { text-align: left; }
   html:not(.fx) .split .lead { margin-inline: 0; }
@@ -144,6 +146,8 @@
   html:not(.fx) .split .stores { align-items: flex-start; }
   /* Como en vertical, sin las piezas secundarias (el segundo móvil de la portada y del cierre, dos filas) */
   html:not(.fx) .obj--m0 { display: none; }
+  /* Sin las entradillas de «Solo una» y «Siempre a mano», como en vertical (también por encima de 860 de ancho) */
+  html:not(.fx) .sc--una .lead, html:not(.fx) .sc--amano .lead { display: none; }
   /* Demasiadas: el titular en sus tres líneas, en el centro, y las filas a los lados */
   html:not(.fx) .sc--muchas .ln { display: block; }
   /* «Solo una»: dos líneas exactas, «Solo UNA.» / «Hasta que la termines» */
@@ -160,6 +164,9 @@
   html:not(.fx) .sc--hero .phone { --pw: min(19vw, 32svh); }
   /* Móviles según el alto: el de «Pruébalo», bastante grande para mantener pulsado */
   html:not(.fx) .phone--hold { --pw: min(30vw, 36svh); }
+  /* «Solo una» cabe en la ventana: si fuera más alta, al bajar su móvil subiría bajo la cabecera fija (64 px) */
+  html:not(.fx) .sc--una { padding-top: 76px; padding-bottom: 14px; }
+  html:not(.fx) .sc--una .phone--hold { --pw: min(30vw, 33svh); }
   html:not(.fx) .fan { --open: 0.8; width: min(44vw, 440px); height: 72svh; }
   html:not(.fx) .sc--amano .phone { --pw: min(15vw, 30svh); }
   html:not(.fx) .sc--activa .phone { --pw: min(22vw, 24svh); }
