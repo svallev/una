@@ -74,7 +74,7 @@ const BUILD = {
     <div class="split split--rev">
       <div class="table">
         <div class="table__tilt">${phone(traceScreen(), { label: t('app.traceAlt') })}</div>
-        ${settingRow(t('scenes.luz.switch'), t('app.lockZoomHint'), 'magnifierMinus', { on: true })}
+        ${settingRow(t('scenes.luz.switch'), null, 'magnifierMinus', { on: true })}
       </div>
       ${copyHtml(s, i)}
     </div>`,

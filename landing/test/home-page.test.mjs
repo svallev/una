@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { after, before, describe, test } from "node:test";
 import { BuildError, HOME_PAGE_MARK, fillHomePage, writeHomeGen } from "../build.mjs";
 import { cloneWorld, edit, read, world } from "./support.mjs";
+import { distanceToRings, drawing, samplePoints, solid, subpaths } from "./svg-outline.mjs";
 
 const SCENE_IDS = ["hero", "muchas", "una", "amano", "activa", "luz", "fin"];
 
@@ -239,13 +240,60 @@ describe("Cambio del propietario (2026-11-15): la mesa de luz, un gato sin texto
     for (const svg of scene.match(/<svg\b[\s\S]*?<\/svg>/g) ?? []) assert.ok(!/<text\b/.test(svg), "un dibujo de la escena lleva texto");
   });
 
-  test("la imagen y el calco del gato comparten la geometría y cada trazo del calco lleva pathLength", async () => {
+  test("cada trazo del calco del gato es un path con pathLength y sin texto, con la misma escala que la imagen", async () => {
     const { cat } = await homeModule(base, "a", "art.js");
     const { art, trace } = cat();
-    const traced = [...trace.matchAll(/<(path|ellipse|circle|rect) ([^>]*?) pathLength="1"\/>/g)];
-    assert.ok(traced.length >= 15, `solo ${traced.length} trazos en el calco`);
-    for (const [, tag, geo] of traced) assert.ok(art.includes(`<${tag} ${geo} `), `el calco no está en la imagen: ${geo}`);
+    const elements = [...trace.matchAll(/<(path|ellipse|circle|rect|line|polyline|polygon|text)\b[^>]*>/g)];
+    assert.ok(elements.length >= 15, `solo ${elements.length} trazos en el calco`);
+    for (const [el, tag] of elements) {
+      assert.equal(tag, "path", `el calco lleva un <${tag}>`);
+      assert.match(el, / pathLength="1"\/>$/, `un trazo del calco sin pathLength="1": ${el}`);
+    }
     assert.ok(!/<text\b/.test(art + trace));
+    const zoom = (svg) => /<g (transform="[^"]*")>/.exec(svg)?.[1];
+    assert.ok(zoom(art) && zoom(trace) === zoom(art), "el calco no tiene la escala de la imagen");
+  });
+
+  test("Cambio del propietario (2026-11-15): el calco solo dibuja las líneas que se ven en la imagen, todas", async () => {
+    const { cat } = await homeModule(base, "a", "art.js");
+    const { art, trace } = cat();
+    const shapes = drawing(art).map((s) => ({ ...s, paths: subpaths(s.tag, s.a) }));
+    for (const s of shapes) if (s.opaque) s.solid = solid(s.paths);
+    // Lo que tapa una forma: lo que se pinta después, con relleno opaco, a más de media unidad de su borde.
+    const hiddenBehind = (i, p) => shapes.slice(i + 1).some((o) => o.opaque && o.solid.contains(p) && o.solid.distance(p) > 0.5);
+    const outlines = shapes.map((s) => s.paths.map(({ cubics }) => samplePoints([{ cubics }], 0.5)));
+    const lines = [...trace.matchAll(/<path d="([^"]+)"/g)].map((m) => samplePoints(subpaths("path", { d: m[1] }), 0.5));
+
+    // 1. Cada punto del calco cae sobre el borde de una forma con línea y ninguna forma pintada después lo tapa.
+    for (const line of lines) {
+      for (const p of line) {
+        const on = shapes.map((s, i) => i).filter((i) => shapes[i].stroked && distanceToRings(outlines[i], p) < 0.6);
+        assert.ok(on.length, `un punto del calco no está en ningún borde: ${p.map((v) => v.toFixed(1))}`);
+        assert.ok(!hiddenBehind(on.at(-1), p), `el calco cruza por dentro de una forma: ${p.map((v) => v.toFixed(1))}`);
+      }
+    }
+    // 2. Cada línea que se ve en la imagen está en el calco (salvo un margen de 1,5 unidades en cada corte).
+    for (const [i, s] of shapes.entries()) {
+      if (!s.stroked) continue;
+      for (const p of outlines[i].flat()) {
+        if (hiddenBehind(i, p)) continue;
+        if (shapes.slice(i + 1).some((o) => o.opaque && o.solid.distance(p) < 1.5)) continue;
+        assert.ok(distanceToRings(lines, p) < 0.6, `una línea visible de la imagen falta en el calco: ${p.map((v) => v.toFixed(1))}`);
+      }
+    }
+  });
+
+  test("Cambio del propietario (2026-11-15): la tarjeta de «Bloquear zoom» va sin descripción y la de activa la conserva", () => {
+    for (const lang of ["es", "en"]) assert.equal(strings(base, lang).app.lockZoomHint, undefined, `app.lockZoomHint sigue en ${lang}`);
+    const es = strings(base, "es");
+    const card = (scene) => /<div class="setting" data-ui>[\s\S]*?<\/span><\/div>/.exec(scene)?.[0];
+    const luz = card(luzScene());
+    assert.ok(luz, "no está la tarjeta del ajuste en la mesa de luz");
+    assert.ok(luz.includes(`<span class="setting__txt"><b>${es.scenes.luz.switch}</b></span>`), luz);
+    assert.ok(!/<small\b/.test(luz), "la tarjeta de «Bloquear zoom» lleva descripción");
+    assert.ok(!html.includes("Solo imágenes: sin zoom ni scroll"));
+    const activa = card(/<section class="sc sc--activa[\s\S]*?<\/section>/.exec(html)[0]);
+    assert.ok(activa.includes(`<small>${es.app.keepAwakeHint}</small>`), "la tarjeta de activa perdió su descripción");
   });
 
   test("las demás tareas con imagen siguen con su título", () => {

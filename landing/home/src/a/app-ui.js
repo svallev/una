@@ -110,5 +110,7 @@ export function listScreen(tasks, colors, { time } = {}) {
 
 /** Fila de Ajustes con su interruptor, como fragmento suelto. */
 export function settingRow(title, hint, ic, { on = false } = {}) {
-  return `<div class="setting" data-ui><span class="setting__ic">${icon(ic)}</span><span class="setting__txt"><b>${esc(title)}</b><small>${esc(hint)}</small></span><span class="sw${on ? ' is-on' : ''}" aria-hidden="true"></span></div>`;
+  // La descripción es opcional: sin ella, la tarjeta lleva solo el nombre (sin una línea vacía)
+  const small = hint ? `<small>${esc(hint)}</small>` : '';
+  return `<div class="setting" data-ui><span class="setting__ic">${icon(ic)}</span><span class="setting__txt"><b>${esc(title)}</b>${small}</span><span class="sw${on ? ' is-on' : ''}" aria-hidden="true"></span></div>`;
 }

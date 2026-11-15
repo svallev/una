@@ -142,8 +142,11 @@ export function routeMap() {
 
 /**
  * Un gato estilo anime, sentado al atardecer entre pétalos, para la mesa de luz. Es un gato inventado (gris
- * azulado con el pecho claro, sin lazos, collares ni marcas de ningún personaje). Devuelve la imagen a color y,
- * con la misma geometría, el contorno que se va calcando en el papel (cada trazo con pathLength="1"). Sin texto.
+ * azulado con el pecho claro, sin lazos, collares ni marcas de ningún personaje). Devuelve la imagen a color y
+ * el calco que se va dibujando en el papel: como un calco a lápiz, solo las líneas que se ven en la imagen (la
+ * parte de cada contorno que no tapa ninguna forma pintada después), en trazos abiertos con pathLength="1".
+ * Si cambia una forma, su calco y el de las que tapa se rehacen; `home-page.test.mjs` comprueba que cuadran.
+ * Sin texto.
  */
 export function cat() {
   // Un miembro: cápsula entre dos puntos, con el ancho dado.
@@ -162,39 +165,41 @@ export function cat() {
   const IRIS = '#2F9C8A';
   const IRIS_LIGHT = '#7FE0C2';
   const PUPIL = '#1E2140';
-  // Un ojo grande: iris, brillo bajo del iris y pupila (con trazo); los reflejos van aparte, sin trazo.
-  const eye = (cx) => [
-    ['ellipse', `cx="${cx}" cy="368" rx="24" ry="29"`, IRIS, 1],
-    ['ellipse', `cx="${cx}" cy="380" rx="16" ry="13"`, IRIS_LIGHT, 0],
-    ['ellipse', `cx="${cx}" cy="370" rx="10" ry="20"`, PUPIL, 1],
+  // Un ojo grande: iris, brillo bajo del iris y pupila (con trazo); los reflejos van aparte, sin trazo y
+  // tapan parte de la pupila.
+  const eye = (cx, iris, pupil) => [
+    ['ellipse', `cx="${cx}" cy="368" rx="24" ry="29"`, IRIS, iris],
+    ['ellipse', `cx="${cx}" cy="380" rx="16" ry="13"`, IRIS_LIGHT],
+    ['ellipse', `cx="${cx}" cy="370" rx="10" ry="20"`, PUPIL, pupil],
   ];
-  // [etiqueta SVG, geometría, relleno, ¿se calca?], de atrás hacia delante. 'none' es una línea sin relleno.
+  // [etiqueta SVG, geometría, relleno, calco], de atrás hacia delante. 'none' es una línea sin relleno. El
+  // calco son los trazos visibles del contorno (sin calco, la forma no se calca).
   const shapes = [
     // La cola, curvada hacia arriba por la derecha
-    ['path', 'd="M236 600 C296 616 350 586 346 520 C344 484 322 462 300 470 C286 476 288 496 302 496 C318 494 324 512 322 528 C318 566 290 582 240 574Z"', FUR, 1],
+    ['path', 'd="M236 600 C296 616 350 586 346 520 C344 484 322 462 300 470 C286 476 288 496 302 496 C318 494 324 512 322 528 C318 566 290 582 240 574Z"', FUR, ['M241.9 601.4 C299.5 614 349.9 583.8 346 520 C344 484 322 462 300 470 C286 476 288 496 302 496 C318 494 324 512 322 528 C318.6 560.6 297.5 577 260.1 576']],
     // Las orejas, detrás de la cabeza
-    ['path', 'd="M116 336 L122 236 L188 290Z"', FUR, 1],
-    ['path', 'd="M274 336 L268 236 L202 290Z"', FUR, 1],
-    ['path', 'd="M132 314 L136 260 L172 292Z"', EAR, 1],
-    ['path', 'd="M258 314 L254 260 L218 292Z"', EAR, 1],
+    ['path', 'd="M116 336 L122 236 L188 290Z"', FUR, ['M117.8 306.3 L122 236 L175.2 279.6']],
+    ['path', 'd="M274 336 L268 236 L202 290Z"', FUR, ['M272.2 306.3 L268 236 L214.8 279.6']],
+    ['path', 'd="M132 314 L136 260 L172 292Z"', EAR, ['M133.5 293.7 L136 260 L161 282.3']],
+    ['path', 'd="M258 314 L254 260 L218 292Z"', EAR, ['M256.5 293.7 L254 260 L229 282.3']],
     // El cuerpo, sentado, con el pecho claro
-    ['path', 'd="M195 418 C148 420 126 472 124 532 C122 584 142 614 195 614 C248 614 268 584 266 532 C264 472 242 420 195 418Z"', FUR, 1],
-    ['path', 'd="M195 436 C168 446 160 498 172 540 L195 566 L218 540 C230 498 222 446 195 436Z"', CREAM, 1],
+    ['path', 'd="M195 418 C148 420 126 472 124 532 C122 584 142 614 195 614 C248 614 268 584 266 532 C264 472 242 420 195 418Z"', FUR, ['M159.8 431.7 C136.8 451.4 125.4 489.7 124 532 C122.8 564.2 129.9 587.9 148.2 601.4', 'M185 613.6 C188.2 613.9 191.5 614 195 614 C198.5 614 201.8 613.9 205 613.6', 'M241.8 601.4 C260.1 587.9 267.2 564.2 266 532 C264.6 489.7 253.2 451.4 230.2 431.7']],
+    ['path', 'd="M195 436 C168 446 160 498 172 540 L195 566 L218 540 C230 498 222 446 195 436Z"', CREAM, ['M223.4 504.7 C224.3 472.9 214.7 443.3 195 436 C175.3 443.3 165.7 472.9 166.6 504.7', 'M184.8 554.5 L195 566 L205.2 554.5']],
     // Las patas de delante
-    ['path', limb(170, 520, 168, 600, 32), FUR, 1],
-    ['path', limb(220, 520, 222, 600, 32), FUR, 1],
-    ['ellipse', 'cx="166" cy="608" rx="22" ry="12"', CREAM, 1],
-    ['ellipse', 'cx="224" cy="608" rx="22" ry="12"', CREAM, 1],
+    ['path', limb(170, 520, 168, 600, 32), FUR, ['M184 600.4 L186 520.4 C186.2 511.6 179.2 504.2 170.4 504 C161.6 503.8 154.2 510.8 154 519.6 L152 599.1']],
+    ['path', limb(220, 520, 222, 600, 32), FUR, ['M238 599.1 L236 519.6 C235.8 510.8 228.4 503.8 219.6 504 C210.8 504.2 203.8 511.6 204 520.4 L206 600.4']],
+    ['ellipse', 'cx="166" cy="608" rx="22" ry="12"', CREAM, ['M188 608 C188 614.6 178.2 620 166 620 C153.8 620 144 614.6 144 608 C144 601.4 153.8 596 166 596 C178.2 596 188 601.4 188 608Z']],
+    ['ellipse', 'cx="224" cy="608" rx="22" ry="12"', CREAM, ['M246 608 C246 614.6 236.2 620 224 620 C211.8 620 202 614.6 202 608 C202 601.4 211.8 596 224 596 C236.2 596 246 601.4 246 608Z']],
     // La cabeza, ancha y redonda, con el hocico claro y tres rayas en la frente
-    ['path', 'd="M195 278 C262 278 296 318 294 366 C292 410 250 436 195 436 C140 436 98 410 96 366 C94 318 128 278 195 278Z"', FUR, 1],
-    ['path', 'd="M195 384 C222 384 236 398 234 412 C232 426 214 432 195 432 C176 432 158 426 156 412 C154 398 168 384 195 384Z"', CREAM, 1],
-    ['path', 'd="M195 288 L195 312 M178 292 L182 310 M212 292 L208 310"', 'none', 1],
-    ...eye(154),
-    ...eye(236),
+    ['path', 'd="M195 278 C262 278 296 318 294 366 C292 410 250 436 195 436 C140 436 98 410 96 366 C94 318 128 278 195 278Z"', FUR, ['M195 278 C262 278 296 318 294 366 C292 410 250 436 195 436 C140 436 98 410 96 366 C94 318 128 278 195 278Z']],
+    ['path', 'd="M195 384 C222 384 236 398 234 412 C232 426 214 432 195 432 C176 432 158 426 156 412 C154 398 168 384 195 384Z"', CREAM, ['M169.8 389.4 C176.1 386.1 184.6 384 195 384 C205.4 384 213.9 386.1 220.2 389.4', 'M227.8 395 C232.7 399.9 234.9 405.9 234 412 C232 426 214 432 195 432 C176 432 158 426 156 412 C155.1 405.9 157.3 399.9 162.2 395']],
+    ['path', 'd="M195 288 L195 312 M178 292 L182 310 M212 292 L208 310"', 'none', ['M195 288 L195 312', 'M178 292 L182 310', 'M212 292 L208 310']],
+    ...eye(154, ['M178 368 C178 384 167.3 397 154 397 C140.7 397 130 384 130 368 C130 352 140.7 339 154 339 C167.3 339 178 352 178 368Z'], ['M151.5 350.6 C152.3 350.2 153.1 350 154 350 C159.5 350 164 359 164 370 C164 374 163.4 377.7 162.4 380.8', 'M159.8 386.3 C158.2 388.6 156.2 390 154 390 C148.5 390 144 381 144 370 C144 367.7 144.2 365.6 144.5 363.6']),
+    ...eye(236, ['M260 368 C260 384 249.3 397 236 397 C222.7 397 212 384 212 368 C212 352 222.7 339 236 339 C249.3 339 260 352 260 368Z'], ['M233.5 350.6 C234.3 350.2 235.1 350 236 350 C241.5 350 246 359 246 370 C246 374 245.4 377.7 244.4 380.8', 'M241.8 386.3 C240.2 388.6 238.2 390 236 390 C230.5 390 226 381 226 370 C226 367.7 226.2 365.6 226.5 363.6']),
     // Nariz, boca y bigotes
-    ['path', 'd="M187 398 L203 398 L195 407Z"', EAR, 1],
-    ['path', 'd="M180 412 C184 421 193 421 195 410 C197 421 206 421 210 412"', 'none', 1],
-    ['path', 'd="M112 388 L66 378 M112 400 L64 404 M278 388 L324 378 M278 400 L326 404"', 'none', 1],
+    ['path', 'd="M187 398 L203 398 L195 407Z"', EAR, ['M187 398 L203 398 L195 407Z']],
+    ['path', 'd="M180 412 C184 421 193 421 195 410 C197 421 206 421 210 412"', 'none', ['M180 412 C184 421 193 421 195 410 C197 421 206 421 210 412']],
+    ['path', 'd="M112 388 L66 378 M112 400 L64 404 M278 388 L324 378 M278 400 L326 404"', 'none', ['M112 388 L66 378', 'M112 400 L64 404', 'M278 388 L324 378', 'M278 400 L326 404']],
   ];
   const head = 'viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" aria-hidden="true"';
   // El gato se dibuja algo más grande, con la misma escala en la imagen y en el calco.
@@ -223,6 +228,7 @@ export function cat() {
     <g fill="#FF8FB1" opacity="0.85"><ellipse cx="130" cy="404" rx="17" ry="8"/><ellipse cx="260" cy="404" rx="17" ry="8"/></g>
     </g>
   </svg>`;
-  const trace = `<svg ${head}><g ${zoom}>${shapes.filter((sh) => sh[3]).map(([tag, geo]) => `<${tag} ${geo} pathLength="1"/>`).join('')}</g></svg>`;
+  const lines = shapes.flatMap((sh) => sh[3] ?? []);
+  const trace = `<svg ${head}><g ${zoom}>${lines.map((d) => `<path d="${d}" pathLength="1"/>`).join('')}</g></svg>`;
   return { art, trace };
 }
