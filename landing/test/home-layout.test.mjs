@@ -109,7 +109,10 @@ test("CA-025-16: en horizontal bajo, el titular de la escena 3 va en dos líneas
   const body = block(css("a", "scene.css"), LANDSCAPE_LOW);
   // La primera línea, sola; las otras dos, juntas y sin partirse (el espacio entre ellas lo pone titleHtml).
   assert.match(declarations(body, "html:not(.fx) .sc--una .ln:first-child"), /display:\s*block/);
-  assert.match(declarations(body, "html:not(.fx) .sc--una .big"), /white-space:\s*nowrap/);
+  // Cada línea de la maqueta, sin partirse por dentro; entre ellas sí, solo si no caben (H-025-04: con zoom al
+  // 400 %, 320 px de ancho, «Hasta que la termines» entero se salía 3 px por la derecha).
+  assert.match(declarations(body, "html:not(.fx) .sc--una .ln"), /white-space:\s*nowrap/);
+  assert.ok(!rules(body).some(([s, d]) => /\.sc--una \.big\b/.test(s) && /white-space:\s*nowrap/.test(d)), "el titular entero no puede ir sin partirse");
   // Las líneas de titleHtml van separadas por un espacio: «Until» y «it's done» no se pegan.
   assert.match(titleHtml("scenes.una.title"), /<\/span><\/span> <span class="ln">/);
 });
@@ -150,4 +153,23 @@ test("CA-025-16: en horizontal bajo, la escena 3 cabe en la ventana y su móvil 
 test("CA-025-16: en horizontal bajo, las escenas 3 y 4 van sin entradilla, como en vertical (también a más de 860 de ancho)", () => {
   const body = block(css("a", "scene.css"), LANDSCAPE_LOW);
   assert.match(declarations(body, "html:not(.fx) .sc--una .lead, html:not(.fx) .sc--amano .lead"), /display:\s*none/);
+});
+
+// Objetivos de 44 × 44 (CA-025-15, H-025-05): el logotipo (70×32), ES y EN (44×42) y los enlaces del pie (18 px de
+// alto) agrandan solo su zona de toque con un `::after` centrado, sin cambiar lo que se ve ni moverlo.
+test("CA-025-15: logotipo, ES/EN y enlaces del pie llevan una zona de toque de al menos 44 × 44", () => {
+  const all = rules(css("shared", "base.css"));
+  const targets = [".logo", ".langs button", ".end a"];
+  const holder = all.find(([s]) => targets.every((t) => s.split(",").map((x) => x.trim()).includes(t)) && !s.includes("::after"));
+  assert.ok(holder, "falta la regla que posiciona los objetivos");
+  assert.match(holder[1], /position:\s*relative/);
+  // Sin desplazamientos ni cambios de caja en esa regla: solo `position`.
+  assert.deepEqual(holder[1].split(";").map((d) => d.trim()).filter(Boolean), ["position: relative"]);
+  const area = all.find(([s]) => targets.every((t) => s.split(",").map((x) => x.trim()).includes(`${t}::after`)));
+  assert.ok(area, "falta el ::after de la zona de toque");
+  assert.match(area[1], /content:\s*""/);
+  assert.match(area[1], /position:\s*absolute/);
+  assert.match(area[1], /width:\s*max\(100%, 44px\)/);
+  assert.match(area[1], /height:\s*max\(100%, 44px\)/);
+  assert.match(area[1], /translate\(-50%, -50%\)/);
 });

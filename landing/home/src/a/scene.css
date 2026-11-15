@@ -150,8 +150,9 @@
   html:not(.fx) .sc--una .lead, html:not(.fx) .sc--amano .lead { display: none; }
   /* Demasiadas: el titular en sus tres líneas, en el centro, y las filas a los lados */
   html:not(.fx) .sc--muchas .ln { display: block; }
-  /* «Solo una»: dos líneas exactas, «Solo UNA.» / «Hasta que la termines» */
-  html:not(.fx) .sc--una .big { white-space: nowrap; }
+  /* «Solo una»: dos líneas exactas, «Solo UNA.» / «Hasta que la termines»; si no cabe (zoom al 400 %), se parte entre
+     las líneas de la maqueta, nunca dentro de una */
+  html:not(.fx) .sc--una .ln { white-space: nowrap; }
   html:not(.fx) .sc--una .ln:first-child { display: block; }
   html:not(.fx) .sc--muchas .row { --fs: 11.5px; width: 150px; }
   html:not(.fx) .sc--muchas .obj { --z: 0px !important; }
