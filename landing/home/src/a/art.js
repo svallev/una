@@ -141,10 +141,11 @@ export function routeMap() {
 }
 
 /**
- * Un jugador de baloncesto entrando a canasta, para la mesa de luz. Devuelve la imagen a color y,
- * con la misma geometría, el contorno que se va calcando en el papel (cada trazo con pathLength="1").
+ * Un gato estilo anime, sentado al atardecer entre pétalos, para la mesa de luz. Es un gato inventado (gris
+ * azulado con el pecho claro, sin lazos, collares ni marcas de ningún personaje). Devuelve la imagen a color y,
+ * con la misma geometría, el contorno que se va calcando en el papel (cada trazo con pathLength="1"). Sin texto.
  */
-export function athlete() {
+export function cat() {
   // Un miembro: cápsula entre dos puntos, con el ancho dado.
   const limb = (x1, y1, x2, y2, w) => {
     const len = Math.hypot(x2 - x1, y2 - y1);
@@ -153,46 +154,75 @@ export function athlete() {
     const f = (v) => v.toFixed(1);
     return `d="M${f(x1 + nx)} ${f(y1 + ny)} L${f(x2 + nx)} ${f(y2 + ny)} A${w / 2} ${w / 2} 0 0 0 ${f(x2 - nx)} ${f(y2 - ny)} L${f(x1 - nx)} ${f(y1 - ny)} A${w / 2} ${w / 2} 0 0 0 ${f(x1 + nx)} ${f(y1 + ny)}Z"`;
   };
-  const SKIN = '#8A4B2D';
-  const SKIN_BACK = '#74401F';
-  // [etiqueta SVG, geometría, relleno, ¿se calca?], de atrás hacia delante
+  const LINE = '#3A2440';
+  const FUR = '#9DB0DD';
+  const FUR_DARK = '#7D90C4';
+  const CREAM = '#FFF6EC';
+  const EAR = '#FFB3C9';
+  const IRIS = '#2F9C8A';
+  const IRIS_LIGHT = '#7FE0C2';
+  const PUPIL = '#1E2140';
+  // Un ojo grande: iris, brillo bajo del iris y pupila (con trazo); los reflejos van aparte, sin trazo.
+  const eye = (cx) => [
+    ['ellipse', `cx="${cx}" cy="368" rx="24" ry="29"`, IRIS, 1],
+    ['ellipse', `cx="${cx}" cy="380" rx="16" ry="13"`, IRIS_LIGHT, 0],
+    ['ellipse', `cx="${cx}" cy="370" rx="10" ry="20"`, PUPIL, 1],
+  ];
+  // [etiqueta SVG, geometría, relleno, ¿se calca?], de atrás hacia delante. 'none' es una línea sin relleno.
   const shapes = [
-    ['rect', 'x="322" y="166" width="62" height="72"', '#FFFFFF', 1],
-    ['rect', 'x="336" y="194" width="34" height="30"', '#FFFFFF', 1],
-    ['path', limb(166, 318, 130, 342, 22), SKIN_BACK, 1], // brazo de atrás
-    ['path', limb(130, 342, 112, 300, 19), SKIN_BACK, 1],
-    ['path', limb(156, 446, 128, 506, 30), SKIN_BACK, 1], // pierna de atrás, recogida
-    ['path', limb(128, 506, 88, 530, 24), SKIN_BACK, 1],
-    ['path', limb(84, 532, 66, 554, 21), '#FFFFFF', 1],
-    ['path', limb(186, 310, 170, 410, 62), '#D4145A', 1], // camiseta
-    ['path', limb(172, 414, 168, 448, 70), '#FFD21F', 1], // pantalón
-    ['path', limb(184, 446, 214, 510, 30), SKIN, 1], // pierna de delante
-    ['path', limb(214, 510, 196, 582, 24), SKIN, 1],
-    ['path', limb(196, 588, 224, 596, 21), '#FFFFFF', 1],
-    ['path', limb(206, 315, 236, 260, 22), SKIN, 1], // brazo que lleva el balón
-    ['path', limb(236, 260, 262, 206, 19), SKIN, 1],
-    ['circle', 'cx="182" cy="270" r="26"', SKIN, 1],
-    ['circle', 'cx="276" cy="184" r="26"', '#F08A24', 1],
-    ['ellipse', 'cx="292" cy="238" rx="31" ry="8"', 'none', 1],
-    ['path', 'd="M0 668h390"', 'none', 1],
+    // La cola, curvada hacia arriba por la derecha
+    ['path', 'd="M236 600 C296 616 350 586 346 520 C344 484 322 462 300 470 C286 476 288 496 302 496 C318 494 324 512 322 528 C318 566 290 582 240 574Z"', FUR, 1],
+    // Las orejas, detrás de la cabeza
+    ['path', 'd="M116 336 L122 236 L188 290Z"', FUR, 1],
+    ['path', 'd="M274 336 L268 236 L202 290Z"', FUR, 1],
+    ['path', 'd="M132 314 L136 260 L172 292Z"', EAR, 1],
+    ['path', 'd="M258 314 L254 260 L218 292Z"', EAR, 1],
+    // El cuerpo, sentado, con el pecho claro
+    ['path', 'd="M195 418 C148 420 126 472 124 532 C122 584 142 614 195 614 C248 614 268 584 266 532 C264 472 242 420 195 418Z"', FUR, 1],
+    ['path', 'd="M195 436 C168 446 160 498 172 540 L195 566 L218 540 C230 498 222 446 195 436Z"', CREAM, 1],
+    // Las patas de delante
+    ['path', limb(170, 520, 168, 600, 32), FUR, 1],
+    ['path', limb(220, 520, 222, 600, 32), FUR, 1],
+    ['ellipse', 'cx="166" cy="608" rx="22" ry="12"', CREAM, 1],
+    ['ellipse', 'cx="224" cy="608" rx="22" ry="12"', CREAM, 1],
+    // La cabeza, ancha y redonda, con el hocico claro y tres rayas en la frente
+    ['path', 'd="M195 278 C262 278 296 318 294 366 C292 410 250 436 195 436 C140 436 98 410 96 366 C94 318 128 278 195 278Z"', FUR, 1],
+    ['path', 'd="M195 384 C222 384 236 398 234 412 C232 426 214 432 195 432 C176 432 158 426 156 412 C154 398 168 384 195 384Z"', CREAM, 1],
+    ['path', 'd="M195 288 L195 312 M178 292 L182 310 M212 292 L208 310"', 'none', 1],
+    ...eye(154),
+    ...eye(236),
+    // Nariz, boca y bigotes
+    ['path', 'd="M187 398 L203 398 L195 407Z"', EAR, 1],
+    ['path', 'd="M180 412 C184 421 193 421 195 410 C197 421 206 421 210 412"', 'none', 1],
+    ['path', 'd="M112 388 L66 378 M112 400 L64 404 M278 388 L324 378 M278 400 L326 404"', 'none', 1],
   ];
   const head = 'viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" aria-hidden="true"';
+  // El gato se dibuja algo más grande, con la misma escala en la imagen y en el calco.
+  const zoom = 'transform="translate(195 440) scale(1.18) translate(-195 -440)"';
+  // Pétalos de cerezo: [x, y, giro, color]
+  const petals = [
+    [52, 110, -20, '#FFFFFF'], [318, 96, 30, '#FFC2D6'], [214, 172, 60, '#FFFFFF'], [36, 300, 10, '#FFC2D6'],
+    [352, 250, -40, '#FFFFFF'], [70, 470, 45, '#FFFFFF'], [340, 430, -15, '#FFC2D6'], [96, 210, 80, '#FFC2D6'],
+    [290, 680, 20, '#FFFFFF'], [60, 720, -50, '#FFC2D6'], [180, 760, 35, '#FFFFFF'], [356, 760, -30, '#FFC2D6'],
+  ];
   const art = `<svg ${head}>
-    <rect width="390" height="844" fill="#FFD9A0"/><circle cx="92" cy="150" r="46" fill="#FFF1C9"/>
-    <g fill="#F2B880"><rect x="0" y="470" width="70" height="200"/><rect x="58" y="520" width="56" height="150"/><rect x="232" y="500" width="64" height="170"/><rect x="286" y="440" width="104" height="230"/></g>
-    <rect x="0" y="668" width="390" height="176" fill="#D9773F"/>
-    <path d="M0 720h390M120 668l-60 176M300 668l40 176" stroke="#FFF1C9" stroke-width="4" fill="none" opacity="0.8"/>
-    <ellipse cx="170" cy="716" rx="74" ry="11" fill="#3A2420" opacity="0.28"/>
-    <rect x="350" y="238" width="11" height="432" fill="#3A2420"/>
+    <rect width="390" height="844" fill="#FF8DB5"/>
+    <rect y="230" width="390" height="190" fill="#FFA88C"/>
+    <rect y="420" width="390" height="200" fill="#FFC77A"/>
+    <circle cx="300" cy="560" r="96" fill="#FFE9A8"/>
+    <path d="M0 620 C80 596 150 604 200 616 C260 600 330 596 390 610 V844 H0Z" fill="#D4145A"/>
+    <path d="M0 668 C90 650 180 660 240 672 C300 662 350 660 390 668 V844 H0Z" fill="#A80F4B"/>
+    <ellipse cx="198" cy="658" rx="122" ry="13" fill="#5A0B30" opacity="0.35"/>
+    ${petals.map(([x, y, r, c]) => `<path d="M0 -9 C8 -6 8 6 0 9 C-3 4 -3 -4 0 -9Z" transform="translate(${x} ${y}) rotate(${r})" fill="${c}"/>`).join('')}
+    <g ${zoom}>
     ${shapes.map(([tag, geo, fill]) => (fill === 'none'
-      ? (tag === 'ellipse' ? `<${tag} ${geo} fill="none" stroke="#E0342B" stroke-width="5"/>` : '')
-      : `<${tag} ${geo} fill="${fill}"${tag === 'rect' ? ' stroke="#3A2420" stroke-width="4"' : ''}/>`)).join('')}
-    <circle cx="262" cy="206" r="11" fill="${SKIN}"/><circle cx="112" cy="300" r="11" fill="${SKIN_BACK}"/>
-    <path d="M264 242l6 34M278 245l4 33M292 246v33M306 245l-4 33M320 242l-6 34M266 258h52M270 272h44" stroke="#FFFFFF" stroke-width="2" fill="none"/>
-    <path d="M250 184h52M276 158v52M256 166c12 10 12 26 0 36M296 166c-12 10-12 26 0 36" stroke="#3A2420" stroke-width="2" fill="none"/>
-    <path d="M158 262c2-18 16-26 30-24 12 2 20 10 20 22-12-6-30-8-50 2z" fill="#2B1D1A"/>
-    <text x="178" y="378" text-anchor="middle" font-family="Archivo, system-ui, sans-serif" font-size="40" font-weight="900" fill="#FFFFFF" transform="rotate(9 178 366)">7</text>
+      ? `<${tag} ${geo} fill="none" stroke="${LINE}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`
+      : `<${tag} ${geo} fill="${fill}" stroke="${LINE}" stroke-width="${fill === IRIS_LIGHT ? 0 : 4}" stroke-linejoin="round"/>`)).join('')}
+    <g fill="${FUR_DARK}"><path d="M128 552 C140 548 146 556 144 566 C136 566 130 560 128 552Z"/><path d="M262 552 C250 548 244 556 246 566 C254 566 260 560 262 552Z"/></g>
+    <g fill="#FFFFFF"><circle cx="146" cy="356" r="8"/><circle cx="228" cy="356" r="8"/><circle cx="162" cy="384" r="3.5"/><circle cx="244" cy="384" r="3.5"/></g>
+    <g fill="#FF8FB1" opacity="0.85"><ellipse cx="130" cy="404" rx="17" ry="8"/><ellipse cx="260" cy="404" rx="17" ry="8"/></g>
+    </g>
   </svg>`;
-  const trace = `<svg ${head}>${shapes.filter((sh) => sh[3]).map(([tag, geo]) => `<${tag} ${geo} pathLength="1"/>`).join('')}</svg>`;
+  const trace = `<svg ${head}><g ${zoom}>${shapes.filter((sh) => sh[3]).map(([tag, geo]) => `<${tag} ${geo} pathLength="1"/>`).join('')}</g></svg>`;
   return { art, trace };
 }

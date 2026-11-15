@@ -155,7 +155,7 @@ describe("CA-025-12: todo texto del HTML generado pasa por una sola función de 
         s.scenes[id].title = `${evil}|*${evil}*`;
         s.scenes[id].lead = evil;
       }
-      s.scenes.una.try = s.scenes.activa.note = s.scenes.luz.note = evil;
+      s.scenes.una.try = s.scenes.activa.note = evil;
       s.scenes.activa.switch = s.scenes.luz.switch = evil;
       s.scenes.amano.chips = [evil, evil, evil];
       s.tasks = s.tasks.map(() => evil);
@@ -220,5 +220,53 @@ describe("T-025-07c: si el programa no arranca, la página no se queda en blanco
     const css = readFileSync(new URL("../home/src/shared/base.css", import.meta.url), "utf8");
     assert.match(css, /html:not\(\.is-ready\) body \{ visibility: hidden; animation: reveal 0s 2s forwards; \}/);
     assert.match(css, /@keyframes reveal \{ to \{ visibility: visible; \} \}/);
+  });
+});
+
+describe("Cambio del propietario (2026-11-15): la mesa de luz, un gato sin texto y sin nota", () => {
+  /** El HTML de la escena de la mesa de luz en la página construida. */
+  const luzScene = () => {
+    const m = /<section class="sc sc--luz[^"]*" id="luz"[\s\S]*?<\/section>/.exec(html);
+    assert.ok(m, "no está la escena de la mesa de luz");
+    return m[0];
+  };
+
+  test("la tarea de la mesa de luz no lleva título y su imagen y su calco no tienen texto", () => {
+    const scene = luzScene();
+    const phone = /<div class="table__tilt">[\s\S]*?<\/div><\/div>/.exec(scene)?.[0] ?? scene;
+    assert.ok(phone.includes('class="lightbox__paper"'), "no está el papel de calco");
+    assert.ok(!phone.includes("app__caption"), "la tarea de la mesa de luz lleva título");
+    for (const svg of scene.match(/<svg\b[\s\S]*?<\/svg>/g) ?? []) assert.ok(!/<text\b/.test(svg), "un dibujo de la escena lleva texto");
+  });
+
+  test("la imagen y el calco del gato comparten la geometría y cada trazo del calco lleva pathLength", async () => {
+    const { cat } = await homeModule(base, "a", "art.js");
+    const { art, trace } = cat();
+    const traced = [...trace.matchAll(/<(path|ellipse|circle|rect) ([^>]*?) pathLength="1"\/>/g)];
+    assert.ok(traced.length >= 15, `solo ${traced.length} trazos en el calco`);
+    for (const [, tag, geo] of traced) assert.ok(art.includes(`<${tag} ${geo} `), `el calco no está en la imagen: ${geo}`);
+    assert.ok(!/<text\b/.test(art + trace));
+  });
+
+  test("las demás tareas con imagen siguen con su título", () => {
+    assert.ok((html.match(/class="app__caption"/g) ?? []).length >= 3);
+  });
+
+  test("ni app.traceTask ni scenes.luz.note existen en ES ni en EN; scenes.activa.note sigue", () => {
+    for (const lang of ["es", "en"]) {
+      const s = strings(base, lang);
+      assert.equal(s.app.traceTask, undefined, `app.traceTask sigue en ${lang}`);
+      assert.equal(s.scenes.luz.note, undefined, `scenes.luz.note sigue en ${lang}`);
+      assert.ok(s.scenes.activa.note);
+      assert.match(s.app.traceAlt, lang === "es" ? /gato estilo anime/ : /anime-style cat/);
+    }
+  });
+
+  test("la escena de la mesa de luz no pinta nota (ni un párrafo vacío) y la de activa sí", () => {
+    const es = strings(base, "es");
+    assert.ok(!/<p class="fine">/.test(luzScene()), "la mesa de luz pinta una nota");
+    assert.ok(!html.includes("Solo para imágenes."));
+    const activa = /<section class="sc sc--activa[\s\S]*?<\/section>/.exec(html)[0];
+    assert.ok(activa.includes(`<p class="fine">${es.scenes.activa.note}</p>`));
   });
 });

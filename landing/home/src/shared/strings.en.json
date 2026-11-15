@@ -47,7 +47,6 @@
     "luz": {
       "title": "Your screen,|*a light table*",
       "lead": "Turn on “Lock zoom” and the photo stays put: no zooming, no scrolling. Lay a sheet of paper on top and trace.",
-      "note": "Images only.",
       "switch": "Lock zoom",
       "locked": "Zoom locked"
     },
@@ -89,8 +88,7 @@
       "Add the yoghurt and oil, then the flour and baking powder.",
       "Pour into a greased tin and bake for about 35 minutes."
     ],
-    "traceTask": "Draw the player for the tournament poster",
-    "traceAlt": "A task with a picture of a basketball player to trace",
+    "traceAlt": "A task with a picture of an anime-style cat to trace",
     "listAlt": "The list of all tasks in the app",
     "iconAlt": "{app} app icon",
     "golfTask": "Saturday tournament: the course map",

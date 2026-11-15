@@ -7,7 +7,7 @@ import { icon } from '../shared/icons.js';
 import { esc } from '../shared/html.js';
 import { copyHtml, storesHtml, footerHtml, headerHtml, hintHtml } from '../shared/chrome.js';
 import { phone, textTask, photoTask, pdfTask, webTask, listScreen, listRow, settingRow } from './app-ui.js';
-import { golfMap, lineupPoster, bookCover, routeMap, athlete } from './art.js';
+import { golfMap, lineupPoster, bookCover, routeMap, cat } from './art.js';
 import { holdHtml } from './hold.js';
 
 const COLORS = [NOTE.yellow, NOTE.blue, NOTE.pink, NOTE.green, NOTE.orange];
@@ -22,10 +22,10 @@ const ROWS = [
   [15, 83, 4, 260, 330, 0], [86, 86, -5, -140, 300, 0],
 ];
 
-/** La tarea de la mesa de luz: la imagen de un jugador de baloncesto y, encima, el papel donde se calca. */
+/** La tarea de la mesa de luz: la imagen de un gato estilo anime (sin título) y, encima, el papel donde se calca. */
 function traceScreen() {
-  const { art, trace } = athlete();
-  return photoTask({ caption: t('app.traceTask'), art, before: `<div class="lightbox__paper">${trace}</div>` });
+  const { art, trace } = cat();
+  return photoTask({ art, before: `<div class="lightbox__paper">${trace}</div>` });
 }
 
 const fine = (key) => `<p class="fine">${esc(t(key))}</p>`;
@@ -76,7 +76,7 @@ const BUILD = {
         <div class="table__tilt">${phone(traceScreen(), { label: t('app.traceAlt') })}</div>
         ${settingRow(t('scenes.luz.switch'), t('app.lockZoomHint'), 'magnifierMinus', { on: true })}
       </div>
-      ${copyHtml(s, i, fine('scenes.luz.note'))}
+      ${copyHtml(s, i)}
     </div>`,
 
   fin: (s, i, tasks) => `

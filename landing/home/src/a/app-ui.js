@@ -40,7 +40,7 @@ export function textTask(text, color = NOTE.yellow, { time } = {}) {
 
 /**
  * Tarea con imagen (o varias, con los puntos del carrusel). La imagen ocupa toda la pantalla,
- * de arriba abajo, y el texto de la tarea va en la barra negra. `before` va debajo de la imagen.
+ * de arriba abajo, y el texto de la tarea va en la barra negra (sin `caption`, no hay barra). `before` va debajo de la imagen.
  */
 export function photoTask({ art, caption, dots = 0, time, before = '' }) {
   const carousel = dots > 1
@@ -49,7 +49,7 @@ export function photoTask({ art, caption, dots = 0, time, before = '' }) {
   return `<div class="app app--media">
     ${before}<div class="app__media">${art}</div>${carousel}
     ${statusBar(time)}${chromeBar(true)}
-    <p class="app__caption">${esc(caption)}</p>
+    ${caption ? `<p class="app__caption">${esc(caption)}</p>` : ''}
     ${ctaButton()}${home}</div>`;
 }
 

@@ -47,7 +47,6 @@
     "luz": {
       "title": "Tu pantalla,|*mesa de luz*",
       "lead": "Activa «Bloquear zoom» y la foto se queda quieta: ni se amplía ni se desplaza. Pon un papel encima y calca.",
-      "note": "Solo para imágenes.",
       "switch": "Bloquear zoom",
       "locked": "Zoom bloqueado"
     },
@@ -89,8 +88,7 @@
       "Añade el yogur y el aceite, y después la harina con la levadura.",
       "Vierte en un molde engrasado y hornea unos 35 minutos."
     ],
-    "traceTask": "Dibujar al jugador para el cartel del torneo",
-    "traceAlt": "Tarea con la imagen de un jugador de baloncesto para calcar",
+    "traceAlt": "Tarea con la imagen de un gato estilo anime para calcar",
     "listAlt": "La lista de todas las tareas en la app",
     "iconAlt": "Icono de la app {app}",
     "golfTask": "Torneo del sábado: recorrido del campo",
