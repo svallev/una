@@ -1,6 +1,6 @@
 # ADR-0009: Monorepo: app en `app/` y la landing futura en `landing/`
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado. **Enmendado por el ADR-0027** (2026-11-13, spec 025): «ningún script de terceros» se lee «ningún programa servido desde otro origen ni que envíe datos; el código de terceros que vaya al navegador se decide en un ADR». La página de inicio de `landing/` lleva GSAP y Lenis, del propio origen; las otras cuatro páginas siguen sin JavaScript ni dependencias
 - **Fecha:** 2026-09-24
 
 ## Contexto
@@ -21,7 +21,7 @@ Un único repositorio:
 
 - Los tokens de `design/tokens.json` generan Dart para la app y variables CSS para la landing.
 - CI con filtros por ruta: los jobs de la app solo se ejecutan si cambian `app/**`, `design/**` o los workflows.
-- La landing tendrá su propia política de cabeceras y **ningún script de terceros** (sin analítica por defecto; si algún día la hay, con consentimiento y sin cookies).
+- La landing tendrá su propia política de cabeceras y **ningún script de terceros** (sin analítica por defecto; si algún día la hay, con consentimiento y sin cookies). **[Enmienda, ADR-0027]** Ver el estado: ningún programa de otro origen ni que envíe datos.
 
 ## Motivos
 
