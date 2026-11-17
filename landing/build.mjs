@@ -1,13 +1,14 @@
-// Construye la web de la app (spec 023, CA-023-03, 04, 13 a 17): la página de inicio, la política de
-// privacidad, las licencias de terceros, la Ayuda y la página de error, en español e inglés en la misma
-// dirección, sin JavaScript.
+// Construye la web de la app (spec 023, CA-023-03, 04, 13 a 17): la política de privacidad, las licencias de
+// terceros, la Ayuda y la página de error, en español e inglés en la misma dirección, sin JavaScript; y, con
+// Vite, la página de inicio (spec 025, ADR-0027) desde `landing/home/`.
 //
-//   node landing/build.mjs      escribe landing/dist/
+//   npm ci --ignore-scripts      (una vez, en landing/)
+//   node landing/build.mjs       escribe landing/dist/
 //
-// Solo módulos de Node, sin `package.json` ni dependencias (P11). Lee `app/identity.yaml` (el nombre,
+// Las cuatro páginas usan solo módulos de Node (P11); Vite se carga solo para la de inicio. Lee `app/identity.yaml` (el nombre,
 // P7), `design/tokens.json` (colores, fuentes y medidas, P12), los títulos de las ARB, el texto de la
 // política (`docs/legal/privacy-policy.md`, la única copia, CA-023-04), el archivo de avisos de terceros
-// (`landing/third-party-notices.txt`, CA-023-16) y `landing/src/` (textos y Ayuda). Falla cerrada:
+// (`landing/third-party-notices.txt`, CA-023-16), el de la propia web (`landing/web-notices.txt`, CA-025-18) y `landing/src/` (textos y Ayuda). Falla cerrada:
 // lo que no entiende (Markdown fuera del subconjunto, un enlace raro, un `{…}` sin sustituir, una
 // clave que falta) detiene la construcción en lugar de publicar algo distinto de lo escrito.
 import {
@@ -44,9 +45,11 @@ export function defaultPaths(repoRoot = REPO_ROOT) {
     helpEs: join(landingDir, "src/help.es.md"),
     helpEn: join(landingDir, "src/help.en.md"),
     notices: join(landingDir, "third-party-notices.txt"),
+    webNotices: join(landingDir, "web-notices.txt"),
     buildFile: join(landingDir, "build.mjs"),
     vercelJson: join(landingDir, "vercel.json"),
     fontsDir: join(repoRoot, "app/assets/fonts"),
+    homeDir: join(landingDir, "home"),
     out: join(landingDir, "dist"),
   };
 }
@@ -565,12 +568,26 @@ export function parseNotices(text, label = "third-party-notices.txt") {
   return { ...header, body };
 }
 
+/**
+ * Los avisos del código de terceros de la propia web (spec 025, CA-025-18): `landing/web-notices.txt`, escrito a
+ * mano, en inglés. Empieza por «Third-party code in this website» y nombra cada paquete que va al navegador en
+ * una línea `Package: <nombre> <versión>` (los tests la cruzan con `package.json`). Devuelve `{ body, packages }`.
+ */
+export function parseWebNotices(text, label = "web-notices.txt") {
+  const body = norm(text);
+  if (!body.trim()) throw new BuildError(`${label}: está vacío`);
+  if (!body.startsWith("Third-party code in this website\n")) {
+    throw new BuildError(`${label}: tiene que empezar por la línea «Third-party code in this website»`);
+  }
+  const packages = [...body.matchAll(/^Package: (\S+) (\S+)/gm)].map((m) => ({ name: m[1], version: m[2] }));
+  if (packages.length === 0) throw new BuildError(`${label}: no nombra ningún paquete (líneas «Package: <nombre> <versión>»)`);
+  return { body, packages };
+}
+
 // ─── Textos (strings.json) ───────────────────────────────────────────────────────────────────────
 
 /** Las claves de `strings.json` y los marcadores que admite cada una (por idioma). */
 const STRING_KEYS = {
-  webHomeTitle: { es: ["appName"], en: ["appName"] },
-  webHomeIntro: { es: [], en: [] },
   webPageTitle: { es: ["página", "appName"], en: ["page", "appName"] },
   webNotFoundTitle: { es: [], en: [] },
   webNotFoundBody: { es: [], en: [] },
@@ -582,6 +599,8 @@ const STRING_KEYS = {
   webLicensesInApp: { es: [], en: [] },
   webLicensesFile: { es: [], en: [] },
   webLanguageName: { es: [], en: [] },
+  // Título del bloque de avisos del código de la web en /licenses (spec 025, CA-025-18).
+  licensesWebTitle: { es: [], en: [] },
 };
 const LANG_ONLY = { webSwitchToSpanish: { es: [] }, webSwitchToEnglish: { en: [] }, webNoticesTitle: { en: [] } };
 
@@ -637,7 +656,10 @@ export const FONT_FILES = [
 ];
 export const FONT_DIRS = [...new Set(FONT_FILES.map((f) => f.dir))];
 
-/** `tokens.css`: las variables de `design/tokens.json` (rem para texto y espacios) y las fuentes. */
+/**
+ * `tokens.css`: las variables de `design/tokens.json` (rem para texto y espacios) y las fuentes (las cuatro
+ * páginas sin JavaScript; la de inicio trae sus propios estilos, los de la maqueta).
+ */
 export function tokensCss(tokens) {
   const vars = [];
   const emit = (name, value) => vars.push(`  --${name}: ${value};`);
@@ -765,20 +787,7 @@ export function renderSite(paths) {
     files.set(file, shell(spec));
   };
 
-  // Inicio.
-  const homeTitle = fill(s.es.webHomeTitle, { appName: name });
-  const links = (lang) =>
-    ["privacy", "licenses", "help"]
-      .map((k) => `<li><a class="block-link" href="/${k}">${esc(arb[lang][k])}</a></li>`)
-      .join("\n");
-  const homeBody = (lang) =>
-    `${langHeading(lang, s)}\n<p>${esc(s[lang].webHomeIntro)}</p>\n<ul class="links">\n${links(lang)}\n</ul>`;
-  page("index.html", {
-    title: homeTitle,
-    h1: esc(homeTitle),
-    main: `${section("es", s, homeBody("es"))}\n${section("en", s, homeBody("en"))}`,
-    footer: footer(s),
-  });
+  // La página de inicio ya no sale de aquí: la construye Vite desde `landing/home/` (spec 025, `buildHome`).
 
   // Política: el texto es el de docs/legal/privacy-policy.md (CA-023-04).
   const policy = policyFragments(readText(paths.policy, "privacy-policy.md"), name);
@@ -814,11 +823,15 @@ export function renderSite(paths) {
       `<p>${esc(s[lang].webLicensesInApp)}</p>`,
       `<p><a class="block-link" href="/${NOTICES_FILE}">${esc(s[lang].webLicensesFile)}</a></p>`,
     ].join("\n");
+  // El código de la propia web (spec 025, CA-025-18): corto, antes de los avisos de la app, con el título en los
+  // dos idiomas y el texto en inglés.
+  const webNotices = parseWebNotices(readText(paths.webNotices, "web-notices.txt"));
+  const webSection = `<section aria-labelledby="web-code">\n<h2 id="web-code">${bilingualH1(s.es.licensesWebTitle, s.en.licensesWebTitle)}</h2>\n<pre lang="en">${esc(webNotices.body)}</pre>\n</section>`;
   const noticesSection = `<section lang="en" aria-labelledby="notices">\n<h2 id="notices">${esc(s.en.webNoticesTitle)}</h2>\n<pre>${esc(norm(notices.body))}</pre>\n</section>`;
   page("licenses/index.html", {
     title: pageTitle(s, name, arb.es.licenses, arb.en.licenses),
     h1: bilingualH1(arb.es.licenses, arb.en.licenses),
-    main: `${section("es", s, licensesBody("es"))}\n${section("en", s, licensesBody("en"))}\n${noticesSection}`,
+    main: `${section("es", s, licensesBody("es"))}\n${section("en", s, licensesBody("en"))}\n${webSection}\n${noticesSection}`,
     footer: footer(s, { backHome: true }),
   });
   files.set(NOTICES_FILE, noticesText);
@@ -895,11 +908,128 @@ export function build(paths = defaultPaths(), { env = process.env } = {}) {
   return { warnings, files: [...files.keys(), ...copies.map(([, to]) => to.slice(paths.out.length + 1))] };
 }
 
+// ─── La página de inicio (spec 025) ──────────────────────────────────────────────────────────────
+
+/** La carpeta de lo generado para Vite (fuera de git): `landing/home/gen/`. */
+export const homeGenDir = (paths) => join(paths.homeDir, "gen");
+
+/**
+ * Las direcciones de las fichas de las tiendas (spec 025, CA-025-08; plan §6.1), de `identity.yaml`: las dos
+ * claves tienen que estar; vacía (`""`) quiere decir «sin ficha todavía» (`null`). Si no está vacía, tiene que
+ * ser `https://` con el anfitrión exacto de su tienda, sin usuario, contraseña ni puerto, y sin caracteres que
+ * no van en una dirección; lo demás falla. Se mira el texto crudo, no solo lo que normaliza `URL` (que
+ * decodifica `%` en el anfitrión y quita `:443`).
+ */
+export const STORE_HOSTS = { appStoreUrl: "apps.apple.com", googlePlayUrl: "play.google.com" };
+
+export function storeUrls(identity, label = "identity.yaml") {
+  const out = {};
+  for (const [key, host] of Object.entries(STORE_HOSTS)) {
+    const value = identity[key];
+    if (typeof value !== "string") throw new BuildError(`${label}: falta «${key}» (vacía, "", hasta que haya ficha)`);
+    if (value === "") {
+      out[key] = null;
+      continue;
+    }
+    const bad = (why) => new BuildError(`${label}: «${key}» no es una dirección de ficha de ${host} (${why}): «${value}»`);
+    if (/[\s"'<>`\\{}|^\u0000-\u001f\u007f-\uffff]/.test(value)) throw bad("caracteres no válidos");
+    const raw = /^https:\/\/([^/?#]*)(?:[/?#]|$)/.exec(value);
+    if (!raw) throw bad("tiene que empezar por https://");
+    if (raw[1] !== host) throw bad(`el anfitrión tiene que ser exactamente ${host}, sin usuario ni puerto`);
+    let url;
+    try {
+      url = new URL(value);
+    } catch {
+      throw bad("no se puede leer");
+    }
+    if (url.protocol !== "https:" || url.hostname !== host || url.port !== "" || url.username !== "" || url.password !== "") {
+      throw bad(`el anfitrión tiene que ser exactamente ${host}, sin usuario ni puerto`);
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * `gen/site.json`, lo que la página de inicio toma de la identidad (`identity.yaml`): el nombre, el logotipo y
+ * las direcciones de las tiendas (`null` sin ficha).
+ */
+export function homeSite(paths) {
+  const identity = readIdentity(readText(paths.identity, "identity.yaml"), basename(paths.identity));
+  return {
+    appName: identity.displayName,
+    wordmark: identity.wordmark,
+    stores: storeUrls(identity, basename(paths.identity)),
+  };
+}
+
+/** Escribe `landing/home/gen/site.json` (lo único que Vite necesita generado). Devuelve la lista de archivos. */
+export function writeHomeGen(paths = defaultPaths()) {
+  const gen = homeGenDir(paths);
+  rmSync(gen, { recursive: true, force: true });
+  mkdirSync(gen, { recursive: true });
+  writeFileSync(join(gen, "site.json"), `${JSON.stringify(homeSite(paths), null, 2)}\n`);
+  return ["site.json"];
+}
+
+/**
+ * Construye la página de inicio con Vite (por su API) dentro de `paths.out`, después de `build`, que ya vació
+ * la carpeta y escribió las otras cuatro páginas. La configuración es la de `landing/home/vite.config.mjs`,
+ * que escribe en `landing/home/../dist`: tiene que ser `paths.out`.
+ */
+export async function buildHome(paths = defaultPaths()) {
+  if (resolve(paths.homeDir, "..", "dist") !== resolve(paths.out)) {
+    throw new BuildError(`la página de inicio se construye en ${resolve(paths.homeDir, "..", "dist")}, no en ${paths.out}`);
+  }
+  writeHomeGen(paths);
+  let vite;
+  try {
+    vite = await import("vite");
+  } catch (e) {
+    throw new BuildError(`no se puede cargar Vite (¿falta «npm ci --ignore-scripts» en landing/?): ${e.message}`);
+  }
+  const config = (await import(pathToFileURL(join(paths.homeDir, "vite.config.mjs")).href)).default;
+  await vite.build({ ...config, configFile: false });
+  const index = join(paths.out, "index.html");
+  writeFileSync(index, await fillHomePage(readFileSync(index, "utf8"), paths));
+}
+
+/** La marca de `landing/home/index.html` donde va la página entera. */
+export const HOME_PAGE_MARK = "<!-- page -->";
+
+/**
+ * Escribe en el `index.html` que deja Vite la página entera en el idioma por defecto (cabecera, las siete
+ * escenas y el pie) y su idioma, título y descripción, con los mismos constructores que usa el programa
+ * (`landing/home/src/a/page.js`): sin JavaScript se ve la versión apilada; con él, el programa la anima.
+ * Necesita `gen/site.json` (`writeHomeGen`).
+ */
+export async function fillHomePage(html, paths = defaultPaths()) {
+  const from = (...path) => import(pathToFileURL(join(paths.homeDir, "src", ...path)).href);
+  const page = await from("a", "page.js");
+  // El escape de la página de inicio, el mismo que usan sus constructores.
+  const { esc } = await from("shared", "html.js");
+  const meta = page.pageMeta();
+  const once = (text, pattern, replacement, what) => {
+    let n = 0;
+    const out = text.replace(pattern, () => {
+      n += 1;
+      return replacement;
+    });
+    if (n !== 1) throw new BuildError(`landing/home/index.html: tiene que haber un(a) ${what} y hay ${n}`);
+    return out;
+  };
+  let out = once(html, /<html lang="[^"]*">/g, `<html lang="${esc(meta.lang)}">`, '<html lang="…">');
+  out = once(out, /<title>[^<]*<\/title>/g, `<title>${esc(meta.title)}</title>`, "<title>");
+  out = once(out, /<meta name="description" content="[^"]*">/g, `<meta name="description" content="${esc(meta.description)}">`, '<meta name="description">');
+  return once(out, new RegExp(HOME_PAGE_MARK, "g"), page.pageHtml(), `marca ${HOME_PAGE_MARK}`);
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const { warnings, files } = build();
     for (const w of warnings) console.warn(w);
-    console.log(`Web construida en landing/dist (${files.length} archivos).`);
+    await buildHome();
+    console.log(`Web construida en landing/dist (${files.length} archivos y la página de inicio).`);
   } catch (e) {
     if (!(e instanceof BuildError)) throw e;
     console.error(`error: ${e.message}`);

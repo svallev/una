@@ -1,0 +1,147 @@
+/* Base compartida de las dos versiones. Identidad de la app (Archivo + Space Mono, radio 0,
+   bordes de 3 px, sombras duras, notas adhesivas) sobre fondos vivos y oscuros por escena. */
+@font-face { font-family: "Archivo"; src: url("/fonts/Archivo-Variable.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; }
+@font-face { font-family: "Space Mono"; src: url("/fonts/SpaceMono-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Space Mono"; src: url("/fonts/SpaceMono-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  color-scheme: dark;
+  --ink: #111111;
+  --cream: #F4F1EA;
+  --surface: #FFFFFF;
+  --fiber: #FFFDF3;
+  --yellow: #FFE55C;
+  --pink: #FF9EC4;
+  --blue: #8FD3F4;
+  --green: #A6E88F;
+  --orange: #FFB870;
+  --switch-on: #FFDC58;
+  --accent: var(--yellow);
+  --face: "Archivo", system-ui, sans-serif;
+  --mono: "Space Mono", ui-monospace, monospace;
+  --margin: clamp(16px, 2.8vw, 40px);
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-stamp: cubic-bezier(0.2, 1.6, 0.4, 1);
+  --ease-confetti: cubic-bezier(0.15, 0.7, 0.3, 1);
+  /* Algo que llega desde lejos: rápido al principio y frena al colocarse */
+  --ease-depth: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+html, body { margin: 0; background: var(--ink); color: var(--cream); font-family: var(--face); -webkit-font-smoothing: antialiased; }
+body { font-size: 18px; line-height: 1.5; overflow-x: clip; }
+img { display: block; max-width: 100%; height: auto; }
+h1, h2, p { margin: 0; }
+a { color: inherit; text-underline-offset: 0.2em; }
+button { font: inherit; color: inherit; }
+::selection { background: var(--yellow); color: var(--ink); }
+:focus-visible { outline: 3px solid var(--cream); outline-offset: 3px; }
+/* La página llega escrita (versión apilada, la que se ve sin JavaScript). Con JavaScript no se pinta hasta
+   que el programa la monta (`main.js` pone .is-ready), para no ver un instante la versión apilada. Si el
+   programa no arranca (error, bloqueado), a los 2 s se enseña igualmente la versión apilada: nunca en blanco. */
+@media (scripting: enabled) { html:not(.is-ready) body { visibility: hidden; animation: reveal 0s 2s forwards; } }
+@keyframes reveal { to { visibility: visible; } }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ic { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; flex: none; }
+
+/* Cabecera fija */
+.top { position: fixed; z-index: 50; inset: 0 0 auto 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: max(16px, env(safe-area-inset-top, 0px)) max(var(--margin), env(safe-area-inset-right, 0px)) 16px max(var(--margin), env(safe-area-inset-left, 0px)); pointer-events: none; }
+.top > * { pointer-events: auto; }
+.top__right { display: flex; align-items: center; gap: 14px; }
+.logo { font-size: 32px; font-weight: 900; letter-spacing: -0.04em; line-height: 1; text-decoration: none; }
+.langs { display: flex; border: 3px solid var(--ink); background: var(--cream); box-shadow: 3px 3px 0 var(--ink); }
+.langs button { min-width: 44px; min-height: 42px; border: 0; background: none; color: var(--ink); font: 700 14px/1 var(--mono); letter-spacing: 0.06em; cursor: pointer; }
+.langs button[aria-pressed="true"] { background: var(--ink); color: var(--cream); }
+/* Zona de toque de al menos 44 × 44 (CA-025-15) sin cambiar lo que se ve: un `::after` centrado y transparente */
+.logo, .langs button, .end a { position: relative; }
+.logo::after, .langs button::after, .end a::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+.btn { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; background: var(--accent); color: var(--ink); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); font: 800 16px/1 var(--face); text-decoration: none; transition: transform 80ms ease, box-shadow 80ms ease, background-color 400ms ease; }
+.btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+/* El texto del botón se esconde como `.vh`, no con `display: none`: sigue siendo su nombre para el lector */
+@media (max-width: 520px) { .btn span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .btn { padding: 0 12px; } .logo { font-size: 28px; } }
+
+/* Titulares: Archivo estrecho y negro, en mayúsculas; la palabra clave va en 3D */
+.big { margin: 0; text-transform: uppercase; font-weight: 900; font-stretch: 62%; font-size: clamp(52px, 9vw, 164px); line-height: 0.88; letter-spacing: -0.005em; text-align: center; }
+.ln { display: block; }
+.ln__i { display: inline-block; }
+.x3d { display: inline-block; color: var(--c, var(--yellow));
+  text-shadow: 0.012em 0.012em 0 var(--ink), 0.024em 0.024em 0 var(--ink), 0.036em 0.036em 0 var(--ink), 0.048em 0.048em 0 var(--ink), 0.06em 0.06em 0 var(--ink), 0.072em 0.072em 0 var(--ink), 0.084em 0.084em 0 var(--ink), 0.096em 0.096em 0 var(--ink); }
+.lead { margin: 26px auto 0; max-width: 36ch; text-align: center; font-size: clamp(17px, 1.45vw, 22px); line-height: 1.45; font-weight: 500; text-wrap: pretty; }
+.fine { margin-top: 14px; max-width: 38ch; font-family: var(--mono); font-size: 13px; line-height: 1.5; opacity: 0.92; }
+.copy { position: relative; z-index: 4; display: flex; flex-direction: column; align-items: center; }
+.extras { margin-top: 26px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+/* Insignias oficiales de las tiendas (no se recolorean ni se deforman) */
+.stores { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.stores__soon { font: 700 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+.stores__row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+/* Rótulos de texto de las tiendas (sin insignias hasta que haya ficha), con la forma de una insignia */
+.badge { display: flex; align-items: center; justify-content: center; height: 52px; min-width: 156px; padding: 0 20px; border: 1.5px solid #A6A6A6; border-radius: 9px; background: #000000; color: #FFFFFF; font: 700 19px/1 var(--face); letter-spacing: -0.01em; white-space: nowrap; text-decoration: none; transition: transform 160ms var(--ease-standard); }
+a.badge:hover { transform: translateY(-2px); }
+a.badge:active { transform: translateY(1px); }
+a.badge:focus-visible { outline-offset: 4px; }
+.badge.is-soon { cursor: default; }
+.split .stores { align-items: flex-start; }
+.split .stores__row { justify-content: flex-start; }
+
+/* Piezas de la app */
+.note { width: var(--w, 150px); aspect-ratio: 1; padding: 0.7em; background: var(--c, var(--yellow)); color: var(--ink); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); display: flex; flex-direction: column; justify-content: space-between; font-size: var(--fs, 15px); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
+.note b { font-size: 0.8em; font-weight: 900; letter-spacing: -0.04em; }
+.seal { width: var(--w, 96px); aspect-ratio: 1; background: var(--ink); border: 3px solid var(--cream); box-shadow: 6px 6px 0 var(--c, var(--yellow)); display: grid; place-items: center; }
+.seal svg { width: 58%; height: 58%; fill: none; stroke: var(--cream); stroke-width: 3.2; stroke-linecap: square; }
+.card { width: var(--w, 220px); background: var(--cream); color: var(--ink); border: 3px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); overflow: hidden; }
+.card img { width: 100%; }
+.card__bar { display: flex; align-items: center; gap: 8px; padding: 7px 10px; font: 700 12px/1.2 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; background: var(--ink); color: var(--cream); }
+.card__bar .ic { width: 15px; height: 15px; }
+.card__doc { padding: 14px; font-size: 13px; line-height: 1.45; }
+.card__doc strong { display: block; font-size: 18px; margin-bottom: 6px; letter-spacing: -0.02em; line-height: 1.1; }
+.chip { display: inline-flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 14px; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); font-weight: 800; font-size: 15px; line-height: 1.1; }
+.chip .ic { width: 18px; height: 18px; }
+.sw { position: relative; flex: none; width: 46px; height: 28px; border: 3px solid var(--ink); border-radius: 8px; background: var(--cream); transition: background-color 140ms ease; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border: 2px solid var(--ink); border-radius: 4px; background: var(--switch-on); transition: transform 140ms var(--ease-standard), background-color 140ms ease; }
+.sw.is-on { background: var(--switch-on); }
+.sw.is-on::after { transform: translateX(18px); background: var(--cream); }
+.screen { width: var(--w, 280px); border: 4px solid var(--ink); box-shadow: 10px 10px 0 var(--ink); background: var(--ink); }
+
+/* Pie dentro de la última escena */
+.end { position: absolute; z-index: 6; left: var(--margin); right: var(--margin); bottom: max(18px, env(safe-area-inset-bottom, 0px)); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; font: 400 13px/1.4 var(--mono); }
+.end nav { display: flex; gap: 20px; }
+
+/* Escenas de fondo claro (amarillo, naranja): el texto va en tinta */
+.sc--ink { color: var(--ink); }
+.sc--ink :focus-visible { outline-color: var(--ink); }
+.top, .hint { transition: color 300ms ease; }
+[data-tone="ink"] .top, [data-tone="ink"] .hint { color: var(--ink); }
+[data-tone="ink"] .top :focus-visible { outline-color: var(--ink); }
+
+/* Pista de scroll */
+.hint { position: fixed; z-index: 40; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; font: 700 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; transition: opacity 300ms ease; }
+.hint.is-off { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) { .hint .ic { animation: nudge 1.4s ease-in-out infinite; } }
+@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+html:not(.fx) .hint { display: none; }
+@media (max-width: 760px) { .hint { display: none; } }
+
+/* Sin escenario (movimiento reducido o sin WebGL): cada escena es un panel con su fondo */
+.sc { position: relative; min-height: 100svh; display: grid; place-items: center; padding: 104px var(--margin) 72px; background: var(--bg); overflow: hidden; }
+.sc__inner { position: relative; width: 100%; display: grid; place-items: center; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: clamp(24px, 5vw, 88px); width: 100%; max-width: 1280px; }
+.split .big, .split .lead { text-align: left; }
+.split .lead { margin-left: 0; }
+.split .copy { align-items: flex-start; }
+.split .extras { justify-content: flex-start; }
+@media (max-width: 860px) {
+  .big { font-size: clamp(46px, 14.5vw, 96px); }
+  .split { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 22px; }
+  .split .big, .split .lead { text-align: center; }
+  .split .lead { margin-inline: auto; }
+  .split .copy { align-items: center; }
+  .split .extras { justify-content: center; }
+  .lead { margin-top: 16px; }
+  .extras, .stores { margin-top: 18px; }
+  .badge { height: 44px; min-width: 132px; padding: 0 16px; font-size: 16px; }
+  .stores__row { gap: 10px; }
+  .split .stores { align-items: center; }
+  .split .stores__row { justify-content: center; }
+}

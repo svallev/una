@@ -1,8 +1,8 @@
 # Plan técnico — Spec 025: Landing de producto
 
 - **Spec:** `specs/025-landing-de-producto/spec.md` (estado: Aprobada)
-- **ADR aplicables:** ADR-0027 (Vite, GSAP y Lenis; **Propuesto**, se acepta al aprobar este plan), ADR-0009 (enmendado por el 0027), ADR-0010 (Vercel), ADR-0026 (licencias de terceros)
-- **Estado del plan:** **Aprobado** (propietario, 2026-11-13, al responder P-025-1 a 7, §8 y §9; la spec quedó enmendada ese día). Revisado por `security-reviewer` (2 bloqueantes, 5 importantes y 6 menores) y `a11y-reviewer` (2 bloqueantes, 7 importantes y 4 menores) el 2026-11-13, todo aplicado o resuelto por el propietario. ADR-0027 **Aceptado** el mismo día (§4). Antes Borrador (2026-11-12).
+- **ADR aplicables:** ADR-0027 (Vite, GSAP y Lenis; **Aceptado** el 2026-11-13, al aprobar este plan), ADR-0009 (enmendado por el 0027), ADR-0010 (Vercel), ADR-0026 (licencias de terceros)
+- **Estado del plan:** **Enmendada por el propietario el 2026-11-13 durante la implementación** (la web se ve y se comporta como la maqueta; ver `tasks.md`, «Enmienda del propietario», que manda donde choque). **Aprobado** (propietario, 2026-11-13, al responder P-025-1 a 7, §8 y §9; la spec quedó enmendada ese día). Revisado por `security-reviewer` (2 bloqueantes, 5 importantes y 6 menores) y `a11y-reviewer` (2 bloqueantes, 7 importantes y 4 menores) el 2026-11-13, todo aplicado o resuelto por el propietario. ADR-0027 **Aceptado** el mismo día (§4). Antes Borrador (2026-11-12).
 - **Origen del código:** la maqueta `UnaWeb/www`, versión A (solo lectura): `a/index.html`, `src/a/*` y `src/shared/*` (unas 1.700 líneas). No entran `b/`, `src/b/`, `propuestas/`, `index.html` (el selector), `.agents/`, `skills-lock.json` ni `three`.
 
 ## 1. Resumen del enfoque
@@ -88,7 +88,7 @@ No hay base de datos. Lo que la spec pide que el plan diga:
 
 - **Tokens.** Grupo nuevo de primer nivel `landing` en `design/tokens.json` (no dentro de `color`), con los fondos `magenta` `#D4145A`, `magentaDeep` `#B8146E`, `orange` `#FF8A1F`, `yellow` `#FFD21F`, **los de la maqueta, sin cambios** (P-025-2). `validate-tokens` comprueba los pares de §6.2 y lleva el par `paperFiber`/`orange` como **salvedad con nombre** (2,31:1, solo titular), no como par válido. `gen_tokens.dart` solo lee los grupos que conoce, así que **`tokens.g.dart` no cambia** **[Suposición: T-025-02 lo confirma con `dart run tool/gen_tokens.dart --check`; si cambiase, se para]**. El resto de colores de la maqueta ya son tokens (`ink`, `paper`, `surface`, `paperFiber`, `switchOn` y la paleta `classic`).
 - **Identidad.** `googlePlayUrl` y `appStoreUrl` en `app/identity.yaml`, vacías (`""`) hasta F6. `gen_identity.dart` solo lee sus cinco claves obligatorias: **los generados de `app/` no cambian** **[Suposición: se confirma con `--check` en T-025-02]**. Tocar `identity.yaml` sí dispara los trabajos de la app en la CI (ya es así). `build.mjs` valida cada dirección (vacía, o `https:` del dominio de su tienda); cualquier otra cosa falla.
-- **Lo que guarda el navegador.** Una clave de `localStorage`, `lang`, con valor `es` o `en`; cualquier otro valor se ignora (CL-025-16). Nada más: ni `sessionStorage`, ni cookies.
+- **Lo que guarda el navegador.** Una clave de `localStorage`, **`una-lang`** (la de la maqueta; este plan decía `lang`, corregido en T-025-14), con valor `es` o `en`, escrita solo al pulsar ES/EN; cualquier otro valor se ignora (CL-025-16). Nada más: ni `sessionStorage`, ni cookies (`landing/home/src/shared/locale.js`).
 
 ## 4. Dependencias nuevas
 

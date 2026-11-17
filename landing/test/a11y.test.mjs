@@ -29,7 +29,9 @@ function fails(label, mutate, pattern) {
 
 const css = (w) => join(w.dist, "site.css");
 const privacy = (w) => join(w.dist, "privacy/index.html");
-const home = (w) => join(w.dist, "index.html");
+// La página de inicio la construye Vite desde la spec 025 y tiene sus propias reglas: los casos de estas
+// reglas, que eran sobre ella, van sobre la de error.
+const notFound = (w) => join(w.dist, "404.html");
 const addCss = (rule) => (w) => edit(css(w), (t) => `${t}\n${rule}\n`);
 
 test("CA-023-15: la web construida pasa", () => {
@@ -85,15 +87,15 @@ describe("CA-023-15: idioma, viewport, estructura", () => {
   const viewport = '<meta name="viewport" content="width=device-width, initial-scale=1">';
   fails("sin viewport", (w) => edit(privacy(w), (t) => t.replace(viewport, "")), /viewport/);
   fails("viewport con user-scalable=no", (w) => edit(privacy(w), (t) => t.replace("initial-scale=1", "initial-scale=1, user-scalable=no")), /viewport|user-scalable/);
-  fails("viewport con maximum-scale", (w) => edit(home(w), (t) => t.replace("initial-scale=1", "initial-scale=1, maximum-scale=1")), /viewport|maximum-scale/);
-  fails("viewport sin width=device-width", (w) => edit(home(w), (t) => t.replace("width=device-width, ", "")), /viewport/);
-  fails("el <title> no es el esperado", (w) => edit(home(w), (t) => t.replace(/<title>[^<]*<\/title>/, "<title>Otra cosa</title>")), /title/);
-  fails("un enlace javascript:", (w) => edit(home(w), (t) => t.replace('href="/help"', 'href="javascript:alert(1)"')), /javascript/);
-  fails("un <link> que no es una hoja de estilo", (w) => edit(home(w), (t) => t.replace("</head>", '<link rel="preload" href="/site.css"></head>')), /link/);
-  fails("una tercera mitad", (w) => edit(home(w), (t) => t.replace("</main>", '<section lang="fr" aria-labelledby="fr"><p>x</p></section></main>')), /section/);
-  fails("una mitad sin aria-labelledby", (w) => edit(home(w), (t) => t.replace('<section lang="en" aria-labelledby="en">', '<section lang="en">')), /aria-labelledby/);
-  fails("sin enlace al español en la mitad inglesa", (w) => edit(home(w), (t) => t.replace(/<p><a class="block-link" href="#es"[^]*?<\/p>\n/, "")), /#es/);
-  fails("el enlace al español sin lang", (w) => edit(home(w), (t) => t.replace('href="#es" lang="es"', 'href="#es"')), /lang/);
+  fails("viewport con maximum-scale", (w) => edit(notFound(w), (t) => t.replace("initial-scale=1", "initial-scale=1, maximum-scale=1")), /viewport|maximum-scale/);
+  fails("viewport sin width=device-width", (w) => edit(notFound(w), (t) => t.replace("width=device-width, ", "")), /viewport/);
+  fails("el <title> no es el esperado", (w) => edit(notFound(w), (t) => t.replace(/<title>[^<]*<\/title>/, "<title>Otra cosa</title>")), /title/);
+  fails("un enlace javascript:", (w) => edit(notFound(w), (t) => t.replace('href="/"', 'href="javascript:alert(1)"')), /javascript/);
+  fails("un <link> que no es una hoja de estilo", (w) => edit(notFound(w), (t) => t.replace("</head>", '<link rel="preload" href="/site.css"></head>')), /link/);
+  fails("una tercera mitad", (w) => edit(notFound(w), (t) => t.replace("</main>", '<section lang="fr" aria-labelledby="fr"><p>x</p></section></main>')), /section/);
+  fails("una mitad sin aria-labelledby", (w) => edit(notFound(w), (t) => t.replace('<section lang="en" aria-labelledby="en">', '<section lang="en">')), /aria-labelledby/);
+  fails("sin enlace al español en la mitad inglesa", (w) => edit(notFound(w), (t) => t.replace(/<p><a class="block-link" href="#es"[^]*?<\/p>\n/, "")), /#es/);
+  fails("el enlace al español sin lang", (w) => edit(notFound(w), (t) => t.replace('href="#es" lang="es"', 'href="#es"')), /lang/);
   fails("el mismo salto de nivel en las dos mitades", (w) => edit(privacy(w), (t) => t.replaceAll("<h3>", "<h5>").replaceAll("</h3>", "</h5>")), /salta/);
   fails("un encabezado a otro nivel solo en la mitad inglesa (sin saltarse ninguno)", (w) => edit(privacy(w), (t) => {
     const i = t.indexOf('<section lang="en"');
@@ -101,27 +103,27 @@ describe("CA-023-15: idioma, viewport, estructura", () => {
   }), /mismo nivel|encabezados de la mitad inglesa/);
   fails("sin lang en la página", (w) => edit(privacy(w), (t) => t.replace('<html lang="es">', "<html>")), /lang/);
   fails("la mitad inglesa sin lang", (w) => edit(privacy(w), (t) => t.replace('<section lang="en" aria-labelledby="en">', '<section aria-labelledby="en">')), /lang/);
-  fails("la mitad española sin lang", (w) => edit(home(w), (t) => t.replace('<section lang="es" aria-labelledby="es">', '<section aria-labelledby="es">')), /lang/);
+  fails("la mitad española sin lang", (w) => edit(notFound(w), (t) => t.replace('<section lang="es" aria-labelledby="es">', '<section aria-labelledby="es">')), /lang/);
   fails("el enlace al inglés sin lang", (w) => edit(privacy(w), (t) => t.replace('href="#en" lang="en"', 'href="#en"')), /enlace|lang/);
-  fails("sin enlace al inglés", (w) => edit(home(w), (t) => t.replace(/<p><a class="block-link" href="#en"[^]*?<\/p>\n/, "")), /enlace.*#en|#en/);
-  fails("el enlace al inglés va a otro sitio", (w) => edit(home(w), (t) => t.replace('href="#en"', 'href="#es"')), /enlace|#en/);
+  fails("sin enlace al inglés", (w) => edit(notFound(w), (t) => t.replace(/<p><a class="block-link" href="#en"[^]*?<\/p>\n/, "")), /enlace.*#en|#en/);
+  fails("el enlace al inglés va a otro sitio", (w) => edit(notFound(w), (t) => t.replace('href="#en"', 'href="#es"')), /enlace|#en/);
   fails("el destino del salto no existe", (w) => edit(privacy(w), (t) => t.replace('<h2 id="en"', '<h2 id="ingles"')), /id="en"|destino/);
   fails("dos <h1>", (w) => edit(privacy(w), (t) => t.replace("<h3>", "<h1>Otro</h1><h3>")), /h1/);
-  fails("sin <h1>", (w) => edit(home(w), (t) => t.replace("<h1>", "<h2>").replace("</h1>", "</h2>")), /h1/);
+  fails("sin <h1>", (w) => edit(notFound(w), (t) => t.replace("<h1>", "<h2>").replace("</h1>", "</h2>")), /h1/);
   fails("un salto de nivel de encabezado", (w) => edit(privacy(w), (t) => t.replace("<h3>", "<h5>").replace("</h3>", "</h5>")), /salta|nivel/);
   fails("la mitad inglesa con otro desplazamiento de encabezados", (w) => edit(privacy(w), (t) => {
     const i = t.indexOf('<section lang="en"');
     const rest = t.slice(i).replace(/<h3>/g, "<h4>").replace(/<\/h3>/g, "</h4>");
     return t.slice(0, i) + rest;
   }), /salta|nivel|desplaza|encabezados/);
-  fails("sin <main>", (w) => edit(home(w), (t) => t.replace("<main>", "<div>").replace("</main>", "</div>")), /main/);
-  fails("sin <footer>", (w) => edit(home(w), (t) => t.replace("<footer>", "<div>").replace("</footer>", "</div>")), /footer/);
-  fails("sin <header>", (w) => edit(home(w), (t) => t.replace("<header>", "<div>").replace("</header>", "</div>")), /header/);
-  fails("dos <main>", (w) => edit(home(w), (t) => t.replace("</main>", "</main><main></main>")), /main/);
+  fails("sin <main>", (w) => edit(notFound(w), (t) => t.replace("<main>", "<div>").replace("</main>", "</div>")), /main/);
+  fails("sin <footer>", (w) => edit(notFound(w), (t) => t.replace("<footer>", "<div>").replace("</footer>", "</div>")), /footer/);
+  fails("sin <header>", (w) => edit(notFound(w), (t) => t.replace("<header>", "<div>").replace("</header>", "</div>")), /header/);
+  fails("dos <main>", (w) => edit(notFound(w), (t) => t.replace("</main>", "</main><main></main>")), /main/);
   fails("el título de la política no es el de la ARB", (w) => edit(privacy(w), (t) => t.replace('<span lang="es">Política de privacidad</span>', '<span lang="es">Privacidad</span>')), /ARB|título/i);
   fails("el título de la política sin sus idiomas", (w) => edit(privacy(w), (t) => t.replace('<span lang="en">Privacy policy</span>', "Privacy policy")), /ARB|título|lang/i);
-  fails("sin <title>", (w) => edit(home(w), (t) => t.replace(/<title>[^<]*<\/title>/, "")), /title/);
-  fails("la mitad española no va primero", (w) => edit(home(w), (t) => {
+  fails("sin <title>", (w) => edit(notFound(w), (t) => t.replace(/<title>[^<]*<\/title>/, "")), /title/);
+  fails("la mitad española no va primero", (w) => edit(notFound(w), (t) => {
     const es = t.indexOf('<section lang="es"');
     const en = t.indexOf('<section lang="en"');
     const mainEnd = t.indexOf("</main>");

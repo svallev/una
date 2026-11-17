@@ -1,6 +1,6 @@
 # ADR-0027: La landing de producto se construye con Vite y lleva GSAP y Lenis al navegador
 
-- **Estado:** **Aceptado** (propietario, 2026-11-13, al aprobar el plan de la spec 025). Comprobación previa hecha el 2026-11-12: ningún paquete hace peticiones ni guarda nada (`specs/025-landing-de-producto/plan.md` §4). Antes Propuesto (2026-11-12)
+- **Estado:** **Aceptado** (propietario, 2026-11-13, al aprobar el plan de la spec 025). Comprobación previa hecha el 2026-11-12: ningún paquete hace peticiones ni guarda nada (`specs/025-landing-de-producto/plan.md` §4). Antes Propuesto (2026-11-12). **Al implementar (enmiendas del propietario del 2026-11-13, `specs/025-landing-de-producto/tasks.md`):** la página de inicio es la maqueta copiada tal cual (`landing/home/`), así que su CSP admite estilos en línea (`style-src 'self' 'unsafe-inline'`; programas, solo del propio origen) y no toma de la app ni tokens ni textos (solo nombre, logotipo y direcciones de las tiendas, de `app/identity.yaml`); `check.mjs` le aplica un juego mínimo de reglas. La decisión (opción 4, versiones fijadas, sin red) no cambia
 - **Fecha:** 2026-11-12
 - **Decisores:** propietario del producto; Claude Code (propuesta)
 - **Relacionado:** spec 025 (landing de producto), spec 023 (webs de la app), ADR-0009 (monorepo y `landing/`, **enmendado aquí**), ADR-0010 (Vercel), ADR-0026 (licencias de terceros), P4, P11 y P12 de la constitución, amenaza T-18 y §5 de `docs/security/threat-model.md`
@@ -59,14 +59,14 @@ Se revisa si: la licencia de GSAP cambia o resulta no encajar; alguno de los dos
 
 **Positivas**
 
-- La landing aprobada a la vista entra sin reescribirse, y comparte nombre, tokens, textos de la app, política y CI con el resto.
+- La landing aprobada a la vista entra sin reescribirse, y comparte nombre, política y CI con el resto (los tokens y los textos de la app, no: nota de implementación, arriba).
 - Las cuatro páginas legales y de ayuda no pierden ninguna de sus garantías.
 
 **Negativas y riesgos (con su mitigación)**
 
 - **`landing/` deja de ser «sin `package.json`»:** aparece una cadena de suministro de npm. Mitigación: versiones exactas y archivo de bloqueo con sumas; instalación reproducible y **sin scripts de instalación**; solo tres dependencias directas (una de construcción, dos de navegador); las actualizaciones automáticas y el análisis de vulnerabilidades del repositorio cubren también `landing/`; el plan decide si el resultado construido se compara con una lista de archivos esperados.
 - **Licencia de GSAP fuera de la lista de §5:** excepción de P11 aceptada por el propietario con este ADR, limitada a la web (GSAP **no entra en la app**), anotada en `threat-model.md` §5 y añadida a la revisión legal que ya bloquea `/release-checklist` (ADR-0026). Su aviso se publica en la página de licencias (CA-025-18).
-- **La CSP de la página de inicio se abre** a programas del propio origen (y, si el plan no consigue evitarlo, a estilos en línea, que el recorrido usa para colocar cada pieza). Mitigación: la CSP de las otras cuatro páginas no cambia; ningún programa en línea; `landing/check.mjs` pasa a tener dos juegos de reglas, el de siempre y el de la página de inicio, y sigue fallando cerrado; T-18 se reescribe con la superficie nueva.
+- **La CSP de la página de inicio se abre** a programas del propio origen y a estilos en línea, que el recorrido usa para colocar cada pieza (**[Hecho, 2026-11-13]**: `style-src 'self' 'unsafe-inline'` en `landing/vercel.json`, enmienda del propietario). Mitigación: la CSP de las otras cuatro páginas no cambia; ningún programa en línea; `landing/check.mjs` pasa a tener dos juegos de reglas, el de siempre y el de la página de inicio, y sigue fallando cerrado; T-18 se reescribe con la superficie nueva.
 - **La web guarda algo en el navegador** (el idioma elegido). No es una cookie ni sale del navegador; la política lo dice (CA-025-13).
 - **Dos formas de construir en la misma carpeta** (la de la 023 y Vite). El plan decide cómo conviven en un solo resultado y en un solo trabajo de CI; si la convivencia complica más de lo que ahorra, se pregunta antes de mover las cuatro páginas a Vite.
 - **Los colores cálidos de la landing** no existen en el prototipo: entran en `design/tokens.json` como colores de la landing y se registran en `docs/design/prototype-deviations.md` (P12).

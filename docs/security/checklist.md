@@ -13,7 +13,7 @@ Se marcan los puntos que apliquen a la PR; los que no apliquen se dejan como "N/
 ## Si añade o actualiza dependencias (T-10)
 
 - [ ] Cumple los criterios de `threat-model.md §5` (mantenimiento, licencia, sin telemetría).
-- [ ] `pubspec.lock` actualizado; OSV-Scanner y dependency-review en verde.
+- [ ] `pubspec.lock` (o `landing/package-lock.json`) actualizado; OSV-Scanner y dependency-review en verde.
 - [ ] Revisados los permisos y el manifiesto de privacidad que añade el paquete.
 
 ## Si toca la importación de archivos (T-3)
@@ -120,12 +120,14 @@ Aplica si la PR toca `MainActivity.kt`, `RecentsPrivacy.kt`, el tema de arranque
 
 ## Si toca las webs de la app, la política o la ficha de tienda (T-18, T-13; spec 023)
 
-Aplica si la PR toca `landing/`, `docs/legal/privacy-policy.md`, `store/google-play/`, `app/identity.yaml`, `design/tokens.json` o las ARB. Lo comprueba el trabajo «Web y ficha» de `ci.yml` (`node landing/build.mjs`, `node landing/check.mjs`, `node --test landing/test/*.test.mjs store/google-play/test/*.test.mjs` con un mínimo de 100 tests y `node store/google-play/check.mjs`); no despliega nada y no tiene secretos.
+Aplica si la PR toca `landing/`, `docs/legal/privacy-policy.md`, `store/google-play/`, `app/identity.yaml`, `design/tokens.json` o las ARB. Lo comprueba el trabajo «Web y ficha» de `ci.yml` (`npm ci --ignore-scripts` en `landing/`, `node landing/build.mjs`, `node landing/check.mjs`, `node --test landing/test/*.test.mjs store/google-play/test/*.test.mjs` con un mínimo de 100 tests y `node store/google-play/check.mjs`); no despliega nada y no tiene secretos.
 
 - [ ] **Una sola fuente para la política:** el texto publicado sale de `docs/legal/privacy-policy.md` (sin cabecera ni notas de revisión) con `{appName}` sustituido; `landing/check.mjs` falla si `dist/` difiere. Español e inglés con las mismas secciones y viñetas. Si cambia lo que la app hace con los datos, la política cambia **antes** que la app (CL-023-7).
 - [ ] **Permisos coherentes (CA-023-08):** la tabla de `store/google-play/data-safety.md` §6, la lista blanca de `tools/check-android-permissions.sh` y la política dicen lo mismo; un permiso nuevo exige actualizar los tres (y W-11 de la declaración). `ACCESS_LOCAL_NETWORK` figura como «sistema, no declarado» y la app **no** lo declara.
 - [ ] **Data Safety:** la respuesta sigue siendo «no se recogen ni se comparten datos». Un flujo nuevo que salga del móvil (SDK, red, informe de errores) obliga a **parar y preguntar** (CL-023-1: sería una excepción a P4 con su ADR), no a cambiar la declaración en silencio.
-- [ ] **La web:** sin JavaScript, cookies, analítica ni recursos de otro origen; sin `<style>` ni `style=` (la CSP los bloquearía); tokens solo desde `design/tokens.json`; el nombre de la app, solo desde la identidad; cabeceras de `landing/vercel.json` completas; construcción sin dependencias (sin `package.json`).
+- [ ] **Las cuatro páginas de la 023** (política, licencias, ayuda y error): sin JavaScript, cookies, analítica ni recursos de otro origen; sin `<style>` ni `style=` (la CSP los bloquearía); tokens solo desde `design/tokens.json`; el nombre de la app, solo desde la identidad; cabeceras de `landing/vercel.json` completas; su construcción no usa dependencias.
+- [ ] **La página de inicio (spec 025, ADR-0027; `landing/home/`, la maqueta copiada tal cual):** un solo `<script type="module" src>` del propio origen, sin código dentro; sin manejadores `on…=`, marcos, recursos de otro origen ni mapas de código; el programa construido sin API de red, sin `sessionStorage`, `indexedDB`, cookies ni `caches`, y sin dominios externos (`checkHome` de `landing/check.mjs`); solo guarda el idioma (`localStorage`, `una-lang`), como dice la política. CSP de «/» = la de las otras páginas más `script-src 'self'` y `style-src 'self' 'unsafe-inline'` (enmienda del 2026-11-13); dos reglas que no se solapan (`/` y `/(.+)`) y `installCommand: "npm ci --ignore-scripts"`. Si cambia lo que guarda o carga, la política (sección «Esta web») cambia en la misma PR.
+- [ ] **Dependencias de npm de `landing/`:** solo `vite`, `gsap` y `lenis`, con versión exacta (`save-exact`), `package-lock.json` con `resolved` del registro de npm e `integrity`, `.npmrc` con `ignore-scripts=true`; nunca `npm install` ni `npx` en la CI. Una dependencia nueva o una subida de GSAP o Lenis: criterios de `threat-model.md` §5 (o un ADR), comprobar que no hace peticiones ni guarda nada, y actualizar `landing/web-notices.txt` (versión y aviso, publicado en `/licenses`) y la cabecera de copyright de GSAP en el programa construido.
 - [ ] **Ficha:** textos con `{appName}` (sin el nombre a mano), longitudes (30, 80 y 4000), sin emojis en el nombre ni en la breve, sin superlativos y **sin prometer lo que la app no hace**; gráfico de 1024 × 500 y 4 capturas de 1080 × 1920 por idioma, PNG de 24 bits **sin canal alfa**, hechas en el emulador y con datos ficticios, **nunca en el móvil del propietario**.
 - [ ] **Antes de F6 (a mano):** el archivo de avisos de `landing/third-party-notices.txt` es el de la versión que se entrega (`/release-checklist`); la revisión legal de la política y de las licencias (ADR-0026) está hecha y anotada.
 
@@ -134,7 +136,7 @@ Aplica si la PR toca `landing/`, `docs/legal/privacy-policy.md`, `store/google-p
 - [ ] `permissions:` mínimos; acciones fijadas por SHA; sin `pull_request_target` con código de la PR.
 - [ ] Secretos solo en *environments* protegidos; nunca en jobs de PR. El trabajo de publicación no usa ninguno hasta F6 (sección anterior).
 - [ ] Lo que venga de una referencia, una etiqueta o un evento llega a los `run:` por `env:` (nunca `${{ }}` dentro del guion) y se sanea antes de imprimirlo o meterlo en un JSON.
-- [ ] Cabeceras de `vercel.json` intactas o reforzadas; sin scripts de terceros.
+- [ ] Cabeceras de `vercel.json` intactas o reforzadas; ningún programa de otro origen ni que envíe datos (solo la página de inicio lleva uno, del propio origen; ADR-0027).
 
 ## Skills, plugins y MCP (P11)
 

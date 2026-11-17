@@ -15,3 +15,9 @@ wordmark: "una."      # logotipo dentro de la app
 privacyPolicyUrl: "https://example.com/privacy"        # política de privacidad
 thirdPartyLicensesUrl: "https://example.com/licenses"  # licencias de terceros (ADR-0026)
 helpUrl: "https://example.com/help"                    # ayuda
+
+# Fichas de las tiendas (spec 025, CA-025-08): las enlaza la página de inicio de la web, no la app. Vacías
+# ("") hasta que exista cada ficha (F6): sin dirección, el rótulo de la tienda no es un enlace y la web dice
+# «Muy pronto». Solo `https://` con el anfitrión exacto de su tienda; `landing/build.mjs` rechaza lo demás.
+appStoreUrl: ""      # https://apps.apple.com/…
+googlePlayUrl: ""    # https://play.google.com/…

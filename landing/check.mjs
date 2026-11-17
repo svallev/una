@@ -1,14 +1,16 @@
 // Comprobaciones de la web construida (spec 023): CA-023-04 (la política publicada es la del
 // documento), CA-023-13 (páginas, idiomas), CA-023-14 (sin terceros ni rastreo, cabeceras),
-// CA-023-15 (tokens, contraste, estructura, foco) y CA-023-16 (el bloque de avisos de terceros).
-// Falla cerrada: lo que no entiende es un error.
+// CA-023-15 (tokens, contraste, estructura, foco) y CA-023-16 (el bloque de avisos de terceros); y, con su
+// propio juego de reglas (`checkHome`), la página de inicio de la spec 025 (CA-025-12), la única con
+// programa. Falla cerrada: lo que no entiende es un error.
 //
 //   node landing/check.mjs [--dist <carpeta>]      (después de `node landing/build.mjs`)
 //
-// Solo módulos de Node. `checkSite` devuelve la lista de errores (vacía si todo está bien) para
-// poder probar cada regla con un caso que falla (`landing/test`).
+// Solo módulos de Node. `checkSite` (las cuatro páginas sin JavaScript y `vercel.json`) y `checkHome` (la
+// de inicio) devuelven la lista de errores (vacía si todo está bien) para poder probar cada regla con un caso
+// que falla (`landing/test`).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   BuildError,
@@ -22,8 +24,12 @@ import {
   renderSite,
 } from "./build.mjs";
 
-/** Las páginas que tiene que haber: inicio, las tres webs de la app y la de error. */
-export const REQUIRED_PAGES = ["index.html", "privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];
+/**
+ * Las páginas sin JavaScript que tiene que haber: las tres webs de la app y la de error. La de inicio la
+ * construye Vite (spec 025) y no pasa estas reglas: tiene las suyas, en `checkHome`.
+ */
+export const REQUIRED_PAGES = ["privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];
+export const HOME_PAGE = "index.html";
 
 /** La página que lleva, tras las dos mitades, el bloque de avisos de terceros (CA-023-16). */
 const NOTICES_PAGE = "licenses/index.html";
@@ -133,11 +139,11 @@ function checkPage(file, html, meta, errors) {
   // Los dos idiomas: primero el español, cada uno con su lang y el enlace al otro.
   const sections = t.filter((x) => x.name === "section" && !x.closing);
   const withNotices = file === NOTICES_PAGE;
-  const expected = withNotices ? 3 : 2;
+  const expected = withNotices ? 4 : 2;
   if (sections.length !== expected) {
     fail(
       withNotices
-        ? `tiene ${sections.length} <section> (las dos mitades, español e inglés, y el bloque de avisos)`
+        ? `tiene ${sections.length} <section> (las dos mitades, español e inglés, el código de esta web y el bloque de avisos)`
         : `tiene ${sections.length} <section> (las dos mitades, español e inglés)`,
     );
     return;
@@ -164,11 +170,31 @@ function checkPage(file, html, meta, errors) {
   else if (toEn.attrs.lang !== "en") fail('el enlace al inglés no está marcado con lang="en"');
   if (!toEs) fail("falta el enlace «#es» al español al principio de la mitad inglesa");
   else if (toEs.attrs.lang !== "es") fail('el enlace al español no está marcado con lang="es"');
-  if (withNotices) checkNoticesBlock(sections[2], closes[2], t, html, fail);
+  if (withNotices) {
+    checkWebCodeBlock(sections[2], closes[2], t, html, fail);
+    checkNoticesBlock(sections[3], closes[3], t, html, fail);
+  }
   const levels = (from, to) =>
     headings.filter((h) => h.start >= from && h.end <= to).map((h) => h.level).join(",");
   if (levels(esFrom, esTo) !== levels(enFrom, enTo)) {
     fail(`los encabezados de la mitad inglesa (${levels(enFrom, enTo)}) no están al mismo nivel que los de la española (${levels(esFrom, esTo)})`);
+  }
+}
+
+/**
+ * El bloque del código de esta web (spec 025, CA-025-18): una tercera `<section aria-labelledby="web-code">`, tras
+ * las dos mitades y antes de los avisos de la app, con su `<h2 id="web-code">` y el texto en un `<pre lang="en">`.
+ */
+function checkWebCodeBlock(open, close, t, html, fail) {
+  if (open.attrs["aria-labelledby"] !== "web-code") fail('el bloque del código de esta web (la tercera <section>) tiene que llevar aria-labelledby="web-code"');
+  const from = open.end;
+  const to = close?.start ?? html.length;
+  const inside = (x) => x.start >= from && x.end <= to && !x.closing;
+  if (!t.some((x) => inside(x) && x.name === "h2" && x.attrs.id === "web-code")) {
+    fail('el bloque del código de esta web no empieza por un <h2 id="web-code">');
+  }
+  if (!t.some((x) => inside(x) && x.name === "pre" && x.attrs.lang === "en")) {
+    fail('el bloque del código de esta web no lleva el texto en un <pre lang="en">');
   }
 }
 
@@ -358,6 +384,15 @@ const CSP = {
   "form-action": "'none'",
   "frame-ancestors": "'none'",
 };
+/**
+ * La de la página de inicio (spec 025, segunda enmienda): la misma con programas del propio origen y estilos en
+ * línea (la maqueta usa atributos `style=`).
+ */
+const HOME_CSP = { ...CSP, "script-src": "'self'", "style-src": "'self' 'unsafe-inline'" };
+/** Las directivas en que la CSP de la página de inicio puede ser distinta de la de las demás. */
+const HOME_CSP_EXTRA = ["script-src", "style-src"];
+/** Cómo instala Vercel las dependencias de la página de inicio (lo mismo que la CI). */
+const INSTALL_COMMAND = "npm ci --ignore-scripts";
 const PERMISSIONS = ["accelerometer", "autoplay", "camera", "display-capture", "geolocation", "gyroscope", "interest-cohort", "magnetometer", "microphone", "payment", "usb"];
 
 function checkVercel(path, errors) {
@@ -373,14 +408,56 @@ function checkVercel(path, errors) {
   if (json.trailingSlash !== false) fail("trailingSlash tiene que ser false");
   if (json.framework !== null) fail("framework tiene que ser null");
   if (json.buildCommand !== "node build.mjs") fail('buildCommand tiene que ser "node build.mjs"');
+  // Vercel instala como la CI: lo del lockfile, sin scripts de instalación (spec 025, plan §6.1).
+  if (json.installCommand !== INSTALL_COMMAND) fail(`installCommand tiene que ser "${INSTALL_COMMAND}" (es ${JSON.stringify(json.installCommand)})`);
   if (json.outputDirectory !== "dist") fail('outputDirectory tiene que ser "dist"');
   for (const key of ["rewrites", "redirects", "routes"]) if (key in json) fail(`la web no necesita «${key}»`);
-  if (!Array.isArray(json.headers) || json.headers.length !== 1 || json.headers[0].source !== "/(.*)") {
-    fail('tiene que haber una sola regla de cabeceras, con source "/(.*)" (todas las rutas)');
+  // Dos reglas que no se solapan (spec 025): «/(.+)», la de siempre, para todo menos la página de inicio, y «/»,
+  // la misma con `script-src 'self'` y `style-src 'self' 'unsafe-inline'`; iguales en todo lo demás.
+  const sources = Array.isArray(json.headers) ? json.headers.map((r) => r?.source) : [];
+  if (sources.length !== 2 || !sources.includes("/(.+)") || !sources.includes("/")) {
+    fail('tiene que haber dos reglas de cabeceras, con source "/(.+)" (todo menos la página de inicio) y "/" (la página de inicio)');
     return;
   }
+  for (const rule of json.headers) {
+    const home = rule.source === "/";
+    checkHeaderRule(rule, home ? HOME_CSP : CSP, home ? (msg) => fail(`${msg} (regla «/»)`) : fail);
+  }
+  const rest = headerMap(json.headers.find((r) => r.source === "/(.+)"));
+  const home = headerMap(json.headers.find((r) => r.source === "/"));
+  for (const key of new Set([...rest.keys(), ...home.keys()])) {
+    const [a, b] = key === "content-security-policy"
+      ? [cspText(rest.get(key), { without: HOME_CSP_EXTRA }), cspText(home.get(key), { without: HOME_CSP_EXTRA })]
+      : [rest.get(key), home.get(key)];
+    if (a !== b) fail(`las dos reglas de cabeceras tienen que ser iguales salvo script-src y style-src de «/»: ${key} difiere («${rest.get(key) ?? "falta"}» frente a «${home.get(key) ?? "falta"}»)`);
+  }
+}
+
+/** Las cabeceras de una regla (nombre en minúsculas → valor). */
+function headerMap(rule) {
+  const out = new Map();
+  for (const h of Array.isArray(rule?.headers) ? rule.headers : []) {
+    if (typeof h?.key === "string") out.set(h.key.toLowerCase(), h.value);
+  }
+  return out;
+}
+
+/** Una CSP en forma comparable (directivas y orígenes ordenados), sin las directivas de [without]. */
+function cspText(value, { without = [] } = {}) {
+  if (typeof value !== "string") return value;
+  return value
+    .split(";")
+    .map((d) => d.trim().split(/\s+/).filter(Boolean))
+    .filter((d) => d.length > 0 && !without.includes(d[0]))
+    .map(([name, ...rest]) => [name, ...rest.sort()].join(" "))
+    .sort()
+    .join("; ");
+}
+
+/** Las cabeceras de una regla de `vercel.json`, con la CSP [cspSpec]. */
+function checkHeaderRule(rule, cspSpec, fail) {
   const headers = new Map();
-  for (const h of json.headers[0].headers ?? []) headers.set(h.key.toLowerCase(), h.value);
+  for (const h of rule.headers ?? []) headers.set(h.key.toLowerCase(), h.value);
   if (headers.has("set-cookie")) fail("pone una cookie (Set-Cookie): la web no usa cookies");
   if (/noindex/i.test(headers.get("x-robots-tag") ?? "")) fail("X-Robots-Tag: noindex (la política tiene que poder encontrarse)");
   const need = (key, ok, expected) => {
@@ -407,11 +484,11 @@ function checkVercel(path, errors) {
         return [name, sources.sort().join(" ")];
       }),
     );
-    for (const [d, v] of Object.entries(CSP)) {
+    for (const [d, v] of Object.entries(cspSpec)) {
       if (!actual.has(d)) fail(`Content-Security-Policy: falta ${d} ${v}`);
       else if (actual.get(d) !== v) fail(`Content-Security-Policy: ${d} tiene que ser ${v} (es ${actual.get(d)})`);
     }
-    for (const d of actual.keys()) if (!(d in CSP)) fail(`Content-Security-Policy: ${d} no se admite`);
+    for (const d of actual.keys()) if (!(d in cspSpec)) fail(`Content-Security-Policy: ${d} no se admite`);
   }
 
   const perms = headers.get("permissions-policy");
@@ -479,6 +556,121 @@ function checkHandWrittenName(paths, identity, errors) {
   }
 }
 
+// ─── La página de inicio (spec 025) ──────────────────────────────────────────────────────────────
+
+/**
+ * Lo que el programa de la página de inicio no puede usar: ninguna forma de pedir algo a la red (CA-025-12), de
+ * guardar algo más que el idioma ni de ejecutar texto. Es la lista de lo que se busca, no de lo permitido.
+ */
+const FORBIDDEN_APIS = [
+  [/\bfetch\s*\(/, "fetch("],
+  [/\bXMLHttpRequest\b/, "XMLHttpRequest"],
+  [/\bsendBeacon\b/, "navigator.sendBeacon"],
+  [/\bWebSocket\b/, "WebSocket"],
+  [/\bWebTransport\b/, "WebTransport"],
+  [/\bEventSource\b/, "EventSource"],
+  [/\bRTC(?:PeerConnection|DataChannel)\b/, "WebRTC"],
+  [/\bimportScripts\b/, "importScripts"],
+  [/\bimport\s*\(/, "import() dinámico"],
+  [/\bserviceWorker\b/, "serviceWorker"],
+  [/\beval\s*\(/, "eval"],
+  // Lo que guarda (CA-025-12 y la política, CA-025-13): solo el idioma, en `localStorage`; nada más.
+  [/\bsessionStorage\b/, "sessionStorage"],
+  [/\bindexedDB\b/, "indexedDB"],
+  [/\bcookieStore\b/, "cookieStore"],
+  [/\.cookie\b/, "document.cookie"],
+  [/\bcaches\s*\.\s*open\b/, "caches.open"],
+  [/\bnew\s+Function\b/, "new Function"],
+];
+
+/**
+ * Los dominios que puede nombrar el programa sin pedirles nada: el espacio de nombres de SVG (GSAP), la web de
+ * GSAP en su aviso de licencia y sus mensajes, y las fichas de las tiendas (enlaces, de `identity.yaml`, que
+ * `build.mjs` valida). Cualquier otro dominio es un error.
+ */
+const PROGRAM_HOSTS = new Set(["www.w3.org", "gsap.com", "apps.apple.com", "play.google.com"]);
+
+/** Las rutas de [dir] (relativas, con «/»), recursivas. */
+const filesOf = (dir) => [...walk(dir)].map((f) => relative(dir, f).split(sep).join("/"));
+
+/**
+ * El juego de reglas de la página de inicio (spec 025, segunda enmienda): la de la maqueta, que construye Vite
+ * y sí lleva programa. Lo mínimo: un único `<script type="module" src>` del propio origen, sin nada escrito
+ * dentro; sin recursos de otro origen; ningún mapa de código en `dist/`; y, en el programa, sin API de red ni
+ * dominios externos. La CSP se comprueba en `vercel.json` (`checkSite`).
+ */
+export function checkHome(paths = defaultPaths(), { dist = paths.out } = {}) {
+  const errors = [];
+  const found = existsSync(dist) ? filesOf(dist) : [];
+  for (const f of found) if (f.endsWith(".map")) errors.push(`${f}: mapa de código en la web publicada (CA-025-12)`);
+  if (!found.includes(HOME_PAGE)) {
+    errors.push(`${HOME_PAGE}: falta la página de inicio (¿se ejecutó landing/build.mjs?)`);
+    return errors;
+  }
+  const html = readFileSync(join(dist, HOME_PAGE), "utf8");
+  const fail = (msg) => errors.push(`${HOME_PAGE}: ${msg}`);
+  const t = tags(html);
+
+  const scripts = t.filter((x) => x.name === "script" && !x.closing);
+  if (scripts.length !== 1) fail(`tiene ${scripts.length} <script> (tiene que haber uno: el programa de assets/)`);
+  for (const s of scripts) {
+    const close = t.find((x) => x.closing && x.name === "script" && x.start >= s.end);
+    if (!close || html.slice(s.end, close.start).trim() !== "") fail("un <script> con código escrito dentro de la página (los programas, solo por src)");
+    const src = s.attrs.src ?? "";
+    if (s.attrs.type !== "module") fail(`un <script> que no es type="module" («${s.attrs.type ?? ""}»)`);
+    if (!src) fail("un <script> sin src (los programas, solo del propio origen y por src)");
+    else if (!isLocal(src)) fail(`un <script> de otro origen («${src}»)`);
+    else if (!found.includes(src.replace(/^\//, ""))) fail(`el <script> carga un programa que no está en dist/ («${src}»)`);
+  }
+  // Todo lo que Vite deja en assets/, esté enlazado o no (un trozo suelto también se publica): cada programa
+  // con las reglas del programa y cada hoja sin `@import` ni recursos de otro origen.
+  for (const f of found) {
+    if (!f.startsWith("assets/")) continue;
+    if (f.endsWith(".js")) checkProgram(f, readFileSync(join(dist, f), "utf8"), errors);
+    else if (f.endsWith(".css")) checkAssetCss(f, readFileSync(join(dist, f), "utf8"), errors);
+  }
+
+  for (const x of t) {
+    if (x.closing) continue;
+    for (const [attr, value] of Object.entries(x.attrs)) {
+      if (/^on/.test(attr)) fail(`<${x.name}> lleva el manejador en línea ${attr} (la CSP lo bloquearía)`);
+      if ((RESOURCE_ATTRS.includes(attr) || (x.name === "link" && attr === "href")) && value && !isLocal(value)) {
+        fail(`<${x.name} ${attr}> de otro origen («${value}»): la web no usa recursos de terceros`);
+      }
+      if (attr === "href" && /^\s*(javascript|data|vbscript):/i.test(value)) fail(`un href con ${value.trim().split(":")[0].toLowerCase()}:`);
+    }
+    if (FRAMES.includes(x.name)) fail(`tiene un <${x.name}> (nada incrustado)`);
+    else if (x.name === "base") fail("tiene un <base>");
+    else if (x.name === "meta" && "http-equiv" in x.attrs) fail("tiene un <meta http-equiv>");
+  }
+  for (const re of ANALYTICS) if (re.test(html)) fail(`rastro de analítica (${re})`);
+  return errors;
+}
+
+/** Atributos que cargan un recurso. */
+const RESOURCE_ATTRS = ["src", "srcset", "poster", "data", "action", "formaction", "background", "xlink:href", "ping", "manifest"];
+
+/** Una hoja construida de la página de inicio: sin `@import` y sin `url()` que no sea del propio origen. */
+function checkAssetCss(file, text, errors) {
+  const fail = (msg) => errors.push(`${file}: ${msg}`);
+  const clean = text.replace(/\/\*[\s\S]*?\*\//g, " ");
+  if (/@import/i.test(clean)) fail("@import (la web no carga hojas de otro sitio)");
+  for (const m of clean.matchAll(/url\(\s*(['"]?)([^)'"]*)\1\s*\)/gi)) {
+    if (!isLocal(m[2].trim())) fail(`url(${m[2]}): recurso de otro origen`);
+  }
+}
+
+/** El programa construido: sin API de red, sin dominios externos, sin analítica y sin mapas. */
+function checkProgram(file, code, errors) {
+  const fail = (msg) => errors.push(`${file}: ${msg}`);
+  for (const [re, api] of FORBIDDEN_APIS) if (re.test(code)) fail(`usa ${api} (CA-025-12: sin red y sin guardar más que el idioma)`);
+  for (const m of code.matchAll(/\b(?:https?|wss?):\/\/([A-Za-z0-9.-]+)/g)) {
+    if (!PROGRAM_HOSTS.has(m[1].toLowerCase())) fail(`nombra un dominio externo («${m[1]}»)`);
+  }
+  if (/sourceMappingURL/.test(code)) fail("apunta a un mapa de código (sourceMappingURL)");
+  for (const re of ANALYTICS) if (re.test(code)) fail(`rastro de analítica (${re})`);
+}
+
 // ─── Todo junto ──────────────────────────────────────────────────────────────────────────────────
 
 /** Las comprobaciones de la web ya construida en [dist]. Devuelve los errores (vacía si todo bien). */
@@ -537,11 +729,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const paths = defaultPaths();
   const at = args.indexOf("--dist");
   const dist = at >= 0 ? args[at + 1] : paths.out;
-  const errors = checkSite(paths, { dist });
+  const errors = [...checkSite(paths, { dist }), ...checkHome(paths, { dist })];
   if (errors.length > 0) {
     for (const e of errors) console.error(`error: ${e}`);
     console.error(`\n${errors.length} error(es) en la web.`);
     process.exit(1);
   }
-  console.log(`Web comprobada (${REQUIRED_PAGES.length} páginas): sin errores.`);
+  console.log(`Web comprobada (${REQUIRED_PAGES.length} páginas y la de inicio): sin errores.`);
 }

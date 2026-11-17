@@ -28,7 +28,9 @@ function fails(label, mutate, pattern) {
   });
 }
 
-const page = (w) => join(w.dist, "index.html");
+// La página de inicio la construye Vite desde la spec 025 y tiene sus propias reglas: estos casos van sobre
+// la de error, que sigue sin JavaScript.
+const page = (w) => join(w.dist, "404.html");
 const vercel = (w) => w.paths.vercelJson;
 const headers = (w) => JSON.parse(read(vercel(w))).headers[0].headers;
 const setHeaders = (w, fn) => {

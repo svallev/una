@@ -1,7 +1,5 @@
 {
   "es": {
-    "webHomeTitle": "{appName}",
-    "webHomeIntro": "Una sola tarea a la vez. Aquí están la política de privacidad, las licencias de terceros y la ayuda de la app.",
     "webPageTitle": "{página} · {appName}",
     "webNotFoundTitle": "Esta página no existe.",
     "webNotFoundBody": "Puede que la dirección esté mal escrita.",
@@ -13,11 +11,10 @@
     "webLicensesInApp": "Los textos completos de las licencias también van dentro de la app.",
     "webLicensesFile": "Ver el archivo de avisos como texto",
     "webSwitchToSpanish": "Leer en español",
-    "webLanguageName": "Español"
+    "webLanguageName": "Español",
+    "licensesWebTitle": "Código de esta web"
   },
   "en": {
-    "webHomeTitle": "{appName}",
-    "webHomeIntro": "One task at a time. Here are the app's privacy policy, third-party licenses and help.",
     "webPageTitle": "{page} · {appName}",
     "webNotFoundTitle": "This page doesn't exist.",
     "webNotFoundBody": "The address may be mistyped.",
@@ -30,6 +27,7 @@
     "webLicensesFile": "View the notices file as plain text",
     "webNoticesTitle": "Third-party notices (full text)",
     "webSwitchToEnglish": "Read in English",
-    "webLanguageName": "English"
+    "webLanguageName": "English",
+    "licensesWebTitle": "Code of this website"
   }
 }
