@@ -144,7 +144,7 @@ describe("CA-023-16: la página de licencias", () => {
   });
 
   // CA-027-06: desde la 027, el destino del enlace de saltar la lista es un tercer enlace al archivo, tras los grupos.
-  test("CA-027-06: las dos mitades y el final del bloque de avisos enlazan al archivo de texto, y la web lo publica tal cual", () => {
+  test("CA-027-06, CA-027-07: las dos mitades y el final del bloque de avisos enlazan al archivo de texto, y la web lo publica tal cual", () => {
     const html = read(licenses(base));
     assert.equal(html.split('href="/third-party-notices.txt"').length - 1, 3);
     assert.equal(read(join(base.dist, "third-party-notices.txt")), read(base.paths.notices));
@@ -578,7 +578,7 @@ describe("CA-027-04, CA-027-05: la construcción falla cerrado", () => {
   breaks("CA-027-04: una ruta de /home/ en un aviso", fakeNotices(HEADER_BUILD, noticesBody("built in /home/someone/src")), /ruta de una carpeta personal \(«\/home\/»\)/);
   breaks("CA-027-04: una ruta C:\\Users\\ en un aviso", fakeNotices(HEADER_BUILD, noticesBody("built in C:\\Users\\someone")), /ruta de una carpeta personal/);
   breaks("CA-027-04: una ruta personal en el preámbulo", fakeNotices(HEADER_BUILD, noticesBody().replace("Version: 0.0.0+0", "Version: 0.0.0+0 /Users/x/")), /línea 4: lleva una ruta/);
-  for (const n of [0x07, 0x1b, 0x7f, 0x85, 0x202e, 0x2066, 0x200f, 0x2028]) {
+  for (const n of [0x07, 0x1b, 0x7f, 0x85, 0x202e, 0x2066, 0x061c, 0x200f, 0x2028]) {
     const code = `U+${n.toString(16).toUpperCase().padStart(4, "0")}`;
     breaks(`CA-027-04: el carácter ${code} en un aviso`, fakeNotices(HEADER_BUILD, noticesBody(`a${String.fromCodePoint(n)}b`)), new RegExp(`línea 9: lleva un carácter de (control|dirección) \\(${code.replace("+", "\\+")}\\)`));
   }

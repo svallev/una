@@ -1,6 +1,6 @@
 # Tareas — Spec 027: Licencias agrupadas por paquete
 
-**Siguiente:** el cierre (revisores `spec-reviewer`, `a11y-reviewer` y `security-reviewer`, `/i18n-check`, `/tokens-validate`, `/security-check` y marcar la spec Implementada); T-027-01 a 06 hechas
+**Siguiente:** la PR de las ramas 022 a 027, cuando lo diga el propietario (la 027 está cerrada: Implementada).
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Los textos y los tokens van juntos en una tarea al principio. Una PR puede agrupar varias tareas consecutivas.
 
@@ -17,10 +17,20 @@ Todas en `landing/`; la app no cambia. Comandos: `cd landing && node --test test
 
 ## Cierre
 
-- [ ] Todos los CA de la spec tienen test en verde (lista CA → test).
-- [ ] `/i18n-check`, `/tokens-validate`, `/security-check`; `a11y-reviewer` y `security-reviewer` sobre `git diff main...HEAD`.
-- [ ] Definition of Done (`specs/constitution.md`) completa.
-- [ ] Spec marcada como **Implementada**; PR preparada sin push hasta que lo confirme el propietario.
+- [x] Todos los CA de la spec tienen test en verde (lista CA → test, abajo).
+- [x] `/i18n-check`, `/tokens-validate`, `/security-check`; `a11y-reviewer` y `security-reviewer` sobre `git diff main...HEAD`.
+- [x] Definition of Done (`specs/constitution.md`) completa.
+- [x] Spec marcada como **Implementada** (2026-11-17); PR preparada sin push hasta que lo confirme el propietario.
+
+### Resultado del cierre (2026-11-17)
+
+Web: 993 tests, `build` y `check` sin errores; `validate-tokens` bien; la app no cambia (`/i18n-check` solo toca `strings.json`: tres claves ES/EN con los textos de §7, cubiertas por `build.test.mjs`). `/security-check`: sin secretos, archivos de firma ni dependencias nuevas; `vercel.json` y la lista de `dist/` iguales que en `main` (fixtures). Revisores: **sin bloqueos** (`security-reviewer`, `a11y-reviewer`, `spec-reviewer`).
+
+**Lista CA → test** (`landing/test/`): 01 y 02 `licenses.test.mjs` (archivo real y de prueba), 03 `licenses.test.mjs`, 04 `security.test.mjs`, `lang.test.mjs`, `licenses.test.mjs`, 05 `licenses.test.mjs`, 06 `a11y.test.mjs`, `licenses.test.mjs`, `lang.test.mjs` y C-027-1, 07 `build.test.mjs` y `licenses.test.mjs`, 08 `licenses.test.mjs` y C-027-1 (`icu` en 79–345 ms), 09 `build.test.mjs`.
+
+**Corregido en el cierre:** U+061C (marca de letra árabe) en la guardia de dirección (con test); test de `.txt` byte a byte citado también como CA-027-07; CA-027-05 aclara las líneas en blanco tras `BEGIN NOTICES` (el analizador las lee como cabecera vacía y falla igual); pregunta del plan marcada resuelta; estado de la spec.
+
+**Aceptado o pendiente, sin cambio [Suposición]:** (a) rutas personales con barras normales, `/root/` y otros caracteres de formato invisibles (U+200B…) en el texto: la spec solo enumera `/Users/`, `/home/` y `C:\Users\`, y el texto va escapado en `<pre>`; (b) que el HTML de los grupos no se compara con el `.txt` en `check.mjs` sino solo en los tests; (c) casillas de navegador **sin verificar**: Firefox, VoiceOver/TalkBack en ES **y** EN (el propietario dijo «todo ok» sin detallar idiomas), cambio de idioma con un grupo abierto en navegador real, modo oscuro del sistema con un grupo abierto, Safari con Option+Tab, y colores forzados en Windows real (solo emulados por CDP); (d) mitigación posible de H-027-01 con `position: sticky` en el `<summary>` abierto: descartada (con zoom 400 % un nombre largo ocuparía media pantalla, 1.4.10); (e) un `<hr>` o etiqueta por aviso para lectores: no hace falta, lo puede pedir la revisión legal; (f) `docs/architecture.md` y `docs/testing.md` no mencionan el analizador (opcional, no lo pide CA-027-09).
 
 ## Estado
 
@@ -33,4 +43,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 | T-027-03 | Hecha. `renderSite` saca el bloque de `noticesSectionHtml` (preámbulo, enlace de saltar, un `<details class="group">` plegado por cabecera y por sección, un `<pre lang="en">` por aviso con un `\n` de más si el texto empieza por salto de línea, destino `#notices-end` = enlace al `.txt`) y acepta `{ parseBody }` solo para probar que la ida y vuelta hace fallar la construcción. Tests en `licenses.test.mjs` (DOM leído sin el analizador, archivo real y de prueba, CRLF, 250 KB; 8 mutaciones detectadas); 5 tests de la 023/026 adaptados. Web: 937 verdes; `build` y `check` sin errores (el `checkNoticesBlock` viejo aún pasa). Página: 1 497 675 bytes. [Pendiente, T-027-04] estilos y `check.mjs` con la forma nueva. | 04a303b |
 | T-027-04 | Hecha. `site.css`: `.group > summary` (`list-item`, 44 × 44, sin alto fijo), línea entre grupos y entre avisos, recuento en Space Mono, `.notices__end`, `summary:focus-visible` y colores forzados. `check.mjs`: `checkNoticesBlock` exige la forma nueva (preámbulo, saltar, grupos sin `id`/`open`/`on*` con `<summary>` y solo `<pre lang="en">`, nada entre grupos, destino) y reglas del marcador nativo. Tests: un caso por regla (a11y, licenses), CSP/`vercel.json`/archivos = `main` (fixtures), `[DATE]`/`plausible` en el nombre de un grupo, `lang.js` y `<details>`; 23 de 25 mutaciones detectadas (2 equivalentes). Web: 993 tests verdes, build y check sin errores. | 1db7a79 |
 | T-027-05 | Hecha. C-027-1 en `navegadores.md`: Chrome 157 (CDP) en 5 tamaños, zoom 200/400 %, espaciado, colores forzados y sin JS, plegados y con los 164 grupos abiertos, sin fallos; teclado y enlace de saltar pasan; `icu` abre en 79–345 ms en el emulador de API 37. Safari/VoiceOver y TalkBack: «todo ok» del propietario. H-027-01 (bajo, foco fuera de la vista al cerrar un grupo grande desplazado) aceptado sin cambio. Firefox sin verificar (no instalado). | e31283f |
-| T-027-06 | Hecha. Enmiendas «en vigor desde el 2026-11-17» anotadas en la 023 (cabecera, CA-023-16 y 3 claves en §7), la 025 (cabecera y CA-025-18) y la 026 (cabecera, CA-026-12 y §7); nota (9) en DEV-60, `screen-map.md`, `checklist.md` (web), `docs/PLAN.md` (fila 027 y F6 punto 6: consolidar copyrights es de la revisión legal), `release-checklist` y `CLAUDE.md`; el glosario ya traía «Grupo de avisos». Lectura cruzada, sin código ni tests (suite de la web sin tocar). | (este commit) |
+| T-027-06 | Hecha. Enmiendas «en vigor desde el 2026-11-17» anotadas en la 023 (cabecera, CA-023-16 y 3 claves en §7), la 025 (cabecera y CA-025-18) y la 026 (cabecera, CA-026-12 y §7); nota (9) en DEV-60, `screen-map.md`, `checklist.md` (web), `docs/PLAN.md` (fila 027 y F6 punto 6: consolidar copyrights es de la revisión legal), `release-checklist` y `CLAUDE.md`; el glosario ya traía «Grupo de avisos». Lectura cruzada, sin código ni tests (suite de la web sin tocar). | 390d723 |

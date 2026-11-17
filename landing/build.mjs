@@ -662,7 +662,7 @@ export function checkNoticesText(text, label = "third-party-notices.txt") {
       const n = c.codePointAt(0);
       const control = (n < 32 && c !== "\r" && c !== "\t") || (n >= 0x7f && n <= 0x9f);
       const bidi =
-        (n >= 0x202a && n <= 0x202e) || (n >= 0x2066 && n <= 0x2069) || n === 0x200e || n === 0x200f || n === 0x2028 || n === 0x2029;
+        (n >= 0x202a && n <= 0x202e) || (n >= 0x2066 && n <= 0x2069) || n === 0x061c || n === 0x200e || n === 0x200f || n === 0x2028 || n === 0x2029;
       if (control || bidi) {
         const code = `U+${n.toString(16).toUpperCase().padStart(4, "0")}`;
         throw new BuildError(`${where}: lleva un carácter de ${control ? "control" : "dirección"} (${code})`);
