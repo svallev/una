@@ -985,7 +985,7 @@ export function renderSite(paths) {
   const licensesBody = (lang) =>
     [
       langHeading(lang, s),
-      `<p>${esc(versionLine(lang))}</p>`,
+      `<p class="meta">${esc(versionLine(lang))}</p>`,
       `<p>${esc(s[lang].webLicensesInApp)}</p>`,
       `<p><a class="block-link" href="/${NOTICES_FILE}">${esc(s[lang].webLicensesFile)}</a></p>`,
     ].join("\n");

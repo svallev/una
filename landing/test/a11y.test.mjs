@@ -271,3 +271,106 @@ describe("CA-026-01, 05, 09 y 16: la estructura de la página (checkPage)", () =
   fails("CA-026-09: un id repetido", (w) => edit(privacy(w), (t) => t.replace('<span id="footer-nav"', '<span id="langs-name"')), /id «langs-name» está repetido/);
   fails("CA-026-09: aria-labelledby a un id que no existe", (w) => edit(privacy(w), (t) => t.replace('<span id="footer-nav"', '<span id="pie"')), /aria-labelledby="footer-nav"> apunta a un id que no existe/);
 });
+
+// Spec 026, T-026-04: los estilos de las páginas nuevas (plan §2.4). Cada regla nueva de `checkCss` con un caso
+// que falla; los de tokens, contraste y movimiento de la 023 (arriba) siguen valiendo.
+describe("CA-026-02, 03, 10 y 11: los estilos de las páginas (checkCss)", () => {
+  const cut = (from, to) => (w) => edit(css(w), (t) => {
+    const i = t.indexOf(from);
+    const j = t.indexOf(to, i + from.length);
+    assert.ok(i >= 0 && j > i, `no está «${from}» … «${to}» en site.css`);
+    return t.slice(0, i) + t.slice(j + to.length);
+  });
+  const swap = (from, to) => (w) => edit(css(w), (t) => {
+    assert.equal(t.split(from).length, 2, `«${from}» tiene que estar una sola vez en site.css`);
+    return t.replace(from, to);
+  });
+  const HEIGHT_MEDIA = "@media (max-height: 539.98px) {";
+
+  test("CA-026-02: la hoja publicada tiene la cabecera fija y sus dos excepciones de @media", () => {
+    const text = read(css(base));
+    assert.match(text, /\.top \{[^}]*position: fixed;/);
+    assert.ok(text.includes(HEIGHT_MEDIA));
+    assert.ok(text.includes("@media (max-width: 520px) {"));
+    assert.ok(text.includes("@media (forced-colors: active) {"));
+    assert.ok(!/transition|animation|@keyframes/.test(text.replace(/\/\*[\s\S]*?\*\//g, "")));
+  });
+
+  // Cabecera fija (CA-026-02).
+  fails("CA-026-02: la cabecera no es fija", swap("  position: fixed;\n", "  position: absolute;\n"), /cabecera.*position: fixed/);
+  fails("CA-026-02: position: fixed en otro elemento", addCss(".langs { position: fixed; }"), /position: fixed/);
+  fails("CA-026-02: position: fixed dentro de un @media", addCss("@media (max-width: 520px) { .end { position: fixed; } }"), /position: fixed/);
+  fails("CA-026-02: la cabecera con position: sticky", swap("  position: fixed;\n", "  position: sticky;\n"), /sticky/);
+  fails("CA-026-02: la cabecera sin fondo de papel opaco", swap("  border-bottom: var(--border-width-hairline) solid var(--color-line);\n  background-color: var(--color-paper);\n", "  border-bottom: var(--border-width-hairline) solid var(--color-line);\n"), /cabecera.*papel/);
+  fails("CA-026-02: la cabecera sin white-space: nowrap", swap("  background-color: var(--color-paper);\n  white-space: nowrap;\n", "  background-color: var(--color-paper);\n"), /cabecera.*nowrap/);
+  fails("CA-026-02: la altura de la cabecera sin variable", swap("  min-height: var(--top-height);\n", ""), /altura de la cabecera/);
+  fails("CA-026-02: scroll-padding-top con otra variable", swap("  scroll-padding-top: var(--top-height);\n", "  scroll-padding-top: var(--size-button);\n"), /scroll-padding-top.*misma variable/);
+  fails("CA-026-02: sin scroll-padding-top", swap("  scroll-padding-top: var(--top-height);\n", ""), /scroll-padding-top/);
+  fails("CA-026-02: el hueco del cuerpo con otra variable", swap("  padding-top: var(--top-height);\n", "  padding-top: var(--size-button);\n"), /body.*padding-top.*misma variable/);
+  fails("CA-026-02: sin la excepción por altura", cut(HEIGHT_MEDIA, "\n}\n"), /max-height: 539\.98px/);
+  fails("CA-026-02: la excepción por altura deja la cabecera fija", swap("    position: static;\n", "    position: relative;\n"), /539\.98px.*position: static/);
+  fails("CA-026-02: la excepción por altura deja el scroll-padding-top", swap("    scroll-padding-top: 0;\n", ""), /539\.98px.*scroll-padding-top/);
+  fails("CA-026-02: la excepción por altura deja el hueco del cuerpo", swap("    padding-top: 0;\n", ""), /539\.98px.*padding-top/);
+
+  // Las dos medidas sueltas admitidas en @media, cada una solo con su valor.
+  fails("CA-026-02: la excepción por altura con otro valor (540px)", swap("(max-height: 539.98px)", "(max-height: 540px)"), /@media/);
+  fails("CA-026-02: la excepción por altura con otra unidad (33.75rem)", swap("(max-height: 539.98px)", "(max-height: 33.75rem)"), /@media/);
+  fails("CA-026-11: la excepción de ancho con otro valor (600px)", swap("(max-width: 520px)", "(max-width: 600px)"), /@media/);
+  fails("CA-026-11: la excepción de ancho como min-width", swap("(max-width: 520px)", "(min-width: 520px)"), /@media/);
+  fails("CA-026-03: un @media de modo oscuro", addCss("@media (prefers-color-scheme: dark) { p { color: var(--color-ink); } }"), /@media/);
+  fails("CA-026-03: un @media anidado", addCss("@media (max-width: 520px) { @media (forced-colors: active) { p { color: var(--color-ink); } } }"), /@media/);
+  fails("CA-026-03: un valor suelto dentro de un @media", addCss("@media (max-width: 520px) { p { margin: 10px; } }"), /valor suelto/);
+  fails("CA-026-10: una animación dentro de un @media", addCss("@media (max-width: 520px) { a { transition: none; } }"), /animaci/);
+
+  // «Descargar» solo con su icono a 520 px o menos (CA-026-11).
+  fails("CA-026-11: «Descargar» no se queda en su icono a 520 px", swap("  .btn__label {\n", "  .btn__nada {\n"), /btn__label/);
+  fails("CA-026-11: el texto de «Descargar» con display: none (pierde su nombre)", swap("  .btn__label {\n    position: absolute;\n", "  .btn__label {\n    display: none;\n    position: absolute;\n"), /btn__label.*display: none/);
+
+  // Ocultar el otro idioma (CA-026-06 y 08) y el titular de cada mitad a la vista (CA-026-10).
+  fails("CA-026-08: sin ocultar la mitad inglesa", swap('html[data-lang="es"] [data-l="en"], ', ""), /ocultar/);
+  fails("CA-026-08: sin ocultar los separadores", swap(', html[data-lang] [data-l="sep"]', ""), /ocultar/);
+  fails("CA-026-08: las reglas de ocultar sin display: none", swap("{\n  display: none;\n}", "{\n  visibility: hidden;\n}"), /ocultar/);
+  fails("CA-026-10: el titular de la mitad no se oculta a la vista", swap(", html[data-lang] .half__title {", " {"), /half__title/);
+  fails("CA-026-10: el titular de la mitad con display: none", addCss("html[data-lang] .half__title { display: none; }"), /half__title.*display: none/);
+  fails("CA-026-10: .vh sin recortar", swap("  clip-path: circle(0);\n  white-space: nowrap;\n}\n\n/* ── Cabecera", "  white-space: nowrap;\n}\n\n/* ── Cabecera"), /: \.vh tiene que ocultar/);
+  fails("CA-026-10: .half sin position: relative", swap(".half {\n  position: relative;\n}", ".half {\n  margin: 0;\n}"), /\.half.*relative/);
+
+  // Titulares, texto de apoyo y columna (CA-026-01 y 03).
+  fails("CA-026-03: el título sin el peso más fuerte", swap("  font-weight: var(--font-weight-black);\n  letter-spacing: var(--font-letter-spacing-tighter);\n", "  font-weight: var(--font-weight-extrabold);\n  letter-spacing: var(--font-letter-spacing-tighter);\n"), /h1.*font-weight-black/);
+  fails("CA-026-03: h3 sin la regla de 4 px", swap("  padding-top: var(--space-s);\n  border-top: var(--border-width-section) solid var(--color-ink);\n  font-size: var(--font-size-heading);\n", "  font-size: var(--font-size-heading);\n"), /h3.*border-width-section/);
+  fails("CA-026-03: la fecha sin Space Mono", swap(".date, .meta {", ".meta {"), /\.date.*mono/);
+  fails("CA-026-03: la versión de licencias sin Space Mono", swap(".date, .meta {", ".date {"), /\.meta.*mono/);
+  fails("CA-026-01: la columna sin el máximo de 600 px", swap("  max-width: var(--size-content-max-width);\n", "  max-width: var(--size-frame-width);\n"), /columna|content-max-width/);
+  fails("CA-026-01: el pie fuera de la columna", swap("main, .end {", "main {"), /\.end.*content-max-width/);
+
+  // Foco, icono, 44 × 44, marcas y colores forzados (CA-026-10).
+  fails("CA-026-10: sin h3:focus-visible", swap(", h3:focus-visible {", " {"), /h3:focus-visible/);
+  fails("CA-026-10: el icono sin currentColor", swap("  stroke: currentColor;\n", "  stroke: var(--color-ink);\n"), /\.ic.*currentColor/);
+  for (const sel of [".logo", ".btn", ".langs a", ".back", ".toc a", ".end a"]) {
+    fails(`CA-026-10: «${sel}» sin objetivo de 44 × 44`, (w) => edit(css(w), (t) => {
+      // Quita el selector de su regla (o la regla entera si va sola) en la que da los 44 × 44.
+      const lines = t.split("\n");
+      const at = lines.findIndex((l, i) => !l.startsWith(" ") && l.endsWith("{") && l.slice(0, -1).split(",").map((s) => s.trim()).includes(sel) &&
+        lines.slice(i, lines.indexOf("}", i)).some((x) => x.includes("min-width: var(--size-min-touch-target)")));
+      assert.ok(at >= 0, sel);
+      const parts = lines[at].slice(0, -1).split(",").map((s) => s.trim()).filter((s) => s !== sel);
+      lines[at] = parts.length ? `${parts.join(", ")} {` : ".nada {";
+      return lines.join("\n");
+    }), /44 × 44/);
+  }
+  fails("CA-026-10: un enlace del índice sin min-height", addCss(".toc a { min-height: 0; }"), /\.toc a.*44 × 44/);
+  fails("CA-026-10: la página actual sin su línea", swap("  border-bottom: var(--border-width-strong) solid var(--color-ink);\n}\n\n/* ── Excepciones", "}\n\n/* ── Excepciones"), /página actual/);
+  fails("CA-026-10: la página actual sin negrita", swap("  font-weight: var(--font-weight-bold);\n  text-decoration: none;\n", "  text-decoration: none;\n"), /página actual/);
+  fails("CA-026-10: un enlace del índice sin subrayado", addCss(".toc a { text-decoration: none; }"), /subrayado/);
+  fails("CA-026-10: el subrayado quitado con un selector que incluye la página actual", addCss('.end a, .end a[aria-current="page"] { text-decoration: none; }'), /subrayado/);
+  fails("CA-026-07: el idioma elegido sin el peso más fuerte", swap("  font-weight: var(--font-weight-black);\n  text-decoration-thickness", "  text-decoration-thickness"), /elegido/);
+  fails("CA-026-07: el idioma elegido sin el subrayado grueso", swap("  text-decoration-thickness: var(--border-width-strong);\n", ""), /elegido/);
+  fails("CA-026-10: sin colores forzados", cut("@media (forced-colors: active) {", "\n}\n"), /forced-colors/);
+  fails("CA-026-10: colores forzados sin el trazo del icono", swap("    stroke: CanvasText;\n", ""), /forced-colors.*\.ic/);
+
+  // Lo que solo admite la cabecera.
+  fails("CA-026-02: z-index en otro elemento", addCss(".langs { z-index: 1; }"), /z-index/);
+  fails("CA-026-02: z-index alto en la cabecera", swap("  z-index: 1;\n", "  z-index: 9999;\n"), /z-index/);
+  fails("CA-026-03: una variable propia fuera de html", addCss("p { --x: var(--space-m); }"), /variable propia/);
+  fails("CA-026-03: una variable propia con un valor suelto", swap("--top-height: calc(var(--size-button) + var(--border-width-hairline));", "--top-height: 4rem;"), /valor suelto/);
+});

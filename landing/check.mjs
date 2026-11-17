@@ -462,24 +462,48 @@ function checkPolicy(paths, dist, name, errors) {
 
 // ─── CSS ─────────────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Las reglas de una hoja: `{ selector, decls, media }` (`media`: la condición del `@media` que la contiene, o
+ * `null`), las reglas @ (`{ name, cond, nested }`) y el texto sin comentarios. Un solo nivel de `@media`.
+ */
 function parseCss(text) {
   const clean = text.replace(/\/\*[\s\S]*?\*\//g, "");
   const rules = [];
-  const atRules = [...clean.matchAll(/@([a-z-]+)/gi)].map((m) => `@${m[1]}`);
-  for (const m of clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const selector = m[1].trim();
-    if (selector.startsWith("@")) continue;
-    const decls = m[2]
-      .split(";")
-      .map((d) => d.trim())
-      .filter(Boolean)
-      .map((d) => {
-        const i = d.indexOf(":");
-        return { prop: d.slice(0, i).trim().toLowerCase(), value: d.slice(i + 1).trim() };
-      });
-    rules.push({ selector, decls });
-  }
-  return { rules, atRules, clean };
+  const atRules = [...clean.matchAll(/@([a-z-]+)/gi)].map((m) => `@${m[1].toLowerCase()}`);
+  const blocks = [];
+  const walk = (body, media) => {
+    let i = 0;
+    while (i < body.length) {
+      const open = body.indexOf("{", i);
+      if (open < 0) break;
+      let depth = 1;
+      let j = open + 1;
+      for (; j < body.length && depth > 0; j++) {
+        if (body[j] === "{") depth++;
+        else if (body[j] === "}") depth--;
+      }
+      const prelude = body.slice(i, open).trim();
+      const inner = body.slice(open + 1, j - 1);
+      i = j;
+      if (prelude.startsWith("@")) {
+        const m = /^@([a-z-]+)\s*([\s\S]*)$/i.exec(prelude);
+        blocks.push({ name: `@${m[1].toLowerCase()}`, cond: m[2].trim().replace(/\s+/g, " "), nested: media !== null });
+        if (m[1].toLowerCase() === "media" && media === null) walk(inner, m[2].trim().replace(/\s+/g, " "));
+        continue;
+      }
+      const decls = inner
+        .split(";")
+        .map((d) => d.trim())
+        .filter(Boolean)
+        .map((d) => {
+          const k = d.indexOf(":");
+          return { prop: d.slice(0, k).trim().toLowerCase(), value: d.slice(k + 1).trim() };
+        });
+      rules.push({ selector: prelude.replace(/\s+/g, " "), decls, media });
+    }
+  };
+  walk(clean, null);
+  return { rules, atRules, blocks, clean };
 }
 
 const NAMED_COLORS = new Set(
@@ -518,13 +542,42 @@ const hexRgb = (hex) => [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 1
 /** Los pares de texto y fondo de `docs/design/tokens.md` (tabla de contraste) que usa la web. */
 const ALLOWED_PAIRS = new Set(["ink/paper", "ink/surface", "textMuted/paper", "textMuted/surface", "error/paper", "error/surface", "ink/dangerFill", "onInk/ink", "onInkMuted/ink"]);
 
+/**
+ * Las únicas condiciones de `@media` de `site.css` (spec 026, plan §2.4): las dos medidas sueltas que admite la
+ * hoja son los umbrales de la landing (`max-height: 539.98px` de `mode.js` y `max-width: 520px` de su botón).
+ */
+const MEDIA_HEIGHT = "(max-height: 539.98px)";
+const MEDIA_WIDTH = "(max-width: 520px)";
+const MEDIA_FORCED = "(forced-colors: active)";
+const ALLOWED_MEDIA = new Set([MEDIA_HEIGHT, MEDIA_WIDTH, MEDIA_FORCED]);
+
+/** Los selectores que llevan los objetivos de 44 × 44 de CA-026-10. */
+const TOUCH_TARGETS = [".logo", ".btn", ".langs a", ".back", ".toc a", ".end a"];
+/** Las reglas de ocultar el otro idioma y los separadores (plan §2.4). */
+const HIDE_SELECTORS = ['html[data-lang="es"] [data-l="en"]', 'html[data-lang="en"] [data-l="es"]', 'html[data-lang] [data-l="sep"]'];
+/** Lo que oculta a la vista sin ocultar al lector (`.vh`, y el texto de «Descargar» a 520 px o menos). */
+const VISUALLY_HIDDEN = { position: "absolute", overflow: "hidden", "clip-path": "circle(0)", "white-space": "nowrap" };
+
+const selectorParts = (selector) => selector.split(",").map((s) => s.trim().replace(/\s+/g, " "));
+
 function checkCss(file, text, { tokens, definedVars }, errors, { strict }) {
   const fail = (msg) => errors.push(`${file}: ${msg}`);
-  const { rules, atRules, clean } = parseCss(text);
+  const { rules, atRules, blocks, clean } = parseCss(text);
 
+  // Variables propias de la hoja: solo en `html` (la altura de la cabecera, plan §2.4) y con valores de tokens.
+  const ownVars = new Set();
+  if (strict) {
+    for (const { selector, decls, media } of rules) {
+      for (const { prop } of decls) {
+        if (!prop.startsWith("--")) continue;
+        if (selector === "html" && media === null) ownVars.add(prop);
+        else fail(`«${selector}»: variable propia ${prop} fuera de «html» (solo la altura de la cabecera, en html)`);
+      }
+    }
+  }
   // Las variables que usa tienen que existir.
   for (const m of clean.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)) {
-    if (!definedVars.has(m[1])) fail(`usa la variable ${m[1]}, que no está en tokens.css`);
+    if (!definedVars.has(m[1]) && !ownVars.has(m[1])) fail(`usa la variable ${m[1]}, que no está en tokens.css`);
   }
   // Recursos: ninguno de otro origen.
   for (const m of clean.matchAll(/url\(\s*(['"]?)([^)'"]*)\1\s*\)/gi)) {
@@ -534,30 +587,50 @@ function checkCss(file, text, { tokens, definedVars }, errors, { strict }) {
   if (/@import/i.test(clean)) fail("@import (la web no carga hojas de otro sitio)");
   if (!strict) return;
 
-  for (const at of atRules) if (at !== "@import") fail(`regla ${at} no admitida (en site.css solo reglas simples con variables)`);
+  for (const at of atRules) if (at !== "@import" && at !== "@media") fail(`regla ${at} no admitida (en site.css solo reglas simples con variables y tres @media)`);
+  for (const b of blocks) {
+    if (b.name !== "@media") continue;
+    if (b.nested) fail(`@media ${b.cond} dentro de otro @media (no se admite)`);
+    else if (!ALLOWED_MEDIA.has(b.cond)) fail(`@media ${b.cond} no admitido (solo ${[...ALLOWED_MEDIA].join(", ")})`);
+  }
 
   const colorKeys = new Map(Object.keys(tokens.color).filter((k) => !k.startsWith("$")).map((k) => [kebab(k), k]));
   const focusRing = [];
   let underline = false;
-  let pre = null;
-  let block = null;
 
-  for (const { selector, decls } of rules) {
-    const where = `«${selector}»`;
+  for (const { selector, decls, media } of rules) {
+    const where = media ? `«${selector}» (@media ${media})` : `«${selector}»`;
+    const parts = selectorParts(selector);
     const get = (p) => decls.find((d) => d.prop === p)?.value;
     for (const { prop, value } of decls) {
+      // z-index: solo la cabecera fija, por encima de las mitades (que llevan position: relative).
+      if (prop === "z-index") {
+        if (selector !== ".top" || media !== null || value !== "1") fail(`${where}: «z-index: ${value}» (solo «.top» con z-index: 1)`);
+        continue;
+      }
       const loose = looseValue(prop, value);
       if (loose) fail(`valor suelto (${loose}) en ${where}: «${prop}: ${value}» (usa una variable de tokens.css)`);
       if (/^(transition|animation)/.test(prop)) fail(`${where}: «${prop}» (la web no tiene animaciones)`);
       if (prop === "scroll-behavior" && value !== "auto") fail(`${where}: scroll-behavior: ${value} (movimiento: tiene que ser auto)`);
       if (/^outline(-style|-width)?$/.test(prop) && /^(none|0|hidden)$/.test(value)) fail(`${where}: «${prop}: ${value}» oculta el foco (2.4.7)`);
-      if (/^text-decoration(-line)?$/.test(prop) && /\bnone\b/.test(value)) fail(`${where}: «${prop}: ${value}» quita el subrayado de los enlaces`);
+      // Sin subrayado solo el logotipo, «Descargar» (como en la landing) y la página actual del pie (que lleva su
+      // línea, CA-026-10).
+      if (/^text-decoration(-line)?$/.test(prop) && /\bnone\b/.test(value)) {
+        const allowed = media === null && parts.every((s) => s === ".logo" || s === ".btn" || s === '.end a[aria-current="page"]');
+        if (!allowed) fail(`${where}: «${prop}: ${value}» quita el subrayado de los enlaces`);
+      }
       if (prop === "height" && !/^(auto|100%|inherit)$/.test(value)) fail(`${where}: altura fija «height: ${value}» (1.4.12: usa min-height)`);
       if (prop === "width" && !/^(auto|100%|inherit|fit-content)$/.test(value)) fail(`${where}: ancho fijo «width: ${value}» (1.4.10: usa max-width)`);
       if (prop === "line-height" && !/^\d*\.?\d+$/.test(value)) fail(`${where}: interlineado fijo «line-height: ${value}» (1.4.12: sin unidades)`);
       if (/^overflow(-x)?$/.test(prop) && /\b(scroll|auto)\b/.test(value)) fail(`${where}: «${prop}: ${value}» obliga a un desplazamiento horizontal (1.4.10)`);
-      if (prop === "position" && /^(sticky|fixed)$/.test(value)) fail(`${where}: position: ${value} puede tapar el elemento con el foco (2.4.11)`);
+      if (prop === "position" && value === "sticky") fail(`${where}: position: sticky puede tapar el elemento con el foco (2.4.11)`);
+      if (prop === "position" && value === "fixed" && (selector !== ".top" || media !== null)) {
+        fail(`${where}: position: fixed puede tapar el elemento con el foco (2.4.11; solo la cabecera, «.top»)`);
+      }
       if (prop === "font-size" && /^(html|:root)$/.test(selector)) fail(`${where}: font-size en html (hay que respetar el tamaño del texto del navegador)`);
+      if (prop === "display" && value === "none" && parts.some((s) => /half__title|btn__label/.test(s))) {
+        fail(`${where}: display: none quita el nombre al lector (se oculta solo a la vista, como .vh)`);
+      }
     }
 
     // Pares de color.
@@ -579,21 +652,88 @@ function checkCss(file, text, { tokens, definedVars }, errors, { strict }) {
       }
     }
 
-    // Reglas que tienen que existir.
-    if (selector.split(",").some((s) => s.trim().endsWith(":focus-visible"))) {
-      if (/var\(--border-width-focus\)/.test(get("outline") ?? "")) focusRing.push(selector);
+    if (media === null && parts.some((s) => s.endsWith(":focus-visible"))) {
+      if (/var\(--border-width-focus\)/.test(get("outline") ?? "")) focusRing.push(...parts);
     }
-    if (selector === "a" && /\bunderline\b/.test(get("text-decoration") ?? "")) underline = true;
-    if (selector === "pre") pre = decls;
-    if (selector === ".block-link") block = decls;
+    if (media === null && selector === "a" && /\bunderline\b/.test(get("text-decoration") ?? "")) underline = true;
   }
+
+  /** El último valor de [prop] para el selector [part] (sin `@media`, o dentro de [media]), como en la cascada. */
+  const valueOf = (part, prop, media = null) => {
+    let found;
+    for (const r of rules) {
+      if (r.media !== media || !selectorParts(r.selector).includes(part)) continue;
+      for (const d of r.decls) if (d.prop === prop) found = d.value;
+    }
+    return found;
+  };
+  const visuallyHidden = (part, media = null) => Object.entries(VISUALLY_HIDDEN).every(([p, v]) => valueOf(part, p, media) === v);
+
   if (focusRing.length === 0) fail("falta el anillo de foco (:focus-visible con outline de var(--border-width-focus)): 2.4.7");
+  else if (!focusRing.includes("h3:focus-visible")) fail("falta h3:focus-visible con el anillo de foco (los <h3> reciben el foco desde el índice, CA-026-10)");
   if (!underline) fail("los enlaces (a) tienen que ir subrayados: text-decoration: underline");
-  if (!pre || pre.find((d) => d.prop === "white-space")?.value !== "pre-wrap") fail("pre tiene que llevar white-space: pre-wrap (reflujo, 1.4.10)");
-  else if (pre.find((d) => d.prop === "overflow-wrap")?.value !== "anywhere") fail("pre tiene que llevar overflow-wrap: anywhere (reflujo, 1.4.10)");
-  if (!block || block.find((d) => d.prop === "min-height")?.value !== "var(--size-link-button)") {
+  if (valueOf("pre", "white-space") !== "pre-wrap") fail("pre tiene que llevar white-space: pre-wrap (reflujo, 1.4.10)");
+  else if (valueOf("pre", "overflow-wrap") !== "anywhere") fail("pre tiene que llevar overflow-wrap: anywhere (reflujo, 1.4.10)");
+  if (valueOf(".block-link", "min-height") !== "var(--size-link-button)") {
     fail(".block-link tiene que llevar min-height: var(--size-link-button) (objetivo de 44, P6)");
   }
+
+  // Ocultar el otro idioma (CA-026-06 y 08) y, con JavaScript, el titular de cada mitad solo a la vista (CA-026-10).
+  if (!HIDE_SELECTORS.every((s) => valueOf(s, "display") === "none")) {
+    fail(`faltan las reglas de ocultar el otro idioma: ${HIDE_SELECTORS.join(", ")} { display: none } (CA-026-08)`);
+  }
+  if (!visuallyHidden(".vh")) fail(`.vh tiene que ocultar solo a la vista (${Object.entries(VISUALLY_HIDDEN).map(([p, v]) => `${p}: ${v}`).join("; ")})`);
+  if (!visuallyHidden("html[data-lang] .half__title")) fail("html[data-lang] .half__title tiene que ocultarse como .vh (el lector lo sigue teniendo, CA-026-10)");
+  if (valueOf(".half", "position") !== "relative") fail(".half tiene que llevar position: relative (el salto a #es y #en deja la mitad a la vista)");
+
+  // La cabecera fija (CA-026-02): una sola variable da su altura, el hueco del cuerpo y el scroll-padding-top.
+  const top = (p, media) => valueOf(".top", p, media);
+  if (top("position") !== "fixed") fail("la cabecera (.top) tiene que llevar position: fixed (CA-026-02)");
+  if (top("background-color") !== "var(--color-paper)") fail("la cabecera (.top) tiene que ir sobre papel opaco: background-color: var(--color-paper)");
+  if (top("white-space") !== "nowrap") fail("la cabecera (.top) tiene que llevar white-space: nowrap (no crece en dos líneas, 1.4.12)");
+  const height = /^var\((--[a-z0-9-]+)\)$/.exec(top("min-height") ?? "")?.[1];
+  if (!height) fail("la altura de la cabecera (.top) tiene que ser min-height: var(--…) (la misma variable que scroll-padding-top)");
+  else {
+    if (valueOf("html", "scroll-padding-top") !== `var(${height})`) fail(`html: scroll-padding-top tiene que usar la misma variable que la altura de la cabecera (var(${height}), 2.4.11)`);
+    if (valueOf("body", "padding-top") !== `var(${height})`) fail(`body: padding-top tiene que usar la misma variable que la altura de la cabecera (var(${height}))`);
+  }
+  if (!blocks.some((b) => b.name === "@media" && b.cond === MEDIA_HEIGHT)) fail(`falta @media ${MEDIA_HEIGHT}: en ventanas bajas la cabecera no es fija (CA-026-02)`);
+  else {
+    if (top("position", MEDIA_HEIGHT) !== "static") fail(`@media ${MEDIA_HEIGHT}: la cabecera (.top) tiene que llevar position: static`);
+    if (valueOf("html", "scroll-padding-top", MEDIA_HEIGHT) !== "0") fail(`@media ${MEDIA_HEIGHT}: html tiene que llevar scroll-padding-top: 0`);
+    if (valueOf("body", "padding-top", MEDIA_HEIGHT) !== "0") fail(`@media ${MEDIA_HEIGHT}: body tiene que llevar padding-top: 0`);
+  }
+  // «Descargar» solo con su icono a 520 px o menos, sin perder su nombre (CA-026-11).
+  if (!visuallyHidden(".btn__label", MEDIA_WIDTH)) fail(`@media ${MEDIA_WIDTH}: .btn__label tiene que ocultarse solo a la vista, como .vh (CA-026-11)`);
+  if (valueOf(".ic", "stroke") !== "currentColor") fail(".ic tiene que llevar stroke: currentColor (el icono es el rótulo a 520 px o menos, 1.4.11)");
+
+  // Titulares, textos de apoyo y columna (CA-026-01 y 03).
+  if (valueOf("h1", "font-weight") !== "var(--font-weight-black)") fail("h1 tiene que llevar font-weight: var(--font-weight-black) (el peso más fuerte, CA-026-03)");
+  if (!/^var\(--border-width-section\) solid var\(--color-ink\)$/.test(valueOf("h3", "border-top") ?? "")) {
+    fail("h3 tiene que llevar border-top: var(--border-width-section) solid var(--color-ink) (la regla de 4 px, CA-026-03)");
+  }
+  for (const s of [".date", ".meta"]) {
+    if (valueOf(s, "font-family") !== "var(--font-family-mono)") fail(`${s} tiene que llevar font-family: var(--font-family-mono) (Space Mono, CA-026-03)`);
+  }
+  for (const s of ["main", ".end"]) {
+    if (valueOf(s, "max-width") !== "var(--size-content-max-width)") fail(`${s} tiene que llevar max-width: var(--size-content-max-width) (la columna de 600 px, CA-026-01)`);
+  }
+
+  // Objetivos de 44 × 44, marcas del elegido y de la página actual, colores forzados (CA-026-07 y 10).
+  for (const s of TOUCH_TARGETS) {
+    const ok = ["min-width", "min-height"].every((p) => valueOf(s, p) === "var(--size-min-touch-target)");
+    if (!ok) fail(`${s} tiene que llevar min-width y min-height: var(--size-min-touch-target) (44 × 44, CA-026-10)`);
+  }
+  const pressed = '.langs a[aria-pressed="true"]';
+  if (valueOf(pressed, "font-weight") !== "var(--font-weight-black)" || valueOf(pressed, "text-decoration-thickness") !== "var(--border-width-strong)") {
+    fail(`el idioma elegido (${pressed}) tiene que llevar font-weight: var(--font-weight-black) y text-decoration-thickness: var(--border-width-strong)`);
+  }
+  const current = '.end a[aria-current="page"]';
+  if (valueOf(current, "font-weight") !== "var(--font-weight-bold)" || !/^var\(--border-width-strong\) solid /.test(valueOf(`${current} > [lang]`, "border-bottom") ?? "")) {
+    fail(`la página actual del pie (${current}) tiene que ir en negrita y con una línea de var(--border-width-strong) bajo el texto (CA-026-10)`);
+  }
+  if (!blocks.some((b) => b.name === "@media" && b.cond === MEDIA_FORCED)) fail(`falta @media ${MEDIA_FORCED} (las marcas y el icono con colores forzados, CA-026-10)`);
+  else if (valueOf(".ic", "stroke", MEDIA_FORCED) !== "CanvasText") fail(`@media ${MEDIA_FORCED}: .ic tiene que llevar stroke: CanvasText`);
 }
 
 // ─── vercel.json ─────────────────────────────────────────────────────────────────────────────────
