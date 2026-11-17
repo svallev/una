@@ -3,9 +3,11 @@
    las únicas medidas sueltas que admite son las dos condiciones de @media de la landing (539.98px y 520px). */
 
 /* La altura de la cabecera fija: una sola variable para la cabecera, el hueco de arriba del cuerpo y el
-   `scroll-padding-top` (el foco y los saltos del índice quedan por debajo, 2.4.11). En rem: crece con el texto. */
+   `scroll-padding-top` (el foco y los saltos del índice quedan por debajo, 2.4.11). Sale de las mismas piezas
+   que la cabecera: su relleno vertical, «Descargar» (44 + su borde) y la línea de abajo (H-026-01; check.mjs lo
+   comprueba). Espacios y tamaños en rem: crece con el texto. */
 html {
-  --top-height: calc(var(--size-button) + var(--border-width-hairline));
+  --top-height: calc(var(--size-min-touch-target) + var(--border-width-strong) + var(--border-width-strong) + var(--space-s) + var(--space-s) + var(--border-width-hairline));
   background-color: var(--color-paper);
   color-scheme: light;
   scroll-behavior: auto;
@@ -110,11 +112,11 @@ html[data-lang="es"] [data-l="en"], html[data-lang="en"] [data-l="es"], html[dat
   stroke-linejoin: miter;
 }
 
-/* ── Columna (CA-026-01): el contenido y el pie, hasta 600 px, centrados ─────────────────────────── */
+/* ── Columna (CA-026-01): el contenido y el pie, hasta 1120 px, centrados ────────────────────────── */
 
 main, .end {
   box-sizing: border-box;
-  max-width: var(--size-content-max-width);
+  max-width: var(--size-web-content-max-width);
   margin-inline: auto;
   padding: var(--space-m) var(--space-l);
 }

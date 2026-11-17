@@ -293,6 +293,15 @@ describe("CA-025-18: cada pieza de terceros que va al navegador tiene su aviso, 
     );
   });
 
+  test("H-026-02: el encabezado dice que las otras páginas solo llevan el programa propio de idioma (no «run no program»)", () => {
+    const text = squash(real());
+    assert.ok(!text.includes("run no program"), "vuelve la frase antigua: las cuatro páginas cargan /lang.js (spec 026)");
+    assert.ok(
+      text.includes("The other pages (privacy policy, licenses, help and the error page) run only a small program of the website's own, to show one language at a time; it includes no third-party code."),
+      "falta la frase de la 026 sobre el programa de idioma de las otras páginas",
+    );
+  });
+
   test("Lenis: el texto de su LICENSE (MIT), tal cual viene en el paquete", () => {
     const license = read(join(LANDING, "node_modules/lenis/LICENSE"));
     assert.ok(squash(real()).includes(squash(license)), "falta el texto de la licencia de Lenis");

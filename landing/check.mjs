@@ -599,9 +599,80 @@ const HIDE_SELECTORS = ['html[data-lang="es"] [data-l="en"]', 'html[data-lang="e
 /** Lo que oculta a la vista sin ocultar al lector (`.vh`, y el texto de «Descargar» a 520 px o menos). */
 const VISUALLY_HIDDEN = { position: "absolute", overflow: "hidden", "clip-path": "circle(0)", "white-space": "nowrap" };
 
+/**
+ * Una longitud de site.css en px, con [rem] px por rem: resuelve `var(--…)` (tokens.css y las variables de `html`)
+ * y evalúa `calc()` con `+`, `-`, `*`, `/` y paréntesis. `null` si no sabe (un valor que no es una longitud).
+ */
+function lengthPx(value, vars, rem, depth = 0) {
+  if (value == null || depth > 8) return null;
+  let v = value.trim();
+  for (;;) {
+    const m = /var\(\s*(--[a-z0-9-]+)\s*\)/i.exec(v);
+    if (!m) break;
+    const inner = lengthPx(vars(m[1]), vars, rem, depth + 1);
+    if (inner === null) return null;
+    v = v.slice(0, m.index) + `(${inner})` + v.slice(m.index + m[0].length);
+  }
+  v = v.replace(/calc\(/g, "(").replace(/(-?\d*\.?\d+)(rem|px)\b/g, (_, n, u) => String(Number(n) * (u === "rem" ? rem : 1)));
+  const tokens = v.match(/\d*\.?\d+|[-+*/()]|\S/g) ?? [];
+  let i = 0;
+  const atom = () => {
+    const t = tokens[i++];
+    if (t === "(") { const x = sum(); if (tokens[i++] !== ")") throw new Error(); return x; }
+    if (t === "-") return -atom();
+    if (/^\d*\.?\d+$/.test(t ?? "")) return Number(t);
+    throw new Error();
+  };
+  const product = () => {
+    let x = atom();
+    while (tokens[i] === "*" || tokens[i] === "/") x = tokens[i++] === "*" ? x * atom() : x / atom();
+    return x;
+  };
+  const sum = () => {
+    let x = product();
+    while (tokens[i] === "+" || tokens[i] === "-") x = tokens[i++] === "+" ? x + product() : x - product();
+    return x;
+  };
+  try {
+    const x = sum();
+    return i === tokens.length && Number.isFinite(x) ? x : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * H-026-01: la variable de la altura de la cabecera mide lo mismo que la cabecera: su relleno de arriba y de
+ * abajo, lo más alto de dentro («Descargar», 44 más su borde, o el logotipo) y su línea de abajo. Con el texto
+ * a 16 px y a 32 px (espacios y tamaños en rem; bordes en px).
+ */
+function checkTopHeight(height, valueOf, varValues, fail) {
+  const own = (name) => varValues.get(name) ?? valueOf("html", name);
+  const first = (v) => (v ?? "").trim().split(/\s+(?![^(]*\))/)[0];
+  for (const rem of [16, 32]) {
+    const px = (v) => lengthPx(v, own, rem);
+    const pad = valueOf(".top", "padding");
+    const padTop = px(valueOf(".top", "padding-top") ?? first(pad));
+    const padBottom = px(valueOf(".top", "padding-bottom") ?? first(pad));
+    const line = px(first(valueOf(".top", "border-bottom")));
+    const btn = (px(valueOf(".btn", "min-height")) ?? 0) + 2 * (px(first(valueOf(".btn", "border"))) ?? 0);
+    const logo = px(valueOf(".logo", "min-height")) ?? 0;
+    const want = px(`var(${height})`);
+    if ([padTop, padBottom, line, want].includes(null)) {
+      fail(`no se puede medir la cabecera (.top): ${height}, su relleno y su border-bottom tienen que ser longitudes de tokens (H-026-01)`);
+      return;
+    }
+    const real = padTop + padBottom + Math.max(btn, logo) + line;
+    if (Math.abs(real - want) > 0.01) {
+      fail(`${height} (${want} px) no es la altura real de la cabecera (.top, ${real} px con el texto a ${rem} px: relleno, «Descargar» con su borde y la línea de abajo; H-026-01, CA-026-02)`);
+      return;
+    }
+  }
+}
+
 const selectorParts = (selector) => selector.split(",").map((s) => s.trim().replace(/\s+/g, " "));
 
-function checkCss(file, text, { tokens, definedVars }, errors, { strict }) {
+function checkCss(file, text, { tokens, definedVars, varValues = new Map() }, errors, { strict }) {
   const fail = (msg) => errors.push(`${file}: ${msg}`);
   const { rules, atRules, blocks, clean } = parseCss(text);
 
@@ -737,6 +808,7 @@ function checkCss(file, text, { tokens, definedVars }, errors, { strict }) {
   else {
     if (valueOf("html", "scroll-padding-top") !== `var(${height})`) fail(`html: scroll-padding-top tiene que usar la misma variable que la altura de la cabecera (var(${height}), 2.4.11)`);
     if (valueOf("body", "padding-top") !== `var(${height})`) fail(`body: padding-top tiene que usar la misma variable que la altura de la cabecera (var(${height}))`);
+    checkTopHeight(height, valueOf, varValues, fail);
   }
   if (!blocks.some((b) => b.name === "@media" && b.cond === MEDIA_HEIGHT)) fail(`falta @media ${MEDIA_HEIGHT}: en ventanas bajas la cabecera no es fija (CA-026-02)`);
   else {
@@ -757,7 +829,7 @@ function checkCss(file, text, { tokens, definedVars }, errors, { strict }) {
     if (valueOf(s, "font-family") !== "var(--font-family-mono)") fail(`${s} tiene que llevar font-family: var(--font-family-mono) (Space Mono, CA-026-03)`);
   }
   for (const s of ["main", ".end"]) {
-    if (valueOf(s, "max-width") !== "var(--size-content-max-width)") fail(`${s} tiene que llevar max-width: var(--size-content-max-width) (la columna de 600 px, CA-026-01)`);
+    if (valueOf(s, "max-width") !== "var(--size-web-content-max-width)") fail(`${s} tiene que llevar max-width: var(--size-web-content-max-width) (la columna de hasta 1120 px, CA-026-01)`);
   }
 
   // Objetivos de 44 × 44, marcas del elegido y de la página actual, colores forzados (CA-026-07 y 10).
@@ -1200,8 +1272,9 @@ export function checkSite(paths = defaultPaths(), { dist = paths.out } = {}) {
   if (!missing.has("tokens.css") && !missing.has("site.css")) {
     const tokensText = readFileSync(join(dist, "tokens.css"), "utf8");
     const tokens = JSON.parse(readFileSync(paths.tokens, "utf8"));
-    const definedVars = new Set([...tokensText.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]));
-    const ctx = { tokens, definedVars };
+    const varValues = new Map([...tokensText.matchAll(/^\s*(--[a-z0-9-]+):\s*([^;]+);/gm)].map((m) => [m[1], m[2].trim()]));
+    const definedVars = new Set(varValues.keys());
+    const ctx = { tokens, definedVars, varValues };
     checkCss("tokens.css", tokensText, ctx, errors, { strict: false });
     checkCss("site.css", readFileSync(join(dist, "site.css"), "utf8"), ctx, errors, { strict: true });
   }

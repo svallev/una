@@ -437,6 +437,7 @@ describe("tokens.css sale de design/tokens.json", () => {
     assert.match(css, /--space-l: 1\.5rem;/);
     assert.match(css, /--size-min-touch-target: 2\.75rem;/);
     assert.match(css, /--size-content-max-width: 37\.5rem;/);
+    assert.match(css, /--size-web-content-max-width: 70rem;/);
   });
 
   test("bordes en px y familias de fuente", () => {

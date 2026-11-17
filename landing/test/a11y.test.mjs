@@ -307,6 +307,22 @@ describe("CA-026-02, 03, 10 y 11: los estilos de las páginas (checkCss)", () =>
   fails("CA-026-02: scroll-padding-top con otra variable", swap("  scroll-padding-top: var(--top-height);\n", "  scroll-padding-top: var(--size-button);\n"), /scroll-padding-top.*misma variable/);
   fails("CA-026-02: sin scroll-padding-top", swap("  scroll-padding-top: var(--top-height);\n", ""), /scroll-padding-top/);
   fails("CA-026-02: el hueco del cuerpo con otra variable", swap("  padding-top: var(--top-height);\n", "  padding-top: var(--size-button);\n"), /body.*padding-top.*misma variable/);
+  // H-026-01: la variable mide lo mismo que la cabecera (relleno + «Descargar» con su borde + la línea de abajo).
+  const TOP_HEIGHT = "  --top-height: calc(var(--size-min-touch-target) + var(--border-width-strong) + var(--border-width-strong) + var(--space-s) + var(--space-s) + var(--border-width-hairline));\n";
+  fails("CA-026-02 (H-026-01): --top-height más baja que la cabecera (los 65 px de antes)", swap(TOP_HEIGHT, "  --top-height: calc(var(--size-button) + var(--border-width-hairline));\n"), /altura real de la cabecera/);
+  fails("CA-026-02 (H-026-01): --top-height más alta que la cabecera", swap(TOP_HEIGHT, TOP_HEIGHT.replace("var(--space-s) + var(--space-s)", "var(--space-m) + var(--space-m)")), /altura real de la cabecera/);
+  fails("CA-026-02 (H-026-01): la cabecera con más relleno que el que cuenta --top-height", swap("  padding: var(--space-s) var(--space-l);\n  border-bottom", "  padding: var(--space-m) var(--space-l);\n  border-bottom"), /altura real de la cabecera/);
+  fails("CA-026-02 (H-026-01): la línea de la cabecera más gruesa que la que cuenta --top-height", swap("  border-bottom: var(--border-width-hairline) solid var(--color-line);\n  background-color: var(--color-paper);\n  white-space", "  border-bottom: var(--border-width-strong) solid var(--color-line);\n  background-color: var(--color-paper);\n  white-space"), /altura real de la cabecera/);
+  fails("CA-026-02 (H-026-01): «Descargar» con otro borde que el que cuenta --top-height", swap("  border: var(--border-width-strong) solid var(--color-ink);\n  background-color: var(--color-surface);\n", "  border: var(--border-width-section) solid var(--color-ink);\n  background-color: var(--color-surface);\n"), /altura real de la cabecera/);
+  test("CA-026-02 (H-026-01): una forma equivalente de --top-height pasa", () => {
+    const w = cloneWorld(base);
+    try {
+      swap(TOP_HEIGHT, "  --top-height: calc(var(--border-width-hairline) + var(--space-s) + var(--size-min-touch-target) + var(--space-s) + var(--border-width-strong) + var(--border-width-strong));\n")(w);
+      assert.deepEqual(specificErrors(checkSite(w.paths)), []);
+    } finally {
+      w.cleanup();
+    }
+  });
   fails("CA-026-02: sin la excepción por altura", cut(HEIGHT_MEDIA, "\n}\n"), /max-height: 539\.98px/);
   fails("CA-026-02: la excepción por altura deja la cabecera fija", swap("    position: static;\n", "    position: relative;\n"), /539\.98px.*position: static/);
   fails("CA-026-02: la excepción por altura deja el scroll-padding-top", swap("    scroll-padding-top: 0;\n", ""), /539\.98px.*scroll-padding-top/);
@@ -340,8 +356,9 @@ describe("CA-026-02, 03, 10 y 11: los estilos de las páginas (checkCss)", () =>
   fails("CA-026-03: h3 sin la regla de 4 px", swap("  padding-top: var(--space-s);\n  border-top: var(--border-width-section) solid var(--color-ink);\n  font-size: var(--font-size-heading);\n", "  font-size: var(--font-size-heading);\n"), /h3.*border-width-section/);
   fails("CA-026-03: la fecha sin Space Mono", swap(".date, .meta {", ".meta {"), /\.date.*mono/);
   fails("CA-026-03: la versión de licencias sin Space Mono", swap(".date, .meta {", ".date {"), /\.meta.*mono/);
-  fails("CA-026-01: la columna sin el máximo de 600 px", swap("  max-width: var(--size-content-max-width);\n", "  max-width: var(--size-frame-width);\n"), /columna|content-max-width/);
-  fails("CA-026-01: el pie fuera de la columna", swap("main, .end {", "main {"), /\.end.*content-max-width/);
+  fails("CA-026-01: la columna sin el máximo de 1120 px", swap("  max-width: var(--size-web-content-max-width);\n", "  max-width: var(--size-frame-width);\n"), /columna|web-content-max-width/);
+  fails("CA-026-01: la columna con el máximo de la app (600 px)", swap("  max-width: var(--size-web-content-max-width);\n", "  max-width: var(--size-content-max-width);\n"), /web-content-max-width/);
+  fails("CA-026-01: el pie fuera de la columna", swap("main, .end {", "main {"), /\.end.*web-content-max-width/);
 
   // Foco, icono, 44 × 44, marcas y colores forzados (CA-026-10).
   fails("CA-026-10: sin h3:focus-visible", swap(", h3:focus-visible {", " {"), /h3:focus-visible/);
@@ -372,5 +389,5 @@ describe("CA-026-02, 03, 10 y 11: los estilos de las páginas (checkCss)", () =>
   fails("CA-026-02: z-index en otro elemento", addCss(".langs { z-index: 1; }"), /z-index/);
   fails("CA-026-02: z-index alto en la cabecera", swap("  z-index: 1;\n", "  z-index: 9999;\n"), /z-index/);
   fails("CA-026-03: una variable propia fuera de html", addCss("p { --x: var(--space-m); }"), /variable propia/);
-  fails("CA-026-03: una variable propia con un valor suelto", swap("--top-height: calc(var(--size-button) + var(--border-width-hairline));", "--top-height: 4rem;"), /valor suelto/);
+  fails("CA-026-03: una variable propia con un valor suelto", swap("--top-height: calc(var(--size-min-touch-target) + var(--border-width-strong) + var(--border-width-strong) + var(--space-s) + var(--space-s) + var(--border-width-hairline));", "--top-height: 4rem;"), /valor suelto/);
 });

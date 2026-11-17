@@ -45,7 +45,7 @@ Que quien pasa de la landing a la Ayuda, la política o las licencias (o llega a
     3. el enlace **«← Volver al inicio»** (salvo en la página de error, que ya lo tiene en su texto, CA-026-05: **uno solo** por página);
     4. el **título** de la página (el único encabezado principal);
     5. en la política, la **fecha de «última actualización»**; en la política y la Ayuda, el **índice** (CA-026-04);
-    6. el **contenido**, en una sola **columna de 600 px como máximo**, centrada, sobre el fondo de papel;
+    6. el **contenido**, en una sola **columna de hasta 1120 px**, centrada, sobre el fondo de papel (enmienda del propietario, 2026-11-17, al revisar C-026-1: aprovechar el ancho como superplay.co/terms; antes, 600 px);
     7. el **pie** de la landing: el aviso legal y los enlaces Ayuda, Privacidad y Licencias, en ese orden, más el contacto que ya lleva hoy (`webContact`). El enlace a la página en la que se está se marca como **página actual** (para el lector y a la vista, sin depender del color).
   - **Verificable:** test sobre el HTML construido de las cuatro páginas (orden de las piezas, un solo «Volver al inicio», pie con los tres enlaces en orden y el actual marcado) y casilla C-026-1.
 
@@ -134,7 +134,7 @@ Que quien pasa de la landing a la Ayuda, la política o las licencias (o llega a
 - **CA-026-11** · En móvil y en escritorio
   - **Dado** las cuatro páginas en los dos idiomas
   - **Cuando** se ven a 320 × 568, 390 × 844, 844 × 390, 768 × 1024 y 1280 × 720, al 400 % de zoom y con el espaciado de texto aumentado
-  - **Entonces** nada se corta ni se sale por la derecha y no hay desplazamiento horizontal de la página; la cabecera mantiene el logotipo y «Descargar» en una línea: si no cabe la palabra, «Descargar» se queda en su icono **sin perder su nombre** para el lector (como la landing a 520 px o menos); el selector cabe en una línea; la columna no pasa de 600 px.
+  - **Entonces** nada se corta ni se sale por la derecha y no hay desplazamiento horizontal de la página; la cabecera mantiene el logotipo y «Descargar» en una línea: si no cabe la palabra, «Descargar» se queda en su icono **sin perder su nombre** para el lector (como la landing a 520 px o menos); el selector cabe en una línea; la columna no pasa de 1120 px (enmienda del propietario, 2026-11-17, al revisar C-026-1: aprovechar el ancho como superplay.co/terms; antes, 600 px).
   - **Verificable:** casilla C-026-1 (cinco tamaños × cuatro páginas × dos idiomas, en Chrome; el plan dice si una parte se automatiza).
 
 - **CA-026-12** · Licencias: los avisos, legibles a cualquier ancho

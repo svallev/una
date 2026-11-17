@@ -227,6 +227,7 @@ abstract final class UnaSizes {
   static const double frameWidth = 390.0;
   static const double frameHeight = 844.0;
   static const double contentMaxWidth = 600.0;
+  static const double webContentMaxWidth = 1120.0;
   static const double icon = 22.0;
   static const double iconM = 24.0;
   static const double iconL = 26.0;
