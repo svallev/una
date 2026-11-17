@@ -149,7 +149,8 @@ Que quien pasa de la landing a la Ayuda, la política o las licencias (o llega a
   - **Dado** las cuatro páginas construidas y la configuración de Vercel del repositorio
   - **Cuando** se pasa la comprobación en la CI
   - **Entonces** sigue en vigor **todo** CA-023-14 (ningún recurso de otro origen, ninguna cookie, ninguna analítica, ningún envío de datos, las fuentes dentro de la web) con un **único cambio** en las cabeceras de estas páginas: se admiten programas **del propio origen**. **No** se admiten programas escritos dentro de la página **ni estilos en línea** (a diferencia de «/», CA-025-12). El programa no usa **ninguna dependencia** de terceros, **no** hace peticiones, **no** escribe en la página nada leído del almacenamiento o de la dirección (solo compara con `es` y `en`, P5), y lo único que guarda es el idioma, con la misma clave que la landing (`una-lang`; lleva el nombre de la app escrito a mano, aceptado en el plan de la 025 y fuera del alcance de esta spec).
-  - **Verificable:** test sobre las páginas construidas y la configuración (cada regla con un caso que falla: un programa en la página, un estilo en línea, un programa de otro origen, una dependencia en el programa) y casilla C-026-2 (peticiones y almacenamiento en el navegador, como C-025-7).
+  - **Enmienda del propietario (2026-11-17, al aprobar el plan, P-026-1):** además de admitir programas del propio origen, las cabeceras de estas páginas **exigen Trusted Types** (`require-trusted-types-for 'script'; trusted-types 'none'`): endurece, no relaja.
+  - **Verificable:** test sobre las páginas construidas y la configuración (cada regla con un caso que falla: un programa en la página, un estilo en línea, un programa de otro origen, una dependencia en el programa, sin Trusted Types) y casilla C-026-2 (peticiones y almacenamiento en el navegador, como C-025-7).
 
 - **CA-026-14** · La política dice la verdad
   - **Dado** `docs/legal/privacy-policy.md` (sección «Esta web»)
