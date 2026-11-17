@@ -636,6 +636,191 @@ export function parseNotices(text, label = "third-party-notices.txt") {
   return { ...header, body };
 }
 
+/** Un marcador de parte del archivo de avisos (la forma de `tools/check-licenses.sh`). */
+const NOTICES_MARKER = /^===== (BEGIN|END) (\S+) =====$/;
+/** El separador de avisos: exactamente 80 guiones, y solo dentro de la parte `NOTICES` (CL-027-3). */
+const NOTICES_SEPARATOR = "-".repeat(80);
+/** Cada línea de la cabecera de un aviso: un nombre de paquete, sin espacios ni caracteres de formato invisibles. */
+const NOTICE_NAME = /^[^\s\p{Cf}]+$/u;
+/** Las partes que no son secciones `assets/…`: no pueden reaparecer tras los avisos. */
+const RESERVED_PARTS = new Set(["ENTRIES", "NOTICES"]);
+
+/**
+ * El archivo entero no puede llevar rutas de una carpeta personal de la máquina de compilación ni caracteres de
+ * control (salvo salto de línea, retorno de carro y tabulador) o de dirección (spec 027, CA-027-04; CA-023-19).
+ * `/home/runner/` es la carpeta de la CI, como en `check-package.sh`. Falla con `BuildError` y la línea.
+ */
+export function checkNoticesText(text, label = "third-party-notices.txt") {
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const where = `${label}, línea ${i + 1}`;
+    const home = /\/home\/(?!runner\/)/.exec(line);
+    const personal = /\/Users\//.exec(line) ?? home ?? /[A-Za-z]:\\Users\\/i.exec(line);
+    if (personal) throw new BuildError(`${where}: lleva una ruta de una carpeta personal («${personal[0]}»)`);
+    for (const c of line) {
+      const n = c.codePointAt(0);
+      const control = (n < 32 && c !== "\r" && c !== "\t") || (n >= 0x7f && n <= 0x9f);
+      const bidi =
+        (n >= 0x202a && n <= 0x202e) || (n >= 0x2066 && n <= 0x2069) || n === 0x200e || n === 0x200f || n === 0x2028 || n === 0x2029;
+      if (control || bidi) {
+        const code = `U+${n.toString(16).toUpperCase().padStart(4, "0")}`;
+        throw new BuildError(`${where}: lleva un carácter de ${control ? "control" : "dirección"} (${code})`);
+      }
+    }
+  }
+}
+
+/**
+ * Analiza el cuerpo del archivo de avisos (spec 027, CA-027-05), ya con los finales de línea en `\n`: el
+ * preámbulo (todo lo anterior a `===== BEGIN NOTICES =====`, con su `BEGIN/END ENTRIES`), los avisos de la parte
+ * `NOTICES` agrupados por cabecera exacta (en el orden del archivo) y las secciones `assets/…` que van detrás.
+ * Puro y sin listas escritas a mano (CL-027-6). [firstLine] es la línea del archivo en que empieza el cuerpo, para
+ * los mensajes. Devuelve `{ preamble, groups: [{ names, notices }], sections: [{ path, text, gap }], tail }`, donde
+ * `gap` son las líneas en blanco antes de la sección y `tail` las del final (solo para reconstruir el cuerpo con
+ * `rebuildNoticesBody`). Cualquier estructura que no reconoce falla con `BuildError` (qué y en qué línea).
+ */
+export function parseNoticesBody(body, { label = "third-party-notices.txt", firstLine = 1 } = {}) {
+  const lines = body.split("\n");
+  const fail = (i, what) => {
+    throw new BuildError(`${label}, línea ${firstLine + i}: ${what}`);
+  };
+  const marker = (line) => {
+    const m = NOTICES_MARKER.exec(line);
+    return m ? { kind: m[1], name: m[2] } : null;
+  };
+  const blank = (line) => line.trim() === "";
+
+  // El preámbulo: hasta `BEGIN NOTICES`, con una sola pareja `BEGIN/END ENTRIES` (opcional) bien cerrada.
+  let i = 0;
+  let entries = "none"; // none → open → closed
+  let entriesAt = -1;
+  for (; i < lines.length; i++) {
+    const m = marker(lines[i]);
+    if (!m) continue;
+    if (m.kind === "BEGIN" && m.name === "NOTICES") {
+      if (entries === "open") fail(i, `la parte «NOTICES» empieza dentro de «ENTRIES» (anidada; «ENTRIES» se abrió en la línea ${firstLine + entriesAt})`);
+      break;
+    }
+    if (m.name !== "ENTRIES") fail(i, `marcador «${lines[i]}» en el preámbulo (solo se admite la pareja «ENTRIES»)`);
+    if (m.kind === "BEGIN") {
+      if (entries === "open") fail(i, "«BEGIN ENTRIES» dentro de «ENTRIES» (anidada)");
+      if (entries === "closed") fail(i, "una segunda pareja «ENTRIES»");
+      entries = "open";
+      entriesAt = i;
+    } else {
+      if (entries !== "open") fail(i, "«END ENTRIES» sin su «BEGIN ENTRIES»");
+      entries = "closed";
+    }
+  }
+  if (entries === "open") fail(entriesAt, "«BEGIN ENTRIES» sin su «END ENTRIES»");
+  if (i >= lines.length) fail(lines.length - 1, "ningún aviso (falta la parte «===== BEGIN NOTICES =====»)");
+  const noticesAt = i;
+  const preamble = lines.slice(0, noticesAt).map((l) => `${l}\n`).join("");
+
+  // Los avisos: trozos entre separadores de 80 guiones, hasta `END NOTICES`.
+  const groups = [];
+  const seen = new Map(); // clave de cabecera → línea de su primer aviso
+  let chunk = [];
+  let chunkAt = noticesAt + 1;
+  const closeChunk = () => {
+    if (chunk.length === 0) fail(chunkAt, "un aviso vacío (dos separadores seguidos, o uno junto a un marcador)");
+    const sep = chunk.indexOf("");
+    if (sep < 0) fail(chunkAt, "un aviso sin la línea en blanco que separa la cabecera del texto");
+    if (sep === 0) fail(chunkAt, "un aviso con la cabecera vacía");
+    const names = chunk.slice(0, sep);
+    names.forEach((n, k) => {
+      if (!NOTICE_NAME.test(n)) fail(chunkAt + k, `cabecera no válida («${n}»): un nombre de paquete por línea, sin espacios`);
+    });
+    const text = chunk.slice(sep + 1).join("\n");
+    if (text.trim() === "") fail(chunkAt, `el aviso de «${names.join(", ")}» no tiene texto`);
+    const key = names.join("\n");
+    const last = groups.at(-1);
+    if (last && last.names.join("\n") === key) last.notices.push(text);
+    else {
+      if (seen.has(key)) {
+        fail(chunkAt, `la cabecera «${names.join(", ")}» reaparece lejos de su primer tramo (línea ${firstLine + seen.get(key)}): sus avisos tienen que ir seguidos`);
+      }
+      seen.set(key, chunkAt);
+      groups.push({ names, notices: [text] });
+    }
+  };
+  for (i = noticesAt + 1; i < lines.length; i++) {
+    const line = lines[i];
+    const m = marker(line);
+    if (m) {
+      if (m.kind === "BEGIN") fail(i, `«${line}» dentro de la parte «NOTICES» (anidada)`);
+      if (m.name !== "NOTICES") fail(i, `«${line}» sin su «BEGIN ${m.name}» (dentro de la parte «NOTICES»)`);
+      break;
+    }
+    if (line === NOTICES_SEPARATOR) {
+      closeChunk();
+      chunk = [];
+      chunkAt = i + 1;
+    } else chunk.push(line);
+  }
+  if (i >= lines.length) fail(noticesAt, "«BEGIN NOTICES» sin su «END NOTICES»");
+  closeChunk();
+
+  // Las secciones `assets/…`: cada una entre su `BEGIN` y su `END`; fuera de ellas, solo líneas en blanco.
+  const sections = [];
+  const paths = new Map();
+  let gap = [];
+  for (i += 1; i < lines.length; i++) {
+    const line = lines[i];
+    const m = marker(line);
+    if (!m) {
+      if (!blank(line)) fail(i, `texto fuera de una parte («${line.slice(0, 60)}»)`);
+      gap.push(line);
+      continue;
+    }
+    if (m.kind === "END") fail(i, `«${line}» sin su «BEGIN ${m.name}»`);
+    if (m.name === "NOTICES") fail(i, "una segunda pareja «NOTICES»");
+    if (RESERVED_PARTS.has(m.name)) fail(i, `«${line}» fuera del preámbulo`);
+    if (paths.has(m.name)) fail(i, `la sección «${m.name}» está repetida (la primera, en la línea ${firstLine + paths.get(m.name)})`);
+    paths.set(m.name, i);
+    const begin = i;
+    const text = [];
+    for (i += 1; i < lines.length; i++) {
+      const inner = marker(lines[i]);
+      if (!inner) {
+        text.push(lines[i]);
+        continue;
+      }
+      if (inner.kind === "BEGIN") fail(i, `«${lines[i]}» dentro de la sección «${m.name}» (anidada)`);
+      if (inner.name !== m.name) fail(i, `«${lines[i]}» sin su «BEGIN ${inner.name}» (dentro de la sección «${m.name}»)`);
+      break;
+    }
+    if (i >= lines.length) fail(begin, `«BEGIN ${m.name}» sin su «END ${m.name}»`);
+    if (text.join("\n").trim() === "") fail(begin, `la sección «${m.name}» no tiene texto`);
+    sections.push({ path: m.name, text: text.join("\n"), gap });
+    gap = [];
+  }
+  return { preamble, groups, sections, tail: gap };
+}
+
+/**
+ * La inversa de `parseNoticesBody` (sin el preámbulo): desde `===== BEGIN NOTICES =====`, con las cabeceras, la
+ * línea en blanco, el texto de cada aviso, los separadores y los marcadores de cada parte (CA-027-02 c).
+ */
+export function rebuildNoticesBody(parsed) {
+  const lines = ["===== BEGIN NOTICES ====="];
+  const notices = parsed.groups.flatMap((g) => g.notices.map((text) => [...g.names, "", text].join("\n")));
+  lines.push(notices.join(`\n${NOTICES_SEPARATOR}\n`), "===== END NOTICES =====");
+  for (const s of parsed.sections) lines.push(...s.gap, `===== BEGIN ${s.path} =====`, s.text, `===== END ${s.path} =====`);
+  lines.push(...parsed.tail);
+  return lines.join("\n");
+}
+
+/**
+ * La ida y vuelta (spec 027, revisión de seguridad I-2): el preámbulo y lo reconstruido desde los grupos tienen que
+ * dar el cuerpo tal cual. Si no, el analizador perdió, repitió o cambió algo y la construcción falla.
+ */
+export function assertNoticesRoundTrip(body, parsed, label = "third-party-notices.txt") {
+  if (parsed.preamble + rebuildNoticesBody(parsed) === body) return;
+  throw new BuildError(`${label}: los avisos agrupados no reconstruyen el archivo (el analizador perdió, repitió o cambió algo)`);
+}
+
 /**
  * Los avisos del código de terceros de la propia web (spec 025, CA-025-18): `landing/web-notices.txt`, escrito a
  * mano, en inglés. Empieza por «Third-party code in this website» y nombra cada paquete que va al navegador en
@@ -989,7 +1174,12 @@ export function renderSite(paths) {
   // Licencias de terceros (CA-023-16): la versión (o la última compilación) y el archivo de avisos,
   // que se publica una sola vez, en inglés, después de las dos mitades.
   const noticesText = readText(paths.notices, "third-party-notices.txt");
+  checkNoticesText(noticesText);
   const notices = parseNotices(noticesText);
+  // Spec 027 (CA-027-05): la estructura del cuerpo, que se reconoce entero o la construcción falla, y la ida y
+  // vuelta. [Pendiente, T-027-03] el HTML de los grupos; de momento, el bloque único de siempre.
+  const noticesBody = norm(notices.body);
+  assertNoticesRoundTrip(noticesBody, parseNoticesBody(noticesBody, { firstLine: 3 }));
   const versionLine = (lang) =>
     notices.kind === "version"
       ? fill(s[lang].webLicensesVersion, { [lang === "es" ? "versión" : "version"]: notices.version })

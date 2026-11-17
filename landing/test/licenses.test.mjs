@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
-import { build, defaultPaths, parseNotices, parseWebNotices } from "../build.mjs";
+import { assertNoticesRoundTrip, build, checkNoticesText, defaultPaths, parseNotices, parseNoticesBody, parseWebNotices, rebuildNoticesBody } from "../build.mjs";
 import { checkSite } from "../check.mjs";
-import { HEADER_BUILD, HEADER_VERSION, cloneWorld, edit, fakeNotices, read, specificErrors, world } from "./support.mjs";
+import { HEADER_BUILD, HEADER_VERSION, cloneWorld, edit, fakeNotices, noticesBody, read, specificErrors, world } from "./support.mjs";
 
 let base;
 before(() => {
@@ -123,9 +123,10 @@ describe("CA-023-16: la página de licencias", () => {
     assert.ok(html.includes("The full license texts are also included in the app."));
   });
 
-  test("CA-026-12: tiene las dos mitades, el código de esta web (spec 025) y, después, el bloque de avisos en inglés, una sola vez", () => {
+  // CA-027-05: el aviso de prueba va dentro de la estructura mínima que se reconoce (antes, un cuerpo sin marcadores).
+  test("CA-026-12, CA-027-05: tiene las dos mitades, el código de esta web (spec 025) y, después, el bloque de avisos en inglés, una sola vez", () => {
     const marker = "AVISO-UNICO-DE-PRUEBA";
-    const { w } = withNotices(fakeNotices(HEADER_BUILD, `Third-party notices\n${marker}\n`));
+    const { w } = withNotices(fakeNotices(HEADER_BUILD, noticesBody(marker)));
     try {
       const html = read(licenses(w));
       const es = html.indexOf('<section class="half" lang="es" data-l="es" aria-labelledby="es">');
@@ -148,8 +149,8 @@ describe("CA-023-16: la página de licencias", () => {
     assert.equal(read(join(base.dist, "third-party-notices.txt")), read(base.paths.notices));
   });
 
-  test("el <pre> escapa el HTML de los avisos", () => {
-    const { w } = withNotices(fakeNotices(HEADER_BUILD, 'Third-party notices\n<script>alert("x")</script> & más\n'));
+  test("CA-027-05: el <pre> escapa el HTML de los avisos", () => {
+    const { w } = withNotices(fakeNotices(HEADER_BUILD, noticesBody('<script>alert("x")</script> & más')));
     try {
       const html = read(licenses(w));
       assert.ok(!html.includes("<script>"));
@@ -160,8 +161,8 @@ describe("CA-023-16: la página de licencias", () => {
     }
   });
 
-  test("los saltos de línea de Windows del archivo no pasan al HTML", () => {
-    const { w } = withNotices(fakeNotices(HEADER_BUILD, "Third-party notices\r\nlínea 2\r\n"));
+  test("CA-027-05: los saltos de línea de Windows del archivo no pasan al HTML", () => {
+    const { w } = withNotices(fakeNotices(HEADER_BUILD, noticesBody("línea 1\nlínea 2").replaceAll("\n", "\r\n")));
     try {
       assert.ok(!read(licenses(w)).includes("\r"));
     } finally {
@@ -169,8 +170,8 @@ describe("CA-023-16: la página de licencias", () => {
     }
   });
 
-  test("un texto de licencia con «[DATE]» o «[WEBSITE]» no es un hueco de identidad", () => {
-    const { w, result } = withNotices(fakeNotices(HEADER_BUILD, "Third-party notices\nCopyright [DATE] [WEBSITE] [WEB]\n"));
+  test("CA-027-05: un texto de licencia con «[DATE]» o «[WEBSITE]» no es un hueco de identidad", () => {
+    const { w, result } = withNotices(fakeNotices(HEADER_BUILD, noticesBody("Copyright [DATE] [WEBSITE] [WEB]")));
     try {
       const own = result.warnings.filter((m) => m.includes("licenses/index.html"));
       assert.ok(own.length >= 1, "el pie de la página sí lleva el hueco del contacto");
@@ -180,8 +181,8 @@ describe("CA-023-16: la página de licencias", () => {
     }
   });
 
-  test("palabras de analítica dentro de una licencia no hacen fallar la comprobación", () => {
-    const { w } = withNotices(fakeNotices(HEADER_BUILD, "Third-party notices\nIt is plausible that gtag( and matomo and _vercel/ appear in a text.\n"));
+  test("CA-027-05: palabras de analítica dentro de una licencia no hacen fallar la comprobación", () => {
+    const { w } = withNotices(fakeNotices(HEADER_BUILD, noticesBody("It is plausible that gtag( and matomo and _vercel/ appear in a text.")));
     try {
       assert.deepEqual(checkSite(w.paths), []);
     } finally {
@@ -390,5 +391,196 @@ describe("CA-025-18: cada pieza de terceros que va al navegador tiene su aviso, 
     } finally {
       w.cleanup();
     }
+  });
+});
+
+// ─── La estructura del archivo de avisos (spec 027) ───────────────────────────────────────────────
+
+const DASH80 = "-".repeat(80);
+/** Un cuerpo de prueba a partir de sus líneas (la línea N del cuerpo es `lines[N - 1]`). */
+const doc = (lines) => `${lines.join("\n")}\n`;
+/** El cuerpo válido de referencia: preámbulo con `ENTRIES`, tres avisos (dos de `a` y uno de `b, c`) y una sección. */
+const VALID = [
+  "Third-party notices", //                    1
+  "===== BEGIN ENTRIES =====", //              2
+  "dart:a", //                                 3
+  "===== END ENTRIES =====", //                4
+  "===== BEGIN NOTICES =====", //              5
+  "a", //                                      6
+  "", //                                       7
+  "text a1", //                                8
+  DASH80, //                                   9
+  "a", //                                     10
+  "", //                                      11
+  "text a2", //                               12
+  DASH80, //                                  13
+  "b", //                                     14
+  "c", //                                     15
+  "", //                                      16
+  "text bc", //                               17
+  "===== END NOTICES =====", //               18
+  "===== BEGIN assets/x.txt =====", //        19
+  "section x", //                             20
+  "===== END assets/x.txt =====", //          21
+];
+/** [VALID] con las líneas [from]…[to] (numeradas desde 1, inclusive) cambiadas por [insert]. */
+const splice = (from, to, ...insert) => {
+  const lines = [...VALID];
+  lines.splice(from - 1, to - from + 1, ...insert);
+  return lines;
+};
+/** Recuento independiente del analizador: parte la parte de avisos por las líneas de 80 guiones. */
+function countByHand(body) {
+  const lines = body.split("\n");
+  const from = lines.indexOf("===== BEGIN NOTICES =====");
+  const to = lines.indexOf("===== END NOTICES =====");
+  const chunks = lines.slice(from + 1, to).join("\n").split(`\n${DASH80}\n`);
+  const headers = chunks.map((c) => c.slice(0, c.indexOf("\n\n")));
+  const runs = headers.filter((h, k) => k === 0 || h !== headers[k - 1]).length;
+  return { notices: chunks.length, distinct: new Set(headers).size, runs };
+}
+
+describe("CA-027-05: el analizador reconoce la estructura del archivo", () => {
+  test("el cuerpo de referencia: preámbulo tal cual, grupos por cabecera exacta y en orden, y la sección", () => {
+    const p = parseNoticesBody(doc(VALID));
+    assert.equal(p.preamble, doc(VALID.slice(0, 4)));
+    assert.deepEqual(p.groups, [
+      { names: ["a"], notices: ["text a1", "text a2"] },
+      { names: ["b", "c"], notices: ["text bc"] },
+    ]);
+    assert.deepEqual(p.sections.map((s) => [s.path, s.text]), [["assets/x.txt", "section x"]]);
+  });
+
+  test("el texto de un aviso conserva sus líneas en blanco y sus espacios del principio y del final", () => {
+    const p = parseNoticesBody(doc(splice(8, 8, "", "  first", "", "last  ", "", "")));
+    assert.deepEqual(p.groups[0].notices[0], "\n  first\n\nlast  \n\n");
+  });
+
+  test("CL-027-3: una línea de 79 u 81 guiones dentro de un aviso es texto; una de 80 dentro de una sección, también", () => {
+    const p = parseNoticesBody(doc(splice(20, 20, "x", DASH80, "y")));
+    assert.equal(p.sections[0].text, `x\n${DASH80}\ny`);
+    const q = parseNoticesBody(doc(splice(8, 8, "-".repeat(79), "-".repeat(81), "=".repeat(80))));
+    assert.equal(q.groups[0].notices[0], `${"-".repeat(79)}\n${"-".repeat(81)}\n${"=".repeat(80)}`);
+    assert.equal(q.groups[0].notices.length, 2);
+  });
+
+  test("CL-027-1: `a, b` y `b, a` son dos grupos, y `dart` y `dart, perfetto` también", () => {
+    const p = parseNoticesBody(doc(splice(6, 17, "a", "b", "", "t1", DASH80, "b", "a", "", "t2", DASH80, "dart", "", "t3", DASH80, "dart", "perfetto", "", "t4")));
+    assert.deepEqual(p.groups.map((g) => g.names.join(", ")), ["a, b", "b, a", "dart", "dart, perfetto"]);
+  });
+
+  test("las líneas en blanco fuera de una parte se admiten y se conservan para la ida y vuelta", () => {
+    const body = doc(splice(19, 19, "", "  ", VALID[18])).concat("\n");
+    const p = parseNoticesBody(body);
+    assert.equal(p.preamble + rebuildNoticesBody(p), body);
+  });
+
+  test("CA-027-02 (c): la ida y vuelta reconstruye el cuerpo desde «BEGIN NOTICES», también sin salto de línea final", () => {
+    for (const body of [doc(VALID), VALID.join("\n")]) {
+      const p = parseNoticesBody(body);
+      assert.equal(rebuildNoticesBody(p), body.slice(body.indexOf("===== BEGIN NOTICES =====")));
+      assertNoticesRoundTrip(body, p);
+    }
+  });
+
+  test("CA-027-02: la construcción falla si el analizador pierde, repite o cambia un aviso", () => {
+    const body = doc(VALID);
+    const tampered = [
+      (p) => p.groups[0].notices.pop(),
+      (p) => p.groups[0].notices.push(p.groups[0].notices[0]),
+      (p) => (p.groups[1].notices[0] = "text bC"),
+      (p) => (p.groups[1].names = ["c", "b"]),
+      (p) => (p.sections[0].text += " "),
+      (p) => (p.preamble = p.preamble.replace("dart:a", "dart:b")),
+    ];
+    for (const tamper of tampered) {
+      const p = parseNoticesBody(body);
+      tamper(p);
+      assert.throws(() => assertNoticesRoundTrip(body, p), /no reconstruyen el archivo/);
+    }
+  });
+
+  const rejects = (label, lines, pattern) =>
+    test(`falla: ${label}`, () => assert.throws(() => parseNoticesBody(typeof lines === "string" ? lines : doc(lines)), pattern));
+
+  rejects("ningún aviso (sin «BEGIN NOTICES»)", VALID.slice(0, 4), /ningún aviso/);
+  rejects("«BEGIN NOTICES» sin «END NOTICES»", VALID.slice(0, 17), /línea 5: «BEGIN NOTICES» sin su «END NOTICES»/);
+  rejects("una sección sin su «END»", VALID.slice(0, 20), /línea 19: «BEGIN assets\/x\.txt» sin su «END assets\/x\.txt»/);
+  rejects("un «END» sin su «BEGIN» tras los avisos", splice(19, 21, "===== END assets/y.txt ====="), /línea 19: «===== END assets\/y\.txt =====» sin su «BEGIN assets\/y\.txt»/);
+  rejects("un «END» de otra parte dentro de los avisos", splice(18, 18, "===== END ENTRIES ====="), /línea 18: .*END ENTRIES.* sin su «BEGIN ENTRIES»/);
+  rejects("el «END» de otra sección dentro de una sección", splice(21, 21, "===== END assets/y.txt ====="), /línea 21: .*sin su «BEGIN assets\/y\.txt»/);
+  rejects("una parte anidada en los avisos", splice(8, 8, "===== BEGIN assets/y.txt ====="), /línea 8: .*anidada/);
+  rejects("una parte anidada en una sección", splice(20, 20, "===== BEGIN assets/y.txt ====="), /línea 20: .*anidada/);
+  rejects("una sección repetida", [...VALID, ...VALID.slice(18, 21)], /línea 22: la sección «assets\/x\.txt» está repetida \(la primera, en la línea 19\)/);
+  rejects("una segunda pareja «NOTICES»", [...VALID, ...VALID.slice(4, 18)], /línea 22: una segunda pareja «NOTICES»/);
+  rejects("«ENTRIES» tras los avisos", [...VALID, ...VALID.slice(1, 4)], /línea 22: .*fuera del preámbulo/);
+  rejects("otro marcador en el preámbulo", splice(2, 4, "===== BEGIN OTHER =====", "===== END OTHER ====="), /línea 2: marcador .*en el preámbulo/);
+  rejects("«ENTRIES» sin cerrar", splice(4, 4), /línea 4: la parte «NOTICES» empieza dentro de «ENTRIES»/);
+  rejects("«ENTRIES» anidado", splice(3, 3, "===== BEGIN ENTRIES ====="), /línea 3: «BEGIN ENTRIES» dentro de «ENTRIES»/);
+  rejects("una segunda pareja «ENTRIES»", splice(5, 4, VALID[1], VALID[3]), /línea 5: una segunda pareja «ENTRIES»/);
+  rejects("«END ENTRIES» sin su «BEGIN»", splice(2, 2), /línea 3: «END ENTRIES» sin su «BEGIN ENTRIES»/);
+  rejects("una cabecera vacía", splice(6, 6), /línea 6: un aviso con la cabecera vacía/);
+  rejects("una cabecera con espacios", splice(14, 14, "b c"), /línea 14: cabecera no válida \(«b c»\)/);
+  rejects("una cabecera con un carácter de formato invisible (U+200B)", splice(15, 15, `c${String.fromCodePoint(0x200b)}`), /línea 15: cabecera no válida/);
+  rejects("un aviso sin la línea en blanco tras la cabecera", splice(16, 16), /línea 14: un aviso sin la línea en blanco/);
+  rejects("un aviso sin texto", splice(17, 17), /línea 14: el aviso de «b, c» no tiene texto/);
+  rejects("un aviso con solo espacios en blanco", splice(17, 17, "  ", ""), /línea 14: el aviso de «b, c» no tiene texto/);
+  rejects("un aviso vacío (dos separadores seguidos)", splice(9, 9, DASH80, DASH80), /línea 10: un aviso vacío/);
+  rejects("un separador justo tras «BEGIN NOTICES»", splice(6, 5, DASH80), /línea 6: un aviso vacío/);
+  rejects("una cabecera que reaparece lejos de su primer tramo", [...VALID.slice(0, 17), DASH80, "a", "", "text a3", ...VALID.slice(17)], /línea 19: la cabecera «a» reaparece lejos de su primer tramo \(línea 6\)/);
+  rejects("texto tras «END NOTICES»", splice(19, 18, "loose"), /línea 19: texto fuera de una parte \(«loose»\)/);
+  rejects("texto entre secciones", [...VALID, "loose", "===== BEGIN assets/y.txt =====", "y", "===== END assets/y.txt ====="], /línea 22: texto fuera de una parte/);
+  rejects("texto tras la última sección", [...VALID, "", "loose"], /línea 23: texto fuera de una parte/);
+  rejects("una sección sin texto", splice(20, 20), /línea 19: la sección «assets\/x\.txt» no tiene texto/);
+});
+
+describe("CA-027-01, CA-027-02 (c): con el archivo real", () => {
+  const { body: raw } = parseNotices(readFileSync(defaultPaths().notices, "utf8"));
+  const body = raw.replace(/\r\n?/g, "\n");
+  const parsed = parseNoticesBody(body, { firstLine: 3 });
+
+  test("CA-027-01: el número de grupos y la suma de sus avisos coinciden con un recuento independiente del analizador", () => {
+    const hand = countByHand(body);
+    assert.equal(parsed.groups.length, hand.distinct);
+    assert.equal(hand.runs, hand.distinct, "cada cabecera en un único tramo seguido");
+    assert.equal(parsed.groups.reduce((n, g) => n + g.notices.length, 0), hand.notices);
+    assert.deepEqual(parsed.sections.map((s) => s.path), [...body.matchAll(/^===== BEGIN (assets\/\S+) =====$/gm)].map((m) => m[1]));
+  });
+
+  test("CA-027-02 (c): rebuild(parse(x)) es el cuerpo desde «BEGIN NOTICES», y el preámbulo es lo anterior", () => {
+    const at = body.indexOf("===== BEGIN NOTICES =====");
+    assert.equal(rebuildNoticesBody(parsed), body.slice(at));
+    assert.equal(parsed.preamble, body.slice(0, at));
+  });
+});
+
+describe("CA-027-04, CA-027-05: la construcción falla cerrado", () => {
+  const breaks = (label, text, pattern) =>
+    test(label, () => {
+      const w = cloneWorld(base);
+      try {
+        writeFileSync(w.paths.notices, text);
+        assert.throws(() => build(w.paths, { env: {} }), pattern);
+      } finally {
+        w.cleanup();
+      }
+    });
+  const lines = noticesBody().split("\n"); // la línea N del cuerpo es la N + 2 del archivo
+
+  breaks("CA-027-05: una estructura no reconocida, con la línea del archivo", fakeNotices(HEADER_BUILD, lines.filter((l) => l !== "===== END NOTICES =====").join("\n")), /third-party-notices\.txt, línea 6: «BEGIN NOTICES» sin su «END NOTICES»/);
+  breaks("CA-027-05: un cuerpo sin la parte de avisos (el de la 023)", fakeNotices(HEADER_BUILD, "Third-party notices\nVersion: 0.0.0+0\n\nLicencia de prueba.\n"), /ningún aviso/);
+  breaks("CA-027-04: una ruta de /Users/ en un aviso", fakeNotices(HEADER_BUILD, noticesBody("built in /Users/someone/src")), /línea 9: lleva una ruta de una carpeta personal \(«\/Users\/»\)/);
+  breaks("CA-027-04: una ruta de /home/ en un aviso", fakeNotices(HEADER_BUILD, noticesBody("built in /home/someone/src")), /ruta de una carpeta personal \(«\/home\/»\)/);
+  breaks("CA-027-04: una ruta C:\\Users\\ en un aviso", fakeNotices(HEADER_BUILD, noticesBody("built in C:\\Users\\someone")), /ruta de una carpeta personal/);
+  breaks("CA-027-04: una ruta personal en el preámbulo", fakeNotices(HEADER_BUILD, noticesBody().replace("Version: 0.0.0+0", "Version: 0.0.0+0 /Users/x/")), /línea 4: lleva una ruta/);
+  for (const n of [0x07, 0x1b, 0x7f, 0x85, 0x202e, 0x2066, 0x200f, 0x2028]) {
+    const code = `U+${n.toString(16).toUpperCase().padStart(4, "0")}`;
+    breaks(`CA-027-04: el carácter ${code} en un aviso`, fakeNotices(HEADER_BUILD, noticesBody(`a${String.fromCodePoint(n)}b`)), new RegExp(`línea 9: lleva un carácter de (control|dirección) \\(${code.replace("+", "\\+")}\\)`));
+  }
+
+  test("CA-027-04: /home/runner/ (la CI), tabuladores y retornos de carro se admiten", () => {
+    checkNoticesText(fakeNotices(HEADER_BUILD, noticesBody("built in /home/runner/work\tx\r\ny")));
+    const { w } = withNotices(fakeNotices(HEADER_BUILD, noticesBody("built in /home/runner/work\tx")));
+    w.cleanup();
   });
 });
