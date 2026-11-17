@@ -1,6 +1,6 @@
 # Spec 027: Licencias agrupadas por paquete
 
-- **Estado:** **Borrador** (2026-11-17; revisión 1 del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 7 importantes y 6 menores)
+- **Estado:** **Borrador** (2026-11-17; revisión 1 del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 7 importantes y 6 menores; revisión 2: 5 importantes y 6 menores, aplicados)
 - **Reglas de producto:** ninguna de la app. Sirve a **P6** (accesible) y **P4** (la web sigue sin rastreo ni recursos de otro origen); los avisos legales se publican completos y sin alterar por ADR-0026.
 - **Pantallas del prototipo:** **sin diseño en el prototipo ni en la maqueta** (DEV-60 cubre las páginas de contenido; esta spec solo cambia cómo se ordena el bloque de avisos de la página de licencias). El propietario lo revisa en el navegador (C-027-1).
 - **Decisiones y ADR relacionados:** decisión del propietario del 2026-11-17 («opción 1, agrúpalo por paquete»; la opción de consolidar copyrights queda fuera, §8). ADR-0026 (licencias en la web; la revisión legal sigue siendo punto bloqueante de F6), ADR-0028 (las páginas de contenido, sin más programa que el del idioma).
@@ -11,12 +11,12 @@
 ## 0. Alcance (decidido por el propietario)
 
 - **[Hecho, 2026-11-17]** La página de licencias (`/licenses`) enseña hoy **todo el archivo de avisos de terceros de seguido**, en un solo bloque: 1,5 MB (la página pesa 1 570 484 bytes). Se **agrupa por paquete**: un grupo plegado por cada cabecera, con su nombre y el número de avisos.
-- **[Hecho, 2026-11-17, medido sobre `landing/third-party-notices.txt` con un recuento aparte del analizador]** La parte de avisos (entre `===== BEGIN NOTICES =====` y `===== END NOTICES =====`) tiene **1638 avisos** separados por líneas de exactamente 80 guiones; cada aviso empieza con su **cabecera** (uno o varios nombres de paquete, **uno por línea**), una línea en blanco y el texto. Hay **159 cabeceras distintas**: **89 avisos** (en **69 cabeceras distintas**) la comparten varios paquetes (hasta 18 nombres) y **98 cabeceras tienen un solo aviso**. Los grupos mayores: `icu` 552, `harfbuzz` 142, `vulkan-validation-layers` 102, `libjpeg-turbo` 92, `glslang` 89, `skia` 83, `spirv-tools` 69, `angle` 48, `expat` 47, `glfw` 25, `dart` 23, `freetype2` 17, `swiftshader` 16… Hoy cada cabecera ocupa **un único tramo seguido** del archivo, y los avisos idénticos entre sí son solo el 1 %. Tras `END NOTICES` van **cinco secciones** delimitadas por marcadores (`assets/fonts/archivo/OFL.txt`, `assets/fonts/space_mono/OFL.txt`, `assets/licenses/android.txt`, `assets/licenses/pdfium.txt` y `assets/licenses/sqlite.txt`). Antes de la parte de avisos va un preámbulo (la cabecera de la compilación, las sumas de comprobación y la lista de 142 componentes entre `BEGIN ENTRIES` y `END ENTRIES`).
+- **[Hecho, 2026-11-17, medido sobre `landing/third-party-notices.txt` con un recuento aparte del analizador]** La parte de avisos (entre `===== BEGIN NOTICES =====` y `===== END NOTICES =====`) tiene **1638 avisos** separados por líneas de exactamente 80 guiones; cada aviso empieza con su **cabecera** (uno o varios nombres de paquete, **uno por línea**), una línea en blanco y el texto. Hay **159 cabeceras distintas**: **89 avisos** (en **69 cabeceras distintas**) la comparten varios paquetes (hasta 18 nombres) y **98 cabeceras tienen un solo aviso**. Los grupos mayores: `icu` 552, `harfbuzz` 142, `vulkan-validation-layers` 102, `libjpeg-turbo` 92, `glslang` 89, `skia` 83, `spirv-tools` 69, `angle` 48, `expat` 47, `glfw` 25, `dart` 23, `freetype2` 17, `swiftshader` 16… Hoy cada cabecera ocupa **un único tramo seguido** del archivo, y los avisos idénticos entre sí son solo el 1 %. Tras `END NOTICES` van **cinco secciones** delimitadas por marcadores (`assets/fonts/archivo/OFL.txt`, `assets/fonts/space_mono/OFL.txt`, `assets/licenses/android.txt`, `assets/licenses/pdfium.txt` y `assets/licenses/sqlite.txt`). Antes de la parte de avisos va un **preámbulo**, que es **todo lo anterior a `===== BEGIN NOTICES =====`** (la cabecera de la compilación, las sumas de comprobación y la lista de 142 componentes entre `BEGIN ENTRIES` y `END ENTRIES`).
 - **[Hecho, 2026-11-17]** **El texto legal no cambia ni un carácter.** Se reordena la presentación; no se quita, se resume ni se fusiona nada. Consolidar copyrights repetidos (ahorraría un tercio del peso) **no entra**: queda para la revisión legal de F6 (ADR-0026, `docs/PLAN.md`, fila de F6, punto 6).
 - **[Hecho, 2026-11-17]** Los grupos son **desplegables nativos** del navegador: funcionan sin JavaScript y no añaden ningún programa (ADR-0028 sigue como está).
 - **[Hecho, 2026-11-17]** El enlace «Ver el archivo de avisos como texto» sigue dando el archivo completo y sin alterar.
 
-**Qué es «el texto publicado».** En esta spec: el preámbulo y la lista de componentes (tal cual), el **texto** de cada aviso (lo que hay entre la línea en blanco que sigue a su cabecera y el siguiente separador, sin tocar espacios ni líneas en blanco) y el texto de cada sección `assets/…`. **No son texto publicado en la página** (sí siguen en el archivo `.txt`): las líneas de 80 guiones que separan avisos, los marcadores `BEGIN`/`END` de las partes y las líneas de cabecera de cada aviso, que pasan a ser el **nombre del grupo**. Los finales de línea se normalizan a `\n`, como hoy.
+**Qué es «el texto publicado».** En esta spec: el preámbulo y la lista de componentes (tal cual), el **texto** de cada aviso (lo que hay entre la línea en blanco que sigue a su cabecera y el salto de línea que precede al siguiente separador o a `END NOTICES`, **con sus espacios y con sus líneas en blanco, también las del principio y las del final**) y el texto de cada sección `assets/…`. **No son texto publicado en la página** (sí siguen en el archivo `.txt`): las líneas de 80 guiones que separan avisos, los marcadores `BEGIN`/`END` de las partes y las líneas de cabecera de cada aviso, que pasan a ser el **nombre del grupo**. Los finales de línea se normalizan a `\n`, como hoy.
 
 ## 1. Objetivo
 
@@ -24,7 +24,7 @@ Que quien abre la página de licencias vea qué paquetes de terceros lleva la ap
 
 ## 2. Historias de usuario
 
-- **HU-027-1** Como persona que quiere saber qué paquetes de terceros usa la app, quiero ver una lista corta de grupos (159 en lugar de 1638 avisos seguidos), para no recorrer 1,5 MB de texto.
+- **HU-027-1** Como persona que quiere saber qué paquetes de terceros usa la app, quiero ver una lista corta de grupos (164, de ellos 159 de paquetes y 5 de secciones, en lugar de 1638 avisos seguidos más las secciones), para no recorrer 1,5 MB de texto.
 - **HU-027-2** Como persona que busca los avisos de un paquete, quiero abrir su grupo y encontrar juntos todos los avisos que comparten su cabecera, para leerlos sin ruido.
 - **HU-027-3** Como persona con lector de pantalla, teclado, texto grande o sin JavaScript, quiero la misma lista y los mismos avisos, y poder saltarme la lista, para no depender de ningún programa ni de un gesto.
 - **HU-027-4** Como propietario, quiero que lo publicado sea idéntico al archivo de la compilación y que la web no se rompa en silencio si cambia, para que la revisión legal lea lo mismo que se entrega.
@@ -36,13 +36,13 @@ Que quien abre la página de licencias vea qué paquetes de terceros lleva la ap
 - **CA-027-01** · Un grupo por cabecera
   - **Dado** la página de licencias construida con un archivo de avisos
   - **Cuando** se abre
-  - **Entonces** los avisos de la parte de avisos salen **agrupados**: un grupo por cada cabecera distinta (la lista de nombres de paquete **tal cual la lleva el aviso**; el nombre del grupo los muestra seguidos y separados por «, »). Cada grupo **empieza plegado** y muestra su nombre y **cuántos avisos tiene** («1 aviso» / «N avisos» en español, «1 notice» / «N notices» en inglés). Al abrirlo se ven **todos** sus avisos, **separados visualmente entre sí** (una línea fina del sistema de diseño) para que no se fundan unos con otros, y **en el orden en que están en el archivo**. Los grupos van **en el orden de la primera aparición** de su cabecera. Dos cabeceras no idénticas (por ejemplo `dart` y `dart, perfetto`, o los mismos nombres en otro orden) son **dos grupos**. Cada una de las cinco secciones `assets/…` es **un grupo propio**, tras los de paquetes, con su ruta como nombre.
+  - **Entonces** los avisos de la parte de avisos salen **agrupados**: un grupo por cada cabecera distinta (la lista de nombres de paquete **tal cual la lleva el aviso**; el nombre del grupo los muestra seguidos y separados por «, »). Cada grupo **empieza plegado** y muestra su nombre y **cuántos avisos tiene** («1 aviso» / «N avisos» en español, «1 notice» / «N notices» en inglés). Al abrirlo se ven **todos** sus avisos, **separados visualmente entre sí** (una línea fina del sistema de diseño) para que no se fundan unos con otros, y **en el orden en que están en el archivo**. Los grupos van **en el orden de la primera aparición** de su cabecera. Dos cabeceras no idénticas (por ejemplo `dart` y `dart, perfetto`, o los mismos nombres en otro orden) son **dos grupos**. Los avisos de una misma cabecera están **seguidos** en el archivo (si no, falla la construcción, CA-027-05), así que los grupos siguen el orden del archivo. Cada sección `assets/…` es **un grupo propio**, tras los de paquetes, con su **ruta como nombre** (que hace de cabecera) y con su recuento («1 aviso» / «1 notice»).
   - **Verificable:** test de la construcción con un archivo de prueba (cabeceras repetidas, una compartida por varios paquetes, una con un solo aviso, otro orden de nombres, una sección `assets/…`) y, con el archivo real, que el número de grupos y la suma de sus avisos coinciden con un recuento **independiente del analizador** (partir el cuerpo por las líneas de 80 guiones), sin cifras escritas a mano.
 
 - **CA-027-02** · Sin pérdida
   - **Dado** el archivo de avisos
   - **Cuando** se construye la página
-  - **Entonces**, comparando el **texto del DOM** de la página ya construida con el archivo (finales de línea normalizados a `\n`): (a) el conjunto de pares (cabecera, texto) publicados es **igual**, uno a uno, al del archivo: **ningún aviso falta, se repite de más ni cambia un carácter** (los avisos idénticos entre sí se conservan todos); (b) el texto de un aviso se publica **entero, con sus espacios y líneas en blanco**; y (c) a partir de lo publicado y del orden original de cada aviso se **reconstruye el cuerpo del archivo** (reinsertando separadores y cabeceras) y sale **igual** al original. El preámbulo, la lista de componentes y las secciones `assets/…` también salen íntegros.
+  - **Entonces**, comparando el **texto del DOM** de la página ya construida con el archivo (finales de línea normalizados a `\n`): (a) el conjunto de pares (cabecera, texto) publicados es **igual**, uno a uno, al del archivo: **ningún aviso falta, se repite de más ni cambia un carácter** (los avisos idénticos entre sí se conservan todos); (b) el texto de un aviso se publica **entero, con sus espacios y líneas en blanco**; y (c) **recorriendo los grupos en orden** y reinsertando las cabeceras, los separadores y los marcadores, se **reconstruye el archivo** (desde la parte de avisos) y sale **igual** al original (normalizado). El preámbulo, la lista de componentes y las secciones `assets/…` también salen íntegros.
   - **Verificable:** test con el archivo real y con uno de prueba que hace (a), (b) y (c); falla si un aviso se pierde, se duplica o cambia un carácter. Un texto con `<`, `&` o comillas sale escapado y el DOM da el mismo texto.
 
 - **CA-027-03** · El preámbulo, a la vista y tal cual
@@ -60,32 +60,32 @@ Que quien abre la página de licencias vea qué paquetes de terceros lleva la ap
 - **CA-027-05** · Falla cerrado
   - **Dado** un archivo de avisos con una estructura que no se reconoce
   - **Cuando** se construye la web
-  - **Entonces** la construcción **falla con un mensaje que dice qué y dónde**, y **no** publica una página agrupada a medias ni vuelve al bloque único sin avisar. Son estructura no reconocida: faltan o se repiten `BEGIN`/`END NOTICES` o los de una sección; no hay ningún aviso; una **cabecera** no válida (vacía, o con un nombre que lleva espacios); un aviso sin texto; un grupo sin avisos. El separador es **una línea de exactamente 80 guiones, y solo dentro de la parte de avisos**; las demás líneas de guiones son texto. El resto de comprobaciones de la página (CA-023-16 y 19: versión o compilación en la cabecera, sin rutas de la máquina de compilación) siguen igual.
-  - **Verificable:** test de la construcción, un caso por cada estructura que falla.
+  - **Entonces** la construcción **falla con un mensaje que dice qué y dónde**, y **no** publica una página agrupada a medias ni vuelve al bloque único sin avisar. Son estructura no reconocida: `BEGIN` sin `END`, `END` sin `BEGIN`, partes anidadas, o una ruta de sección repetida; ningún aviso; una **cabecera** no válida (vacía, o con un nombre que lleva espacios); un aviso sin texto; una **cabecera que reaparece lejos de su primer tramo** (los avisos de una cabecera deben estar seguidos); y **cualquier texto que no sea espacio en blanco fuera de una parte reconocida** (entre `BEGIN NOTICES` y el primer aviso, entre `END NOTICES` y la primera sección, entre secciones o tras la última). El separador es **una línea de exactamente 80 guiones, y solo dentro de la parte de avisos**; las demás líneas de guiones son texto. El resto de comprobaciones de la página (CA-023-16 y 19: versión o compilación en la cabecera, sin rutas de la máquina de compilación) siguen igual.
+  - **Verificable:** test de la construcción, un caso por cada estructura de esa lista.
 
 - **CA-027-06** · Accesibles
   - **Dado** la página de licencias, en los dos idiomas, con y sin JavaScript
   - **Cuando** se recorre con teclado, con lector de pantalla, con el texto al 200 % y 400 %, con el espaciado de texto aumentado y con los colores forzados del sistema
-  - **Entonces** se mantiene **todo** CA-026-10 y CA-026-12, y además: la lista de grupos va en **una región con nombre** (el título «Third-party notices (full text)») y delante hay un **enlace nativo «Saltar la lista de avisos» / «Skip the notices list»** al pie de la página, para no pasar por 159 paradas del teclado; cada grupo se alcanza con el teclado y se abre con **Intro o Espacio**; el lector dice el nombre del grupo, **un solo recuento** (el del idioma elegido; sin JavaScript, los dos, como el resto de textos bilingües de las páginas) y si está abierto o cerrado; la cabecera de cada grupo mide **44 × 44 o más**; el foco se ve y no queda tapado por la cabecera fija (también al saltar con el enlace); el estado abierto o cerrado no depende solo del color ni de un icono sin nombre y se ve con los colores forzados; **nada se mueve**; los nombres y los avisos salen marcados como inglés (`lang="en"`) y cada recuento, con su idioma; las líneas largas se parten dentro de la columna (no hay desplazamiento horizontal de la página ni de un grupo). **Salvedad aceptada [Suposición]:** los 159 grupos no son encabezados, así que no se navega por ellos con las teclas de encabezados del lector; se llega por la región, la lista y el enlace de saltar.
-  - **Verificable:** test de la construcción (región, enlace, zonas, nombres, `lang`, tamaños y reglas de estilo con las excepciones de la 026) y casilla C-027-1 (Chrome de escritorio y del emulador, teclado, zoom, colores forzados y el marcador de los desplegables en Safari; TalkBack como en la 026).
+  - **Entonces** se mantiene **todo** CA-026-10 y CA-026-12, y además: la lista de grupos va en **una región con nombre** (el título «Third-party notices (full text)») y delante hay un **enlace nativo «Saltar la lista de avisos» / «Skip the notices list»** que lleva a un punto **justo después de la lista, dentro del mismo bloque** (no al pie de la página), para no pasar por 164 paradas del teclado; cada grupo se alcanza con el teclado y se abre con **Intro o Espacio**; el lector dice el nombre del grupo, **un solo recuento** (el del idioma elegido; sin JavaScript, los dos, como el resto de textos bilingües de las páginas): los dos recuentos llevan su `lang` y se ocultan con el mismo mecanismo que el resto de textos bilingües (CA-026-09), lo que prueba el test y si está abierto o cerrado; la cabecera de cada grupo mide **44 × 44 o más**; el foco se ve y no queda tapado por la cabecera fija (también al saltar con el enlace); el estado abierto o cerrado no depende solo del color ni de un icono sin nombre y se ve con los colores forzados; **nada se mueve**; los nombres y los avisos salen marcados como inglés (`lang="en"`) y cada recuento, con su idioma; las líneas largas se parten dentro de la columna (no hay desplazamiento horizontal de la página ni de un grupo). **Salvedad aceptada [Suposición]:** los 164 grupos no son encabezados, así que no se navega por ellos con las teclas de encabezados del lector; se llega por la región, la lista y el enlace de saltar.
+  - **Verificable:** test de la construcción (región, enlace y su destino, zonas, nombres, `lang` de los dos recuentos, tamaños y reglas de estilo con las excepciones de la 026) y casilla C-027-1 (lo que dice el lector, solo a oído) (Chrome de escritorio y del emulador, teclado, zoom, colores forzados y el marcador de los desplegables en Safari; TalkBack como en la 026).
 
 - **CA-027-07** · El archivo de texto no cambia, y las demás partes de la página tampoco
   - **Dado** la página de licencias y el archivo de avisos publicado
   - **Cuando** se construye la web
   - **Entonces** el enlace «Ver el archivo de avisos como texto» da el archivo **completo y sin alterar, con sus finales de línea originales** (el mismo `third-party-notices.txt` de `landing/`); la explicación, la versión (o el aviso de última compilación), el enlace al archivo y el bloque del **código de la web** (`licensesWebTitle`, CA-025-18) quedan **como están**; y el texto de los avisos sale **una sola vez** (no se repite por idioma, CA-026-12). `/licenses#notices` sigue llevando a los avisos.
-  - **Verificable:** test de la construcción (el archivo de `dist/` es el de `landing/`, byte a byte; el HTML fuera del bloque de avisos es igual que el de la construcción anterior a esta spec, con un fragmento de referencia en el test).
+  - **Verificable:** test de la construcción (el archivo de `dist/` es el de `landing/`, byte a byte; el HTML fuera del bloque de avisos es igual que el de la construcción anterior a esta spec, con un fragmento de referencia en el test; el destino del enlace de saltar está **dentro** del bloque, así que no cuenta).
 
 - **CA-027-08** · Ligeras
   - **Dado** la página de licencias construida con el archivo actual
   - **Cuando** se mide
-  - **Entonces** el HTML pesa **como mucho el texto publicado más 250 KB** sin comprimir (lo que añaden los grupos, hoy unos 100 KB) **[Suposición]**, y la página no carga ningún archivo más que hoy (CA-026-15).
-  - **Verificable:** test de la construcción (tamaño y lista de recursos) con el archivo real; casilla C-027-1 (abrir un grupo grande, como `icu`, en el emulador de Android sin que se note lento).
+  - **Entonces** el HTML pesa **como mucho el texto publicado más 250 KB** sin comprimir (el texto publicado medido sin escapar y en bytes UTF-8) (lo que añaden los grupos, hoy unos 100 KB) **[Suposición]**, y la página no carga ningún archivo más que hoy (CA-026-15).
+  - **Verificable:** test de la construcción (tamaño y lista de recursos) con el archivo real; casilla C-027-1 (abrir el grupo mayor, `icu`, en el emulador de Android en menos de 1 s **[Suposición]**).
 
 - **CA-027-09** · Documentación y tests al día
   - **Dado** la spec implementada
   - **Cuando** se cierra
   - **Entonces** están al día: CA-023-16, CA-025-18 y CA-026-12 y las tablas de textos de la 023 y la 026 con su enmienda (§10), el glosario, `docs/design/screen-map.md`, la nota de DEV-60, `docs/security/checklist.md` si el apartado de la web lo nombra, `docs/PLAN.md` y `CLAUDE.md`; la revisión legal (F6) sigue diciendo que consolidar copyrights es decisión suya. Los tests de la 023, la 025 y la 026 que usan un archivo de avisos mínimo (sin marcadores) **se actualizan** a la estructura que ahora se exige, **citando el CA nuevo**, sin borrar lo que siguen protegiendo.
-  - **Verificable:** `spec-reviewer` al cerrar; la CI en verde.
+  - **Verificable:** test de la web (las tres claves de §7 están en ES y EN, y los textos coinciden con la tabla de esta spec; cada test nuevo o cambiado cita su CA-027-NN), `spec-reviewer` al cerrar y la CI en verde.
 
 ## 4. Casos límite
 
@@ -103,19 +103,18 @@ Que quien abre la página de licencias vea qué paquetes de terceros lleva la ap
 | CL-027-10 | El sistema está en modo oscuro | La página no cambia: siempre en claro (CL-026-10). |
 | CL-027-11 | Un grupo con un solo aviso (hoy 98 de 159) | Se muestra como los demás, con «1 aviso» / «1 notice». |
 | CL-027-12 | El texto lleva `\r`, `<`, `&` o caracteres especiales | Los finales de línea se normalizan a `\n` (como hoy); el resto sale escapado y el texto del DOM es el original (CA-027-02). |
-| CL-027-13 | Una sección `assets/…` falta, se repite o su marcador no cierra | Falla la construcción (CA-027-05). |
-| CL-027-14 | Se abre un grupo con 552 avisos en un móvil modesto | Debe seguir fluido **[Suposición]**; se comprueba en C-027-1 (CA-027-08). |
+| CL-027-13 | Una sección `assets/…` se repite o su marcador no cierra | Falla la construcción (CA-027-05). Que falte una sección no se puede detectar sin una lista escrita a mano (CL-027-6): no es un error. |
+| CL-027-14 | Se abre un grupo con 552 avisos en un móvil modesto | Se abre en menos de 1 s en el emulador **[Suposición]**; se comprueba en C-027-1 (CA-027-08). |
 
 ## 5. Estados vacíos y de error
 
 | Estado | Cuándo | Qué ve el usuario |
 |---|---|---|
-| Un grupo sin avisos | Nunca debe existir | Si el archivo lo produjera, la construcción falla (CA-027-05). |
 | El archivo no se reconoce | Al construir | Nada publicado: falla la construcción con el motivo (CA-027-05). |
 
 ## 6. Accesibilidad
 
-Ver CA-027-06. Cada grupo es un control nativo (teclado: Intro o Espacio; lector: nombre, recuento y estado), sin alternativa a ningún gesto porque no hay gestos; el enlace de saltar evita 159 paradas del teclado; sin animación; el texto al 200 % y el espaciado aumentado no cortan nada; los colores forzados mantienen el estado visible.
+Ver CA-027-06. Cada grupo es un control nativo (teclado: Intro o Espacio; lector: nombre, recuento y estado), sin alternativa a ningún gesto porque no hay gestos; el enlace de saltar evita 164 paradas del teclado; sin animación; el texto al 200 % y el espaciado aumentado no cortan nada; los colores forzados mantienen el estado visible.
 
 ## 7. Textos (ES / EN)
 
@@ -124,7 +123,7 @@ Los textos de los avisos y los nombres de paquete **no se traducen** (inglés, `
 | Clave | ES | EN | Notas |
 |---|---|---|---|
 | `webNoticesCountOne` | 1 aviso | 1 notice | Recuento de un grupo con un aviso. |
-| `webNoticesCountMany` | {n} avisos | {n} notices | Recuento de un grupo con varios; `{n}` es el número. Se amplía la lista de marcadores admitidos de la carga de textos. |
+| `webNoticesCountMany` | {n} avisos | {n} notices | Recuento de un grupo con varios; `{n}` es el número. |
 | `webNoticesSkip` | Saltar la lista de avisos | Skip the notices list | Enlace nativo al pie (CA-027-06). |
 
 ## 8. Fuera de alcance
@@ -139,9 +138,8 @@ Los textos de los avisos y los nombres de paquete **no se traducen** (inglés, `
 
 ## 9. Preguntas abiertas
 
-- **[Pendiente, Q-027-1, propietario]** El agrupado es por **cabecera exacta**, no por paquete suelto: 69 cabeceras comparten varios paquetes (por ejemplo `async, cli_util, collection, mime, stream_channel, typed_data`), y el mismo paquete (`dart`, `icu`…) aparece en varias cabeceras. Agrupar «por paquete» de verdad obligaría a **repetir** un aviso bajo cada uno de sus paquetes (duplica texto legal, contra CA-027-02). **Recomendación: cabecera exacta** (lo supuesto aquí). ¿Es lo que querías al decir «por paquete»?
-- **[Pendiente, Q-027-2, propietario]** ¿Los grupos empiezan **todos plegados**? **[Suposición: sí]**; con 159 grupos, abrir uno solo no ahorra nada.
-- **[Pendiente, plan]** Cómo se reconoce la estructura del archivo (partes, cabeceras y secciones `assets/…`) sin listas escritas a mano; cómo se garantiza CA-027-02 (reconstrucción por posición); cómo se separan visualmente los avisos de un grupo y cómo entra el recuento bilingüe sin que el programa de idioma escriba texto.
+- **[Pendiente, Q-027-1, propietario]** El agrupado es por **cabecera exacta**, no por paquete suelto: 69 cabeceras comparten varios paquetes (por ejemplo `async, cli_util, collection, mime, stream_channel, typed_data`), y el mismo paquete (`dart`, `icu`…) aparece en varias cabeceras. Agrupar «por paquete» de verdad obligaría a **repetir** un aviso bajo cada uno de sus paquetes (duplica texto legal, contra CA-027-02). **Recomendación: cabecera exacta** (lo supuesto aquí). ¿Es lo que querías al decir «por paquete»? (Los grupos empiezan todos plegados, CA-027-01 **[Suposición]**: con 164 grupos, abrir uno solo no ahorra nada.)
+- **[Pendiente, plan]** Cómo se reconoce la estructura del archivo (partes, cabeceras y secciones `assets/…`) sin listas escritas a mano y cómo se carga el marcador `{n}` de las claves nuevas; cómo se garantiza CA-027-02; cómo se separan visualmente los avisos de un grupo y cómo entra el recuento bilingüe sin que el programa de idioma escriba texto.
 
 ## 10. Enmiendas
 
