@@ -1,6 +1,6 @@
 # Tareas — Spec 027: Licencias agrupadas por paquete
 
-**Siguiente:** T-027-01
+**Siguiente:** T-027-02
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Los textos y los tokens van juntos en una tarea al principio. Una PR puede agrupar varias tareas consecutivas.
 
@@ -28,3 +28,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-027-01 | Hecha. `webNoticesCountOne`, `webNoticesCountMany` (`{n}`) y `webNoticesSkip` en `strings.json` (ES/EN, §7) y `STRING_KEYS`; referencia `test/fixtures/027/licenses-outside-notices.html` (construida con `world()` desde `main` en un *worktree*, sin la `<section aria-labelledby="notices">`; cómo, en el `README.md` de la carpeta). Tests en `build.test.mjs` (claves, marcadores, y la página sin el bloque = referencia, que T-027-03 debe seguir pasando). Web: 866 tests verdes, `build` y `check` sin errores. | (este commit) |

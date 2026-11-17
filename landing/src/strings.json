@@ -12,7 +12,10 @@
     "webLicensesFile": "Ver el archivo de avisos como texto",
     "webLanguageName": "Español",
     "licensesWebTitle": "Código de esta web",
-    "webOnThisPage": "En esta página"
+    "webOnThisPage": "En esta página",
+    "webNoticesCountOne": "1 aviso",
+    "webNoticesCountMany": "{n} avisos",
+    "webNoticesSkip": "Saltar la lista de avisos"
   },
   "en": {
     "webPageTitle": "{page} · {appName}",
@@ -28,6 +31,9 @@
     "webNoticesTitle": "Third-party notices (full text)",
     "webLanguageName": "English",
     "licensesWebTitle": "Code of this website",
-    "webOnThisPage": "On this page"
+    "webOnThisPage": "On this page",
+    "webNoticesCountOne": "1 notice",
+    "webNoticesCountMany": "{n} notices",
+    "webNoticesSkip": "Skip the notices list"
   }
 }

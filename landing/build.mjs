@@ -671,6 +671,10 @@ const STRING_KEYS = {
   licensesWebTitle: { es: [], en: [] },
   // Nombre visible de la navegación del índice de la política y la Ayuda (spec 026, CA-026-04).
   webOnThisPage: { es: [], en: [] },
+  // Recuento de cada grupo y enlace de saltar del bloque de avisos de /licenses (spec 027, CA-027-01 y 06).
+  webNoticesCountOne: { es: [], en: [] },
+  webNoticesCountMany: { es: ["n"], en: ["n"] },
+  webNoticesSkip: { es: [], en: [] },
 };
 const LANG_ONLY = { webNoticesTitle: { en: [] } };
 
