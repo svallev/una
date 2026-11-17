@@ -361,10 +361,10 @@ describe("CA-026-02, 03, 10 y 11: los estilos de las páginas (checkCss)", () =>
   fails("CA-026-01: el pie fuera de la columna", swap("main, .end {", "main {"), /\.end.*web-content-max-width/);
 
   // Foco, icono, 44 × 44, marcas y colores forzados (CA-026-10).
-  fails("CA-026-10: sin h3:focus-visible", swap(", h3:focus-visible {", " {"), /h3:focus-visible/);
+  fails("CA-026-10: sin h3:focus-visible", swap(" h3:focus-visible,", ""), /h3:focus-visible/);
   fails("CA-026-10: el icono sin currentColor", swap("  stroke: currentColor;\n", "  stroke: var(--color-ink);\n"), /\.ic.*currentColor/);
-  for (const sel of [".logo", ".btn", ".langs a", ".back", ".toc a", ".end a"]) {
-    fails(`CA-026-10: «${sel}» sin objetivo de 44 × 44`, (w) => edit(css(w), (t) => {
+  for (const sel of [".logo", ".btn", ".langs a", ".back", ".toc a", ".end a", ".group > summary"]) {
+    fails(`${sel === ".group > summary" ? "CA-027-06" : "CA-026-10"}: «${sel}» sin objetivo de 44 × 44`, (w) => edit(css(w), (t) => {
       // Quita el selector de su regla (o la regla entera si va sola) en la que da los 44 × 44.
       const lines = t.split("\n");
       const at = lines.findIndex((l, i) => !l.startsWith(" ") && l.endsWith("{") && l.slice(0, -1).split(",").map((s) => s.trim()).includes(sel) &&
@@ -391,3 +391,36 @@ describe("CA-026-02, 03, 10 y 11: los estilos de las páginas (checkCss)", () =>
   fails("CA-026-03: una variable propia fuera de html", addCss("p { --x: var(--space-m); }"), /variable propia/);
   fails("CA-026-03: una variable propia con un valor suelto", swap("--top-height: calc(var(--size-min-touch-target) + var(--border-width-strong) + var(--border-width-strong) + var(--space-s) + var(--space-s) + var(--border-width-hairline));", "--top-height: 4rem;"), /valor suelto/);
 });
+
+// Spec 027, T-027-04: los estilos de los grupos de avisos (plan §1.4 y §1.5). Cada regla nueva de `checkCss`, con
+// un caso que falla.
+describe("CA-027-06: los estilos de los grupos de avisos (checkCss)", () => {
+  const swap = (from, to) => (w) => edit(css(w), (t) => {
+    assert.equal(t.split(from).length, 2, `«${from}» tiene que estar una sola vez en site.css`);
+    return t.replace(from, to);
+  });
+
+  test("CA-027-06: la hoja publicada lleva la cabecera de los grupos, la separación, el recuento y los colores forzados", () => {
+    const text = read(css(base));
+    assert.match(text, /\.group > summary \{[^}]*display: list-item;[^}]*min-height: var\(--size-min-touch-target\);/);
+    assert.match(text, /\.group pre \+ pre \{[^}]*border-top: var\(--border-width-hairline\) solid var\(--color-line\);/);
+    assert.match(text, /\.group__count \{[^}]*font-family: var\(--font-family-mono\);/);
+    assert.match(text, /@media \(forced-colors: active\) \{[^}]*\.group \+ \.group, \.group pre \+ pre, \.notices__end \{\n    border-color: CanvasText;/);
+    assert.match(text, /summary:focus-visible \{\n  outline: var\(--border-width-focus\)/);
+    assert.ok(!/(list-style:\s*none|details-marker)/.test(text.slice(text.indexOf(".group + .group"))), "sin quitar el marcador nativo");
+  });
+
+  fails("CA-027-06: sin summary:focus-visible", swap(", summary:focus-visible {", " {"), /summary:focus-visible/);
+  fails("CA-027-06: sin a:focus-visible (el destino del salto es un enlace)", swap("a:focus-visible, h2:focus-visible", "h2:focus-visible"), /a:focus-visible/);
+  fails("CA-027-06: la cabecera del grupo sin display: list-item", swap("  display: list-item;\n", ""), /group > summary.*list-item/);
+  fails("CA-027-06: la cabecera del grupo como bloque", swap("  display: list-item;\n", "  display: block;\n"), /list-item/);
+  fails("CA-027-06: la cabecera del grupo como flex en otra regla", addCss("details summary { display: flex; }"), /display: flex.*summary/);
+  fails("CA-027-06: sin la viñeta del <summary>", addCss(".group > summary { list-style: none; }"), /quita el marcador/);
+  fails("CA-027-06: sin la viñeta (list-style-type)", addCss("summary { list-style-type: none; }"), /quita el marcador/);
+  fails("CA-027-06: el marcador de WebKit oculto", addCss("summary::-webkit-details-marker { display: none; }"), /marcador del desplegable/);
+  fails("CA-027-06: el marcador cambiado por otro contenido", addCss('.group > summary::marker { content: ""; }'), /marcador del desplegable/);
+  fails("CA-027-06: la cabecera del grupo recortada", addCss(".group > summary { overflow: hidden; }"), /recorta/);
+  fails("CA-027-06: la cabecera del grupo con alto fijo", addCss(".group > summary { height: var(--size-min-touch-target); }"), /altura fija/);
+  fails("CA-027-06: una transición al abrir", addCss(".group > summary { transition: none; }"), /animaci/);
+});
+

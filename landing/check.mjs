@@ -462,21 +462,104 @@ function checkWebCodeBlock(open, close, t, html, fail) {
 }
 
 /**
- * El bloque de avisos de terceros (CA-023-16): una tercera `<section lang="en" aria-labelledby="notices">`
- * después de las dos mitades, que empieza por su `<h2 id="notices">` y lleva el texto en un `<pre lang="en">`.
+ * El bloque de avisos de terceros (CA-023-16; spec 027, plan §1.5): una tercera `<section lang="en"
+ * aria-labelledby="notices">` después de las dos mitades, que empieza por su `<h2 id="notices">` y lleva, en este
+ * orden, el preámbulo en un `<pre lang="en" class="notices__preamble">`, el enlace de saltar a `#notices-end`, los
+ * grupos (`<details class="group">` sin `id`, `open` ni manejadores, con `<summary>` como primer hijo y después
+ * solo `<pre lang="en">`) y, tras el último, el destino del salto: el enlace al archivo de texto con
+ * `id="notices-end"`. Ningún `<pre>` fuera de los grupos salvo el preámbulo: así ningún error de plantilla saca el
+ * texto de un aviso de la exclusión de las guardias (CA-027-04) sin que se vea.
  */
 function checkNoticesBlock(open, close, t, html, fail) {
   if (open.attrs.lang !== "en") fail('el bloque de avisos (la tercera <section>) no está marcado con lang="en"');
   if (open.attrs["aria-labelledby"] !== "notices") fail('el bloque de avisos tiene que llevar aria-labelledby="notices"');
   const from = open.end;
   const to = close?.start ?? html.length;
-  const inside = (x) => x.start >= from && x.end <= to && !x.closing;
-  if (!t.some((x) => inside(x) && x.name === "h2" && x.attrs.id === "notices")) {
+  const within = t.filter((x) => x.start >= from && x.end <= to);
+  const opens = within.filter((x) => !x.closing);
+  if (!opens.some((x) => x.name === "h2" && x.attrs.id === "notices")) {
     fail('el bloque de avisos no empieza por un <h2 id="notices">');
   }
-  const pre = t.find((x) => inside(x) && x.name === "pre");
-  if (!pre) fail("el bloque de avisos no lleva el texto en un <pre>");
-  else if (pre.attrs.lang !== "en") fail('el bloque de avisos no lleva el texto en un <pre lang="en"> (CA-026-12)');
+  const pres = opens.filter((x) => x.name === "pre");
+  const preamble = pres[0];
+  if (!preamble) {
+    fail("el bloque de avisos no lleva el texto en un <pre>");
+    return;
+  }
+  if (preamble.attrs.lang !== "en") fail('el bloque de avisos no lleva el texto en un <pre lang="en"> (CA-026-12)');
+  if (!hasClass(preamble, "notices__preamble")) fail('el primer <pre> del bloque de avisos tiene que ser el preámbulo, <pre lang="en" class="notices__preamble"> (CA-027-03)');
+
+  const groups = opens.filter((x) => x.name === "details");
+  if (groups.length === 0) {
+    fail('el bloque de avisos no lleva ningún grupo (<details class="group">, CA-027-01)');
+    return;
+  }
+  const first = groups[0];
+  // El preámbulo es el primer <pre>: si fuera detrás del primer grupo, el primero sería un aviso (sin la clase).
+  const skips = opens.filter((x) => x.name === "a" && x.attrs.href === "#notices-end");
+  if (skips.length !== 1 || skips[0].start < preamble.end || skips[0].start > first.start) {
+    fail('el bloque de avisos tiene que llevar un enlace de saltar (<a href="#notices-end">) tras el preámbulo y antes del primer grupo (CA-027-06)');
+  }
+
+  // Cada grupo: sin id, open ni manejadores, sin grupos dentro; <summary> primero y después solo <pre lang="en">.
+  const inGroups = new Set();
+  let lastEnd = 0;
+  for (const g of groups) {
+    const name = `el grupo de avisos ${groups.indexOf(g) + 1}`;
+    const gClose = closeOf(t, g);
+    if (!gClose || gClose.start > to) {
+      fail(`${name} (<details>) no se cierra dentro del bloque de avisos`);
+      return;
+    }
+    if (g.start < lastEnd) fail(`${name} va dentro de otro grupo (los <details> no se anidan)`);
+    else if (lastEnd > 0 && html.slice(lastEnd, g.start).trim() !== "") fail(`algo entre los grupos de avisos, antes del grupo ${groups.indexOf(g) + 1} (los avisos van solo dentro de los grupos, CA-027-04)`);
+    lastEnd = gClose.end;
+    const bad = Object.keys(g.attrs).filter((a) => a === "id" || a === "open" || /^on/.test(a));
+    if (bad.length > 0) fail(`${name} lleva ${bad.join(", ")} (los grupos van plegados, sin id ni manejadores; CA-027-01)`);
+    if (!hasClass(g, "group")) fail(`${name} no lleva class="group" (los estilos de la cabecera y del marcador, CA-027-06)`);
+    const kids = t.filter((x) => x.start >= g.end && x.end <= gClose.start);
+    const summary = kids[0];
+    if (!summary || summary.name !== "summary" || summary.closing || html.slice(g.end, summary.start).trim() !== "") {
+      fail(`${name} no lleva <summary> como primer hijo (el nombre del grupo, CA-027-06)`);
+      continue;
+    }
+    const sClose = closeOf(t, summary);
+    if (!sClose || sClose.start > gClose.start) {
+      fail(`${name}: su <summary> no se cierra dentro del grupo`);
+      continue;
+    }
+    for (const x of t.filter((y) => !y.closing && y.start >= summary.end && y.end <= sClose.start)) {
+      if (x.name !== "span") fail(`${name}: un <${x.name}> dentro de su <summary> (solo el nombre y el recuento, en <span>)`);
+    }
+    let at = sClose.end;
+    let ok = true;
+    let count = 0;
+    for (const x of kids.filter((y) => y.start >= sClose.end)) {
+      if (x.closing) continue;
+      const pClose = x.name === "pre" ? closeOf(t, x) : undefined;
+      if (x.name !== "pre" || x.start < at || html.slice(at, x.start).trim() !== "" || !pClose || pClose.start > gClose.start) {
+        ok = false;
+        break;
+      }
+      if (Object.keys(x.attrs).join(" ") !== "lang" || x.attrs.lang !== "en") ok = false;
+      inGroups.add(x);
+      count += 1;
+      at = pClose.end;
+    }
+    if (!ok || count === 0 || html.slice(at, gClose.start).trim() !== "") {
+      fail(`${name}: tras su <summary> solo pueden ir avisos en <pre lang="en"> (CA-027-01 y 02)`);
+    }
+  }
+  for (const p of pres) {
+    if (p !== preamble && !inGroups.has(p)) fail("un <pre> del bloque de avisos fuera de los grupos (solo el preámbulo va suelto, CA-027-04)");
+  }
+
+  // El destino del salto: el enlace al archivo de texto, tras el último grupo y dentro del bloque (CA-027-06).
+  const targets = t.filter((x) => !x.closing && x.attrs.id === "notices-end");
+  const target = targets[0];
+  if (targets.length !== 1 || target.name !== "a" || target.attrs.href !== `/${NOTICES_FILE}` || target.start < lastEnd || target.end > to) {
+    fail(`el destino del salto (<a id="notices-end" href="/${NOTICES_FILE}">) tiene que ir tras el último grupo, dentro del bloque de avisos (CA-027-06)`);
+  }
 }
 
 const escapeText = (s) =>
@@ -592,8 +675,10 @@ const MEDIA_WIDTH = "(max-width: 520px)";
 const MEDIA_FORCED = "(forced-colors: active)";
 const ALLOWED_MEDIA = new Set([MEDIA_HEIGHT, MEDIA_WIDTH, MEDIA_FORCED]);
 
-/** Los selectores que llevan los objetivos de 44 × 44 de CA-026-10. */
-const TOUCH_TARGETS = [".logo", ".btn", ".langs a", ".back", ".toc a", ".end a"];
+/** La cabecera de cada grupo de avisos (spec 027, CA-027-06). */
+const GROUP_SUMMARY = ".group > summary";
+/** Los selectores que llevan los objetivos de 44 × 44 de CA-026-10 (y la cabecera de los grupos, CA-027-06). */
+const TOUCH_TARGETS = [".logo", ".btn", ".langs a", ".back", ".toc a", ".end a", GROUP_SUMMARY];
 /** Las reglas de ocultar el otro idioma y los separadores (plan §2.4). */
 const HIDE_SELECTORS = ['html[data-lang="es"] [data-l="en"]', 'html[data-lang="en"] [data-l="es"]', 'html[data-lang] [data-l="sep"]'];
 /** Lo que oculta a la vista sin ocultar al lector (`.vh`, y el texto de «Descargar» a 520 px o menos). */
@@ -783,11 +868,32 @@ function checkCss(file, text, { tokens, definedVars, varValues = new Map() }, er
 
   if (focusRing.length === 0) fail("falta el anillo de foco (:focus-visible con outline de var(--border-width-focus)): 2.4.7");
   else if (!focusRing.includes("h3:focus-visible")) fail("falta h3:focus-visible con el anillo de foco (los <h3> reciben el foco desde el índice, CA-026-10)");
+  else {
+    if (!focusRing.includes("a:focus-visible")) fail("falta a:focus-visible con el anillo de foco (los enlaces y el destino del salto de los avisos, CA-027-06)");
+    if (!focusRing.includes("summary:focus-visible")) fail("falta summary:focus-visible con el anillo de foco (la cabecera de cada grupo de avisos, CA-027-06)");
+  }
   if (!underline) fail("los enlaces (a) tienen que ir subrayados: text-decoration: underline");
   if (valueOf("pre", "white-space") !== "pre-wrap") fail("pre tiene que llevar white-space: pre-wrap (reflujo, 1.4.10)");
   else if (valueOf("pre", "overflow-wrap") !== "anywhere") fail("pre tiene que llevar overflow-wrap: anywhere (reflujo, 1.4.10)");
   if (valueOf(".block-link", "min-height") !== "var(--size-link-button)") {
     fail(".block-link tiene que llevar min-height: var(--size-link-button) (objetivo de 44, P6)");
+  }
+
+  // La cabecera de los grupos de avisos (CA-027-06): el marcador nativo (list-item, sin quitar la viñeta ni el
+  // marcador de WebKit), que cambia de forma al abrir y da el estado al lector; sin recortar el texto (1.4.12).
+  if (valueOf(GROUP_SUMMARY, "display") !== "list-item") fail(`${GROUP_SUMMARY} tiene que llevar display: list-item (el marcador nativo del desplegable, CA-027-06)`);
+  for (const { selector, decls, media } of rules) {
+    const where = media ? `«${selector}» (@media ${media})` : `«${selector}»`;
+    for (const part of selectorParts(selector)) {
+      const marker = /::?(-webkit-details-marker|marker)\b/.test(part);
+      if (!marker && !/\bsummary\b/.test(part)) continue;
+      for (const { prop, value } of decls) {
+        if (marker && (prop === "display" || prop === "content" || prop === "visibility")) fail(`${where}: «${prop}: ${value}» en el marcador del desplegable (se deja el nativo, CA-027-06)`);
+        else if (/^list-style(-type)?$/.test(prop) && /\bnone\b/.test(value)) fail(`${where}: «${prop}: ${value}» quita el marcador del desplegable (CA-027-06)`);
+        else if (prop === "display" && value !== "list-item") fail(`${where}: «display: ${value}» en un <summary> (tiene que ser list-item: el marcador nativo, CA-027-06)`);
+        else if (/^overflow(-[xy])?$/.test(prop) && /\b(hidden|clip)\b/.test(value)) fail(`${where}: «${prop}: ${value}» en un <summary> recorta el nombre del grupo (1.4.12)`);
+      }
+    }
   }
 
   // Ocultar el otro idioma (CA-026-06 y 08) y, con JavaScript, el titular de cada mitad solo a la vista (CA-026-10).

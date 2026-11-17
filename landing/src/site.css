@@ -281,7 +281,7 @@ a {
   text-underline-offset: var(--space-xs);
 }
 
-a:focus-visible, h2:focus-visible, h3:focus-visible {
+a:focus-visible, h2:focus-visible, h3:focus-visible, summary:focus-visible {
   outline: var(--border-width-focus) solid var(--color-ink);
   outline-offset: var(--border-width-focus);
 }
@@ -291,6 +291,44 @@ a:focus-visible, h2:focus-visible, h3:focus-visible {
   display: flex;
   align-items: center;
   min-height: var(--size-link-button);
+}
+
+/* ── Avisos de terceros en grupos (spec 027, CA-027-01 y 06) ──────────────────────────────────────── */
+
+/* Entre grupos seguidos, la línea fina: así se recorre la lista plegada con zoom. */
+.group + .group {
+  border-top: var(--border-width-hairline) solid var(--color-line);
+}
+
+/* La cabecera de cada grupo: 44 × 44 o más y sin alto fijo (1.4.12). Se deja el marcador nativo (list-item): el
+   triángulo cambia de forma al abrir, se pinta con el color del texto (también con colores forzados) y el
+   navegador da el estado al lector. */
+.group > summary {
+  display: list-item;
+  box-sizing: border-box;
+  min-width: var(--size-min-touch-target);
+  min-height: var(--size-min-touch-target);
+  padding: var(--space-s) 0;
+  cursor: pointer;
+}
+
+/* El recuento, como los textos de apoyo (Space Mono). */
+.group__count {
+  color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-s);
+}
+
+/* La separación entre los avisos de un grupo. */
+.group pre + pre {
+  padding-top: var(--space-m);
+  border-top: var(--border-width-hairline) solid var(--color-line);
+}
+
+/* El destino del enlace de saltar (el enlace al archivo de texto), con la línea que cierra la lista. */
+.notices__end {
+  padding-top: var(--space-s);
+  border-top: var(--border-width-hairline) solid var(--color-line);
 }
 
 /* ── Pie (CA-026-01): el de la landing, en tinta sobre papel ───────────────────────────────────── */
@@ -361,9 +399,10 @@ a:focus-visible, h2:focus-visible, h3:focus-visible {
   }
 }
 
-/* Colores forzados: los bordes del botón, del selector y de la página actual, y el trazo del icono. */
+/* Colores forzados: los bordes del botón, del selector, de la página actual y de los grupos de avisos, y el
+   trazo del icono. */
 @media (forced-colors: active) {
-  .btn, .langs a + a, .end a[aria-current="page"] > [lang] {
+  .btn, .langs a + a, .end a[aria-current="page"] > [lang], .group + .group, .group pre + pre, .notices__end {
     border-color: CanvasText;
   }
 

@@ -872,3 +872,126 @@ describe("CA-027-02: la construcción comprueba la ida y vuelta", () => {
     });
   }
 });
+
+// ─── La comprobación del bloque en grupos (spec 027, T-027-04) ───────────────────────────────────────
+
+describe("CA-027-01, 03, 04 y 06: check.mjs exige la forma nueva del bloque de avisos", () => {
+  const fails = (label, mutate, pattern) =>
+    test(label, () => {
+      const w = cloneWorld(base);
+      try {
+        edit(licenses(w), (t) => {
+          const out = mutate(t);
+          assert.notEqual(out, t, "la mutación no cambió nada");
+          return out;
+        });
+        const errors = specificErrors(checkSite(w.paths));
+        assert.ok(errors.length >= 1, "la comprobación pasó con una web que no debería pasar");
+        assert.ok(errors.some((e) => pattern.test(e)), `ningún error casa ${pattern}:\n${errors.join("\n")}`);
+      } finally {
+        w.cleanup();
+      }
+    });
+  const SECTION = '<section lang="en" aria-labelledby="notices">';
+  /** Aplica [fn] solo al bloque de avisos de la página. */
+  const inBlock = (fn) => (t) => {
+    const at = t.indexOf(SECTION);
+    const end = t.indexOf("</section>", at) + "</section>".length;
+    return t.slice(0, at) + fn(t.slice(at, end)) + t.slice(end);
+  };
+  const GROUP_OPEN = '<details class="group">';
+  const FIRST_PRE_IN_GROUP = /(<\/summary>\n)<pre lang="en">/;
+  const PREAMBLE = /<pre lang="en" class="notices__preamble">[\s\S]*?<\/pre>\n/;
+  const END_LINK = /<p class="notices__end">[^\n]*<\/p>\n/;
+
+  test("CA-027-06: lo construido (archivo real) pasa con la forma nueva", () => {
+    assert.deepEqual(checkSite(base.paths), []);
+  });
+
+  // Los grupos (CA-027-01).
+  fails("CA-027-01: un grupo abierto", (t) => t.replace(GROUP_OPEN, '<details class="group" open>'), /lleva open/);
+  fails("CA-027-01: un grupo con id", (t) => t.replace(GROUP_OPEN, '<details class="group" id="icu">'), /lleva id/);
+  fails("CA-027-04: un grupo con un manejador", (t) => t.replace(GROUP_OPEN, '<details class="group" ontoggle="x()">'), /lleva ontoggle/);
+  fails("CA-027-06: un grupo sin class=\"group\"", (t) => t.replace(GROUP_OPEN, "<details>"), /class="group"/);
+  fails("CA-027-01: ningún grupo", inBlock((b) => b.replace(/<details class="group">[\s\S]*?<\/details>\n/g, "")), /ningún grupo/);
+  fails("CA-027-06: un grupo sin <summary> como primer hijo", (t) => t.replace(`${GROUP_OPEN}<summary>`, `${GROUP_OPEN}<p>x</p><summary>`), /<summary> como primer hijo/);
+  fails("CA-027-06: texto antes del <summary>", (t) => t.replace(`${GROUP_OPEN}<summary>`, `${GROUP_OPEN}x<summary>`), /<summary> como primer hijo/);
+  fails("CA-027-06: un enlace dentro del <summary>", (t) => t.replace(`${GROUP_OPEN}<summary>`, `${GROUP_OPEN}<summary><a href="/">x</a>`), /<a> dentro de su <summary>/);
+  fails("CA-027-02: un párrafo entre los avisos de un grupo", (t) => t.replace(FIRST_PRE_IN_GROUP, '$1<p>x</p>\n<pre lang="en">'), /solo pueden ir avisos/);
+  fails("CA-027-02: texto suelto entre los avisos de un grupo", (t) => t.replace(FIRST_PRE_IN_GROUP, '$1x\n<pre lang="en">'), /solo pueden ir avisos/);
+  fails("CA-027-02: texto suelto tras el último aviso de un grupo", (t) => t.replace("</pre>\n</details>", "</pre>\nx\n</details>"), /solo pueden ir avisos/);
+  fails("CA-027-02: un grupo sin avisos", (t) => t.replace(/(<details class="group"><summary>[\s\S]*?<\/summary>\n)<pre lang="en">[\s\S]*?<\/pre>\n(<\/details>)/, "$1$2"), /solo pueden ir avisos/);
+  fails("CA-027-06: un aviso de un grupo sin lang=\"en\"", (t) => t.replace(FIRST_PRE_IN_GROUP, "$1<pre>"), /solo pueden ir avisos/);
+  fails("CA-027-06: un aviso de un grupo con otro atributo", (t) => t.replace(FIRST_PRE_IN_GROUP, '$1<pre lang="en" class="x">'), /solo pueden ir avisos/);
+  fails("CA-027-01: un grupo dentro de otro", inBlock((b) => {
+    const first = b.indexOf("</details>\n");
+    return b.slice(0, first) + b.slice(first + "</details>\n".length).replace("</details>\n", "</details>\n</details>\n");
+  }), /dentro de otro grupo|solo pueden ir avisos/);
+  fails("CA-027-04: un aviso en un <pre> fuera de los grupos", inBlock((b) => b.replace("</details>\n", '</details>\n<pre lang="en">x</pre>\n')), /fuera de los grupos/);
+  fails("CA-027-04: un aviso fuera de un <pre> y de los grupos", inBlock((b) => b.replace("</details>\n", "</details>\n<p>texto de un aviso</p>\n")), /entre los grupos/);
+
+  // El preámbulo (CA-027-03).
+  fails("CA-027-03: el preámbulo sin su clase", (t) => t.replace('<pre lang="en" class="notices__preamble">', '<pre lang="en">'), /preámbulo/);
+  fails("CA-027-03: el preámbulo detrás del primer grupo", inBlock((b) => {
+    const pre = PREAMBLE.exec(b)[0];
+    return b.replace(pre, "").replace("</details>\n", `</details>\n${pre}`);
+  }), /preámbulo/);
+
+  // El enlace de saltar y su destino (CA-027-06).
+  fails("CA-027-06: sin el enlace de saltar", (t) => t.replace(/<p><a href="#notices-end" class="block-link">[^\n]*<\/p>\n/, ""), /enlace de saltar/);
+  fails("CA-027-06: el enlace de saltar tras el primer grupo", inBlock((b) => {
+    const skip = /<p><a href="#notices-end" class="block-link">[^\n]*<\/p>\n/.exec(b)[0];
+    return b.replace(skip, "").replace("</details>\n", `</details>\n${skip}`);
+  }), /enlace de saltar/);
+  fails("CA-027-06: dos enlaces de saltar", (t) => t.replace(/<p><a href="#notices-end" class="block-link">[^\n]*<\/p>\n/, (m) => m + m), /enlace de saltar/);
+  fails("CA-027-06: sin el destino del salto", (t) => t.replace(' id="notices-end"', ""), /destino del salto/);
+  fails("CA-027-06: el destino del salto antes del último grupo", inBlock((b) => {
+    const end = END_LINK.exec(b)[0];
+    const last = b.lastIndexOf(GROUP_OPEN);
+    return (b.slice(0, last) + end + b.slice(last)).replace(/(<\/details>\n)<p class="notices__end">[^\n]*<\/p>\n<\/section>$/, "$1</section>");
+  }), /destino del salto/);
+  fails("CA-027-06: el destino del salto lleva a otro sitio", (t) => t.replace('id="notices-end" href="/third-party-notices.txt"', 'id="notices-end" href="/help"'), /destino del salto/);
+  fails("CA-027-06: el destino del salto fuera del bloque", (t) => {
+    const end = END_LINK.exec(t)[0];
+    return t.replace(end, "").replace(`${SECTION}`, (m) => m).replace("</section>\n</main>", `</section>\n${end}</main>`);
+  }, /destino del salto/);
+  fails("CA-027-06: el destino del salto no es un enlace", (t) => t.replace(' id="notices-end"', "").replace('<p class="notices__end">', '<p class="notices__end" id="notices-end">'), /destino del salto/);
+});
+
+describe("CA-027-04: las guardias miran el nombre de los grupos (no el texto de los avisos)", () => {
+  test("CA-027-04: un «[DATE]» en el nombre de un grupo es un hueco de identidad (y en producción no se publica)", () => {
+    const text = fakeNotices(HEADER_BUILD, noticesBody().replace("\npaquete\n", "\n[DATE]\n"));
+    const { w, result } = withNotices(text);
+    try {
+      assert.ok(result.warnings.some((m) => m.includes("[DATE]") && m.includes("licenses/index.html")), result.warnings.join("\n"));
+      assert.throws(() => build(w.paths, { env: { VERCEL_ENV: "production" } }), /\[DATE\] en licenses\/index\.html/);
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  test("CA-027-04: el mismo «[DATE]» en el texto de un aviso no lo es (como en la 023)", () => {
+    const { w, result } = withNotices(fakeNotices(HEADER_BUILD, noticesBody("Copyright [DATE]")));
+    try {
+      assert.ok(!result.warnings.some((m) => m.includes("[DATE]") && m.includes("licenses/index.html")), result.warnings.join("\n"));
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  test("CA-027-04: un grupo llamado como una analítica hace fallar la comprobación; en el texto de un aviso, no", () => {
+    const named = withNotices(fakeNotices(HEADER_BUILD, noticesBody().replace("\npaquete\n", "\nplausible\n")));
+    try {
+      const errors = specificErrors(checkSite(named.w.paths));
+      assert.ok(errors.some((e) => /^licenses\/index\.html: .*analítica.*plausible/.test(e)), errors.join("\n"));
+    } finally {
+      named.w.cleanup();
+    }
+    const inText = withNotices(fakeNotices(HEADER_BUILD, noticesBody("plausible")));
+    try {
+      assert.deepEqual(checkSite(inText.w.paths), []);
+    } finally {
+      inText.w.cleanup();
+    }
+  });
+});
