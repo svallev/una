@@ -12,6 +12,15 @@
 
 🧭 **Planificación cerrada** (2026-09-24). Aún no hay código de la app. Siguiente fase: **F0 Preparación** → **F1 Spikes**. Ver [docs/PLAN.md](docs/PLAN.md).
 
+## Probar en línea
+
+| Qué | Enlace |
+|---|---|
+| **App web de pruebas** (Flutter web, solo para probar; la app real es móvil) | [una-rho.vercel.app](https://una-rho.vercel.app) |
+| **Landing** (vista previa; huecos de identidad aún sin rellenar, contacto provisional) | [una-landing-git-web-preview-salvadorvalle-8227s-projects.vercel.app](https://una-landing-git-web-preview-salvadorvalle-8227s-projects.vercel.app) |
+
+Son entornos de prueba, no la publicación: ver [docs/PLAN.md](docs/PLAN.md) (F6) para lo que falta antes de publicar.
+
 ## Documentación
 
 | Documento | Para qué |
