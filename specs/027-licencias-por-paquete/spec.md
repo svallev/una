@@ -1,6 +1,6 @@
 # Spec 027: Licencias agrupadas por paquete
 
-- **Estado:** **Aprobada** por el propietario el 2026-11-17 (Q-027-1 resuelta: cabecera exacta; grupos plegados; antes Borrador; revisión 1 del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 7 importantes y 6 menores; revisión 2: 5 importantes y 6 menores, aplicados)
+- **Estado:** **Aprobada** por el propietario el 2026-11-17 (Q-027-1 resuelta: cabecera exacta; grupos plegados; **plan Aprobado** el 2026-11-17, con la enmienda de CA-027-04 de Q-P-1; antes Borrador; revisión 1 del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 7 importantes y 6 menores; revisión 2: 5 importantes y 6 menores, aplicados)
 - **Reglas de producto:** ninguna de la app. Sirve a **P6** (accesible) y **P4** (la web sigue sin rastreo ni recursos de otro origen); los avisos legales se publican completos y sin alterar por ADR-0026.
 - **Pantallas del prototipo:** **sin diseño en el prototipo ni en la maqueta** (DEV-60 cubre las páginas de contenido; esta spec solo cambia cómo se ordena el bloque de avisos de la página de licencias). El propietario lo revisa en el navegador (C-027-1).
 - **Decisiones y ADR relacionados:** decisión del propietario del 2026-11-17 («opción 1, agrúpalo por paquete»; la opción de consolidar copyrights queda fuera, §8). ADR-0026 (licencias en la web; la revisión legal sigue siendo punto bloqueante de F6), ADR-0028 (las páginas de contenido, sin más programa que el del idioma).
@@ -55,7 +55,7 @@ Que quien abre la página de licencias vea qué paquetes de terceros lleva la ap
   - **Dado** la página de licencias con o sin JavaScript
   - **Cuando** se abre y se pulsa un grupo
   - **Entonces** el grupo se despliega y se pliega **sin ningún programa nuevo**: la página sigue cargando solo el programa de idioma (CA-026-13), sin estilos en línea, con la misma política de contenido (CSP) y sin archivos más que hoy. **Cambiar de idioma no cambia qué grupos están abiertos.** Las guardias que hoy miran el texto de los avisos (CA-023-19: sin rutas de la máquina de compilación; y los huecos de identidad al publicar) **siguen mirando todo el texto de los grupos**.
-  - **Verificable:** test de la construcción (recursos y CSP iguales que hoy; ningún `<script>` ni `style=` nuevo; un `[DATE]` o una ruta de una carpeta personal en el texto de un aviso hacen fallar igual) y test de `lang.js` (el estado abierto no cambia al cambiar de idioma).
+  - **Verificable:** test de la construcción (recursos y CSP iguales que hoy; ningún `<script>` ni `style=` nuevo; **enmienda del plan, Q-P-1, 2026-11-17:** un `[DATE]` en el **texto** de un aviso sigue sin contar como hueco de identidad, como en la 023, y en el **nombre** de un grupo sí cuenta; una ruta de una carpeta personal (`/Users/`, `/home/` salvo `/home/runner/`, `C:\Users\`) o un carácter de control o de dirección en **cualquier parte** del archivo hace fallar la construcción) y test de `lang.js` (el estado abierto no cambia al cambiar de idioma).
 
 - **CA-027-05** · Falla cerrado
   - **Dado** un archivo de avisos con una estructura que no se reconoce

@@ -1,0 +1,30 @@
+# Tareas — Spec 027: Licencias agrupadas por paquete
+
+**Siguiente:** T-027-01
+
+Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Los textos y los tokens van juntos en una tarea al principio. Una PR puede agrupar varias tareas consecutivas.
+
+Todas en `landing/`; la app no cambia. Comandos: `cd landing && node --test test/`, `node build.mjs` y `node check.mjs` (y, desde `app/`, `flutter test` solo si algo de `app/` cambiara, que no debería).
+
+| ID | Tarea | Depende de | Toca | Verificación | CA |
+|---|---|---|---|---|---|
+| T-027-01 | **Referencia y textos.** Antes de cambiar nada del HTML, guardar el fragmento de referencia: el HTML de `dist/licenses/index.html` construido desde `main` **sin** la `<section … aria-labelledby="notices">…</section>` (`test/fixtures/027/licenses-outside-notices.html`, con una nota de cómo se sacó). Añadir `webNoticesCountOne`, `webNoticesCountMany` (`{n}`) y `webNoticesSkip` a `strings.json` (ES y EN, textos de §7) y a `STRING_KEYS`. | — | `landing/src/strings.json`, `landing/build.mjs` (`STRING_KEYS`), `landing/test/fixtures/027/`, `landing/test/build.test.mjs` | Test de las tres claves (textos exactos de §7; `{n}` solo en `…Many`; un marcador de más falla); suite de la web en verde | CA-027-09 (claves), base de CA-027-07 |
+| T-027-02 | **Analizador.** `parseNoticesBody` y `rebuildNoticesBody` (plan §1.1), exportados y puros; mensajes con qué y línea; la construcción comprueba la ida y vuelta y, según Q-P-1, rechaza rutas personales y caracteres de control o de dirección en todo el archivo. `fakeNotices` de `support.mjs` pasa a la estructura mínima válida (`BEGIN/END NOTICES` y un aviso) y los tests de la 023, la 025 y la 026 que usaban un cuerpo sin marcadores se adaptan citando CA-027-05, sin perder lo que protegen. Todavía **no** cambia el HTML. | T-027-01 | `landing/build.mjs`, `landing/test/support.mjs`, `landing/test/licenses.test.mjs` y los que usen `fakeNotices` | Tests del analizador: un caso por estructura de CA-027-05 (y 79/81 guiones y 80 en una sección como texto); con el archivo real, grupos y avisos = recuento independiente y `rebuild(parse(x)) === x` desde `BEGIN NOTICES`; suite en verde | CA-027-01 (recuento), 02 (c), 05 |
+| T-027-03 | **HTML de los grupos.** En `renderSite`, el bloque de avisos con el preámbulo, el enlace de saltar, un `<details>` por cabecera y por sección (plegado, nombre con «, », recuento bilingüe), un `<pre lang="en">` por aviso y el destino `#notices-end` (plan §1.2). | T-027-02 | `landing/build.mjs`, `landing/test/licenses.test.mjs` | Tests de construcción: grupos, orden, recuentos, plegados (CA-027-01); texto del DOM = archivo, (a), (b) y (c) con el real y el de prueba, escapado (CA-027-02); preámbulo primero (CA-027-03); `.txt` byte a byte, HTML fuera del bloque = referencia de T-027-01, avisos una vez (CA-027-07); tamaño ≤ publicado + 250 KB (CA-027-08). `node check.mjs` puede fallar aún por `checkNoticesBlock` → se arregla en T-027-04 (dejarlo dicho en Estado) | CA-027-01, 02, 03, 07, 08 |
+| T-027-04 | **Estilos y comprobación.** `site.css` (plan §1.4) y `check.mjs` (`checkNoticesBlock` con la forma nueva, `.group > summary` en `TOUCH_TARGETS`, `summary:focus-visible` y el destino en el anillo de foco). Tests: un caso que falla por cada regla nueva de `check.mjs`; mismas guardias (un `<script>` o `style=` de más, CSP y archivos de `dist/` iguales; `[DATE]` en un aviso según Q-P-1); `lang.js` no cambia el `open` de un `<details>` al cambiar de idioma. | T-027-03 | `landing/src/site.css`, `landing/check.mjs`, `landing/test/a11y.test.mjs`, `landing/test/security.test.mjs`, `landing/test/lang.test.mjs`, `landing/test/licenses.test.mjs` | `node build.mjs && node check.mjs` sin errores; suite de la web en verde | CA-027-04, 06 |
+| T-027-05 | **C-027-1 en el navegador** (coordinador, con el propietario): Chrome de escritorio y del emulador (teclado, Intro/Espacio, enlace de saltar y foco al llegar, zoom 200 % y 400 %, colores forzados, `icu` en < 1 s), Safari (marcador) y TalkBack (nombre, un recuento, estado). Hallazgos → `navegadores.md`; si alguno pide código, una tarea nueva. | T-027-04 | `specs/027-licencias-por-paquete/navegadores.md` | Casillas con resultado | CA-027-06, 08 |
+| T-027-06 | **Documentación** (CA-027-09): enmiendas de la 023 (CA-023-16 y §7), la 025 (CA-025-18) y la 026 (CA-026-12, §7 y DEV-60 en `prototype-deviations.md`); glosario; `docs/design/screen-map.md`; `docs/security/checklist.md` si el apartado de la web lo nombra; `docs/PLAN.md` y `CLAUDE.md`; la revisión legal de F6 sigue diciendo que consolidar copyrights es suya. | T-027-05 | `specs/023-…/spec.md`, `specs/025-…/spec.md`, `specs/026-…/spec.md`, `docs/…`, `CLAUDE.md` | Lectura cruzada; `spec-reviewer` en el cierre | CA-027-09 |
+
+## Cierre
+
+- [ ] Todos los CA de la spec tienen test en verde (lista CA → test).
+- [ ] `/i18n-check`, `/tokens-validate`, `/security-check`; `a11y-reviewer` y `security-reviewer` sobre `git diff main...HEAD`.
+- [ ] Definition of Done (`specs/constitution.md`) completa.
+- [ ] Spec marcada como **Implementada**; PR preparada sin push hasta que lo confirme el propietario.
+
+## Estado
+
+Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests, emulador), fallos encontrados y lo pendiente con **[Suposición]**/**[Pendiente]**. El detalle va en el mensaje del commit; lo que sirve para otras tareas, a las **Trampas** de `.claude/agents/spec-task.md`.
+
+| Tareas | Estado | Commit |
+|---|---|---|
