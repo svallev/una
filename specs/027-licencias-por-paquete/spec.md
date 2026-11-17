@@ -1,6 +1,6 @@
 # Spec 027: Licencias agrupadas por paquete
 
-- **Estado:** **Borrador** (2026-11-17; revisión 1 del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 7 importantes y 6 menores; revisión 2: 5 importantes y 6 menores, aplicados)
+- **Estado:** **Aprobada** por el propietario el 2026-11-17 (Q-027-1 resuelta: cabecera exacta; grupos plegados; antes Borrador; revisión 1 del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 7 importantes y 6 menores; revisión 2: 5 importantes y 6 menores, aplicados)
 - **Reglas de producto:** ninguna de la app. Sirve a **P6** (accesible) y **P4** (la web sigue sin rastreo ni recursos de otro origen); los avisos legales se publican completos y sin alterar por ADR-0026.
 - **Pantallas del prototipo:** **sin diseño en el prototipo ni en la maqueta** (DEV-60 cubre las páginas de contenido; esta spec solo cambia cómo se ordena el bloque de avisos de la página de licencias). El propietario lo revisa en el navegador (C-027-1).
 - **Decisiones y ADR relacionados:** decisión del propietario del 2026-11-17 («opción 1, agrúpalo por paquete»; la opción de consolidar copyrights queda fuera, §8). ADR-0026 (licencias en la web; la revisión legal sigue siendo punto bloqueante de F6), ADR-0028 (las páginas de contenido, sin más programa que el del idioma).
@@ -138,7 +138,7 @@ Los textos de los avisos y los nombres de paquete **no se traducen** (inglés, `
 
 ## 9. Preguntas abiertas
 
-- **[Pendiente, Q-027-1, propietario]** El agrupado es por **cabecera exacta**, no por paquete suelto: 69 cabeceras comparten varios paquetes (por ejemplo `async, cli_util, collection, mime, stream_channel, typed_data`), y el mismo paquete (`dart`, `icu`…) aparece en varias cabeceras. Agrupar «por paquete» de verdad obligaría a **repetir** un aviso bajo cada uno de sus paquetes (duplica texto legal, contra CA-027-02). **Recomendación: cabecera exacta** (lo supuesto aquí). ¿Es lo que querías al decir «por paquete»? (Los grupos empiezan todos plegados, CA-027-01 **[Suposición]**: con 164 grupos, abrir uno solo no ahorra nada.)
+- **[Hecho, Q-027-1 resuelta por el propietario el 2026-11-17: «por cabecera exacta»; los grupos empiezan todos plegados]** El agrupado es por **cabecera exacta**, no por paquete suelto: 69 cabeceras comparten varios paquetes (por ejemplo `async, cli_util, collection, mime, stream_channel, typed_data`), y el mismo paquete (`dart`, `icu`…) aparece en varias cabeceras. Agrupar «por paquete» de verdad obligaría a **repetir** un aviso bajo cada uno de sus paquetes (duplica texto legal, contra CA-027-02). **Recomendación: cabecera exacta** (lo supuesto aquí). ¿Es lo que querías al decir «por paquete»? (Los grupos empiezan todos plegados, CA-027-01 **[Suposición]**: con 164 grupos, abrir uno solo no ahorra nada.)
 - **[Pendiente, plan]** Cómo se reconoce la estructura del archivo (partes, cabeceras y secciones `assets/…`) sin listas escritas a mano y cómo se carga el marcador `{n}` de las claves nuevas; cómo se garantiza CA-027-02; cómo se separan visualmente los avisos de un grupo y cómo entra el recuento bilingüe sin que el programa de idioma escriba texto.
 
 ## 10. Enmiendas
