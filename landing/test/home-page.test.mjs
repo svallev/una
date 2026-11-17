@@ -318,3 +318,118 @@ describe("Cambio del propietario (2026-11-15): la mesa de luz, un gato sin texto
     assert.ok(activa.includes(`<p class="fine">${es.scenes.activa.note}</p>`));
   });
 });
+
+describe("Cierre de la 025: hallazgos de accesibilidad de los revisores", () => {
+  /** Un elemento de mentira con lo justo para `setupHold`: clases, estilo, manejadores y lo que se le escribe. */
+  const fakeEl = () => {
+    const classes = new Set();
+    const props = new Map();
+    const el = {
+      writes: [],
+      handlers: {},
+      innerHTML: "",
+      classList: { add: (...c) => c.forEach((x) => classes.add(x)), remove: (...c) => c.forEach((x) => classes.delete(x)), contains: (c) => classes.has(c) },
+      style: { setProperty: (k, v) => props.set(k, v), getPropertyValue: (k) => props.get(k) ?? "" },
+      querySelector: () => fakeEl(),
+      querySelectorAll: () => [],
+      addEventListener: (type, fn) => { el.handlers[type] = fn; },
+    };
+    let text = "";
+    Object.defineProperty(el, "textContent", { get: () => text, set: (v) => { text = v; el.writes.push(v); } });
+    return el;
+  };
+
+  /** `setupHold` sobre un DOM de mentira y con un reloj a mano (`tick`). */
+  async function holdWorld(fn) {
+    const { setupHold } = await homeModule(base, "a", "hold.js");
+    const els = new Map();
+    const root = { querySelector: (sel) => els.get(sel) ?? els.set(sel, fakeEl()).get(sel) };
+    const real = { setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout };
+    let now = 0;
+    let seq = 0;
+    const queue = new Map();
+    globalThis.setTimeout = (cb, ms = 0) => { queue.set(++seq, { at: now + ms, cb }); return seq; };
+    globalThis.clearTimeout = (id) => { queue.delete(id); };
+    const tick = (ms) => {
+      const end = now + ms;
+      for (;;) {
+        const due = [...queue].filter(([, x]) => x.at <= end).sort((a, b) => a[1].at - b[1].at || a[0] - b[0])[0];
+        if (!due) break;
+        queue.delete(due[0]);
+        now = due[1].at;
+        due[1].cb();
+      }
+      now = end;
+    };
+    try {
+      const handle = setupHold(root);
+      fn({ handle, tick, app: root.querySelector(".hold"), btn: root.querySelector(".hold__btn"), live: root.querySelector("[aria-live]") });
+    } finally {
+      Object.assign(globalThis, real);
+    }
+  }
+  const done = () => strings(base, "es").app.done;
+
+  test("CA-025-15: completar dos veces se anuncia dos veces (la región se vacía y el texto llega después)", async () => {
+    await holdWorld(({ tick, btn, live }) => {
+      for (const round of [1, 2]) {
+        const from = live.writes.length;
+        btn.handlers.click({ detail: 0 });
+        assert.equal(live.textContent, "", `vuelta ${round}: la región no se vació al completar`);
+        tick(3000);
+        assert.equal(live.textContent, done(), `vuelta ${round}`);
+        assert.deepEqual(live.writes.slice(from), ["", done()], `vuelta ${round}`);
+      }
+    });
+  });
+
+  test("CA-025-15: mantener pulsado con el teclado también se anuncia", async () => {
+    await holdWorld(({ tick, btn, live }) => {
+      btn.handlers.keydown({ key: "Enter", repeat: false, preventDefault() {} });
+      tick(5000);
+      assert.equal(live.textContent, done());
+    });
+  });
+
+  test("CA-025-07: la demostración automática completa la nota sin anunciar nada al lector", async () => {
+    await holdWorld(({ handle, tick, app, live }) => {
+      handle.demo();
+      tick(900 + 1200);
+      assert.ok(app.classList.contains("is-done"), "la demostración no llegó a completar la nota");
+      tick(5000);
+      assert.deepEqual(live.writes.filter((w) => w !== ""), []);
+    });
+  });
+
+  test("CA-025-07: tras la demostración, completar a mano sí se anuncia", async () => {
+    await holdWorld(({ handle, tick, btn, live }) => {
+      handle.demo();
+      tick(10000);
+      btn.handlers.click({ detail: 0 });
+      tick(3000);
+      assert.equal(live.textContent, done());
+    });
+  });
+
+  test("CA-025-15: a 520 px o menos «Descargar» conserva su nombre (el texto se esconde como .vh, no con display: none)", () => {
+    const css = readFileSync(new URL("../home/src/shared/base.css", import.meta.url), "utf8");
+    const narrow = /@media \(max-width: 520px\) \{ \.btn span \{([^}]*)\}/.exec(css);
+    assert.ok(narrow, "no está la regla de .btn span a 520 px");
+    assert.ok(!/display:\s*none/.test(narrow[1]), "el texto del botón sigue con display: none");
+    const vh = /^\.vh \{([^}]*)\}/m.exec(css);
+    const decls = (s) => s.split(";").map((d) => d.trim()).filter(Boolean);
+    assert.deepEqual(decls(narrow[1]), decls(vh[1]));
+    assert.ok(decls(vh[1]).includes("position: absolute"), "fuera del flujo: el botón no cambia de tamaño");
+    // El botón escrito en la página lleva su texto dentro del <span> que se esconde.
+    assert.match(html, /<a class="btn"[^>]*>\s*<svg[\s\S]*?<\/svg>\s*<span>[^<]+<\/span>\s*<\/a>/);
+  });
+
+  test("CA-025-15: las filas decorativas de la escena «muchas» no se leen antes de su titular", () => {
+    const scene = /<section class="sc sc--muchas[^"]*" id="muchas"[\s\S]*?<\/section>/.exec(html)?.[0];
+    assert.ok(scene, "no está la escena «muchas»");
+    const rows = [...scene.matchAll(/<div\b[^>]*style="--w:\d+px"[^>]*>/g)].map((m) => m[0]);
+    assert.ok(rows.length >= 5, `filas: ${rows.length}`);
+    for (const r of rows) assert.match(r, /aria-hidden="true"/, r);
+    assert.ok(!html.includes('aria-hidden="false"'), 'queda un aria-hidden="false" que no hace nada');
+  });
+});

@@ -23,6 +23,11 @@ const programOf = (w) => {
   assert.equal(js.length, 1, `tiene que haber un solo programa: ${js.join(", ")}`);
   return join(w.dist, "assets", js[0]);
 };
+const cssOf = (w) => {
+  const css = all(join(w.dist, "assets")).filter((f) => f.endsWith(".css"));
+  assert.equal(css.length, 1, `tiene que haber una sola hoja: ${css.join(", ")}`);
+  return join(w.dist, "assets", css[0]);
+};
 
 describe("CA-025-12: el programa construido", () => {
   test("un solo <script type=module src> del propio origen, vacío", () => {
@@ -89,6 +94,34 @@ describe("CA-025-12: checkHome, cada regla con un caso que falla", () => {
   homeFails("el programa nombra un dominio externo", (w) => edit(programOf(w), (t) => `${t}\n;const u="https://evil.example/p";`), /dominio externo \(«evil\.example»\)/);
   homeFails("el programa apunta a un mapa", (w) => edit(programOf(w), (t) => `${t}\n//# sourceMappingURL=x.js.map`), /mapa de código/);
   homeFails("el programa lleva analítica", (w) => edit(programOf(w), (t) => `${t}\n;const u="plausible";`), /anal[ií]tica/);
+
+  // Cierre de la 025 (revisor de seguridad, T-18): todo lo que hay en assets/, no solo lo enlazado, y el HTML
+  // con las mismas prohibiciones que las otras páginas.
+  const extra = (w, name) => join(w.dist, "assets", name);
+  homeFails("otro programa en assets/, sin enlazar, que usa la red", (w) => writeFileSync(extra(w, "chunk-x.js"), 'fetch("/x");'), /assets\/chunk-x\.js: usa fetch\(/);
+  homeFails("otro programa en assets/ que nombra un dominio externo", (w) => writeFileSync(extra(w, "chunk-x.js"), 'const u="https://evil.example/p";'), /assets\/chunk-x\.js: nombra un dominio externo/);
+  homeFails("una hoja de assets/ con @import", (w) => edit(cssOf(w), (t) => `@import "/otra.css";${t}`), /assets\/[^:]+\.css: @import/);
+  homeFails("una hoja de assets/, sin enlazar, con @import", (w) => writeFileSync(extra(w, "x.css"), '@import url("https://cdn.example/x.css");'), /assets\/x\.css: @import/);
+  for (const [label, url] of [
+    ["de otro origen", "https://cdn.example/f.woff2"],
+    ["de otro origen sin protocolo", "//cdn.example/f.woff2"],
+    ["con data:", "data:font/woff2;base64,AAAA"],
+  ]) {
+    homeFails(`una hoja de assets/ con un url() ${label}`, (w) => edit(cssOf(w), (t) => `${t}\n.x{background:url("${url}")}`), /assets\/[^:]+\.css: url\([^)]*\): recurso de otro origen/);
+  }
+  homeFails("un <base>", (w) => edit(page(w), (t) => t.replace("</head>", '<base href="https://evil.example/"></head>')), /index\.html: tiene un <base>/);
+  homeFails("un <base> sin href", (w) => edit(page(w), (t) => t.replace("</head>", '<base target="_blank"></head>')), /index\.html: tiene un <base>/);
+  homeFails("un <meta http-equiv>", (w) => edit(page(w), (t) => t.replace("</head>", '<meta http-equiv="refresh" content="0;url=/x"></head>')), /index\.html: tiene un <meta http-equiv>/);
+  for (const scheme of ["javascript", "data", "vbscript"]) {
+    homeFails(`un enlace con ${scheme}:`, (w) => edit(page(w), (t) => t.replace('href="#fin"', `href="${scheme}:x"`)), new RegExp(`index\\.html: un href con ${scheme}:`));
+  }
+  homeFails("un enlace con javascript: en mayúsculas y con espacio", (w) => edit(page(w), (t) => t.replace('href="#fin"', 'href=" JavaScript:x"')), /index\.html: un href con /);
+
+  test("las hojas construidas solo cargan las fuentes del propio origen", () => {
+    const urls = [...read(cssOf(base)).matchAll(/url\(([^)]*)\)/g)].map((m) => m[1]);
+    assert.ok(urls.length > 0);
+    for (const u of urls) assert.match(u, /^\/fonts\/[A-Za-z-]+\.woff2$/);
+  });
 });
 
 describe("CA-025-12 y CA-025-13: lo único que guarda la página de inicio es el idioma (lo que dice la política)", () => {
@@ -113,6 +146,25 @@ describe("CA-025-12 y CA-025-13: lo único que guarda la página de inicio es el
     assert.match(chrome, /setLang\(b\.dataset\.lang\)/);
     const code = read(join(SRC, "shared/locale.js"));
     assert.match(code, /return pickLang\(fromUrl \|\| stored \|\| navigator\.language \|\| 'es'\);/);
+  });
+
+  test("setLang no guarda ni recarga con un valor que no sea «es» o «en»", async () => {
+    const { setLang } = await import("../home/src/shared/locale.js");
+    const calls = [];
+    const had = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+    Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { setItem: (k, v) => calls.push(`set ${k}=${v}`) } });
+    globalThis.location = { href: "https://una.example/?lang=en", replace: (u) => calls.push(`go ${u}`) };
+    try {
+      for (const bad of ["fr", "<script>", "", undefined, null, "ES", "en-US", { toString: () => "en" }]) setLang(bad);
+      assert.deepEqual(calls, []);
+      // El idioma por defecto de i18n.js es «es»: cambiar a «en» sí guarda y recarga sin `?lang`.
+      setLang("en");
+      assert.deepEqual(calls, ["set una-lang=en", "go https://una.example/"]);
+    } finally {
+      delete globalThis.location;
+      if (had) Object.defineProperty(globalThis, "localStorage", had);
+      else delete globalThis.localStorage;
+    }
   });
 
   test("en el programa construido, «localStorage» aparece solo en la lectura y la escritura del idioma", () => {

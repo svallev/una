@@ -59,7 +59,7 @@ Se revisa si: la licencia de GSAP cambia o resulta no encajar; alguno de los dos
 
 **Positivas**
 
-- La landing aprobada a la vista entra sin reescribirse, y comparte nombre, tokens, textos de la app, política y CI con el resto.
+- La landing aprobada a la vista entra sin reescribirse, y comparte nombre, política y CI con el resto (los tokens y los textos de la app, no: nota de implementación, arriba).
 - Las cuatro páginas legales y de ayuda no pierden ninguna de sus garantías.
 
 **Negativas y riesgos (con su mitigación)**

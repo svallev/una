@@ -12,6 +12,7 @@ export function detectLang() {
 }
 
 export function setLang(next) {
+  if (next !== 'es' && next !== 'en') return; // solo se guarda un idioma de la página
   if (next === lang) return;
   try { localStorage.setItem(KEY, next); } catch { /* sin almacenamiento */ }
   const url = new URL(location.href);

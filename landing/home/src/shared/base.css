@@ -58,7 +58,8 @@ button { font: inherit; color: inherit; }
 .logo::after, .langs button::after, .end a::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 .btn { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; background: var(--accent); color: var(--ink); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); font: 800 16px/1 var(--face); text-decoration: none; transition: transform 80ms ease, box-shadow 80ms ease, background-color 400ms ease; }
 .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
-@media (max-width: 520px) { .btn span { display: none; } .btn { padding: 0 12px; } .logo { font-size: 28px; } }
+/* El texto del botón se esconde como `.vh`, no con `display: none`: sigue siendo su nombre para el lector */
+@media (max-width: 520px) { .btn span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .btn { padding: 0 12px; } .logo { font-size: 28px; } }
 
 /* Titulares: Archivo estrecho y negro, en mayúsculas; la palabra clave va en 3D */
 .big { margin: 0; text-transform: uppercase; font-weight: 900; font-stretch: 62%; font-size: clamp(52px, 9vw, 164px); line-height: 0.88; letter-spacing: -0.005em; text-align: center; }

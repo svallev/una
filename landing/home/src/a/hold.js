@@ -55,6 +55,14 @@ export function setupHold(root, { animate = true } = {}) {
   let busy = false;
   let timer = 0;
   let touched = false;
+  let liveTimer = 0;
+
+  // El mismo texto escrito dos veces no se vuelve a leer: se vacía la región y el texto llega un momento después.
+  const announce = () => {
+    clearTimeout(liveTimer);
+    live.textContent = '';
+    liveTimer = setTimeout(() => { live.textContent = t('app.done'); }, 60);
+  };
 
   const fill = (note, i) => {
     const { text, color } = noteAt(tasks, i);
@@ -74,12 +82,13 @@ export function setupHold(root, { animate = true } = {}) {
     }).join('');
   };
 
-  const complete = () => {
+  /** `silent`: la demostración automática, que no se anuncia al lector (CA-025-07). */
+  const complete = ({ silent = false } = {}) => {
     if (busy) return;
     busy = true;
     clearTimeout(timer);
     app.classList.remove('is-holding');
-    live.textContent = t('app.done');
+    if (!silent) announce();
     if (!animate) { index += 1; paint(); busy = false; return; }
     // Sello y confeti; después la nota se rasga en dos y debajo ya está la siguiente
     app.classList.add('is-done');
@@ -99,11 +108,11 @@ export function setupHold(root, { animate = true } = {}) {
     }, 520 + TEAR_MS);
   };
 
-  const start = () => {
+  const start = ({ silent = false } = {}) => {
     if (busy) return;
     app.classList.add('is-holding');
     clearTimeout(timer);
-    timer = setTimeout(complete, HOLD_MS);
+    timer = setTimeout(() => complete({ silent }), HOLD_MS);
   };
   const cancel = () => {
     if (busy) return;
@@ -128,7 +137,7 @@ export function setupHold(root, { animate = true } = {}) {
     demo() {
       clearTimeout(demoTimer);
       if (!animate || touched) return;
-      demoTimer = setTimeout(() => { if (!touched) start(); }, 900);
+      demoTimer = setTimeout(() => { if (!touched) start({ silent: true }); }, 900);
     },
     stop() { clearTimeout(demoTimer); if (!touched) cancel(); },
   };

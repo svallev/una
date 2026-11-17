@@ -621,7 +621,13 @@ export function checkHome(paths = defaultPaths(), { dist = paths.out } = {}) {
     if (!src) fail("un <script> sin src (los programas, solo del propio origen y por src)");
     else if (!isLocal(src)) fail(`un <script> de otro origen («${src}»)`);
     else if (!found.includes(src.replace(/^\//, ""))) fail(`el <script> carga un programa que no está en dist/ («${src}»)`);
-    else checkProgram(src.replace(/^\//, ""), readFileSync(join(dist, src.replace(/^\//, "")), "utf8"), errors);
+  }
+  // Todo lo que Vite deja en assets/, esté enlazado o no (un trozo suelto también se publica): cada programa
+  // con las reglas del programa y cada hoja sin `@import` ni recursos de otro origen.
+  for (const f of found) {
+    if (!f.startsWith("assets/")) continue;
+    if (f.endsWith(".js")) checkProgram(f, readFileSync(join(dist, f), "utf8"), errors);
+    else if (f.endsWith(".css")) checkAssetCss(f, readFileSync(join(dist, f), "utf8"), errors);
   }
 
   for (const x of t) {
@@ -631,8 +637,11 @@ export function checkHome(paths = defaultPaths(), { dist = paths.out } = {}) {
       if ((RESOURCE_ATTRS.includes(attr) || (x.name === "link" && attr === "href")) && value && !isLocal(value)) {
         fail(`<${x.name} ${attr}> de otro origen («${value}»): la web no usa recursos de terceros`);
       }
+      if (attr === "href" && /^\s*(javascript|data|vbscript):/i.test(value)) fail(`un href con ${value.trim().split(":")[0].toLowerCase()}:`);
     }
     if (FRAMES.includes(x.name)) fail(`tiene un <${x.name}> (nada incrustado)`);
+    else if (x.name === "base") fail("tiene un <base>");
+    else if (x.name === "meta" && "http-equiv" in x.attrs) fail("tiene un <meta http-equiv>");
   }
   for (const re of ANALYTICS) if (re.test(html)) fail(`rastro de analítica (${re})`);
   return errors;
@@ -640,6 +649,16 @@ export function checkHome(paths = defaultPaths(), { dist = paths.out } = {}) {
 
 /** Atributos que cargan un recurso. */
 const RESOURCE_ATTRS = ["src", "srcset", "poster", "data", "action", "formaction", "background", "xlink:href", "ping", "manifest"];
+
+/** Una hoja construida de la página de inicio: sin `@import` y sin `url()` que no sea del propio origen. */
+function checkAssetCss(file, text, errors) {
+  const fail = (msg) => errors.push(`${file}: ${msg}`);
+  const clean = text.replace(/\/\*[\s\S]*?\*\//g, " ");
+  if (/@import/i.test(clean)) fail("@import (la web no carga hojas de otro sitio)");
+  for (const m of clean.matchAll(/url\(\s*(['"]?)([^)'"]*)\1\s*\)/gi)) {
+    if (!isLocal(m[2].trim())) fail(`url(${m[2]}): recurso de otro origen`);
+  }
+}
 
 /** El programa construido: sin API de red, sin dominios externos, sin analítica y sin mapas. */
 function checkProgram(file, code, errors) {

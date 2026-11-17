@@ -37,7 +37,7 @@ const BUILD = {
     ${copyHtml(s, i, storesHtml())}`,
 
   muchas: (s, i, tasks) => `
-    ${ROWS.map(([x, y, r, z, w, desk], k) => obj(`<div style="--w:${w}px">${listRow(tasks[(k + 1) % tasks.length], COLORS[k % COLORS.length])}</div>`, { x, y, r, z, bob: 5 + (k % 4) * 0.8, cls: `${desk ? 'obj--m0' : ''} ${x < 50 ? 'obj--l' : 'obj--r'}` })).join('')}
+    ${ROWS.map(([x, y, r, z, w, desk], k) => obj(`<div style="--w:${w}px" aria-hidden="true">${listRow(tasks[(k + 1) % tasks.length], COLORS[k % COLORS.length])}</div>`, { x, y, r, z, bob: 5 + (k % 4) * 0.8, cls: `${desk ? 'obj--m0' : ''} ${x < 50 ? 'obj--l' : 'obj--r'}` })).join('')}
     ${copyHtml(s, i)}`,
 
   una: (s, i) => `
@@ -51,7 +51,7 @@ const BUILD = {
 
   amano: (s, i) => `
     <div class="split split--rev">
-      <div class="fan" aria-hidden="false">
+      <div class="fan">
         <div class="fan__card" style="--rot:-15deg;--tx:-52%">${phone(photoTask({ art: golfMap(), caption: t('app.golfTask') }), { label: t('app.golfAlt') })}</div>
         <div class="fan__card" style="--rot:-5deg;--tx:-17%">${phone(photoTask({ art: lineupPoster(), caption: t('app.lineupTask'), dots: 3 }), { label: t('app.lineupAlt') })}</div>
         <div class="fan__card" style="--rot:5deg;--tx:17%">${phone(pdfTask({ kind: 'programme' }), { label: t('app.progAlt') })}</div>
