@@ -1,14 +1,22 @@
-/* Estilos de la web (spec 023, CA-023-15). Solo valores de tokens.css (las variables de
-   design/tokens.json): nada de colores, medidas ni fuentes sueltas. `check.mjs` lo comprueba. */
+/* Estilos de las páginas de contenido (spec 023, CA-023-15; spec 026, plan §2.4). Solo valores de tokens.css
+   (las variables de design/tokens.json): nada de colores, medidas ni fuentes sueltas. `check.mjs` lo comprueba;
+   las únicas medidas sueltas que admite son las dos condiciones de @media de la landing (539.98px y 520px). */
 
+/* La altura de la cabecera fija: una sola variable para la cabecera, el hueco de arriba del cuerpo y el
+   `scroll-padding-top` (el foco y los saltos del índice quedan por debajo, 2.4.11). Sale de las mismas piezas
+   que la cabecera: su relleno vertical, «Descargar» (44 + su borde) y la línea de abajo (H-026-01; check.mjs lo
+   comprueba). Espacios y tamaños en rem: crece con el texto. */
 html {
+  --top-height: calc(var(--size-min-touch-target) + var(--border-width-strong) + var(--border-width-strong) + var(--space-s) + var(--space-s) + var(--border-width-hairline));
   background-color: var(--color-paper);
   color-scheme: light;
   scroll-behavior: auto;
+  scroll-padding-top: var(--top-height);
 }
 
 body {
   margin: 0;
+  padding-top: var(--top-height);
   background-color: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-family-display);
@@ -18,17 +26,151 @@ body {
   overflow-wrap: break-word;
 }
 
-body > header, body > main, body > footer {
+/* Con JavaScript (`lang.js` pone data-lang en <html>) se ve un idioma: lo del otro y los separadores de las
+   piezas bilingües, fuera (ni se ven ni los lee el lector). Sin la marca no se oculta nada (CA-026-09). */
+html[data-lang="es"] [data-l="en"], html[data-lang="en"] [data-l="es"], html[data-lang] [data-l="sep"] {
+  display: none;
+}
+
+/* Oculto a la vista, no al lector. El titular de cada mitad también, con JavaScript: el lector lo sigue
+   teniendo y no hay salto de h1 a h3 (CA-026-10). */
+.vh, html[data-lang] .half__title {
+  position: absolute;
+  max-width: var(--border-width-hairline);
+  max-height: var(--border-width-hairline);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: circle(0);
+  white-space: nowrap;
+}
+
+/* ── Cabecera fija (CA-026-02): logotipo y «Descargar», sobre papel opaco, sin sombra ──────────────── */
+
+.top {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1;
   box-sizing: border-box;
-  max-width: var(--size-content-max-width);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-m);
+  min-height: var(--top-height);
+  padding: var(--space-s) var(--space-l);
+  border-bottom: var(--border-width-hairline) solid var(--color-line);
+  background-color: var(--color-paper);
+  white-space: nowrap;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  min-width: var(--size-min-touch-target);
+  min-height: var(--size-min-touch-target);
+  color: var(--color-ink);
+  font-size: var(--font-size-sheet-title);
+  font-weight: var(--font-weight-black);
+  letter-spacing: var(--font-letter-spacing-tightest);
+  line-height: 1;
+  text-decoration: none;
+}
+
+/* El botón de la landing sobre fondo claro: borde de tinta, fondo blanco y la sombra dura del botón. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-s);
+  min-width: var(--size-min-touch-target);
+  min-height: var(--size-min-touch-target);
+  padding: 0 var(--space-ml);
+  border: var(--border-width-strong) solid var(--color-ink);
+  background-color: var(--color-surface);
+  box-shadow: var(--space-xs) var(--space-xs) 0 var(--color-ink);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+  text-decoration: none;
+}
+
+/* El icono hereda el color del texto: a 520 px o menos es el único rótulo visible (3:1, 1.4.11). */
+.ic {
+  flex: none;
+  min-width: var(--size-icon);
+  max-width: var(--size-icon);
+  min-height: var(--size-icon);
+  max-height: var(--size-icon);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--size-icon-stroke);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+/* ── Columna (CA-026-01): el contenido y el pie, hasta 1120 px, centrados ────────────────────────── */
+
+main, .end {
+  box-sizing: border-box;
+  max-width: var(--size-web-content-max-width);
   margin-inline: auto;
   padding: var(--space-m) var(--space-l);
 }
 
+/* El selector (CA-026-07): ES | EN, centrado; el elegido en el peso más fuerte y con subrayado grueso. */
+.langs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 var(--space-s);
+}
+
+.langs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-min-touch-target);
+  min-height: var(--size-min-touch-target);
+  padding: 0 var(--space-s);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-s);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--font-letter-spacing-group-label);
+}
+
+.langs a + a {
+  border-left: var(--border-width-hairline) solid var(--color-ink);
+}
+
+.langs a[aria-pressed="true"] {
+  font-weight: var(--font-weight-black);
+  text-decoration-thickness: var(--border-width-strong);
+}
+
+/* «← Volver al inicio», los enlaces del índice y los del pie: objetivos de 44 × 44 (CA-026-10). */
+.back, .toc a, .end a {
+  display: inline-block;
+  box-sizing: border-box;
+  min-width: var(--size-min-touch-target);
+  min-height: var(--size-min-touch-target);
+  padding: var(--space-s) 0;
+}
+
+/* Cada mitad, para que su titular oculto a la vista (destino de #es y #en) deje la mitad a la vista. */
+.half {
+  position: relative;
+}
+
+/* ── Titulares y texto (CA-026-03) ──────────────────────────────────────────────────────────────── */
+
 h1 {
-  margin: var(--space-m) 0 0;
+  margin: var(--space-s) 0 0;
   font-size: var(--font-size-display);
-  font-weight: var(--font-weight-extrabold);
+  font-weight: var(--font-weight-black);
   letter-spacing: var(--font-letter-spacing-tighter);
   line-height: 1.2;
 }
@@ -43,8 +185,11 @@ h2 {
   line-height: 1.2;
 }
 
+/* Cada sección, con la regla de tinta de 4 px encima. */
 h3 {
   margin: var(--space-l) 0 var(--space-s);
+  padding-top: var(--space-s);
+  border-top: var(--border-width-section) solid var(--color-ink);
   font-size: var(--font-size-heading);
   font-weight: var(--font-weight-bold);
   line-height: 1.3;
@@ -98,6 +243,37 @@ pre {
   white-space: pre-wrap;
 }
 
+/* Los textos de apoyo (fecha, versión o aviso de la última compilación) en Space Mono. */
+.date, .meta {
+  color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-s);
+}
+
+/* El índice (CA-026-04): una navegación con nombre visible, sin viñetas. */
+.toc {
+  margin: var(--space-m) 0 var(--space-l);
+}
+
+.toc__name {
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--font-letter-spacing-group-label);
+  text-transform: uppercase;
+}
+
+.toc ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.toc li {
+  margin: 0;
+}
+
 /* Los enlaces se distinguen sin depender del color (subrayado) y tienen foco visible. */
 a {
   color: var(--color-ink);
@@ -105,7 +281,7 @@ a {
   text-underline-offset: var(--space-xs);
 }
 
-a:focus-visible, h2:focus-visible {
+a:focus-visible, h2:focus-visible, h3:focus-visible {
   outline: var(--border-width-focus) solid var(--color-ink);
   outline-offset: var(--border-width-focus);
 }
@@ -117,10 +293,81 @@ a:focus-visible, h2:focus-visible {
   min-height: var(--size-link-button);
 }
 
-footer {
+/* ── Pie (CA-026-01): el de la landing, en tinta sobre papel ───────────────────────────────────── */
+
+.end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--space-l);
   margin-top: var(--space-xxl);
-  border-top: var(--border-width-section) solid var(--color-ink);
-  color: var(--color-text-muted);
+  border-top: var(--border-width-hairline) solid var(--color-line);
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-body-s);
+  font-size: var(--font-size-caption);
+}
+
+.end p {
+  margin: 0;
+}
+
+.end nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-ml);
+}
+
+/* La página actual: en negrita y, en vez del subrayado, una línea gruesa bajo el texto (no depende del color;
+   con colores forzados se ve el borde). */
+.end a[aria-current="page"] {
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+.end a[aria-current="page"] > [lang] {
+  border-bottom: var(--border-width-strong) solid var(--color-ink);
+}
+
+/* ── Excepciones por tamaño de ventana (las dos condiciones de la landing) ───────────────────────── */
+
+/* Ventanas bajas (móvil en horizontal, zoom alto): la cabecera se va con el scroll (CA-026-02, 1.4.10). */
+@media (max-height: 539.98px) {
+  html {
+    scroll-padding-top: 0;
+  }
+
+  body {
+    padding-top: 0;
+  }
+
+  .top {
+    position: static;
+  }
+}
+
+/* Estrecho: «Descargar» se queda en su icono; la palabra sigue siendo su nombre (CA-026-11). */
+@media (max-width: 520px) {
+  .btn__label {
+    position: absolute;
+    max-width: var(--border-width-hairline);
+    max-height: var(--border-width-hairline);
+    overflow: hidden;
+    clip-path: circle(0);
+    white-space: nowrap;
+  }
+
+  .btn {
+    padding: 0 var(--space-sm);
+  }
+}
+
+/* Colores forzados: los bordes del botón, del selector y de la página actual, y el trazo del icono. */
+@media (forced-colors: active) {
+  .btn, .langs a + a, .end a[aria-current="page"] > [lang] {
+    border-color: CanvasText;
+  }
+
+  .ic {
+    stroke: CanvasText;
+  }
 }

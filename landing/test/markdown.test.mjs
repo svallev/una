@@ -2,7 +2,7 @@
 // La salida esperada está escrita a mano: no se compara con el propio conversor.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { convertMarkdown, MarkdownError } from "../build.mjs";
+import { convertMarkdown, MarkdownError, sectionAnchor } from "../build.mjs";
 
 const html = (md, options) => convertMarkdown(md, options).html;
 const fails = (md, pattern, options) =>
@@ -171,4 +171,54 @@ test("CA-023-04: los encabezados que se leyeron salen en el resultado", () => {
     { level: 3, text: "Dos" },
     { level: 3, text: "Tres" },
   ]);
+});
+
+// ─── Anclas de las secciones (spec 026, CA-026-04; plan §2.2) ─────────────────────────────────────
+
+test("CA-026-04: el ancla de una sección: prefijo del idioma, minúsculas, sin acentos y «-» entre palabras", () => {
+  assert.equal(sectionAnchor("es", "Quién es el responsable"), "es-quien-es-el-responsable");
+  assert.equal(sectionAnchor("es", "Fotos, PDF y páginas web"), "es-fotos-pdf-y-paginas-web");
+  assert.equal(sectionAnchor("en", "Photos, PDFs and web pages"), "en-photos-pdfs-and-web-pages");
+  assert.equal(sectionAnchor("es", "  ¿Qué pasa?  ¡Sí! — Ñandú  "), "es-que-pasa-si-nandu");
+  assert.equal(sectionAnchor("en", "**Bold** and `code`"), "en-bold-and-code");
+});
+
+test("CA-026-04: anclas estables: el mismo titular da siempre la misma ancla, y distinta en cada idioma", () => {
+  assert.equal(sectionAnchor("es", "Ajustes"), sectionAnchor("es", "Ajustes"));
+  assert.notEqual(sectionAnchor("es", "Ajustes"), sectionAnchor("en", "Ajustes"));
+  const a = convertMarkdown("# T\n\n## Uno\n\n## Dos", { shift: 1, anchors: "es" });
+  const b = convertMarkdown("# T\n\n## Uno\n\nOtro texto.\n\n## Dos", { shift: 1, anchors: "es" });
+  assert.deepEqual(a.headings.map((h) => h.id), b.headings.map((h) => h.id));
+});
+
+test("CA-026-04: un titular sin letras ni números no da ancla y falla", () => {
+  assert.throws(() => sectionAnchor("es", "¿?¡! —"), (e) => e instanceof MarkdownError && /ancla/.test(e.message));
+});
+
+test("CA-026-04: con [anchors], cada sección (`##`) lleva su ancla y tabindex=\"-1\"; el título y lo de debajo, no", () => {
+  assert.equal(
+    html("# Título\n\n## Quién es\n\nTexto.\n\n### Punto\n\n## Más cosas", { shift: 1, anchors: "es", firstHeadingAttrs: 'id="es"' }),
+    [
+      '<h2 id="es">Título</h2>',
+      '<h3 id="es-quien-es" tabindex="-1">Quién es</h3>',
+      "<p>Texto.</p>",
+      "<h4>Punto</h4>",
+      '<h3 id="es-mas-cosas" tabindex="-1">Más cosas</h3>',
+    ].join("\n"),
+  );
+  const r = convertMarkdown("# T\n\n## Uno **fuerte**\n\n## Dos", { shift: 1, anchors: "en" });
+  assert.deepEqual(r.headings, [
+    { level: 2, text: "T" },
+    { level: 3, text: "Uno **fuerte**", id: "en-uno-fuerte", label: "Uno fuerte" },
+    { level: 3, text: "Dos", id: "en-dos", label: "Dos" },
+  ]);
+});
+
+test("CA-026-04: sin [anchors] no cambia nada (licencias y textos sueltos)", () => {
+  assert.equal(html("## Uno", { shift: 1 }), "<h3>Uno</h3>");
+});
+
+test("CA-026-04: dos secciones con la misma ancla hacen fallar la construcción", () => {
+  fails("# T\n\n## Ajustes\n\n## Ajustes", /misma ancla.*es-ajustes/, { shift: 1, anchors: "es" });
+  fails("# T\n\n## Qué es\n\n## Que es", /misma ancla.*es-que-es/, { shift: 1, anchors: "es" });
 });

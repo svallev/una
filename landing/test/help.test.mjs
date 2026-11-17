@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
-import { build, compareHelpStructure, defaultPaths, stripComments } from "../build.mjs";
+import { build, compareHelpStructure, defaultPaths, sectionAnchor, stripComments } from "../build.mjs";
 import { checkSite } from "../check.mjs";
-import { cloneWorld, edit, read, specificErrors, world } from "./support.mjs";
+import { cloneWorld, edit, idsOf, read, specificErrors, tocOf, world } from "./support.mjs";
 
 let base;
 before(() => {
@@ -150,19 +150,21 @@ describe("CA-023-17: cada sección dice de qué spec sale, en un comentario que 
 describe("CA-023-17: la página de Ayuda", () => {
   test("sale en español e inglés, con el título de la fila de Ajustes", () => {
     const html = read(page(base));
-    assert.ok(html.includes('<h1><span lang="es">Ayuda</span> · <span lang="en">Help</span></h1>'));
-    assert.match(html, /<section lang="es" aria-labelledby="es">/);
-    assert.match(html, /<section lang="en" aria-labelledby="en">/);
-    assert.match(html, /<h2 id="es" tabindex="-1">Ayuda \(ES\)<\/h2>/);
-    assert.match(html, /<h2 id="en" tabindex="-1">Help \(EN\)<\/h2>/);
+    // Con las marcas de idioma de la spec 026 (CA-026-09).
+    assert.ok(html.includes('<h1><span lang="es" data-l="es">Ayuda</span><span data-l="sep"> · </span><span lang="en" data-l="en">Help</span></h1>'));
+    assert.match(html, /<section class="half" lang="es" data-l="es" aria-labelledby="es">/);
+    assert.match(html, /<section class="half" lang="en" data-l="en" aria-labelledby="en">/);
+    assert.match(html, /<h2 id="es" tabindex="-1" class="half__title">Ayuda \(ES\)<\/h2>/);
+    assert.match(html, /<h2 id="en" tabindex="-1" class="half__title">Help \(EN\)<\/h2>/);
   });
 
   test("una sección por tema (h3) en cada idioma, sin saltos de nivel", () => {
     const html = read(page(base));
-    const es = html.slice(html.indexOf('<section lang="es"'), html.indexOf('<section lang="en"'));
-    const en = html.slice(html.indexOf('<section lang="en"'));
-    assert.equal(es.split("<h3>").length - 1, 12);
-    assert.equal(en.split("<h3>").length - 1, 12);
+    const es = html.slice(html.indexOf('<section class="half" lang="es"'), html.indexOf('<section class="half" lang="en"'));
+    const en = html.slice(html.indexOf('<section class="half" lang="en"'));
+    // Desde la spec 026 cada <h3> lleva su ancla (CA-026-04).
+    assert.equal(es.split("<h3 ").length - 1, 12);
+    assert.equal(en.split("<h3 ").length - 1, 12);
     assert.ok(!/<h[56]/.test(html));
   });
 
@@ -299,7 +301,7 @@ describe("CA-023-17: falla cerrada", () => {
   test("la página de Ayuda cambiada a mano no coincide con lo que construyen las fuentes", () => {
     const w = cloneWorld(base);
     try {
-      edit(page(w), (t) => t.replace("<h3>", "<h3>X"));
+      edit(page(w), (t) => t.replace('tabindex="-1">La tarea', 'tabindex="-1">XLa tarea'));
       const errors = checkSite(w.paths);
       assert.ok(errors.some((e) => /help\/index\.html/.test(e) && /no coincide/.test(e)));
     } finally {
@@ -317,4 +319,91 @@ describe("CA-023-17: falla cerrada", () => {
       w.cleanup();
     }
   });
+});
+
+// ─── Índice y anclas (spec 026, CA-026-04) ───────────────────────────────────────────────────────────
+
+describe("CA-026-04: el índice de la Ayuda", () => {
+  const md = { es: helpEs, en: helpEn };
+  const NAME = { es: "En esta página", en: "On this page" };
+
+  for (const lang of ["es", "en"]) {
+    test(`(${lang}) un enlace por tema, en orden, a un ancla única que existe; el índice bajo el título`, () => {
+      const html = read(page(base));
+      const toc = tocOf(html, lang);
+      assert.equal(toc.navCount, 1);
+      assert.equal(toc.links.length, 12);
+      assert.deepEqual(toc.links.map((l) => l.text), titles(md[lang]()));
+      assert.deepEqual(toc.links.map((l) => l.href), titles(md[lang]()).map((t) => `#${sectionAnchor(lang, t)}`));
+      assert.deepEqual(toc.sections.map((h) => `#${h.id}`), toc.links.map((l) => l.href));
+      const ids = idsOf(html);
+      for (const h of toc.sections) {
+        assert.equal(ids.filter((i) => i === h.id).length, 1, `${h.id}: no es único`);
+        assert.equal(h.tabindex, "-1");
+      }
+      assert.equal(toc.name?.[2], NAME[lang]);
+      assert.ok(toc.h2At >= 0 && toc.h2At < toc.navAt && toc.navAt < toc.firstH3At);
+      assert.equal(toc.dateAt, -1, "la Ayuda no lleva fecha");
+    });
+  }
+
+  test("anclas que no cambian: «Ajustes» y «Settings»", () => {
+    const ids = idsOf(read(page(base)));
+    assert.ok(ids.includes("es-ajustes") && ids.includes("en-settings"));
+    assert.ok(ids.includes("es-fotos-pdf-y-paginas-web") && ids.includes("en-photos-pdfs-and-web-pages"));
+  });
+
+  test("el enlace a la política (/privacy#es y /privacy#en) sigue apuntando a un id que existe", () => {
+    const html = read(page(base));
+    assert.ok(html.includes('href="/privacy#es"') && html.includes('href="/privacy#en"'));
+    assert.deepEqual(checkSite(base.paths), []);
+  });
+
+  test("dos temas con el mismo titular hacen fallar la construcción", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.helpEn, (t) => t.replace("## Backups\n", "## Settings\n"));
+      assert.throws(() => w.build(), /help\.en\.md.*misma ancla.*en-settings/);
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  test("licencias y la página de error no llevan índice ni anclas de sección", () => {
+    for (const f of ["licenses/index.html", "404.html"]) {
+      const html = read(join(base.dist, f));
+      assert.ok(!html.includes('class="toc"'), `${f}: lleva índice`);
+      assert.ok(!html.includes("<h3"), `${f}: lleva secciones <h3>`);
+    }
+  });
+
+  const fails = (label, mutate, pattern) =>
+    test(label, () => {
+      const w = cloneWorld(base);
+      try {
+        mutate(w);
+        const errors = specificErrors(checkSite(w.paths));
+        assert.ok(errors.some((e) => pattern.test(e)), `no falló como se esperaba:\n${errors.join("\n")}`);
+      } finally {
+        w.cleanup();
+      }
+    });
+  fails("un enlace a otra página con un ancla que allí no existe", (w) => edit(page(w), (t) => t.replace('href="/privacy#es"', 'href="/privacy#es-nada"')), /\/privacy#es-nada.*no existe/);
+  fails("un enlace del índice a un id que no existe", (w) => edit(page(w), (t) => t.replace('href="#en-settings"', 'href="#en-nada"')), /#en-nada.*no existe/);
+  const moveToc = (t, lang, place) => {
+    const nav = new RegExp(`<nav class="toc" aria-labelledby="${lang}-toc">[\\s\\S]*?</nav>\\n`).exec(t)[0];
+    return place(t.replace(nav, ""), nav);
+  };
+  fails("el índice antes del título", (w) => edit(page(w), (t) => moveToc(t, "en", (x, nav) => x.replace('<h2 id="en"', `${nav}<h2 id="en"`))), /índice de la mitad «en» va antes del título/);
+  fails("el índice después de la primera sección", (w) => edit(page(w), (t) => moveToc(t, "es", (x, nav) => x.replace(/(<h3 id="es-[^"]*" tabindex="-1">[^<]*<\/h3>\n)/, `$1${nav}`))), /índice de la mitad «es» va después de la primera sección/);
+  test("una sección cuya ancla es la del nombre del índice hace fallar la construcción", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.helpEs, (t) => t.replace("## Ajustes\n", "## TOC\n"));
+      assert.throws(() => w.build(), /help\.es\.md.*es-toc/);
+    } finally {
+      w.cleanup();
+    }
+  });
+  fails("un índice en la página de licencias", (w) => edit(join(w.dist, "licenses/index.html"), (t) => t.replace('<h2 id="en" tabindex="-1" class="half__title">English</h2>', '<h2 id="en" tabindex="-1" class="half__title">English</h2>\n<nav class="toc" aria-labelledby="en">x</nav>')), /índice/);
 });

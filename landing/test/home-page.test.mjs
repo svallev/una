@@ -433,3 +433,38 @@ describe("Cierre de la 025: hallazgos de accesibilidad de los revisores", () => 
     assert.ok(!html.includes('aria-hidden="false"'), 'queda un aria-hidden="false" que no hace nada');
   });
 });
+
+describe("CA-026-16: «Descargar» de las páginas de contenido abre la landing en el cierre (/#fin)", () => {
+  const sceneFromHash = async () => (await homeModule(base, "shared", "story.js")).sceneFromHash;
+
+  test("una escena que existe da su índice; el cierre es la última", async () => {
+    const f = await sceneFromHash();
+    assert.equal(f("#fin"), SCENE_IDS.length - 1);
+    assert.equal(f("#hero"), 0);
+    assert.equal(f("#luz"), SCENE_IDS.indexOf("luz"));
+  });
+
+  test("una que no existe, rara o vacía da −1 (sin heredar nada del prototipo de un objeto)", async () => {
+    const f = await sceneFromHash();
+    for (const h of ["", "#", "fin", "#FIN", "#fin ", "#fin/", "#es", "#top", "#__proto__", "#constructor", "#toString", "#0", "#-1", "#fin#fin", undefined, null, 6]) {
+      assert.equal(f(h), -1, String(h));
+    }
+  });
+
+  test("main.js salta a la escena del ancla al montar, en la versión apilada y en el recorrido", () => {
+    const main = read(join(base.paths.homeDir, "src", "a", "main.js"));
+    assert.match(main, /sceneFromHash\(location\.hash\)/);
+    assert.match(main, /scenes\[\w+\]\.scrollIntoView\(\)/);
+    assert.match(main, /\.jumpToScene\(\w+\)/);
+    // Tras `load` (ScrollTrigger recalcula y el navegador puede volver a saltar) y sin enseñar antes la portada.
+    assert.match(main, /addEventListener\('load', jump/);
+    assert.match(main, /if \(target < 0\) ready\(\);/);
+    const journey = read(join(base.paths.homeDir, "src", "shared", "journey.js"));
+    assert.match(journey, /jumpToScene/);
+    assert.match(journey, /immediate: true/);
+  });
+
+  test("la página construida (sin JavaScript) trae la escena con id=\"fin\", destino del salto del navegador", () => {
+    assert.match(html, /<section class="sc sc--fin[^"]*" id="fin"/);
+  });
+});

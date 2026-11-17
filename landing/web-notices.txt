@@ -3,7 +3,8 @@ Third-party code in this website
 The home page of this website runs one program, served from the website
 itself. Besides the website's own code, that program includes the
 packages below. The other pages (privacy policy, licenses, help and the
-error page) run no program.
+error page) run only a small program of the website's own, to show one
+language at a time; it includes no third-party code.
 
 The fonts of this website (Archivo and Space Mono) are the same as the
 app's: their licenses (SIL Open Font License 1.1) are in the app's
