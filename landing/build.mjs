@@ -446,14 +446,14 @@ const DATE_LINE = {
 
 /**
  * El HTML de las dos partes de la política con el nombre de la app, la fecha de «última
- * actualización» de cada una (para el pie) y los huecos que dejan.
+ * actualización» de cada una y los huecos que dejan. Desde la spec 026 la fecha ya no va en el pie.
  */
 export function policyFragments(md, appName) {
   const { es, en } = extractPolicy(md);
   const result = {};
   for (const [lang, half] of [["es", es], ["en", en]]) {
     const text = half.replaceAll("{appName}", appName);
-    const converted = convertMarkdown(text, { shift: 1, firstHeadingAttrs: `id="${lang}" tabindex="-1"` });
+    const converted = convertMarkdown(text, { shift: 1, firstHeadingAttrs: HALF_TITLE_ATTRS(lang) });
     const date = DATE_LINE[lang].exec(text);
     if (!date) {
       throw new BuildError(
@@ -513,7 +513,7 @@ export function stripComments(md) {
 export function helpFragment(md, appName, lang, label) {
   try {
     const text = stripComments(md).replaceAll("{appName}", appName);
-    const converted = convertMarkdown(text, { shift: 1, firstHeadingAttrs: `id="${lang}" tabindex="-1"` });
+    const converted = convertMarkdown(text, { shift: 1, firstHeadingAttrs: HALF_TITLE_ATTRS(lang) });
     const levels = converted.headings.map((h) => h.level);
     if (levels[0] !== 2 || levels.filter((l) => l === 2).length !== 1) {
       throw new BuildError("tiene que empezar por un único título «# …» (y no llevar otro)");
@@ -604,7 +604,7 @@ const STRING_KEYS = {
   // Nombre visible de la navegación del índice de la política y la Ayuda (spec 026, CA-026-04).
   webOnThisPage: { es: [], en: [] },
 };
-const LANG_ONLY = { webSwitchToSpanish: { es: [] }, webSwitchToEnglish: { en: [] }, webNoticesTitle: { en: [] } };
+const LANG_ONLY = { webNoticesTitle: { en: [] } };
 
 export function loadStrings(text, label = "strings.json") {
   let json;
@@ -737,27 +737,30 @@ export function tokensCss(tokens) {
 
 // ─── Páginas ─────────────────────────────────────────────────────────────────────────────────────
 
-function shell({ title, h1, main, footer }) {
+/**
+ * Las cuatro páginas (spec 026, plan §2.1): cabecera (logotipo y «Descargar»), selector de idioma, «← Volver al
+ * inicio» (salvo en la de error), el título, las mitades y el pie de la landing. Lo que existe en los dos idiomas va
+ * marcado con `data-l="es|en"` (y su `lang`) y los separadores con `data-l="sep"`: sin JavaScript se ve todo.
+ */
+function shell({ titleEs, titleEn, h1, back, main, chrome }) {
   return `<!doctype html>
-<html lang="es">
+<html lang="es" data-title-es="${esc(titleEs)}" data-title-en="${esc(titleEn)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>${esc(title)}</title>
+<title>${esc(`${titleEs} / ${titleEn}`)}</title>
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/site.css">
 </head>
 <body>
-<header>
-<h1>${h1}</h1>
-</header>
+${chrome.header}
 <main>
+${chrome.langs}
+${back ? `${chrome.back}\n` : ""}<h1>${h1}</h1>
 ${main}
 </main>
-<footer>
-${footer}
-</footer>
+${chrome.footer}
 </body>
 </html>
 `;
@@ -784,47 +787,107 @@ function loadSite(paths) {
 /** El archivo de avisos tal como se publica (CA-023-16). */
 export const NOTICES_FILE = "third-party-notices.txt";
 
-function bilingualH1(es, en) {
-  return `<span lang="es">${esc(es)}</span> · <span lang="en">${esc(en)}</span>`;
+/** Un texto en los dos idiomas: cada parte con su `lang` y su `data-l`, y el separador con `data-l="sep"`. */
+function bilingual(es, en, sep = " / ") {
+  return `<span lang="es" data-l="es">${esc(es)}</span><span data-l="sep">${esc(sep)}</span><span lang="en" data-l="en">${esc(en)}</span>`;
 }
 
-function section(lang, s, body) {
-  const link =
-    lang === "es"
-      ? `<p><a class="block-link" href="#en" lang="en">${esc(s.en.webSwitchToEnglish)}</a></p>`
-      : `<p><a class="block-link" href="#es" lang="es">${esc(s.es.webSwitchToSpanish)}</a></p>`;
-  return `<section lang="${lang}" aria-labelledby="${lang}">\n${link}\n${body}\n</section>`;
+/** El título de la página en los dos idiomas («Privacidad · Privacy»). */
+const bilingualH1 = (es, en) => bilingual(es, en, " · ");
+
+/** Un nombre accesible en los dos idiomas, sin separador (oculto a la vista o dentro de un `.vh`). */
+function bilingualName(es, en, cls = "") {
+  const c = cls ? ` class="${cls}"` : "";
+  return `<span${c} lang="es" data-l="es">${esc(es)}</span><span${c} lang="en" data-l="en">${esc(en)}</span>`;
 }
 
-const langHeading = (lang, s) => `<h2 id="${lang}" tabindex="-1">${esc(s[lang].webLanguageName)}</h2>`;
-
-function footer(s, { date = null, backHome = false } = {}) {
-  return ["es", "en"]
-    .map((lang) => {
-      const rows = [`<p>${esc(s[lang].webContact)}</p>`];
-      if (date) rows.push(`<p>${esc(fill(s[lang].webLastUpdated, { [lang === "es" ? "fecha" : "date"]: date[lang] }))}</p>`);
-      if (backHome) rows.push(`<p><a class="block-link" href="/">${esc(s[lang].webBackHome)}</a></p>`);
-      return `<div lang="${lang}">\n${rows.join("\n")}\n</div>`;
-    })
-    .join("\n");
+/** Cada mitad de la página (plan §2.1): la oculta el programa cuando se elige el otro idioma. */
+function section(lang, body) {
+  return `<section class="half" lang="${lang}" data-l="${lang}" aria-labelledby="${lang}">\n${body}\n</section>`;
 }
 
-function pageTitle(s, name, es, en) {
-  return `${fill(s.es.webPageTitle, { página: es, appName: name })} / ${fill(s.en.webPageTitle, { page: en, appName: name })}`;
+/** El atributo del `<h2>` con que empieza cada mitad (destino de `#es` y `#en`). */
+const HALF_TITLE_ATTRS = (lang) => `id="${lang}" tabindex="-1" class="half__title"`;
+
+const langHeading = (lang, s) => `<h2 ${HALF_TITLE_ATTRS(lang)}>${esc(s[lang].webLanguageName)}</h2>`;
+
+/** El trazo de la flecha de «Descargar»: el `arrowDown` de la landing (`home/src/shared/icons.js`). */
+export const DOWNLOAD_ICON_PATH = "M12 4v15M6 13l6 6 6-6";
+
+/** El ancla de la escena de cierre de la landing, la de las tiendas (CA-026-16). */
+export const DOWNLOAD_HREF = "/#fin";
+
+/** Los enlaces del pie, en este orden (CA-026-01), y la página de cada uno. */
+export const FOOTER_LINKS = [
+  ["help", "/help", "help/index.html"],
+  ["privacy", "/privacy", "privacy/index.html"],
+  ["licenses", "/licenses", "licenses/index.html"],
+];
+
+/**
+ * Las piezas comunes de una página (plan §2.1) para [file]: la cabecera, el selector, «← Volver al inicio» y
+ * el pie, con el enlace de [file] marcado como página actual.
+ */
+function chrome(file, { identity, strings: s, landing: l }) {
+  const header = [
+    '<header class="top">',
+    `<a class="logo" href="/"><span aria-hidden="true">${esc(identity.wordmark)}</span>${bilingualName(l.es.nav.home, l.en.nav.home, "vh")}</a>`,
+    `<a class="btn" href="${DOWNLOAD_HREF}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${DOWNLOAD_ICON_PATH}"/></svg><span class="btn__label">${bilingual(l.es.nav.download, l.en.nav.download)}</span></a>`,
+    "</header>",
+  ].join("\n");
+  const option = (lang) =>
+    `<a href="#${lang}" hreflang="${lang}" lang="${lang}"><span>${lang.toUpperCase()}</span><span class="vh">, ${esc(s[lang].webLanguageName)}</span></a>`;
+  const langs = [
+    '<div class="langs" role="group" aria-labelledby="langs-name">',
+    `<span id="langs-name" class="vh">${bilingualName(l.es.nav.lang, l.en.nav.lang)}</span>`,
+    option("es"),
+    option("en"),
+    "</div>",
+  ].join("\n");
+  const back = `<p><a class="back" href="/"><span aria-hidden="true">← </span>${bilingual(s.es.webBackHome, s.en.webBackHome)}</a></p>`;
+  const legal =
+    l.es.footer.legal === l.en.footer.legal
+      ? `<p>${esc(l.es.footer.legal)}</p>`
+      : `<p lang="es" data-l="es">${esc(l.es.footer.legal)}</p>\n<p lang="en" data-l="en">${esc(l.en.footer.legal)}</p>`;
+  const links = FOOTER_LINKS.map(
+    ([key, href, page]) => `<a href="${href}"${page === file ? ' aria-current="page"' : ""}>${bilingual(l.es.footer[key], l.en.footer[key])}</a>`,
+  );
+  const footer = [
+    '<footer class="end">',
+    legal,
+    '<nav aria-labelledby="footer-nav">',
+    `<span id="footer-nav" class="vh">${bilingualName(l.es.footer.nav, l.en.footer.nav)}</span>`,
+    ...links,
+    "</nav>",
+    `<p lang="es" data-l="es">${esc(s.es.webContact)}</p>`,
+    `<p lang="en" data-l="en">${esc(s.en.webContact)}</p>`,
+    "</footer>",
+  ].join("\n");
+  return { header, langs, back, footer };
+}
+
+/** El título de la pestaña en cada idioma (`webPageTitle`). */
+function pageTitles(s, name, es, en) {
+  return {
+    titleEs: fill(s.es.webPageTitle, { página: es, appName: name }),
+    titleEn: fill(s.en.webPageTitle, { page: en, appName: name }),
+  };
 }
 
 /**
  * Todas las páginas en memoria: `files` (ruta de salida → contenido) y `meta` (de cada página, el
- * `<title>` y el `<h1>` que le tocan según las ARB, la identidad y `strings.json`).
+ * `<title>`, los títulos de cada idioma y el `<h1>` que le tocan según las ARB, la identidad y `strings.json`).
  */
 export function renderSite(paths) {
-  const { identity, strings: s, tokens, arb } = loadSite(paths);
+  const site = loadSite(paths);
+  const { identity, strings: s, tokens, arb } = site;
   const name = identity.displayName;
   const files = new Map();
   const meta = new Map();
   const page = (file, spec) => {
-    meta.set(file, { title: spec.title, h1: spec.h1 });
-    files.set(file, shell(spec));
+    const title = `${spec.titleEs} / ${spec.titleEn}`;
+    meta.set(file, { title, titleEs: spec.titleEs, titleEn: spec.titleEn, h1: spec.h1 });
+    files.set(file, shell({ ...spec, chrome: chrome(file, site) }));
   };
 
   // La página de inicio ya no sale de aquí: la construye Vite desde `landing/home/` (spec 025, `buildHome`).
@@ -832,20 +895,20 @@ export function renderSite(paths) {
   // Política: el texto es el de docs/legal/privacy-policy.md (CA-023-04).
   const policy = policyFragments(readText(paths.policy, "privacy-policy.md"), name);
   page("privacy/index.html", {
-    title: pageTitle(s, name, arb.es.privacy, arb.en.privacy),
+    ...pageTitles(s, name, arb.es.privacy, arb.en.privacy),
     h1: bilingualH1(arb.es.privacy, arb.en.privacy),
-    main: `${section("es", s, policy.es.html)}\n${section("en", s, policy.en.html)}`,
-    footer: footer(s, { date: { es: policy.es.date, en: policy.en.date }, backHome: true }),
+    back: true,
+    main: `${section("es", policy.es.html)}\n${section("en", policy.en.html)}`,
   });
 
-  // Error (CL-023-6).
+  // Error (CL-023-6, CA-026-05): sin «← Volver al inicio» encima del título; cada mitad lleva el suyo.
   const notFound = (lang) =>
     `${langHeading(lang, s)}\n<p>${esc(s[lang].webNotFoundBody)}</p>\n<p><a class="block-link" href="/">${esc(s[lang].webBackHome)}</a></p>`;
   page("404.html", {
-    title: pageTitle(s, name, s.es.webNotFoundTitle, s.en.webNotFoundTitle),
+    ...pageTitles(s, name, s.es.webNotFoundTitle, s.en.webNotFoundTitle),
     h1: bilingualH1(s.es.webNotFoundTitle, s.en.webNotFoundTitle),
-    main: `${section("es", s, notFound("es"))}\n${section("en", s, notFound("en"))}`,
-    footer: footer(s),
+    back: false,
+    main: `${section("es", notFound("es"))}\n${section("en", notFound("en"))}`,
   });
 
   // Licencias de terceros (CA-023-16): la versión (o la última compilación) y el archivo de avisos,
@@ -867,12 +930,12 @@ export function renderSite(paths) {
   // dos idiomas y el texto en inglés.
   const webNotices = parseWebNotices(readText(paths.webNotices, "web-notices.txt"));
   const webSection = `<section aria-labelledby="web-code">\n<h2 id="web-code">${bilingualH1(s.es.licensesWebTitle, s.en.licensesWebTitle)}</h2>\n<pre lang="en">${esc(webNotices.body)}</pre>\n</section>`;
-  const noticesSection = `<section lang="en" aria-labelledby="notices">\n<h2 id="notices">${esc(s.en.webNoticesTitle)}</h2>\n<pre>${esc(norm(notices.body))}</pre>\n</section>`;
+  const noticesSection = `<section lang="en" aria-labelledby="notices">\n<h2 id="notices">${esc(s.en.webNoticesTitle)}</h2>\n<pre lang="en">${esc(norm(notices.body))}</pre>\n</section>`;
   page("licenses/index.html", {
-    title: pageTitle(s, name, arb.es.licenses, arb.en.licenses),
+    ...pageTitles(s, name, arb.es.licenses, arb.en.licenses),
     h1: bilingualH1(arb.es.licenses, arb.en.licenses),
-    main: `${section("es", s, licensesBody("es"))}\n${section("en", s, licensesBody("en"))}\n${webSection}\n${noticesSection}`,
-    footer: footer(s, { backHome: true }),
+    back: true,
+    main: `${section("es", licensesBody("es"))}\n${section("en", licensesBody("en"))}\n${webSection}\n${noticesSection}`,
   });
   files.set(NOTICES_FILE, noticesText);
 
@@ -882,10 +945,10 @@ export function renderSite(paths) {
     en: helpFragment(readText(paths.helpEn, "help.en.md"), name, "en", "help.en.md"),
   };
   page("help/index.html", {
-    title: pageTitle(s, name, arb.es.help, arb.en.help),
+    ...pageTitles(s, name, arb.es.help, arb.en.help),
     h1: bilingualH1(arb.es.help, arb.en.help),
-    main: `${section("es", s, help.es.html)}\n${section("en", s, help.en.html)}`,
-    footer: footer(s, { backHome: true }),
+    back: true,
+    main: `${section("es", help.es.html)}\n${section("en", help.en.html)}`,
   });
 
   files.set("tokens.css", tokensCss(tokens));
@@ -899,7 +962,7 @@ function findGaps(files) {
   for (const [file, content] of files) {
     if (!file.endsWith(".html")) continue;
     // El bloque de avisos de terceros no es de la identidad: una licencia puede llevar «[DATE]».
-    const text = content.replace(/<pre>[\s\S]*?<\/pre>/g, " ").replace(/<[^>]*>/g, " ");
+    const text = content.replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/g, " ").replace(/<[^>]*>/g, " ");
     const kinds = new Set(text.match(gapPattern()) ?? []);
     for (const g of kinds) found.push({ file, gap: g });
   }

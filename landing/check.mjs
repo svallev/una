@@ -14,7 +14,9 @@ import { join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   BuildError,
+  DOWNLOAD_HREF,
   FONT_DIRS,
+  FOOTER_LINKS,
   NOTICES_FILE,
   FONT_FILES,
   defaultPaths,
@@ -104,7 +106,7 @@ function checkPage(file, html, meta, errors) {
     else if (x.name === "style") fail("tiene un <style> en línea (la CSP lo bloquearía)");
     else if (FRAMES.includes(x.name)) fail(`tiene un <${x.name}> (nada incrustado)`);
     else if (FORMS.includes(x.name)) fail(`tiene un <${x.name}> (la web no tiene formularios)`);
-    else if (MEDIA.includes(x.name)) fail(`tiene un <${x.name}> (la web no lleva imágenes ni medios)`);
+    else if (MEDIA.includes(x.name) && x.name !== "svg") fail(`tiene un <${x.name}> (la web no lleva imágenes ni medios)`);
     else if (x.name === "base") fail("tiene un <base>");
     else if (x.name === "meta" && "http-equiv" in x.attrs) fail("tiene un <meta http-equiv>");
     else if (x.name === "link") {
@@ -118,7 +120,7 @@ function checkPage(file, html, meta, errors) {
   }
   // El bloque de avisos de terceros (un `<pre>` con los textos de las licencias) no cuenta: una licencia
   // puede nombrar cualquier cosa.
-  const scanned = html.replace(/<pre>[\s\S]*?<\/pre>/g, " ");
+  const scanned = html.replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/g, " ");
   for (const re of ANALYTICS) if (re.test(scanned)) fail(`rastro de analítica (${re})`);
 
   // Estructura: un <h1> y niveles sin saltos.
@@ -151,6 +153,9 @@ function checkPage(file, html, meta, errors) {
   const [es, en] = sections;
   if (es.attrs.lang !== "es") fail('la primera mitad (el español va primero) no está marcada con lang="es"');
   if (en.attrs.lang !== "en") fail('la segunda mitad no está marcada con lang="en"');
+  for (const [half, lang] of [[es, "es"], [en, "en"]]) {
+    if (half.attrs["data-l"] !== lang || !hasClass(half, "half")) fail(`la mitad «${lang}» tiene que ser <section class="half" data-l="${lang}"> (CA-026-09)`);
+  }
   if (es.attrs["aria-labelledby"] !== "es" || en.attrs["aria-labelledby"] !== "en") {
     fail("las mitades tienen que llevar aria-labelledby=\"es\" y \"en\"");
   }
@@ -162,14 +167,7 @@ function checkPage(file, html, meta, errors) {
     const target = t.find((x) => x.start >= from && x.end <= to && x.name === "h2" && x.attrs.id === id);
     if (!target) fail(`la mitad «${id}» no empieza por un <h2 id="${id}"> (destino del salto de idioma)`);
   }
-  const switchLink = (from, to, href, lang) =>
-    t.find((x) => x.start >= from && x.end <= to && x.name === "a" && !x.closing && x.attrs.href === href);
-  const toEn = switchLink(esFrom, esTo, "#en");
-  const toEs = switchLink(enFrom, enTo, "#es");
-  if (!toEn) fail("falta el enlace «#en» al inglés al principio de la mitad española");
-  else if (toEn.attrs.lang !== "en") fail('el enlace al inglés no está marcado con lang="en"');
-  if (!toEs) fail("falta el enlace «#es» al español al principio de la mitad inglesa");
-  else if (toEs.attrs.lang !== "es") fail('el enlace al español no está marcado con lang="es"');
+  checkLayout(file, html, t, meta, { es: [esFrom, esTo], en: [enFrom, enTo] }, fail);
   if (withNotices) {
     checkWebCodeBlock(sections[2], closes[2], t, html, fail);
     checkNoticesBlock(sections[3], closes[3], t, html, fail);
@@ -178,6 +176,149 @@ function checkPage(file, html, meta, errors) {
     headings.filter((h) => h.start >= from && h.end <= to).map((h) => h.level).join(",");
   if (levels(esFrom, esTo) !== levels(enFrom, enTo)) {
     fail(`los encabezados de la mitad inglesa (${levels(enFrom, enTo)}) no están al mismo nivel que los de la española (${levels(esFrom, esTo)})`);
+  }
+}
+
+const hasClass = (x, name) => (x.attrs.class ?? "").split(/\s+/).includes(name);
+
+/** La etiqueta que cierra [open] (la primera del mismo nombre que la equilibra), o `undefined`. */
+function closeOf(t, open) {
+  let depth = 0;
+  for (const x of t) {
+    if (x.start < open.end || x.name !== open.name) continue;
+    if (!x.closing) depth += 1;
+    else if (depth === 0) return x;
+    else depth -= 1;
+  }
+  return undefined;
+}
+
+/** Las etiquetas de apertura entre [open] y su cierre. */
+function inside(t, open) {
+  const close = closeOf(t, open);
+  const to = close?.start ?? Infinity;
+  return t.filter((x) => !x.closing && x.start >= open.end && x.end <= to);
+}
+
+/**
+ * Las piezas de la página de la spec 026 (CA-026-01, 05 y 09; plan §2.1): cabecera con el logotipo y «Descargar»
+ * (con su único `<svg>`), el selector de idioma, un solo «← Volver al inicio», el título, las mitades y el pie de la
+ * landing con la página actual marcada; y las marcas `data-l` de lo que va en los dos idiomas. [halves] da el
+ * rango de cada mitad; [meta], los títulos que le tocan.
+ */
+function checkLayout(file, html, t, meta, halves, fail) {
+  const open = t.filter((x) => !x.closing);
+  const isError = file === "404.html";
+  const htmlTag = open.find((x) => x.name === "html");
+  for (const lang of ["es", "en"]) {
+    const title = htmlTag?.attrs[`data-title-${lang}`];
+    const want = meta?.[lang === "es" ? "titleEs" : "titleEn"];
+    if (!title) fail(`el <html> no lleva data-title-${lang} (el título de la pestaña en ese idioma)`);
+    else if (want !== undefined && title !== escapeText(want)) fail(`data-title-${lang} no es el esperado («${title}»)`);
+  }
+
+  // Cabecera: el logotipo a la landing y «Descargar» al cierre de la landing (CA-026-02 y 16), nada más.
+  const header = open.find((x) => x.name === "header");
+  const main = open.find((x) => x.name === "main");
+  const footer = open.find((x) => x.name === "footer");
+  const links = header ? inside(t, header).filter((x) => x.name === "a") : [];
+  const [logo, download] = links;
+  if (links.length !== 2) fail(`la cabecera tiene ${links.length} enlaces (tienen que ser el logotipo y «Descargar»)`);
+  if (!logo || !hasClass(logo, "logo") || logo.attrs.href !== "/") fail('la cabecera no empieza por el logotipo (<a class="logo" href="/">)');
+  if (!download || download.attrs.href !== DOWNLOAD_HREF) fail(`«Descargar» no lleva a la escena de cierre de la landing (${DOWNLOAD_HREF}, CA-026-16)`);
+
+  // El único <svg>: el icono de «Descargar», decorativo y solo con trazos.
+  const svgs = open.filter((x) => x.name === "svg");
+  if (svgs.length !== 1) fail(`tiene ${svgs.length} <svg> (solo el icono de «Descargar»)`);
+  for (const svg of svgs) {
+    if (!download || !inside(t, download).includes(svg)) fail("el <svg> no está dentro de «Descargar»");
+    if (svg.attrs["aria-hidden"] !== "true") fail('el <svg> de «Descargar» no lleva aria-hidden="true"');
+    if (svg.attrs.focusable !== "false") fail('el <svg> de «Descargar» no lleva focusable="false"');
+    for (const x of inside(t, svg)) {
+      if (x.name !== "path" || Object.keys(x.attrs).join() !== "d") fail(`el <svg> de «Descargar» lleva <${x.name} ${Object.keys(x.attrs).join(" ")}> (solo <path d>)`);
+    }
+  }
+  for (const x of open) if (x.name === "path" && !svgs.some((svg) => inside(t, svg).includes(x))) fail("un <path> fuera del <svg>");
+
+  // El selector: un grupo con nombre y dos enlaces a las mitades (CA-026-07 y 09).
+  const langs = open.filter((x) => x.name === "div" && hasClass(x, "langs"));
+  const selector = langs[0];
+  if (langs.length !== 1) fail(`tiene ${langs.length} selectores de idioma (<div class="langs">; tiene que haber uno)`);
+  else {
+    if (selector.attrs.role !== "group" || !selector.attrs["aria-labelledby"]) fail('el selector de idioma no es un grupo con nombre (role="group" y aria-labelledby)');
+    const options = inside(t, selector).filter((x) => x.name === "a");
+    const got = options.map((a) => `${a.attrs.href}|${a.attrs.hreflang}|${a.attrs.lang}`).join(", ");
+    if (got !== "#es|es|es, #en|en|en") fail(`el selector tiene que llevar ES y EN, en ese orden, a #es y #en con su hreflang y su lang (lleva ${got || "nada"})`);
+  }
+
+  // «← Volver al inicio»: uno solo por página. En la de error, uno en cada mitad (su texto) y ninguno fuera.
+  const inHalf = (x, lang) => x.start >= halves[lang][0] && x.end <= halves[lang][1];
+  const homeLinks = open.filter((x) => x.name === "a" && x.attrs.href === "/" && !hasClass(x, "logo"));
+  const outside = homeLinks.filter((x) => !inHalf(x, "es") && !inHalf(x, "en"));
+  for (const lang of ["es", "en"]) {
+    const n = homeLinks.filter((x) => inHalf(x, lang)).length;
+    if (n !== (isError ? 1 : 0)) fail(`la mitad «${lang}» tiene ${n} enlaces «Volver al inicio» (${isError ? "la página de error lleva uno en su texto" : "va uno solo, encima del título"})`);
+  }
+  if (outside.length !== (isError ? 0 : 1)) fail(`tiene ${outside.length} «← Volver al inicio» encima del título (${isError ? "la página de error no lo lleva: ya va en su texto" : "tiene que haber uno"})`);
+
+  // El orden de arriba abajo (CA-026-01).
+  const h1 = open.find((x) => x.name === "h1");
+  const firstHalf = open.find((x) => x.name === "section");
+  const order = [
+    ["la cabecera", header],
+    ["el selector de idioma", selector],
+    ...(isError ? [] : [["«← Volver al inicio»", outside[0]]]),
+    ["el título", h1],
+    ["las mitades", firstHalf],
+    ["el pie", footer],
+  ];
+  for (let i = 1; i < order.length; i++) {
+    const [a, x] = order[i - 1];
+    const [b, y] = order[i];
+    if (x && y && x.start > y.start) fail(`${a} tiene que ir antes que ${b} (CA-026-01)`);
+  }
+  if (main && selector && !inside(t, main).includes(selector)) fail("el selector de idioma tiene que ir dentro de <main>");
+
+  // El pie de la landing: Ayuda, Privacidad y Licencias, en ese orden, y la página actual marcada.
+  const navs = footer ? inside(t, footer).filter((x) => x.name === "nav") : [];
+  if (navs.length !== 1) fail(`el pie tiene ${navs.length} <nav> (tiene que haber uno, con Ayuda, Privacidad y Licencias)`);
+  else {
+    const nav = navs[0];
+    if (!nav.attrs["aria-labelledby"]) fail("la navegación del pie no tiene nombre (aria-labelledby)");
+    const navLinks = inside(t, nav).filter((x) => x.name === "a");
+    const hrefs = navLinks.map((a) => a.attrs.href).join(", ");
+    const want = FOOTER_LINKS.map(([, href]) => href).join(", ");
+    if (hrefs !== want) fail(`el pie tiene que enlazar ${want}, en ese orden (enlaza ${hrefs || "nada"})`);
+    const current = FOOTER_LINKS.find(([, , page]) => page === file)?.[1];
+    const marked = navLinks.filter((a) => a.attrs["aria-current"] === "page").map((a) => a.attrs.href);
+    if (marked.join() !== (current ?? "")) fail(`el pie tiene que marcar con aria-current="page" ${current ? `solo ${current}` : "ningún enlace (la página de error no está en el pie)"} (marca ${marked.join(", ") || "ninguno"})`);
+  }
+  for (const x of open) {
+    if ("aria-current" in x.attrs && !(x.name === "a" && navs.length === 1 && inside(t, navs[0]).includes(x) && x.attrs["aria-current"] === "page")) {
+      fail(`<${x.name} aria-current="${x.attrs["aria-current"]}"> fuera de la navegación del pie`);
+    }
+  }
+
+  // Lo que va en los dos idiomas (CA-026-09): cada parte con su lang y su pareja; los separadores, solo texto.
+  const marks = open.filter((x) => "data-l" in x.attrs);
+  for (const x of marks) {
+    const l = x.attrs["data-l"];
+    if (l === "es" || l === "en") {
+      if (x.attrs.lang !== l) fail(`<${x.name} data-l="${l}"> sin lang="${l}"`);
+    } else if (l === "sep") {
+      if ("lang" in x.attrs) fail('un separador (data-l="sep") con lang');
+      if (inside(t, x).length > 0) fail('un separador (data-l="sep") con etiquetas dentro (solo texto)');
+    } else fail(`data-l="${l}" no admitido (solo es, en y sep)`);
+  }
+  const n = (l) => marks.filter((x) => x.attrs["data-l"] === l).length;
+  if (n("es") !== n("en")) fail(`hay ${n("es")} piezas en español (data-l="es") y ${n("en")} en inglés: cada una tiene que tener su pareja`);
+
+  // Cada aria-labelledby, a un id que existe una sola vez.
+  const ids = open.map((x) => x.attrs.id).filter(Boolean);
+  for (const id of new Set(ids)) if (ids.filter((i) => i === id).length > 1) fail(`el id «${id}» está repetido`);
+  for (const x of open) {
+    const ref = x.attrs["aria-labelledby"];
+    if (ref && !ids.includes(ref)) fail(`<${x.name} aria-labelledby="${ref}"> apunta a un id que no existe`);
   }
 }
 
@@ -200,7 +341,7 @@ function checkWebCodeBlock(open, close, t, html, fail) {
 
 /**
  * El bloque de avisos de terceros (CA-023-16): una tercera `<section lang="en" aria-labelledby="notices">`
- * después de las dos mitades, que empieza por su `<h2 id="notices">` y lleva el texto en un `<pre>`.
+ * después de las dos mitades, que empieza por su `<h2 id="notices">` y lleva el texto en un `<pre lang="en">`.
  */
 function checkNoticesBlock(open, close, t, html, fail) {
   if (open.attrs.lang !== "en") fail('el bloque de avisos (la tercera <section>) no está marcado con lang="en"');
@@ -211,7 +352,9 @@ function checkNoticesBlock(open, close, t, html, fail) {
   if (!t.some((x) => inside(x) && x.name === "h2" && x.attrs.id === "notices")) {
     fail('el bloque de avisos no empieza por un <h2 id="notices">');
   }
-  if (!t.some((x) => inside(x) && x.name === "pre")) fail("el bloque de avisos no lleva el texto en un <pre>");
+  const pre = t.find((x) => inside(x) && x.name === "pre");
+  if (!pre) fail("el bloque de avisos no lleva el texto en un <pre>");
+  else if (pre.attrs.lang !== "en") fail('el bloque de avisos no lleva el texto en un <pre lang="en"> (CA-026-12)');
 }
 
 const escapeText = (s) =>
@@ -224,13 +367,12 @@ function checkPolicy(paths, dist, name, errors) {
   const html = readFileSync(join(dist, file), "utf8");
   const expected = policyFragments(readFileSync(paths.policy, "utf8"), name);
   for (const lang of ["es", "en"]) {
-    const m = new RegExp(`<section lang="${lang}" aria-labelledby="${lang}">\\n([\\s\\S]*?)\\n</section>`).exec(html);
+    const m = new RegExp(`<section class="half" lang="${lang}" data-l="${lang}" aria-labelledby="${lang}">\\n([\\s\\S]*?)\\n</section>`).exec(html);
     if (!m) {
       errors.push(`${file}: no está la mitad «${lang}» de la política`);
       continue;
     }
-    const body = m[1].replace(/^<p><a class="block-link"[^\n]*<\/a><\/p>\n/, "");
-    if (body !== expected[lang].html) {
+    if (m[1] !== expected[lang].html) {
       errors.push(`${file}: el texto publicado de la política (${lang}) no es el de docs/legal/privacy-policy.md`);
     }
   }

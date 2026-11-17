@@ -154,7 +154,7 @@ describe("CA-023-04: una sola fuente para la política", () => {
   test("una mitad de la política que falta en dist/ falla", () => {
     const w = cloneWorld(base);
     try {
-      edit(join(w.dist, "privacy/index.html"), (t) => t.replace('<section lang="en" aria-labelledby="en">', "<section>"));
+      edit(join(w.dist, "privacy/index.html"), (t) => t.replace('<section class="half" lang="en" data-l="en" aria-labelledby="en">', "<section>"));
       const errors = specificErrors(checkSite(w.paths));
       assert.ok(errors.some((e) => /no está la mitad «en» de la política/.test(e)), errors.join("\n"));
     } finally {
@@ -193,7 +193,8 @@ describe("CA-023-04: una sola fuente para la política", () => {
     assert.ok(html.includes("[CONTROLLER]"));
   });
 
-  test("la fecha del pie sale de la propia política", () => {
+  // Desde la spec 026 (CA-026-01 y 04) la fecha ya no va en el pie: queda en su mitad, bajo el título (T-026-03).
+  test("CA-026-04: la fecha sale de la propia política, en cada mitad, y ya no va en el pie", () => {
     const w = cloneWorld(base);
     try {
       edit(w.paths.policy, (t) =>
@@ -204,8 +205,11 @@ describe("CA-023-04: una sola fuente para la política", () => {
       );
       w.build();
       const html = read(join(w.dist, "privacy/index.html"));
-      assert.ok(html.includes("Última actualización: 3 de marzo de 2027</p>"));
-      assert.ok(html.includes("Last updated: March 3, 2027</p>"));
+      const footer = html.slice(html.indexOf('<footer class="end">'));
+      const half = (lang) => html.slice(html.indexOf(`<section class="half" lang="${lang}"`), html.indexOf("</section>", html.indexOf(`<section class="half" lang="${lang}"`)));
+      assert.ok(half("es").includes("Última actualización:</strong> 3 de marzo de 2027</p>"));
+      assert.ok(half("en").includes("Last updated:</strong> March 3, 2027</p>"));
+      assert.ok(!/3 de marzo de 2027|March 3, 2027/.test(footer), "la fecha sigue en el pie");
       assert.deepEqual(checkSite(w.paths), []);
     } finally {
       w.cleanup();

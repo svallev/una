@@ -123,19 +123,19 @@ describe("CA-023-16: la página de licencias", () => {
     assert.ok(html.includes("The full license texts are also included in the app."));
   });
 
-  test("tiene las dos mitades, el código de esta web (spec 025) y, después, el bloque de avisos en inglés, una sola vez", () => {
+  test("CA-026-12: tiene las dos mitades, el código de esta web (spec 025) y, después, el bloque de avisos en inglés, una sola vez", () => {
     const marker = "AVISO-UNICO-DE-PRUEBA";
     const { w } = withNotices(fakeNotices(HEADER_BUILD, `Third-party notices\n${marker}\n`));
     try {
       const html = read(licenses(w));
-      const es = html.indexOf('<section lang="es" aria-labelledby="es">');
-      const en = html.indexOf('<section lang="en" aria-labelledby="en">');
+      const es = html.indexOf('<section class="half" lang="es" data-l="es" aria-labelledby="es">');
+      const en = html.indexOf('<section class="half" lang="en" data-l="en" aria-labelledby="en">');
       const notices = html.indexOf('<section lang="en" aria-labelledby="notices">');
       const web = html.indexOf('<section aria-labelledby="web-code">');
       assert.ok(es >= 0 && en > es && web > en && notices > web, "orden: español, inglés, código de esta web y avisos");
       assert.equal(html.split(marker).length - 1, 1, "los avisos se publican una sola vez");
       assert.ok(html.indexOf(marker) > notices);
-      assert.match(html, /<h2 id="notices">[^<]+<\/h2>\n<pre>Third-party notices\n/);
+      assert.match(html, /<h2 id="notices">[^<]+<\/h2>\n<pre lang="en">Third-party notices\n/);
       assert.equal(html.split('<section ').length - 1, 4);
     } finally {
       w.cleanup();
@@ -195,7 +195,7 @@ describe("CA-023-16: la página de licencias", () => {
 
   test("el título es el de la fila de Ajustes", () => {
     const html = read(licenses(base));
-    assert.ok(html.includes('<h1><span lang="es">Licencias de terceros</span> · <span lang="en">Third-party licenses</span></h1>'));
+    assert.ok(html.includes('<h1><span lang="es" data-l="es">Licencias de terceros</span><span data-l="sep"> · </span><span lang="en" data-l="en">Third-party licenses</span></h1>'));
     assert.match(html, /<title>Licencias de terceros · .+ \/ Third-party licenses · .+<\/title>/);
   });
 });
@@ -242,12 +242,13 @@ describe("CA-023-16: la comprobación de la web", () => {
   fails("falta el archivo de avisos publicado", (w) => rmSync(join(w.dist, "third-party-notices.txt")), /third-party-notices\.txt/);
   fails("el bloque de avisos sin lang=\"en\"", (w) => edit(licenses(w), (t) => t.replace('<section lang="en" aria-labelledby="notices">', '<section aria-labelledby="notices">')), /avisos|lang/);
   fails("el bloque de avisos con lang=\"es\"", (w) => edit(licenses(w), (t) => t.replace('<section lang="en" aria-labelledby="notices">', '<section lang="es" aria-labelledby="notices">')), /avisos|lang/);
-  fails("el bloque de avisos sin su <h2>", (w) => edit(licenses(w), (t) => t.replace('<h2 id="notices">', '<h3 id="notices">').replace(/<\/h2>\n<pre>/, "</h3>\n<pre>")), /avisos|h2|salta/);
-  fails("el bloque de avisos sin <pre>", (w) => edit(licenses(w), (t) => t.replace("<pre>", "<div>").replace("</pre>", "</div>")), /<pre>|avisos/);
+  fails("el bloque de avisos sin su <h2>", (w) => edit(licenses(w), (t) => t.replace(/<h2 id="notices">([^<]*)<\/h2>/, '<h3 id="notices">$1</h3>')), /avisos|h2|salta/);
+  fails("el bloque de avisos sin <pre>", (w) => edit(licenses(w), (t) => t.replace(/(<h2 id="notices">[^<]*<\/h2>\n)<pre lang="en">([\s\S]*?)<\/pre>/, "$1<div>$2</div>")), /<pre|avisos/);
+  fails("CA-026-12: los avisos en un <pre> sin lang=\"en\"", (w) => edit(licenses(w), (t) => t.replace(/(<h2 id="notices">[^<]*<\/h2>\n)<pre lang="en">/, "$1<pre>")), /avisos.*<pre lang="en">/);
   fails("el bloque de avisos sin aria-labelledby", (w) => edit(licenses(w), (t) => t.replace('<section lang="en" aria-labelledby="notices">', '<section lang="en">')), /aria-labelledby|avisos/);
   fails("una tercera mitad que no es de avisos", (w) => edit(licenses(w), (t) => t.replace("</main>", '<section lang="fr" aria-labelledby="fr"><p>x</p></section></main>')), /section|avisos/);
   fails("el bloque de avisos antes de las mitades", (w) => edit(licenses(w), (t) => {
-    const a = t.indexOf('<section lang="es"');
+    const a = t.indexOf('<section class="half" lang="es"');
     const n = t.indexOf('<section lang="en" aria-labelledby="notices">');
     const end = t.indexOf("</main>");
     return t.slice(0, a) + t.slice(n, end) + "\n" + t.slice(a, n) + t.slice(end);
@@ -272,7 +273,7 @@ describe("CA-023-16: la comprobación de la web", () => {
       w.cleanup();
     }
   });
-  fails("un <script> en un aviso sin escapar", (w) => edit(licenses(w), (t) => t.replace("<pre>", "<pre><script>1</script>")), /script/);
+  fails("un <script> en un aviso sin escapar", (w) => edit(licenses(w), (t) => t.replace(/(<h2 id="notices">[^<]*<\/h2>\n<pre lang="en">)/, "$1<script>1</script>")), /script/);
   fails("la cabecera del archivo con otro formato", (w) => edit(w.paths.notices, (t) => t.replace(/^[^\n]*/, "Versión: x")), /cabecera/);
 });
 
@@ -315,11 +316,12 @@ describe("CA-025-18: cada pieza de terceros que va al navegador tiene su aviso, 
 
   test("/licenses lo publica en su bloque, con el título en los dos idiomas, entre las mitades y los avisos de la app", () => {
     const html = read(licenses(base));
-    const block = /<section aria-labelledby="web-code">\n<h2 id="web-code"><span lang="es">Código de esta web<\/span> · <span lang="en">Code of this website<\/span><\/h2>\n<pre lang="en">([\s\S]*?)<\/pre>\n<\/section>/.exec(html);
+    // Con las marcas de idioma de la spec 026 (CA-026-12: sin JavaScript, el título en los dos idiomas).
+    const block = /<section aria-labelledby="web-code">\n<h2 id="web-code"><span lang="es" data-l="es">Código de esta web<\/span><span data-l="sep"> · <\/span><span lang="en" data-l="en">Code of this website<\/span><\/h2>\n<pre lang="en">([\s\S]*?)<\/pre>\n<\/section>/.exec(html);
     assert.ok(block, "falta el bloque «Código de esta web»");
     const unescape = (t) => t.replaceAll("&quot;", '"').replaceAll("&#39;", "'").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
     assert.equal(unescape(block[1]), real());
-    assert.ok(block.index > html.indexOf('<section lang="en" aria-labelledby="en">'));
+    assert.ok(block.index > html.indexOf('<section class="half" lang="en" data-l="en" aria-labelledby="en">'));
     assert.ok(block.index < html.indexOf('<section lang="en" aria-labelledby="notices">'));
   });
 

@@ -150,17 +150,18 @@ describe("CA-023-17: cada sección dice de qué spec sale, en un comentario que 
 describe("CA-023-17: la página de Ayuda", () => {
   test("sale en español e inglés, con el título de la fila de Ajustes", () => {
     const html = read(page(base));
-    assert.ok(html.includes('<h1><span lang="es">Ayuda</span> · <span lang="en">Help</span></h1>'));
-    assert.match(html, /<section lang="es" aria-labelledby="es">/);
-    assert.match(html, /<section lang="en" aria-labelledby="en">/);
-    assert.match(html, /<h2 id="es" tabindex="-1">Ayuda \(ES\)<\/h2>/);
-    assert.match(html, /<h2 id="en" tabindex="-1">Help \(EN\)<\/h2>/);
+    // Con las marcas de idioma de la spec 026 (CA-026-09).
+    assert.ok(html.includes('<h1><span lang="es" data-l="es">Ayuda</span><span data-l="sep"> · </span><span lang="en" data-l="en">Help</span></h1>'));
+    assert.match(html, /<section class="half" lang="es" data-l="es" aria-labelledby="es">/);
+    assert.match(html, /<section class="half" lang="en" data-l="en" aria-labelledby="en">/);
+    assert.match(html, /<h2 id="es" tabindex="-1" class="half__title">Ayuda \(ES\)<\/h2>/);
+    assert.match(html, /<h2 id="en" tabindex="-1" class="half__title">Help \(EN\)<\/h2>/);
   });
 
   test("una sección por tema (h3) en cada idioma, sin saltos de nivel", () => {
     const html = read(page(base));
-    const es = html.slice(html.indexOf('<section lang="es"'), html.indexOf('<section lang="en"'));
-    const en = html.slice(html.indexOf('<section lang="en"'));
+    const es = html.slice(html.indexOf('<section class="half" lang="es"'), html.indexOf('<section class="half" lang="en"'));
+    const en = html.slice(html.indexOf('<section class="half" lang="en"'));
     assert.equal(es.split("<h3>").length - 1, 12);
     assert.equal(en.split("<h3>").length - 1, 12);
     assert.ok(!/<h[56]/.test(html));

@@ -123,39 +123,40 @@ describe("CA-023-15: idioma, viewport, estructura", () => {
   fails("un enlace javascript:", (w) => edit(notFound(w), (t) => t.replace('href="/"', 'href="javascript:alert(1)"')), /javascript/);
   fails("un <link> que no es una hoja de estilo", (w) => edit(notFound(w), (t) => t.replace("</head>", '<link rel="preload" href="/site.css"></head>')), /link/);
   fails("una tercera mitad", (w) => edit(notFound(w), (t) => t.replace("</main>", '<section lang="fr" aria-labelledby="fr"><p>x</p></section></main>')), /section/);
-  fails("una mitad sin aria-labelledby", (w) => edit(notFound(w), (t) => t.replace('<section lang="en" aria-labelledby="en">', '<section lang="en">')), /aria-labelledby/);
-  fails("sin enlace al español en la mitad inglesa", (w) => edit(notFound(w), (t) => t.replace(/<p><a class="block-link" href="#es"[^]*?<\/p>\n/, "")), /#es/);
-  fails("el enlace al español sin lang", (w) => edit(notFound(w), (t) => t.replace('href="#es" lang="es"', 'href="#es"')), /lang/);
+  fails("una mitad sin aria-labelledby", (w) => edit(notFound(w), (t) => t.replace('<section class="half" lang="en" data-l="en" aria-labelledby="en">', '<section class="half" lang="en" data-l="en">')), /aria-labelledby/);
+  // Desde la spec 026 el salto al otro idioma es el selector ES / EN, encima del título (CA-026-09).
+  fails("CA-026-09: sin la opción ES en el selector", (w) => edit(notFound(w), (t) => t.replace(/<a href="#es" hreflang="es"[^\n]*<\/a>\n/, "")), /selector/);
+  fails("CA-026-09: la opción ES sin lang", (w) => edit(notFound(w), (t) => t.replace('href="#es" hreflang="es" lang="es"', 'href="#es" hreflang="es"')), /selector.*lang/);
   fails("el mismo salto de nivel en las dos mitades", (w) => edit(privacy(w), (t) => t.replaceAll("<h3>", "<h5>").replaceAll("</h3>", "</h5>")), /salta/);
   fails("un encabezado a otro nivel solo en la mitad inglesa (sin saltarse ninguno)", (w) => edit(privacy(w), (t) => {
-    const i = t.indexOf('<section lang="en"');
+    const i = t.indexOf('<section class="half" lang="en"');
     return t.slice(0, i) + t.slice(i).replace("<h3>", "<h2>").replace("</h3>", "</h2>");
   }), /mismo nivel|encabezados de la mitad inglesa/);
-  fails("sin lang en la página", (w) => edit(privacy(w), (t) => t.replace('<html lang="es">', "<html>")), /lang/);
-  fails("la mitad inglesa sin lang", (w) => edit(privacy(w), (t) => t.replace('<section lang="en" aria-labelledby="en">', '<section aria-labelledby="en">')), /lang/);
-  fails("la mitad española sin lang", (w) => edit(notFound(w), (t) => t.replace('<section lang="es" aria-labelledby="es">', '<section aria-labelledby="es">')), /lang/);
-  fails("el enlace al inglés sin lang", (w) => edit(privacy(w), (t) => t.replace('href="#en" lang="en"', 'href="#en"')), /enlace|lang/);
-  fails("sin enlace al inglés", (w) => edit(notFound(w), (t) => t.replace(/<p><a class="block-link" href="#en"[^]*?<\/p>\n/, "")), /enlace.*#en|#en/);
-  fails("el enlace al inglés va a otro sitio", (w) => edit(notFound(w), (t) => t.replace('href="#en"', 'href="#es"')), /enlace|#en/);
+  fails("sin lang en la página", (w) => edit(privacy(w), (t) => t.replace('<html lang="es" ', "<html ")), /lang/);
+  fails("la mitad inglesa sin lang", (w) => edit(privacy(w), (t) => t.replace('<section class="half" lang="en" data-l="en" aria-labelledby="en">', '<section class="half" aria-labelledby="en">')), /lang/);
+  fails("la mitad española sin lang", (w) => edit(notFound(w), (t) => t.replace('<section class="half" lang="es" data-l="es" aria-labelledby="es">', '<section class="half" aria-labelledby="es">')), /lang/);
+  fails("CA-026-09: la opción EN sin lang", (w) => edit(privacy(w), (t) => t.replace('href="#en" hreflang="en" lang="en"', 'href="#en" hreflang="en"')), /selector.*lang/);
+  fails("CA-026-09: sin la opción EN en el selector", (w) => edit(notFound(w), (t) => t.replace(/<a href="#en" hreflang="en"[^\n]*<\/a>\n/, "")), /selector/);
+  fails("CA-026-09: la opción EN va a otro sitio", (w) => edit(notFound(w), (t) => t.replace('href="#en"', 'href="#es"')), /selector.*#en/);
   fails("el destino del salto no existe", (w) => edit(privacy(w), (t) => t.replace('<h2 id="en"', '<h2 id="ingles"')), /id="en"|destino/);
   fails("dos <h1>", (w) => edit(privacy(w), (t) => t.replace("<h3>", "<h1>Otro</h1><h3>")), /h1/);
   fails("sin <h1>", (w) => edit(notFound(w), (t) => t.replace("<h1>", "<h2>").replace("</h1>", "</h2>")), /h1/);
   fails("un salto de nivel de encabezado", (w) => edit(privacy(w), (t) => t.replace("<h3>", "<h5>").replace("</h3>", "</h5>")), /salta|nivel/);
   fails("la mitad inglesa con otro desplazamiento de encabezados", (w) => edit(privacy(w), (t) => {
-    const i = t.indexOf('<section lang="en"');
+    const i = t.indexOf('<section class="half" lang="en"');
     const rest = t.slice(i).replace(/<h3>/g, "<h4>").replace(/<\/h3>/g, "</h4>");
     return t.slice(0, i) + rest;
   }), /salta|nivel|desplaza|encabezados/);
   fails("sin <main>", (w) => edit(notFound(w), (t) => t.replace("<main>", "<div>").replace("</main>", "</div>")), /main/);
-  fails("sin <footer>", (w) => edit(notFound(w), (t) => t.replace("<footer>", "<div>").replace("</footer>", "</div>")), /footer/);
-  fails("sin <header>", (w) => edit(notFound(w), (t) => t.replace("<header>", "<div>").replace("</header>", "</div>")), /header/);
+  fails("sin <footer>", (w) => edit(notFound(w), (t) => t.replace('<footer class="end">', "<div>").replace("</footer>", "</div>")), /footer/);
+  fails("sin <header>", (w) => edit(notFound(w), (t) => t.replace('<header class="top">', "<div>").replace("</header>", "</div>")), /header/);
   fails("dos <main>", (w) => edit(notFound(w), (t) => t.replace("</main>", "</main><main></main>")), /main/);
-  fails("el título de la política no es el de la ARB", (w) => edit(privacy(w), (t) => t.replace('<span lang="es">Política de privacidad</span>', '<span lang="es">Privacidad</span>')), /ARB|título/i);
-  fails("el título de la política sin sus idiomas", (w) => edit(privacy(w), (t) => t.replace('<span lang="en">Privacy policy</span>', "Privacy policy")), /ARB|título|lang/i);
+  fails("el título de la política no es el de la ARB", (w) => edit(privacy(w), (t) => t.replace('<span lang="es" data-l="es">Política de privacidad</span>', '<span lang="es" data-l="es">Privacidad</span>')), /ARB|título/i);
+  fails("el título de la política sin sus idiomas", (w) => edit(privacy(w), (t) => t.replace('<span lang="en" data-l="en">Privacy policy</span>', "Privacy policy")), /ARB|título|lang/i);
   fails("sin <title>", (w) => edit(notFound(w), (t) => t.replace(/<title>[^<]*<\/title>/, "")), /title/);
   fails("la mitad española no va primero", (w) => edit(notFound(w), (t) => {
-    const es = t.indexOf('<section lang="es"');
-    const en = t.indexOf('<section lang="en"');
+    const es = t.indexOf('<section class="half" lang="es"');
+    const en = t.indexOf('<section class="half" lang="en"');
     const mainEnd = t.indexOf("</main>");
     return t.slice(0, es) + t.slice(en, mainEnd) + "\n" + t.slice(es, en) + t.slice(mainEnd);
   }), /primero|orden/);
@@ -188,4 +189,84 @@ describe("CA-023-15: foco, interlineado, movimiento y reflujo", () => {
       assert.ok(!/px$/.test(m[2]), `${m[0]} está en px`);
     }
   });
+});
+
+// Spec 026, T-026-02: cada regla nueva de `checkPage` (la estructura de la página, plan §2.1) con un caso que falla.
+describe("CA-026-01, 05, 09 y 16: la estructura de la página (checkPage)", () => {
+  const licenses = (w) => join(w.dist, "licenses/index.html");
+  const help = (w) => join(w.dist, "help/index.html");
+  const BACK = /<p><a class="back" href="\/">[^\n]*<\/a><\/p>\n/;
+  const LANGS = /<div class="langs"[\s\S]*?<\/div>\n/;
+  const SVG = /<svg [^>]*>[\s\S]*?<\/svg>/;
+
+  // Títulos de la pestaña por idioma.
+  fails("CA-026-09: el <html> sin data-title-es", (w) => edit(privacy(w), (t) => t.replace(/ data-title-es="[^"]*"/, "")), /data-title-es/);
+  fails("CA-026-09: data-title-en distinto del título", (w) => edit(notFound(w), (t) => t.replace(/data-title-en="[^"]*"/, 'data-title-en="Otra cosa"')), /data-title-en no es el esperado/);
+
+  // Cabecera y «Descargar».
+  fails("CA-026-01: un tercer enlace en la cabecera", (w) => edit(help(w), (t) => t.replace("</header>", '<a href="/privacy">x</a>\n</header>')), /cabecera tiene 3 enlaces/);
+  fails("CA-026-01: el logotipo no lleva a la landing", (w) => edit(privacy(w), (t) => t.replace('<a class="logo" href="/">', '<a class="logo" href="/help">')), /logotipo/);
+  fails("CA-026-16: «Descargar» no lleva al cierre de la landing", (w) => edit(licenses(w), (t) => t.replace('href="/#fin"', 'href="/"')), /Descargar.*#fin/);
+
+  // El único <svg>.
+  fails("CA-026-01: un segundo <svg>", (w) => edit(notFound(w), (t) => t.replace("</footer>", '<svg aria-hidden="true" focusable="false"><path d="M0 0"/></svg>\n</footer>')), /2 <svg>/);
+  fails("CA-026-01: el <svg> fuera de «Descargar»", (w) => edit(notFound(w), (t) => {
+    const svg = SVG.exec(t)[0];
+    return t.replace(svg, "").replace("</footer>", `${svg}\n</footer>`);
+  }), /<svg> no está dentro de «Descargar»/);
+  fails("CA-026-01: el <svg> sin aria-hidden", (w) => edit(privacy(w), (t) => t.replace('viewBox="0 0 24 24" aria-hidden="true"', 'viewBox="0 0 24 24"')), /aria-hidden="true"/);
+  fails("CA-026-01: el <svg> sin focusable=\"false\"", (w) => edit(privacy(w), (t) => t.replace(' focusable="false"', "")), /focusable="false"/);
+  fails("CA-026-01: el <svg> con otra cosa que <path d>", (w) => edit(help(w), (t) => t.replace('<path d="', '<circle r="1"/><path d="')), /solo <path d>/);
+  fails("CA-026-01: un <path> del <svg> con más atributos", (w) => edit(help(w), (t) => t.replace('<path d="', '<path fill="red" d="')), /solo <path d>/);
+  fails("CA-026-01: un <path> fuera del <svg>", (w) => edit(help(w), (t) => t.replace("</footer>", '<path d="M0 0"/>\n</footer>')), /<path> fuera del <svg>/);
+
+  // El selector.
+  fails("CA-026-09: el selector sin role=\"group\"", (w) => edit(privacy(w), (t) => t.replace('class="langs" role="group"', 'class="langs"')), /grupo con nombre/);
+  fails("CA-026-09: dos selectores", (w) => edit(privacy(w), (t) => t.replace(LANGS, (m) => m + m.replace('id="langs-name"', 'id="langs-name-2"').replace('aria-labelledby="langs-name"', 'aria-labelledby="langs-name-2"'))), /2 selectores/);
+  fails("CA-026-09: EN antes que ES en el selector", (w) => edit(privacy(w), (t) => t.replace(/(<a href="#es"[^\n]*\n)(<a href="#en"[^\n]*\n)/, "$2$1")), /selector.*en ese orden/);
+  fails("CA-026-01: el selector fuera de <main>", (w) => edit(help(w), (t) => {
+    const langs = LANGS.exec(t)[0];
+    return t.replace(langs, "").replace("<main>\n", `${langs}<main>\n`);
+  }), /dentro de <main>/);
+
+  // Un solo «← Volver al inicio».
+  fails("CA-026-01: sin «← Volver al inicio»", (w) => edit(privacy(w), (t) => t.replace(BACK, "")), /0 «← Volver al inicio»/);
+  fails("CA-026-01: dos «← Volver al inicio»", (w) => edit(licenses(w), (t) => t.replace(BACK, (m) => m + m)), /2 «← Volver al inicio»/);
+  fails("CA-026-01: «Volver al inicio» dentro de una mitad, además del de arriba", (w) => edit(help(w), (t) => t.replace('<h2 id="es" tabindex="-1" class="half__title">', '<p><a href="/">x</a></p>\n<h2 id="es" tabindex="-1" class="half__title">')), /mitad «es» tiene 1 enlaces/);
+  fails("CA-026-05: la página de error con «← Volver al inicio» encima del título", (w) => edit(notFound(w), (t) => t.replace("<h1>", '<p><a class="back" href="/">x</a></p>\n<h1>')), /página de error no lo lleva/);
+  fails("CA-026-05: la página de error sin «Volver al inicio» en una mitad", (w) => edit(notFound(w), (t) => t.replace('<p><a class="block-link" href="/">Back to home</a></p>\n', "")), /mitad «en» tiene 0 enlaces/);
+
+  // El orden.
+  fails("CA-026-01: el título antes que «← Volver al inicio»", (w) => edit(privacy(w), (t) => {
+    const back = BACK.exec(t)[0];
+    const h1 = /<h1>[^\n]*<\/h1>\n/.exec(t)[0];
+    return t.replace(back + h1, h1 + back);
+  }), /«← Volver al inicio» tiene que ir antes que el título/);
+  fails("CA-026-01: «← Volver al inicio» antes que el selector", (w) => edit(help(w), (t) => {
+    const back = BACK.exec(t)[0];
+    const langs = LANGS.exec(t)[0];
+    return t.replace(langs + back, back + langs);
+  }), /el selector de idioma tiene que ir antes que «← Volver al inicio»/);
+
+  // El pie.
+  fails("CA-026-01: el pie sin <nav>", (w) => edit(privacy(w), (t) => t.replace('<nav aria-labelledby="footer-nav">', "<div>").replace("</nav>", "</div>")), /0 <nav>/);
+  fails("CA-026-01: la navegación del pie sin nombre", (w) => edit(privacy(w), (t) => t.replace('<nav aria-labelledby="footer-nav">', "<nav>")), /pie no tiene nombre/);
+  fails("CA-026-01: el pie con Privacidad antes que Ayuda", (w) => edit(notFound(w), (t) => t.replace(/(<a href="\/help">[^\n]*\n)(<a href="\/privacy">[^\n]*\n)/, "$2$1")), /en ese orden/);
+  fails("CA-026-01: el pie sin Licencias", (w) => edit(notFound(w), (t) => t.replace(/<a href="\/licenses">[^\n]*\n/, "")), /en ese orden/);
+  fails("CA-026-01: la página actual sin marcar", (w) => edit(privacy(w), (t) => t.replace(' aria-current="page"', "")), /aria-current="page" solo \/privacy/);
+  fails("CA-026-01: otra página marcada como actual", (w) => edit(licenses(w), (t) => t.replace(' aria-current="page"', "").replace('<a href="/help">', '<a href="/help" aria-current="page">')), /aria-current="page" solo \/licenses/);
+  fails("CA-026-05: la página de error con una página actual", (w) => edit(notFound(w), (t) => t.replace('<a href="/help">', '<a href="/help" aria-current="page">')), /ningún enlace/);
+  fails("CA-026-01: aria-current fuera del pie", (w) => edit(help(w), (t) => t.replace('<a class="back" href="/">', '<a class="back" href="/" aria-current="page">')), /aria-current="page"> fuera de la navegación del pie/);
+
+  // Las marcas de idioma.
+  fails("CA-026-09: una pieza en español sin lang", (w) => edit(privacy(w), (t) => t.replace('<span lang="es" data-l="es">Descargar</span>', '<span data-l="es">Descargar</span>')), /data-l="es"> sin lang="es"/);
+  fails("CA-026-09: una pieza con otro idioma en data-l", (w) => edit(privacy(w), (t) => t.replace('<span lang="en" data-l="en">Download</span>', '<span lang="en" data-l="fr">Download</span>')), /data-l="fr" no admitido/);
+  fails("CA-026-09: un separador con lang", (w) => edit(help(w), (t) => t.replace('<span data-l="sep"> · </span>', '<span lang="es" data-l="sep"> · </span>')), /separador.*con lang/);
+  fails("CA-026-09: un separador con etiquetas dentro", (w) => edit(help(w), (t) => t.replace('<span data-l="sep"> · </span>', '<span data-l="sep"><b> · </b></span>')), /separador.*etiquetas dentro/);
+  fails("CA-026-09: una pieza en inglés sin su pareja en español", (w) => edit(notFound(w), (t) => t.replace('<span lang="es" data-l="es">Descargar</span>', "Descargar")), /pareja/);
+  fails("CA-026-09: una mitad sin class=\"half\" ni data-l", (w) => edit(help(w), (t) => t.replace('<section class="half" lang="en" data-l="en" aria-labelledby="en">', '<section lang="en" aria-labelledby="en">')), /class="half" data-l="en"/);
+
+  // Nombres por id.
+  fails("CA-026-09: un id repetido", (w) => edit(privacy(w), (t) => t.replace('<span id="footer-nav"', '<span id="langs-name"')), /id «langs-name» está repetido/);
+  fails("CA-026-09: aria-labelledby a un id que no existe", (w) => edit(privacy(w), (t) => t.replace('<span id="footer-nav"', '<span id="pie"')), /aria-labelledby="footer-nav"> apunta a un id que no existe/);
 });

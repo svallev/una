@@ -4,9 +4,10 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
-import { build, defaultPaths, fill, loadLandingStrings, LANDING_STRING_KEYS, readIdentity, tokensCss } from "../build.mjs";
+import { build, defaultPaths, DOWNLOAD_ICON_PATH, fill, loadLandingStrings, LANDING_STRING_KEYS, readIdentity, tokensCss } from "../build.mjs";
 import { checkSite, mentionsName } from "../check.mjs";
 import { cloneWorld, edit, read, world } from "./support.mjs";
+import { iconPaths } from "../home/src/shared/icons.js";
 
 let base;
 let name;
@@ -36,29 +37,32 @@ describe("CA-023-13: las páginas", () => {
     }
   });
 
-  test("cada página tiene el español y el inglés, cada uno con su idioma y el enlace al otro", () => {
+  // Desde la spec 026 (CA-026-09) el enlace al otro idioma es el selector ES / EN, encima del título; «Read in
+  // English» y «Leer en español» desaparecen.
+  test("CA-026-09: cada página tiene el español y el inglés, cada uno con su idioma, y el selector lleva a cada mitad", () => {
     for (const f of pages) {
       const html = read(join(base.dist, f));
-      assert.match(html, /<html lang="es">/, f);
-      assert.match(html, /<section lang="es" aria-labelledby="es">/, f);
-      assert.match(html, /<section lang="en" aria-labelledby="en">/, f);
-      assert.match(html, /<h2 id="es" tabindex="-1">/, f);
-      assert.match(html, /<h2 id="en" tabindex="-1">/, f);
-      assert.ok(html.indexOf('lang="es" aria-labelledby') < html.indexOf('lang="en" aria-labelledby'), `${f}: primero el español`);
-      assert.match(html, /<a class="block-link" href="#en" lang="en">Read in English<\/a>/, f);
-      assert.match(html, /<a class="block-link" href="#es" lang="es">Leer en español<\/a>/, f);
+      assert.match(html, /<html lang="es" /, f);
+      assert.match(html, /<section class="half" lang="es" data-l="es" aria-labelledby="es">/, f);
+      assert.match(html, /<section class="half" lang="en" data-l="en" aria-labelledby="en">/, f);
+      assert.match(html, /<h2 id="es" tabindex="-1" class="half__title">/, f);
+      assert.match(html, /<h2 id="en" tabindex="-1" class="half__title">/, f);
+      assert.ok(html.indexOf('data-l="es" aria-labelledby="es"') < html.indexOf('data-l="en" aria-labelledby="en"'), `${f}: primero el español`);
+      assert.match(html, /<a href="#es" hreflang="es" lang="es"><span>ES<\/span><span class="vh">, Español<\/span><\/a>/, f);
+      assert.match(html, /<a href="#en" hreflang="en" lang="en"><span>EN<\/span><span class="vh">, English<\/span><\/a>/, f);
+      assert.ok(!/Read in English|Leer en español/.test(html), `${f}: sigue el enlace antiguo al otro idioma`);
     }
   });
 
   test("ninguna página lleva JavaScript", () => {
     for (const f of pages) {
-      const html = read(join(base.dist, f)).replace(/<pre>[\s\S]*?<\/pre>/g, " "); // los avisos de terceros son texto escapado
+      const html = read(join(base.dist, f)).replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/g, " "); // los avisos de terceros son texto escapado
       assert.ok(!/<script/i.test(html), `${f} tiene <script>`);
       assert.ok(!/\son[a-z]+\s*=/i.test(html), `${f} tiene un manejador on…`);
     }
   });
 
-  test("la página de error está en los dos idiomas y vuelve al inicio", () => {
+  test("CA-026-05: la página de error está en los dos idiomas y vuelve al inicio", () => {
     const html = read(join(base.dist, "404.html"));
     assert.ok(html.includes("Esta página no existe."));
     assert.ok(html.includes("This page doesn&#39;t exist."));
@@ -88,6 +92,114 @@ describe("CA-023-13: las páginas", () => {
     for (const f of pages.filter((p) => p !== "licenses/index.html")) {
       assert.ok(readFileSync(join(base.dist, f)).length < 100_000, f);
     }
+  });
+});
+
+// Spec 026, T-026-02: la estructura nueva de las cuatro páginas, sobre lo construido y sin ejecutar nada.
+describe("CA-026-01, 05, 09, 12 y 16: la página nueva, sin JavaScript", () => {
+  const html = (f) => read(join(base.dist, f));
+  const identity = () => readIdentity(read(base.paths.identity));
+  const both = (es, en, sep = " / ") => `<span lang="es" data-l="es">${es}</span><span data-l="sep">${sep}</span><span lang="en" data-l="en">${en}</span>`;
+  const CURRENT = { "privacy/index.html": "/privacy", "licenses/index.html": "/licenses", "help/index.html": "/help", "404.html": null };
+
+  test("CA-026-01: de arriba abajo: cabecera, selector, «← Volver al inicio», título, mitades y pie", () => {
+    for (const f of pages) {
+      const t = html(f);
+      const marks = [
+        '<header class="top">',
+        '<div class="langs" role="group" aria-labelledby="langs-name">',
+        ...(f === "404.html" ? [] : ['<a class="back" href="/">']),
+        "<h1>",
+        '<section class="half" lang="es"',
+        '<section class="half" lang="en"',
+        '<footer class="end">',
+      ];
+      const at = marks.map((m) => t.indexOf(m));
+      assert.ok(at.every((i) => i >= 0), `${f}: falta alguna pieza (${marks.filter((_, i) => at[i] < 0).join(", ")})`);
+      for (let i = 1; i < at.length; i++) assert.ok(at[i - 1] < at[i], `${f}: «${marks[i - 1]}» va después de «${marks[i]}»`);
+      // Un solo «← Volver al inicio» (en la de error, el de su texto, uno por idioma).
+      assert.equal(t.split('class="back"').length - 1, f === "404.html" ? 0 : 1, f);
+    }
+  });
+
+  test("CA-026-01: el pie de la landing: aviso legal, Ayuda, Privacidad y Licencias en ese orden, la actual marcada, y el contacto", () => {
+    for (const f of pages) {
+      const footer = html(f).slice(html(f).indexOf('<footer class="end">'));
+      assert.ok(footer.includes(`<p>© 2026 ${identity().displayName}</p>`), f);
+      const links = [...footer.matchAll(/<a href="([^"]+)"( aria-current="page")?>/g)];
+      assert.deepEqual(links.map((m) => m[1]), ["/help", "/privacy", "/licenses"], f);
+      assert.deepEqual(links.filter((m) => m[2]).map((m) => m[1]), CURRENT[f] ? [CURRENT[f]] : [], f);
+      assert.equal(html(f).split("aria-current").length - 1, CURRENT[f] ? 1 : 0, `${f}: aria-current fuera del pie`);
+      assert.ok(footer.includes(`<a href="/help"${f === "help/index.html" ? ' aria-current="page"' : ""}>${both("Ayuda", "Help")}</a>`), f);
+      assert.ok(footer.includes('<nav aria-labelledby="footer-nav">\n<span id="footer-nav" class="vh"><span lang="es" data-l="es">Ayuda, privacidad y licencias</span><span lang="en" data-l="en">Help, privacy and licenses</span></span>'), f);
+      assert.ok(footer.includes('<p lang="es" data-l="es">Contacto: [CONTACTO]</p>\n<p lang="en" data-l="en">Contact: [CONTACT]</p>'), f);
+      // La fecha y «Volver al inicio» ya no van en el pie.
+      assert.ok(!/Última actualización|Last updated|Volver al inicio|Back to home/.test(footer), `${f}: el pie lleva la fecha o «Volver al inicio»`);
+    }
+  });
+
+  test("CA-026-02: la cabecera lleva el logotipo (a la landing, con nombre en los dos idiomas) y «Descargar»", () => {
+    for (const f of pages) {
+      const t = html(f);
+      const header = t.slice(t.indexOf('<header class="top">'), t.indexOf("</header>"));
+      assert.ok(header.includes(`<a class="logo" href="/"><span aria-hidden="true">${identity().wordmark}</span><span class="vh" lang="es" data-l="es">${identity().displayName}, inicio</span><span class="vh" lang="en" data-l="en">${identity().displayName}, home</span></a>`), f);
+      assert.ok(header.includes(`<span class="btn__label">${both("Descargar", "Download")}</span></a>`), f);
+      assert.equal(header.split("<a ").length - 1, 2, `${f}: la cabecera lleva otros enlaces`);
+    }
+  });
+
+  test("CA-026-16: «Descargar» lleva a la escena de cierre de la landing, con la flecha de la landing en línea", () => {
+    const d = iconPaths("arrowDown");
+    assert.equal(d.length, 1);
+    assert.equal(DOWNLOAD_ICON_PATH, d[0]);
+    for (const f of pages) {
+      const t = html(f);
+      assert.ok(t.includes(`<a class="btn" href="/#fin"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${d[0]}"/></svg>`), f);
+      assert.equal(t.split("<svg").length - 1, 1, `${f}: más de un <svg>`);
+    }
+  });
+
+  test("CA-026-09: las piezas comunes salen en los dos idiomas, cada parte con su idioma", () => {
+    const titles = {
+      "privacy/index.html": ["Política de privacidad", "Privacy policy"],
+      "licenses/index.html": ["Licencias de terceros", "Third-party licenses"],
+      "help/index.html": ["Ayuda", "Help"],
+      "404.html": ["Esta página no existe.", "This page doesn&#39;t exist."],
+    };
+    const name = identity().displayName;
+    for (const f of pages) {
+      const t = html(f);
+      const [es, en] = titles[f];
+      assert.ok(t.includes(`<html lang="es" data-title-es="${es} · ${name}" data-title-en="${en} · ${name}">`), f);
+      assert.ok(t.includes(`<title>${es} · ${name} / ${en} · ${name}</title>`), f);
+      assert.ok(t.includes(`<h1>${both(es, en, " · ")}</h1>`), f);
+      assert.ok(t.includes(`<span id="langs-name" class="vh"><span lang="es" data-l="es">Idioma</span><span lang="en" data-l="en">Language</span></span>`), f);
+      if (f !== "404.html") assert.ok(t.includes(`<p><a class="back" href="/"><span aria-hidden="true">← </span>${both("Volver al inicio", "Back to home")}</a></p>`), f);
+      // Toda pieza marcada con un idioma lleva ese idioma; los separadores, ninguno.
+      for (const m of t.matchAll(/<[a-z0-9]+ [^>]*data-l="([^"]+)"[^>]*>/g)) {
+        if (m[1] === "sep") assert.ok(!/\slang=/.test(m[0]), `${f}: ${m[0]}`);
+        else assert.ok(m[0].includes(`lang="${m[1]}"`), `${f}: ${m[0]}`);
+      }
+    }
+  });
+
+  test("CA-026-05: la página de error lleva cabecera, selector y pie, y en cada mitad su texto y «Volver al inicio»", () => {
+    const t = html("404.html");
+    for (const piece of ['<header class="top">', '<div class="langs"', '<footer class="end">']) assert.ok(t.includes(piece), piece);
+    assert.ok(t.includes('<h2 id="es" tabindex="-1" class="half__title">Español</h2>\n<p>Puede que la dirección esté mal escrita.</p>\n<p><a class="block-link" href="/">Volver al inicio</a></p>\n</section>'));
+    assert.ok(t.includes('<h2 id="en" tabindex="-1" class="half__title">English</h2>\n<p>The address may be mistyped.</p>\n<p><a class="block-link" href="/">Back to home</a></p>\n</section>'));
+    assert.ok(t.includes('<a class="logo" href="/">'));
+  });
+
+  test("CA-026-12: licencias: los avisos una sola vez, en inglés y fuera de las mitades; el título del código de la web en los dos idiomas", () => {
+    const t = html("licenses/index.html");
+    const pres = [...t.matchAll(/<pre([^>]*)>/g)];
+    assert.deepEqual(pres.map((m) => m[1]), [' lang="en"', ' lang="en"'], "dos <pre> (código de la web y avisos de la app), los dos en inglés");
+    assert.ok(t.includes(`<h2 id="web-code">${both("Código de esta web", "Code of this website", " · ")}</h2>`));
+    const enEnd = t.indexOf("</section>", t.indexOf('<section class="half" lang="en"'));
+    assert.ok(t.indexOf("<pre") > enEnd, "los avisos van después de las dos mitades");
+    const body = read(base.paths.notices).split("\n").slice(2).join("\n").slice(0, 40);
+    assert.equal(t.split(body).length - 1, 1, "el texto de los avisos sale una sola vez");
   });
 });
 
@@ -343,8 +455,15 @@ describe("tokens.css sale de design/tokens.json", () => {
 // Spec 026, T-026-01: los textos nuevos y los de la landing que usan la cabecera y el pie.
 describe("CA-026-01: los textos de las páginas", () => {
   const strings = () => JSON.parse(read(base.paths.strings));
-  // Solo en un idioma: los enlaces al otro idioma (se retiran en T-026-02) y el título de los avisos, en inglés.
-  const langOnly = { es: ["webSwitchToSpanish"], en: ["webSwitchToEnglish", "webNoticesTitle"] };
+  // Solo en un idioma: el título de los avisos, en inglés («webSwitchTo*» se retiraron en T-026-02).
+  const langOnly = { es: [], en: ["webNoticesTitle"] };
+
+  test("CA-026-09: «webSwitchToSpanish» y «webSwitchToEnglish» ya no existen (los sustituye el selector)", () => {
+    for (const lang of ["es", "en"]) {
+      for (const key of ["webSwitchToSpanish", "webSwitchToEnglish"]) assert.ok(!(key in strings()[lang]), `${lang}.${key}`);
+    }
+  });
+
 
   test("CA-026-01: «webOnThisPage» en español y en inglés", () => {
     assert.equal(strings().es.webOnThisPage, "En esta página");
@@ -421,4 +540,5 @@ describe("CA-026-01: los textos de las páginas", () => {
     delete json.footer;
     return JSON.stringify(json, null, 2);
   }), /strings\.es\.json.*footer\./);
+  breaks("CA-026-09: «webSwitchToEnglish» en strings.json ya no es una clave conocida", (w) => edit(w.paths.strings, (t) => t.replace('"webOnThisPage": "On this page"', '"webOnThisPage": "On this page",\n    "webSwitchToEnglish": "Read in English"')), /webSwitchToEnglish.*no es una clave conocida/);
 });

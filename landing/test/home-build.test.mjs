@@ -1,4 +1,4 @@
-// La página de inicio es la landing y las otras páginas no cambian (spec 025, CA-025-01).
+// La página de inicio es la landing y las otras páginas no cambian (spec 025, CA-025-01; su marco cambia con la spec 026).
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -27,9 +27,21 @@ describe("CA-025-01: cinco páginas, la de inicio es la landing", () => {
     assert.equal(html.length, 5, `hay otras páginas: ${html.join(", ")}`);
   });
 
-  test("/help y la página de error son idénticas byte a byte a las de la 023 (capturadas en T-025-01)", () => {
+  // Hasta la spec 026 eran idénticas byte a byte a las de la 023; con la 026 cambia el marco (cabecera, selector,
+  // pie, CA-026-01), pero el contenido de cada mitad sigue siendo el de la 023: sin el enlace «Read in English» /
+  // «Leer en español» (CA-026-09) y con la clase del título de la mitad.
+  test("CA-026-01: /help y la página de error conservan el contenido de cada mitad de la 023 (capturadas en T-025-01)", () => {
+    const half = (html, lang) => {
+      const m = new RegExp(`<section [^>]*aria-labelledby="${lang}">\\n([\\s\\S]*?)\\n</section>`).exec(html);
+      assert.ok(m, `falta la mitad «${lang}»`);
+      return m[1]
+        .replace(/^<p><a class="block-link" href="#e[sn]" lang="e[sn]">[^<]*<\/a><\/p>\n/, "")
+        .replace(` class="half__title"`, "");
+    };
     for (const f of ["help/index.html", "404.html"]) {
-      assert.ok(readFileSync(join(base.dist, f)).equals(readFileSync(join(FIXTURES, f))), `${f} cambió`);
+      const now = read(join(base.dist, f));
+      const before = readFileSync(join(FIXTURES, f), "utf8");
+      for (const lang of ["es", "en"]) assert.equal(half(now, lang), half(before, lang), `${f} (${lang}) cambió`);
     }
   });
 
