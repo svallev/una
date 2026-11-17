@@ -143,7 +143,7 @@ Los textos de los avisos y los nombres de paquete **no se traducen** (inglés, `
 
 ## 10. Enmiendas
 
-Se anotan al aprobar esta spec como «Enmienda (spec 027, Aprobada; en vigor cuando la 027 se implemente)».
+Se anotaron al aprobar esta spec como «Enmienda (spec 027, Aprobada; en vigor cuando la 027 se implemente)»; **[Hecho, 2026-11-17]** pasan a «en vigor desde el 2026-11-17, con la 027 implementada (T-027-06)» en la 023, la 025 y la 026.
 
 | Spec | Criterio | Qué cambia |
 |---|---|---|

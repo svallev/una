@@ -1,6 +1,7 @@
 # Spec 026: Páginas de contenido
 
 - **Estado:** **Implementada** el 2026-11-17 (rama `feat/026-paginas-de-contenido`, T-026-01 a 10; sin push ni PR hasta que lo confirme el propietario). Antes **Aprobada** por el propietario el 2026-11-17 («aprobado»), con las suposiciones del §9 confirmadas. Antes **Borrador** (2026-11-17; revisión del `spec-reviewer` aplicada el mismo día: 2 bloqueantes, 8 importantes y 11 menores)
+- **Enmendada por la spec 027** (licencias agrupadas por paquete, **Aprobada el 2026-11-17**; en vigor desde el 2026-11-17, con la 027 implementada (T-027-06)): CA-026-12 (los avisos salen una sola vez, en inglés, **en grupos plegados** por cabecera), el §7 (tres claves nuevas) y la nota de DEV-60. Tabla en `specs/027-licencias-por-paquete/spec.md` §10.
 - **Reglas de producto:** R15 (idioma): las páginas la **siguen**, no la cambian. Ninguna regla de la app cambia.
 - **Pantallas del prototipo:** **sin diseño en el prototipo ni en la maqueta.** El prototipo no tiene páginas web (DEV-58) y la maqueta de la landing (`UnaWeb/www`, versión A) solo tiene la página de inicio. El diseño sale de: la pauta de la maqueta para estas páginas (`UnaWeb/design.md` §8: «la misma maqueta en columna de 600 px, titulares con regla gruesa superior, sin adornos»); las piezas de la landing (logotipo, botón «Descargar», pie); y la **estructura** de las páginas legales de superplay.co (`/terms`, vista por última vez el 2026-11-17), que el propietario dio como referencia. Se registra como desviación **DEV-60** al implementar; el propietario lo revisa en el navegador (C-026-1).
 - **Decisiones y ADR relacionados:** P-012-2 (una sola dirección para ES y EN), ADR-0009 (`landing/`) y ADR-0027 (herramientas de la landing): los dos dicen que estas cuatro páginas van **sin JavaScript**, así que **[Pendiente, plan] un ADR nuevo los enmienda** (un programa propio, sin dependencias, solo para el idioma, en las cuatro páginas; la constitución pide un ADR para cambiar uno aceptado). ADR-0010 (Vercel), ADR-0026 (licencias de terceros), D17, D26.
@@ -142,6 +143,7 @@ Que quien pasa de la landing a la Ayuda, la política o las licencias (o llega a
   - **Cuando** se ve en cualquiera de los dos idiomas
   - **Entonces** la explicación, la versión (o el aviso de última compilación, CL-023-11), el enlace al archivo de texto y el **título** del bloque del código de la web (`licensesWebTitle`) salen en el idioma elegido (sin JavaScript, el título en los dos, como hoy). Los **textos** de los avisos (los de la app y los del código de la web, CA-025-18) salen **una sola vez**, en inglés y marcados como inglés, en los dos idiomas. Las **líneas largas se parten** dentro de la columna: no hay desplazamiento horizontal, ni de la página ni dentro de un bloque **[Suposición]**.
   - **Verificable:** test sobre el HTML construido (avisos una sola vez, marcados en inglés; título en los dos idiomas sin JavaScript) y casilla C-026-1 (320 px y 400 %).
+  - *Enmienda (spec 027, Aprobada el 2026-11-17; en vigor desde el 2026-11-17, con la 027 implementada (T-027-06)):* los textos de los avisos salen una sola vez, en inglés, **en grupos plegados por cabecera** (CA-027-01); las líneas largas se siguen partiendo (CA-027-06).
 
 ### Privacidad y seguridad
 
@@ -234,6 +236,7 @@ Que quien pasa de la landing a la Ayuda, la política o las licencias (o llega a
 | `footer.nav` (landing) | Ayuda, privacidad y licencias | Help, privacy and licenses | Nombre de la navegación del pie |
 | `licensesWebTitle` (025) | Código de esta web | Code of this website | Sin cambios de texto; con JavaScript, solo en el idioma elegido (CA-026-12) |
 | `webContact`, `webPageTitle`, `webNotFoundTitle`, `webNotFoundBody`, `webLastUpdated`, `webLicensesVersion`, `webLicensesLatestBuild`, `webLicensesInApp`, `webLicensesFile`, `webNoticesTitle` (023) | Sin cambios | Sin cambios | Siguen igual; `webBackHome` y `webLastUpdated` cambian de sitio (§10) |
+| `webNoticesCountOne`, `webNoticesCountMany`, `webNoticesSkip` (027) | 1 aviso · {n} avisos · Saltar la lista de avisos | 1 notice · {n} notices · Skip the notices list | **Añadidas por la spec 027 (en vigor desde el 2026-11-17, con la 027 implementada (T-027-06)):** las usa la página de licencias; ver el §7 de la 027 |
 | `webSwitchToEnglish`, `webSwitchToSpanish` (023) | — | — | **Se retiran** (CA-026-09): los sustituye el selector |
 | Frases de «Esta web» de la política | Se redactan en la implementación (CA-026-14) | Igual | Revisión del propietario |
 
