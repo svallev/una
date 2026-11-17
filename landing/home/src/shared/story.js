@@ -24,3 +24,13 @@ export const SCENES = [
 
 // Parte de cada tramo en que la cámara descansa en la escena; el resto es viaje.
 export const HOLD = 0.42;
+
+/**
+ * La escena que nombra un ancla (`#fin` → la de cierre; CA-026-16): su índice, o −1 si el ancla no es
+ * exactamente el `id` de una escena (vacía, otra, con mayúsculas o `#__proto__`). Pura: se prueba en Node.
+ */
+export function sceneFromHash(hash) {
+  if (typeof hash !== 'string' || !hash.startsWith('#')) return -1;
+  const id = hash.slice(1);
+  return SCENES.findIndex((s) => s.id === id);
+}

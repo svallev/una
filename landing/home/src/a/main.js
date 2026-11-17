@@ -3,7 +3,7 @@ import './device.css';
 import './scene.css';
 import { lang, useLang } from '../shared/i18n.js';
 import { detectLang, applyMeta } from '../shared/locale.js';
-import { SCENES, HOLD } from '../shared/story.js';
+import { SCENES, HOLD, sceneFromHash } from '../shared/story.js';
 import { buildChrome } from '../shared/chrome.js';
 import { createJourney, sceneAt, reduceMotion, gsap } from '../shared/journey.js';
 import { pickMode, TALL_ENOUGH } from '../shared/mode.js';
@@ -49,6 +49,11 @@ const hold = setupHold(document.getElementById('solo'), { animate: !reduceMotion
 // Recorrido solo si no se pide reducir movimiento y la ventana es bastante alta para que cada escena quepa
 // entera; si no, apilada (CL-025-13, `mode.js`).
 const tall = window.matchMedia(TALL_ENOUGH);
+// Con un ancla de escena (`/#fin`, el «Descargar» de las páginas de contenido; CA-026-16) se abre en ella. Sin
+// JavaScript ya salta el navegador; con él, el salto se pierde al reescribir la página o, en el recorrido, porque
+// las escenas están en 3D. Diferencia con la maqueta (DEV-59).
+const target = sceneFromHash(location.hash);
+let journeyApi = null;
 if (pickMode({ reduceMotion, tallEnough: tall.matches }) === 'stacked') {
   // Sin cámara: paneles apilados, cada uno con su fondo (y los interruptores encendidos, `page.js`). La demo
   // sigue funcionando sin animación.
@@ -59,12 +64,22 @@ if (pickMode({ reduceMotion, tallEnough: tall.matches }) === 'stacked') {
   }, { rootMargin: '0px 0px -92% 0px' });
   scenes.forEach((sc) => io.observe(sc));
 } else {
-  startStage();
+  journeyApi = startStage();
   // Si al girar o cambiar de tamaño deja de caber, se vuelve a cargar y sale apilada (no se vuelve al recorrido).
   tall.addEventListener('change', () => { if (!tall.matches) location.reload(); });
 }
-// Ya montada: se deja ver (`base.css`).
-document.documentElement.classList.add('is-ready');
+// Ya montada: se deja ver (`base.css`). Con un ancla de escena, después del salto, para no enseñar antes la portada.
+const ready = () => document.documentElement.classList.add('is-ready');
+if (target < 0) ready();
+else {
+  // Tras `load`: al cargar, ScrollTrigger recalcula y el navegador puede volver a saltar al ancla por su cuenta.
+  const jump = () => requestAnimationFrame(() => {
+    if (journeyApi) journeyApi.jumpToScene(target);
+    else scenes[target].scrollIntoView();
+    ready();
+  });
+  if (document.readyState === 'complete') jump(); else window.addEventListener('load', jump, { once: true });
+}
 
 function startStage() {
   document.documentElement.classList.add('fx');
@@ -159,4 +174,5 @@ function startStage() {
   window.addEventListener('resize', place);
   void world.offsetWidth; // fija el estado de salida antes del primer fotograma: la portada también entra escalonada
   render(0);
+  return j;
 }

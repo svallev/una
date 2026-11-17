@@ -63,6 +63,17 @@ export function createJourney({ journey, onRender }) {
     lenis.scrollTo(st.start + (st.end - st.start) * p, { duration: 1.6 });
   };
 
+  // Salto sin viaje a la escena i (al abrir con su ancla, CA-026-16): con las medidas de ScrollTrigger al día, el
+  // scroll va de golpe al descanso de la escena y la línea de tiempo la alcanza sin el suavizado del scrub.
+  const jumpToScene = (i) => {
+    ScrollTrigger.refresh();
+    const st = tl.scrollTrigger;
+    const p = i === 0 ? 0 : (i + HOLD * 0.5) / total;
+    lenis.scrollTo(st.start + (st.end - st.start) * p, { immediate: true, force: true });
+    ScrollTrigger.update();
+    st.getTween()?.progress(1);
+  };
+
   // Solo en desarrollo: saltar a un tiempo de la historia desde la consola (__una.go(2.2)).
   if (import.meta.env.DEV) {
     window.__una = {
@@ -77,6 +88,7 @@ export function createJourney({ journey, onRender }) {
     N,
     total,
     scrollToScene,
+    jumpToScene,
     /** Ventana del viaje que llega a la escena i. */
     travel: (i) => ({ start: i - 1 + HOLD, duration: 1 - HOLD }),
   };
