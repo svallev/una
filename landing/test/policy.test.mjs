@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { comparePolicyStructure, extractPolicy, readIdentity } from "../build.mjs";
+import { comparePolicyStructure, extractPolicy, readIdentity, sectionAnchor } from "../build.mjs";
 import { checkSite } from "../check.mjs";
-import { cloneWorld, edit, read, specificErrors, world } from "./support.mjs";
+import { cloneWorld, edit, idsOf, read, specificErrors, tocOf, world } from "./support.mjs";
 
 let base;
 before(() => {
@@ -193,8 +193,8 @@ describe("CA-023-04: una sola fuente para la política", () => {
     assert.ok(html.includes("[CONTROLLER]"));
   });
 
-  // Desde la spec 026 (CA-026-01 y 04) la fecha ya no va en el pie: queda en su mitad, bajo el título (T-026-03).
-  test("CA-026-04: la fecha sale de la propia política, en cada mitad, y ya no va en el pie", () => {
+  // Desde la spec 026 (CA-026-01 y 04) la fecha ya no va en el pie ni en el cuerpo: va bajo el título de su mitad.
+  test("CA-026-04: la fecha sale de la propia política, bajo el título de cada mitad, y ya no va en el pie", () => {
     const w = cloneWorld(base);
     try {
       edit(w.paths.policy, (t) =>
@@ -207,8 +207,8 @@ describe("CA-023-04: una sola fuente para la política", () => {
       const html = read(join(w.dist, "privacy/index.html"));
       const footer = html.slice(html.indexOf('<footer class="end">'));
       const half = (lang) => html.slice(html.indexOf(`<section class="half" lang="${lang}"`), html.indexOf("</section>", html.indexOf(`<section class="half" lang="${lang}"`)));
-      assert.ok(half("es").includes("Última actualización:</strong> 3 de marzo de 2027</p>"));
-      assert.ok(half("en").includes("Last updated:</strong> March 3, 2027</p>"));
+      assert.ok(half("es").includes('<p class="date">Última actualización: 3 de marzo de 2027</p>'));
+      assert.ok(half("en").includes('<p class="date">Last updated: March 3, 2027</p>'));
       assert.ok(!/3 de marzo de 2027|March 3, 2027/.test(footer), "la fecha sigue en el pie");
       assert.deepEqual(checkSite(w.paths), []);
     } finally {
@@ -315,4 +315,126 @@ describe("CA-025-13: la política dice la verdad sobre la página de inicio", ()
     assert.ok(html.includes("<strong>The home page uses JavaScript</strong>"));
     assert.ok(!html.includes("una-lang"), "las notas de revisión no se publican");
   });
+});
+
+// ─── Índice, anclas y fecha (spec 026, CA-026-04) ────────────────────────────────────────────────────
+
+describe("CA-026-04: índice y fecha de la política", () => {
+  const page = (w = base) => read(join(w.dist, "privacy/index.html"));
+  /** Los titulares `##` de la mitad [lang] de la política. */
+  const titles = (lang) => [...extractPolicy(policyText())[lang].matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+  const NAME = { es: "En esta página", en: "On this page" };
+  const DATE = { es: "Última actualización: [FECHA]", en: "Last updated: [DATE]" };
+
+  for (const lang of ["es", "en"]) {
+    test(`(${lang}) un enlace por sección, en orden, a un ancla única que existe`, () => {
+      const html = page();
+      const toc = tocOf(html, lang);
+      assert.equal(toc.navCount, 1, "tiene que haber un índice por mitad");
+      assert.equal(toc.sections.length, titles(lang).length);
+      assert.deepEqual(toc.links.map((l) => l.text), toc.sections.map((h) => h.text));
+      assert.deepEqual(toc.links.map((l) => l.href), toc.sections.map((h) => `#${h.id}`));
+      const ids = idsOf(html);
+      for (const h of toc.sections) {
+        assert.ok(h.id.startsWith(`${lang}-`), `${h.id}: sin el prefijo del idioma`);
+        assert.equal(ids.filter((i) => i === h.id).length, 1, `${h.id}: no es único`);
+        assert.equal(h.tabindex, "-1", `${h.id}: sin tabindex="-1" (el foco va a la sección)`);
+      }
+      assert.deepEqual(toc.sections.map((h) => h.id), titles(lang).map((t) => sectionAnchor(lang, t)));
+    });
+
+    test(`(${lang}) el índice se llama «${NAME[lang]}» (no es un encabezado) y va tras la fecha, bajo el título`, () => {
+      const toc = tocOf(page(), lang);
+      assert.equal(toc.labelledby, `${lang}-toc`);
+      assert.equal(toc.name?.[1], `${lang}-toc`);
+      assert.equal(toc.name?.[2], NAME[lang]);
+      assert.ok(toc.h2At >= 0 && toc.h2At < toc.dateAt, "la fecha no va bajo el título");
+      assert.ok(toc.dateAt < toc.navAt, "la fecha no va antes del índice");
+      assert.ok(toc.navAt < toc.firstH3At, "el índice no va antes de las secciones");
+      assert.ok(toc.half.includes(`<p class="date">${DATE[lang]}</p>`), "la fecha no sale con webLastUpdated");
+      assert.equal(toc.half.split('<p class="date">').length - 1, 1, "la fecha sale más de una vez");
+    });
+  }
+
+  test("la línea de la fecha del Markdown sale del cuerpo", () => {
+    const html = page();
+    assert.ok(!html.includes("<strong>Última actualización:</strong>"));
+    assert.ok(!html.includes("<strong>Last updated:</strong>"));
+  });
+
+  test("anclas que no cambian: «Quién es el responsable» y «Who is responsible»", () => {
+    const ids = idsOf(page());
+    assert.ok(ids.includes("es-quien-es-el-responsable"));
+    assert.ok(ids.includes("en-who-is-responsible"));
+    assert.ok(ids.includes("es-esta-web") && ids.includes("en-this-website"));
+  });
+
+  test("/privacy#es y /privacy#en siguen valiendo (los <h2> de las mitades)", () => {
+    const ids = idsOf(page());
+    assert.ok(ids.includes("es") && ids.includes("en"));
+  });
+
+  test("dos secciones con el mismo titular en una mitad hacen fallar la construcción", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.policy, (t) => t.replace("## Menores\n", "## Tus derechos\n"));
+      assert.throws(() => w.build(), /misma ancla.*es-tus-derechos/);
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  test("la línea de la fecha repetida hace fallar la construcción", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.policy, (t) => t.replace("## Menores\n", "**Última actualización:** otra\n\n## Menores\n"));
+      assert.throws(() => w.build(), /más de una vez/);
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  test("un titular nuevo sale en el índice sin escribirlo a mano", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.policy, (t) => t.replace("## Menores\n", "## Una sección nueva\n\nTexto.\n\n## Menores\n").replace("## Children\n", "## A new section\n\nText.\n\n## Children\n"));
+      w.build();
+      const html = read(join(w.dist, "privacy/index.html"));
+      assert.ok(tocOf(html, "es").links.some((l) => l.href === "#es-una-seccion-nueva" && l.text === "Una sección nueva"));
+      assert.ok(tocOf(html, "en").links.some((l) => l.href === "#en-a-new-section"));
+      assert.deepEqual(checkSite(w.paths), []);
+    } finally {
+      w.cleanup();
+    }
+  });
+});
+
+describe("CA-026-04: la comprobación del índice (cada regla con un caso que falla)", () => {
+  const privacy = (w) => join(w.dist, "privacy/index.html");
+  const fails = (label, mutate, pattern) =>
+    test(label, () => {
+      const w = cloneWorld(base);
+      try {
+        mutate(w);
+        const errors = specificErrors(checkSite(w.paths));
+        assert.ok(errors.some((e) => pattern.test(e)), `no falló como se esperaba:\n${errors.join("\n")}`);
+      } finally {
+        w.cleanup();
+      }
+    });
+
+  fails("un enlace de menos en el índice", (w) => edit(privacy(w), (t) => t.replace(/<li><a href="#es-menores">[^<]*<\/a><\/li>\n/, "")), /índice.*«es»/);
+  fails("dos enlaces del índice cambiados de orden", (w) => edit(privacy(w), (t) => t.replace(/(<li><a href="#en-children">[^<]*<\/a><\/li>)\n(<li><a href="#en-your-rights">[^<]*<\/a><\/li>)/, "$2\n$1")), /índice.*«en»/);
+  fails("un enlace que apunta a un id que no existe", (w) => edit(privacy(w), (t) => t.replace('href="#es-menores"', 'href="#es-nada"')), /#es-nada.*no existe/);
+  fails("sin índice en una mitad", (w) => edit(privacy(w), (t) => t.replace(/<nav class="toc" aria-labelledby="en-toc">[\s\S]*?<\/nav>\n/, "")), /mitad «en» tiene 0 índices/);
+  fails("el índice sin su nombre", (w) => edit(privacy(w), (t) => t.replace('aria-labelledby="es-toc"', 'aria-labelledby="es"')), /índice.*«es».*nombre|aria-labelledby/);
+  fails("una sección sin tabindex=\"-1\"", (w) => edit(privacy(w), (t) => t.replace('<h3 id="es-menores" tabindex="-1">', '<h3 id="es-menores">')), /tabindex/);
+  fails("una sección sin el prefijo de su idioma", (w) => edit(privacy(w), (t) => t.replaceAll('es-menores"', 'menores"')), /prefijo|«es-»/);
+  fails("la fecha después del índice", (w) => edit(privacy(w), (t) => {
+    const date = /<p class="date">[^<]*<\/p>\n/.exec(t.slice(t.indexOf('<section class="half" lang="es"')))[0];
+    const without = t.replace(date, "");
+    return without.replace('<h3 id="es-', `${date}<h3 id="es-`);
+  }), /fecha/);
+  fails("sin fecha en una mitad de la política", (w) => edit(privacy(w), (t) => t.replace(/<p class="date">Last updated[^<]*<\/p>\n/, "")), /fecha/);
+  fails("un tabindex que no es -1", (w) => edit(privacy(w), (t) => t.replace('<a class="logo" href="/">', '<a class="logo" href="/" tabindex="0">')), /tabindex/);
 });

@@ -210,12 +210,30 @@ function rejectUnsupported(line) {
 }
 
 /**
+ * El ancla de una sección (spec 026, CA-026-04; plan §2.2): el prefijo del idioma [lang] y el titular [title] en
+ * minúsculas, sin acentos, con lo que no es letra o número convertido en «-» y sin «-» repetidos ni en los extremos
+ * (`es-quien-es-el-responsable`). Estable mientras no cambie el titular. Falla si no queda nada.
+ */
+export function sectionAnchor(lang, title) {
+  const slug = title
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!slug) mdFail(`la sección «${title}» no da ancla (sin letras ni números)`);
+  return `${lang}-${slug}`;
+}
+
+/**
  * Convierte [md] (el subconjunto: encabezados `#`–`###`, párrafos, listas con «- » y anidadas,
  * citas, **negrita**, *cursiva*, `código` y enlaces) a HTML. [shift] desplaza el nivel de los
- * encabezados; [firstHeadingAttrs] son los atributos del primero. Devuelve el HTML, los encabezados
- * que leyó y los huecos de identidad que dejó tal cual.
+ * encabezados; [firstHeadingAttrs] son los atributos del primero. Con [anchors] (`es` o `en`), cada sección
+ * (`## …`) lleva su ancla (`sectionAnchor`) y `tabindex="-1"`, para que el índice le pase el foco; dos con la
+ * misma ancla fallan. Devuelve el HTML, los encabezados que leyó (las secciones, con `id` y el texto sin marcas,
+ * `label`) y los huecos de identidad que dejó tal cual.
  */
-export function convertMarkdown(md, { shift = 0, firstHeadingAttrs = "" } = {}) {
+export function convertMarkdown(md, { shift = 0, firstHeadingAttrs = "", anchors = null } = {}) {
   const text = norm(md);
   if (text.includes("\t")) mdFail("no se admiten los tabuladores");
   const placeholder = /\{[^{}\n]*\}/.exec(text);
@@ -241,10 +259,20 @@ export function convertMarkdown(md, { shift = 0, firstHeadingAttrs = "" } = {}) 
     const heading = /^(#{1,3}) +(\S.*)$/.exec(line);
     if (heading) {
       const level = heading[1].length + shift;
-      const attrs = firstHeading && firstHeadingAttrs ? ` ${firstHeadingAttrs}` : "";
+      const title = heading[2].trim();
+      let attrs = firstHeading && firstHeadingAttrs ? ` ${firstHeadingAttrs}` : "";
       firstHeading = false;
-      headings.push({ level, text: heading[2].trim() });
-      blocks.push(`<h${level}${attrs}>${inline(heading[2].trim(), gaps)}</h${level}>`);
+      const content = inline(title, gaps);
+      if (anchors && heading[1].length === 2) {
+        const id = sectionAnchor(anchors, title);
+        const twin = headings.find((h) => h.id === id);
+        if (twin) mdFail(`dos secciones con la misma ancla, ${id}: «${twin.text}» y «${title}»`);
+        attrs += ` id="${id}" tabindex="-1"`;
+        headings.push({ level, text: title, id, label: content.replace(/<[^>]*>/g, "") });
+      } else {
+        headings.push({ level, text: title });
+      }
+      blocks.push(`<h${level}${attrs}>${content}</h${level}>`);
       i++;
       continue;
     }
@@ -440,27 +468,61 @@ function compareSignatures(a, b) {
 }
 
 const DATE_LINE = {
-  es: /^\*\*Última actualización:\*\*[ \t]*(.+)$/m,
-  en: /^\*\*Last updated:\*\*[ \t]*(.+)$/m,
+  es: /^\*\*Última actualización:\*\*[ \t]*(.+)$\n?/gm,
+  en: /^\*\*Last updated:\*\*[ \t]*(.+)$\n?/gm,
 };
+const DATE_KEY = { es: "fecha", en: "date" };
 
 /**
- * El HTML de las dos partes de la política con el nombre de la app, la fecha de «última
- * actualización» de cada una y los huecos que dejan. Desde la spec 026 la fecha ya no va en el pie.
+ * El índice de una mitad (spec 026, CA-026-04; plan §2.2): «En esta página» (`webOnThisPage`, no es un encabezado)
+ * y un enlace a cada sección de [headings], en orden.
  */
-export function policyFragments(md, appName) {
+function tableOfContents(lang, s, headings) {
+  const sections = headings.filter((h) => h.id);
+  const name = `${lang}-toc`;
+  const clash = sections.find((h) => h.id === name);
+  if (clash) throw new BuildError(`la sección «${clash.text}» da el ancla ${name}, la del nombre del índice`);
+  return [
+    `<nav class="toc" aria-labelledby="${name}">`,
+    `<p id="${name}" class="toc__name">${esc(s[lang].webOnThisPage)}</p>`,
+    "<ul>",
+    ...sections.map((h) => `<li><a href="#${h.id}">${h.label}</a></li>`),
+    "</ul>",
+    "</nav>",
+  ].join("\n");
+}
+
+/** [html] (que empieza por el `<h2>` de la mitad, en su propia línea) con [extra] justo después del `<h2>`. */
+function afterTitle(html, extra) {
+  const nl = html.indexOf("\n");
+  return nl < 0 ? [html, ...extra].join("\n") : [html.slice(0, nl), ...extra, html.slice(nl + 1)].join("\n");
+}
+
+/**
+ * El HTML de las dos partes de la política con el nombre de la app, y los huecos que dejan. Desde la spec 026
+ * (CA-026-04) la línea de «última actualización» de cada parte sale del cuerpo y va bajo el título con
+ * `webLastUpdated`, seguida del índice; [s] son los textos de `strings.json`.
+ */
+export function policyFragments(md, appName, s) {
   const { es, en } = extractPolicy(md);
   const result = {};
   for (const [lang, half] of [["es", es], ["en", en]]) {
     const text = half.replaceAll("{appName}", appName);
-    const converted = convertMarkdown(text, { shift: 1, firstHeadingAttrs: HALF_TITLE_ATTRS(lang) });
-    const date = DATE_LINE[lang].exec(text);
-    if (!date) {
-      throw new BuildError(
-        `la política (${lang}): falta la línea «${lang === "es" ? "**Última actualización:**" : "**Last updated:**"}»`,
-      );
-    }
-    result[lang] = { html: converted.html, gaps: converted.gaps, date: date[1].trim() };
+    const dates = [...text.matchAll(DATE_LINE[lang])];
+    const line = lang === "es" ? "**Última actualización:**" : "**Last updated:**";
+    if (dates.length === 0) throw new BuildError(`la política (${lang}): falta la línea «${line}»`);
+    if (dates.length > 1) throw new BuildError(`la política (${lang}): la línea «${line}» aparece más de una vez`);
+    const date = dates[0][1].trim();
+    const converted = convertMarkdown(text.replace(DATE_LINE[lang], ""), {
+      shift: 1,
+      firstHeadingAttrs: HALF_TITLE_ATTRS(lang),
+      anchors: lang,
+    });
+    // La fecha pasa por el mismo conversor (falla cerrada, huecos de identidad) y sale sin su párrafo.
+    const dateHtml = convertMarkdown(date).html.replace(/^<p>|<\/p>$/g, "");
+    const dateLine = `<p class="date">${fill(esc(s[lang].webLastUpdated), { [DATE_KEY[lang]]: dateHtml })}</p>`;
+    const html = afterTitle(converted.html, [dateLine, tableOfContents(lang, s, converted.headings)]);
+    result[lang] = { html, gaps: converted.gaps, date };
   }
   return result;
 }
@@ -510,15 +572,16 @@ export function stripComments(md) {
  * Tiene que empezar por un único título `# …` (sale como `<h2 id="es|en">`, igual que la política) y
  * cada tema es un `## …` (`<h3>`). [label] es el archivo, para los mensajes.
  */
-export function helpFragment(md, appName, lang, label) {
+export function helpFragment(md, appName, lang, label, s) {
   try {
     const text = stripComments(md).replaceAll("{appName}", appName);
-    const converted = convertMarkdown(text, { shift: 1, firstHeadingAttrs: HALF_TITLE_ATTRS(lang) });
+    const converted = convertMarkdown(text, { shift: 1, firstHeadingAttrs: HALF_TITLE_ATTRS(lang), anchors: lang });
     const levels = converted.headings.map((h) => h.level);
     if (levels[0] !== 2 || levels.filter((l) => l === 2).length !== 1) {
       throw new BuildError("tiene que empezar por un único título «# …» (y no llevar otro)");
     }
-    return converted;
+    // El índice, bajo el título (spec 026, CA-026-04).
+    return { ...converted, html: afterTitle(converted.html, [tableOfContents(lang, s, converted.headings)]) };
   } catch (e) {
     if (e instanceof BuildError) throw new BuildError(`${label}: ${e.message}`);
     throw e;
@@ -893,7 +956,7 @@ export function renderSite(paths) {
   // La página de inicio ya no sale de aquí: la construye Vite desde `landing/home/` (spec 025, `buildHome`).
 
   // Política: el texto es el de docs/legal/privacy-policy.md (CA-023-04).
-  const policy = policyFragments(readText(paths.policy, "privacy-policy.md"), name);
+  const policy = policyFragments(readText(paths.policy, "privacy-policy.md"), name, s);
   page("privacy/index.html", {
     ...pageTitles(s, name, arb.es.privacy, arb.en.privacy),
     h1: bilingualH1(arb.es.privacy, arb.en.privacy),
@@ -941,8 +1004,8 @@ export function renderSite(paths) {
 
   // Ayuda (CA-023-17): los textos de landing/src/help.{es,en}.md.
   const help = {
-    es: helpFragment(readText(paths.helpEs, "help.es.md"), name, "es", "help.es.md"),
-    en: helpFragment(readText(paths.helpEn, "help.en.md"), name, "en", "help.en.md"),
+    es: helpFragment(readText(paths.helpEs, "help.es.md"), name, "es", "help.es.md", s),
+    en: helpFragment(readText(paths.helpEn, "help.en.md"), name, "en", "help.en.md", s),
   };
   page("help/index.html", {
     ...pageTitles(s, name, arb.es.help, arb.en.help),

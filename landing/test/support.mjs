@@ -106,3 +106,39 @@ export const HEADER_BUILD =
 /** Un archivo de avisos de prueba, pequeño, con la cabecera [header] y [body] (el del artefacto). */
 export const fakeNotices = (header = HEADER_BUILD, body = "Third-party notices\nVersion: 0.0.0+0\n\nLicencia de prueba.\n") =>
   `${header}\n\n${body}`;
+
+/** La mitad [lang] (`es` o `en`) de una página construida: de su `<section class="half">` a su cierre. */
+export function halfOf(html, lang) {
+  const from = html.indexOf(`<section class="half" lang="${lang}"`);
+  if (from < 0) throw new Error(`no está la mitad «${lang}»`);
+  return html.slice(from, html.indexOf("</section>", from));
+}
+
+/**
+ * El índice de la mitad [lang] (spec 026, CA-026-04): dónde empiezan el `<h2>`, la fecha, el índice y la primera
+ * sección; los enlaces del índice (`href` y texto) y las secciones (`<h3>`: `id`, `tabindex` y texto).
+ */
+export function tocOf(html, lang) {
+  const half = halfOf(html, lang);
+  const strip = (s) => s.replace(/<[^>]*>/g, "");
+  const nav = /<nav class="toc" aria-labelledby="([^"]*)">([\s\S]*?)<\/nav>/.exec(half);
+  return {
+    half,
+    h2At: half.indexOf(`<h2 id="${lang}"`),
+    dateAt: half.indexOf('<p class="date">'),
+    navAt: nav ? nav.index : -1,
+    firstH3At: half.indexOf("<h3"),
+    navCount: half.split('<nav class="toc"').length - 1,
+    labelledby: nav?.[1],
+    name: nav ? /<p id="([^"]*)" class="toc__name">([^<]*)<\/p>/.exec(nav[2]) : null,
+    links: nav ? [...nav[2].matchAll(/<a href="([^"]*)">([\s\S]*?)<\/a>/g)].map((m) => ({ href: m[1], text: strip(m[2]) })) : [],
+    sections: [...half.matchAll(/<h3([^>]*)>([\s\S]*?)<\/h3>/g)].map((m) => ({
+      id: /\bid="([^"]*)"/.exec(m[1])?.[1],
+      tabindex: /\btabindex="([^"]*)"/.exec(m[1])?.[1],
+      text: strip(m[2]),
+    })),
+  };
+}
+
+/** Todos los `id` de una página construida. */
+export const idsOf = (html) => [...html.matchAll(/\sid="([^"]*)"/g)].map((m) => m[1]);

@@ -21,6 +21,7 @@ import {
   FONT_FILES,
   defaultPaths,
   kebab,
+  loadStrings,
   policyFragments,
   readIdentity,
   renderSite,
@@ -168,6 +169,7 @@ function checkPage(file, html, meta, errors) {
     if (!target) fail(`la mitad «${id}» no empieza por un <h2 id="${id}"> (destino del salto de idioma)`);
   }
   checkLayout(file, html, t, meta, { es: [esFrom, esTo], en: [enFrom, enTo] }, fail);
+  checkToc(file, t, { es: [esFrom, esTo], en: [enFrom, enTo] }, fail);
   if (withNotices) {
     checkWebCodeBlock(sections[2], closes[2], t, html, fail);
     checkNoticesBlock(sections[3], closes[3], t, html, fail);
@@ -322,6 +324,85 @@ function checkLayout(file, html, t, meta, halves, fail) {
   }
 }
 
+/** Las páginas con índice (CA-026-04) y, de ellas, la que lleva la fecha de «última actualización». */
+const TOC_PAGES = ["privacy/index.html", "help/index.html"];
+const DATED_PAGE = "privacy/index.html";
+
+/**
+ * El índice, las anclas y la fecha (spec 026, CA-026-04; plan §2.2): en la política y la Ayuda, cada mitad lleva
+ * tras su `<h2>` (y, en la política, tras la fecha) un único `<nav class="toc">` con nombre propio y un enlace por
+ * sección (`<h3 id="es-…" tabindex="-1">`), en orden. En licencias y la de error, ni índice ni fecha. Fuera de los
+ * `<h2>` de las mitades y los `<h3>`, ningún `tabindex`.
+ */
+function checkToc(file, t, halves, fail) {
+  const open = t.filter((x) => !x.closing);
+  const withToc = TOC_PAGES.includes(file);
+  const dated = file === DATED_PAGE;
+  for (const x of open) {
+    if (!("tabindex" in x.attrs)) continue;
+    const half = x.name === "h2" && (x.attrs.id === "es" || x.attrs.id === "en");
+    if (x.attrs.tabindex !== "-1" || !(half || x.name === "h3")) {
+      fail(`<${x.name} tabindex="${x.attrs.tabindex}"> (solo los <h2> de las mitades y las secciones <h3> llevan tabindex="-1")`);
+    }
+  }
+  for (const lang of ["es", "en"]) {
+    const [from, to] = halves[lang];
+    const here = open.filter((x) => x.start >= from && x.end <= to);
+    const navs = here.filter((x) => x.name === "nav" && hasClass(x, "toc"));
+    const dates = here.filter((x) => x.name === "p" && hasClass(x, "date"));
+    const h2 = here.find((x) => x.name === "h2" && x.attrs.id === lang);
+    const h3s = here.filter((x) => x.name === "h3");
+    if (!withToc) {
+      if (navs.length > 0) fail(`la mitad «${lang}» lleva un índice (solo la política y la Ayuda, CA-026-04)`);
+      if (dates.length > 0) fail(`la mitad «${lang}» lleva la fecha de «última actualización» (solo la política)`);
+      continue;
+    }
+    for (const h of h3s) {
+      if (!h.attrs.id?.startsWith(`${lang}-`)) fail(`una sección <h3> de la mitad «${lang}» sin un ancla con el prefijo «${lang}-» (${h.attrs.id ?? "sin id"})`);
+      if (h.attrs.tabindex !== "-1") fail(`la sección ${h.attrs.id ?? "sin id"} no lleva tabindex="-1" (el índice le pasa el foco)`);
+    }
+    if (navs.length !== 1) {
+      fail(`la mitad «${lang}» tiene ${navs.length} índices (<nav class="toc">; tiene que haber uno)`);
+      continue;
+    }
+    const nav = navs[0];
+    const name = `${lang}-toc`;
+    const label = inside(t, nav).find((x) => x.name === "p" && x.attrs.id === name && hasClass(x, "toc__name"));
+    if (nav.attrs["aria-labelledby"] !== name || !label) fail(`el índice de la mitad «${lang}» no tiene su nombre (aria-labelledby="${name}" y <p id="${name}" class="toc__name">)`);
+    const hrefs = inside(t, nav).filter((x) => x.name === "a").map((a) => a.attrs.href);
+    const want = h3s.map((h) => `#${h.attrs.id}`);
+    if (hrefs.join(" ") !== want.join(" ")) fail(`el índice de la mitad «${lang}» no lleva un enlace por sección, en orden (lleva ${hrefs.join(" ") || "nada"}; las secciones son ${want.join(" ") || "ninguna"})`);
+    if (h2 && nav.start < h2.start) fail(`el índice de la mitad «${lang}» va antes del título`);
+    if (h3s[0] && nav.start > h3s[0].start) fail(`el índice de la mitad «${lang}» va después de la primera sección`);
+    if (dated) {
+      if (dates.length !== 1) fail(`la mitad «${lang}» tiene ${dates.length} fechas de «última actualización» (tiene que haber una, bajo el título)`);
+      else if ((h2 && dates[0].start < h2.start) || dates[0].start > nav.start) fail(`la fecha de la mitad «${lang}» tiene que ir bajo el título y antes del índice`);
+    } else if (dates.length > 0) fail(`la mitad «${lang}» lleva la fecha de «última actualización» (solo la política)`);
+  }
+}
+
+/** La página que sirve cada ruta del sitio (para los enlaces con ancla a otra página). */
+const PAGE_OF_PATH = { "/privacy": "privacy/index.html", "/help": "help/index.html", "/licenses": "licenses/index.html" };
+
+/**
+ * CA-026-04: cada enlace con ancla de las cuatro páginas (`#x` a la misma página o `/privacy#x` a otra) apunta a un
+ * `id` que existe. `/#…` es de la página de inicio, que comprueba `checkHome`.
+ */
+function checkAnchors(pages, errors) {
+  const ids = new Map();
+  for (const [file, html] of pages) ids.set(file, new Set(tags(html).filter((x) => !x.closing && x.attrs.id).map((x) => x.attrs.id)));
+  for (const [file, html] of pages) {
+    for (const a of tags(html)) {
+      if (a.closing || a.name !== "a") continue;
+      const m = /^([^#]*)#(.*)$/.exec(a.attrs.href ?? "");
+      if (!m || m[1] === "/") continue;
+      const target = m[1] === "" ? file : PAGE_OF_PATH[m[1]];
+      if (!target) errors.push(`${file}: el enlace ${a.attrs.href} lleva un ancla a una página que no es de la web`);
+      else if (!ids.get(target)?.has(m[2])) errors.push(`${file}: el enlace ${a.attrs.href} apunta a un id que no existe${target === file ? "" : ` en ${target}`}`);
+    }
+  }
+}
+
 /**
  * El bloque del código de esta web (spec 025, CA-025-18): una tercera `<section aria-labelledby="web-code">`, tras
  * las dos mitades y antes de los avisos de la app, con su `<h2 id="web-code">` y el texto en un `<pre lang="en">`.
@@ -365,7 +446,8 @@ const escapeText = (s) =>
 function checkPolicy(paths, dist, name, errors) {
   const file = "privacy/index.html";
   const html = readFileSync(join(dist, file), "utf8");
-  const expected = policyFragments(readFileSync(paths.policy, "utf8"), name);
+  const strings = loadStrings(readFileSync(paths.strings, "utf8"));
+  const expected = policyFragments(readFileSync(paths.policy, "utf8"), name, strings);
   for (const lang of ["es", "en"]) {
     const m = new RegExp(`<section class="half" lang="${lang}" data-l="${lang}" aria-labelledby="${lang}">\\n([\\s\\S]*?)\\n</section>`).exec(html);
     if (!m) {
@@ -844,10 +926,13 @@ export function checkSite(paths = defaultPaths(), { dist = paths.out } = {}) {
   }
 
   // Páginas.
+  const pages = new Map();
   for (const page of REQUIRED_PAGES) {
     if (missing.has(page)) continue;
-    checkPage(page, readFileSync(join(dist, page), "utf8"), site.meta.get(page), errors);
+    pages.set(page, readFileSync(join(dist, page), "utf8"));
+    checkPage(page, pages.get(page), site.meta.get(page), errors);
   }
+  checkAnchors(pages, errors);
   if (!missing.has("privacy/index.html")) checkPolicy(paths, dist, identity.displayName, errors);
 
   // CSS.

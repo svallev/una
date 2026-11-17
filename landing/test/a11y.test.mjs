@@ -127,10 +127,11 @@ describe("CA-023-15: idioma, viewport, estructura", () => {
   // Desde la spec 026 el salto al otro idioma es el selector ES / EN, encima del título (CA-026-09).
   fails("CA-026-09: sin la opción ES en el selector", (w) => edit(notFound(w), (t) => t.replace(/<a href="#es" hreflang="es"[^\n]*<\/a>\n/, "")), /selector/);
   fails("CA-026-09: la opción ES sin lang", (w) => edit(notFound(w), (t) => t.replace('href="#es" hreflang="es" lang="es"', 'href="#es" hreflang="es"')), /selector.*lang/);
-  fails("el mismo salto de nivel en las dos mitades", (w) => edit(privacy(w), (t) => t.replaceAll("<h3>", "<h5>").replaceAll("</h3>", "</h5>")), /salta/);
+  // Desde la spec 026 cada <h3> lleva su ancla y tabindex="-1" (CA-026-04).
+  fails("el mismo salto de nivel en las dos mitades", (w) => edit(privacy(w), (t) => t.replace(/<h3 [^>]*>/g, "<h5>").replaceAll("</h3>", "</h5>")), /salta/);
   fails("un encabezado a otro nivel solo en la mitad inglesa (sin saltarse ninguno)", (w) => edit(privacy(w), (t) => {
     const i = t.indexOf('<section class="half" lang="en"');
-    return t.slice(0, i) + t.slice(i).replace("<h3>", "<h2>").replace("</h3>", "</h2>");
+    return t.slice(0, i) + t.slice(i).replace(/<h3 [^>]*>/, "<h2>").replace("</h3>", "</h2>");
   }), /mismo nivel|encabezados de la mitad inglesa/);
   fails("sin lang en la página", (w) => edit(privacy(w), (t) => t.replace('<html lang="es" ', "<html ")), /lang/);
   fails("la mitad inglesa sin lang", (w) => edit(privacy(w), (t) => t.replace('<section class="half" lang="en" data-l="en" aria-labelledby="en">', '<section class="half" aria-labelledby="en">')), /lang/);
@@ -139,12 +140,12 @@ describe("CA-023-15: idioma, viewport, estructura", () => {
   fails("CA-026-09: sin la opción EN en el selector", (w) => edit(notFound(w), (t) => t.replace(/<a href="#en" hreflang="en"[^\n]*<\/a>\n/, "")), /selector/);
   fails("CA-026-09: la opción EN va a otro sitio", (w) => edit(notFound(w), (t) => t.replace('href="#en"', 'href="#es"')), /selector.*#en/);
   fails("el destino del salto no existe", (w) => edit(privacy(w), (t) => t.replace('<h2 id="en"', '<h2 id="ingles"')), /id="en"|destino/);
-  fails("dos <h1>", (w) => edit(privacy(w), (t) => t.replace("<h3>", "<h1>Otro</h1><h3>")), /h1/);
+  fails("dos <h1>", (w) => edit(privacy(w), (t) => t.replace("<h3 ", "<h1>Otro</h1><h3 ")), /h1/);
   fails("sin <h1>", (w) => edit(notFound(w), (t) => t.replace("<h1>", "<h2>").replace("</h1>", "</h2>")), /h1/);
-  fails("un salto de nivel de encabezado", (w) => edit(privacy(w), (t) => t.replace("<h3>", "<h5>").replace("</h3>", "</h5>")), /salta|nivel/);
+  fails("un salto de nivel de encabezado", (w) => edit(privacy(w), (t) => t.replace(/<h3 [^>]*>/, "<h5>").replace("</h3>", "</h5>")), /salta|nivel/);
   fails("la mitad inglesa con otro desplazamiento de encabezados", (w) => edit(privacy(w), (t) => {
     const i = t.indexOf('<section class="half" lang="en"');
-    const rest = t.slice(i).replace(/<h3>/g, "<h4>").replace(/<\/h3>/g, "</h4>");
+    const rest = t.slice(i).replace(/<h3 [^>]*>/g, "<h4>").replace(/<\/h3>/g, "</h4>");
     return t.slice(0, i) + rest;
   }), /salta|nivel|desplaza|encabezados/);
   fails("sin <main>", (w) => edit(notFound(w), (t) => t.replace("<main>", "<div>").replace("</main>", "</div>")), /main/);

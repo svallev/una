@@ -36,7 +36,10 @@ describe("CA-025-01: cinco páginas, la de inicio es la landing", () => {
       assert.ok(m, `falta la mitad «${lang}»`);
       return m[1]
         .replace(/^<p><a class="block-link" href="#e[sn]" lang="e[sn]">[^<]*<\/a><\/p>\n/, "")
-        .replace(` class="half__title"`, "");
+        .replace(` class="half__title"`, "")
+        // El índice y las anclas de las secciones son de la spec 026 (CA-026-04): el resto, igual.
+        .replace(/<nav class="toc"[\s\S]*?<\/nav>\n/, "")
+        .replace(/<h3 id="[^"]*" tabindex="-1">/g, "<h3>");
     };
     for (const f of ["help/index.html", "404.html"]) {
       const now = read(join(base.dist, f));
