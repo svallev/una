@@ -58,7 +58,7 @@ spikes/     Pruebas técnicas de las primeras fases
 
 ## Stack (provisional)
 
-Flutter (versión en `app/.fvmrc`), Dart, SQLite con drift, Riverpod; Android 8+ (API 26) e iOS 16+ (al final). La web (`landing/`) es Node sin dependencias para las páginas de contenido y Vite, GSAP y Lenis para la landing; se aloja en Vercel. Justificación en [ADR-0001](docs/adr/0001-stack-tecnologico.md), [ADR-0009](docs/adr/0009-monorepo-y-landing.md) y [ADR-0027](docs/adr/0027-landing-con-vite-gsap-y-lenis.md).
+Flutter (versión en `.fvmrc`), Dart, SQLite con drift, Riverpod; Android 8+ (API 26) e iOS 16+ (al final). La web (`landing/`) es Node sin dependencias para las páginas de contenido y Vite, GSAP y Lenis para la landing; se aloja en Vercel. Justificación en [ADR-0001](docs/adr/0001-stack-tecnologico.md), [ADR-0009](docs/adr/0009-monorepo-y-landing.md) y [ADR-0027](docs/adr/0027-landing-con-vite-gsap-y-lenis.md).
 
 ### Comandos
 
