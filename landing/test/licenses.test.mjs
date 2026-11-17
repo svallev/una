@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
-import { assertNoticesRoundTrip, build, checkNoticesText, defaultPaths, parseNotices, parseNoticesBody, parseWebNotices, rebuildNoticesBody } from "../build.mjs";
+import { assertNoticesRoundTrip, build, checkNoticesText, defaultPaths, parseNotices, parseNoticesBody, parseWebNotices, rebuildNoticesBody, renderSite } from "../build.mjs";
 import { checkSite } from "../check.mjs";
 import { HEADER_BUILD, HEADER_VERSION, cloneWorld, edit, fakeNotices, noticesBody, read, specificErrors, world } from "./support.mjs";
 
@@ -136,16 +136,17 @@ describe("CA-023-16: la página de licencias", () => {
       assert.ok(es >= 0 && en > es && web > en && notices > web, "orden: español, inglés, código de esta web y avisos");
       assert.equal(html.split(marker).length - 1, 1, "los avisos se publican una sola vez");
       assert.ok(html.indexOf(marker) > notices);
-      assert.match(html, /<h2 id="notices">[^<]+<\/h2>\n<pre lang="en">Third-party notices\n/);
+      assert.match(html, /<h2 id="notices">[^<]+<\/h2>\n<pre lang="en" class="notices__preamble">Third-party notices\n/);
       assert.equal(html.split('<section ').length - 1, 4);
     } finally {
       w.cleanup();
     }
   });
 
-  test("las dos mitades enlazan al archivo de texto y la web lo publica tal cual", () => {
+  // CA-027-06: desde la 027, el destino del enlace de saltar la lista es un tercer enlace al archivo, tras los grupos.
+  test("CA-027-06: las dos mitades y el final del bloque de avisos enlazan al archivo de texto, y la web lo publica tal cual", () => {
     const html = read(licenses(base));
-    assert.equal(html.split('href="/third-party-notices.txt"').length - 1, 2);
+    assert.equal(html.split('href="/third-party-notices.txt"').length - 1, 3);
     assert.equal(read(join(base.dist, "third-party-notices.txt")), read(base.paths.notices));
   });
 
@@ -244,8 +245,12 @@ describe("CA-023-16: la comprobación de la web", () => {
   fails("el bloque de avisos sin lang=\"en\"", (w) => edit(licenses(w), (t) => t.replace('<section lang="en" aria-labelledby="notices">', '<section aria-labelledby="notices">')), /avisos|lang/);
   fails("el bloque de avisos con lang=\"es\"", (w) => edit(licenses(w), (t) => t.replace('<section lang="en" aria-labelledby="notices">', '<section lang="es" aria-labelledby="notices">')), /avisos|lang/);
   fails("el bloque de avisos sin su <h2>", (w) => edit(licenses(w), (t) => t.replace(/<h2 id="notices">([^<]*)<\/h2>/, '<h3 id="notices">$1</h3>')), /avisos|h2|salta/);
-  fails("el bloque de avisos sin <pre>", (w) => edit(licenses(w), (t) => t.replace(/(<h2 id="notices">[^<]*<\/h2>\n)<pre lang="en">([\s\S]*?)<\/pre>/, "$1<div>$2</div>")), /<pre|avisos/);
-  fails("CA-026-12: los avisos en un <pre> sin lang=\"en\"", (w) => edit(licenses(w), (t) => t.replace(/(<h2 id="notices">[^<]*<\/h2>\n)<pre lang="en">/, "$1<pre>")), /avisos.*<pre lang="en">/);
+  // CA-027-01: desde la 027 el bloque lleva varios <pre> (el preámbulo y uno por aviso): se quitan todos.
+  fails("CA-027-01: el bloque de avisos sin <pre>", (w) => edit(licenses(w), (t) => {
+    const at = t.indexOf('<section lang="en" aria-labelledby="notices">');
+    return t.slice(0, at) + t.slice(at).replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/g, "<div>$1</div>");
+  }), /<pre|avisos/);
+  fails("CA-026-12, CA-027-03: el preámbulo de los avisos en un <pre> sin lang=\"en\"", (w) => edit(licenses(w), (t) => t.replace(/(<h2 id="notices">[^<]*<\/h2>\n)<pre lang="en" class="notices__preamble">/, "$1<pre>")), /avisos.*<pre lang="en">/);
   fails("el bloque de avisos sin aria-labelledby", (w) => edit(licenses(w), (t) => t.replace('<section lang="en" aria-labelledby="notices">', '<section lang="en">')), /aria-labelledby|avisos/);
   fails("una tercera mitad que no es de avisos", (w) => edit(licenses(w), (t) => t.replace("</main>", '<section lang="fr" aria-labelledby="fr"><p>x</p></section></main>')), /section|avisos/);
   fails("el bloque de avisos antes de las mitades", (w) => edit(licenses(w), (t) => {
@@ -274,7 +279,7 @@ describe("CA-023-16: la comprobación de la web", () => {
       w.cleanup();
     }
   });
-  fails("un <script> en un aviso sin escapar", (w) => edit(licenses(w), (t) => t.replace(/(<h2 id="notices">[^<]*<\/h2>\n<pre lang="en">)/, "$1<script>1</script>")), /script/);
+  fails("CA-027-04: un <script> en un aviso sin escapar", (w) => edit(licenses(w), (t) => t.replace(/(<details class="group"><summary>[\s\S]*?<\/summary>\n<pre lang="en">)/, "$1<script>1</script>")), /script/);
   fails("la cabecera del archivo con otro formato", (w) => edit(w.paths.notices, (t) => t.replace(/^[^\n]*/, "Versión: x")), /cabecera/);
 });
 
@@ -583,4 +588,287 @@ describe("CA-027-04, CA-027-05: la construcción falla cerrado", () => {
     const { w } = withNotices(fakeNotices(HEADER_BUILD, noticesBody("built in /home/runner/work\tx")));
     w.cleanup();
   });
+});
+
+// ─── El bloque de avisos en grupos (spec 027, T-027-03) ──────────────────────────────────────────────
+
+/**
+ * El texto del DOM de un trozo de HTML que emite `esc`: las cinco entidades y nada más (otra entidad hace fallar el
+ * test, plan §4). Con [pre], además, el salto de línea que el HTML se salta justo tras `<pre>`.
+ */
+function domText(html, { pre = false } = {}) {
+  const other = /&(?!amp;|lt;|gt;|quot;|#39;)[^;\s]*;/.exec(html);
+  if (other) throw new Error(`una entidad que no emite esc: ${other[0]}`);
+  const text = html.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", '"').replaceAll("&#39;", "'").replaceAll("&amp;", "&");
+  return pre && text.startsWith("\n") ? text.slice(1) : text;
+}
+
+const BILINGUAL = /^<span lang="es" data-l="es">([^<]*)<\/span><span data-l="sep"> \/ <\/span><span lang="en" data-l="en">([^<]*)<\/span>$/;
+const GROUP = /<details([^>]*)><summary><span class="group__name">([^<]*)<\/span> <span class="group__count">\(([\s\S]*?)\)<\/span><\/summary>\n([\s\S]*?)\n<\/details>/g;
+
+/** El bloque de avisos de una página construida, leído sin el analizador: preámbulo, enlaces y grupos. */
+function noticesBlockOf(html) {
+  const at = html.indexOf('<section lang="en" aria-labelledby="notices">');
+  assert.ok(at >= 0, "falta el bloque de avisos");
+  const block = html.slice(at, html.indexOf("</section>", at) + "</section>".length);
+  const preamble = /<pre lang="en" class="notices__preamble">([\s\S]*?)<\/pre>/.exec(block);
+  const groups = [...block.matchAll(GROUP)].map((m) => {
+    const count = BILINGUAL.exec(m[3]);
+    return {
+      at: m.index,
+      end: m.index + m[0].length,
+      attrs: m[1],
+      name: domText(m[2]),
+      count: count ? { es: count[1], en: count[2] } : null,
+      texts: [...m[4].matchAll(/<pre lang="en">([\s\S]*?)<\/pre>/g)].map((p) => domText(p[1], { pre: true })),
+      inner: m[4],
+    };
+  });
+  return { block, preamble, groups };
+}
+
+/** Los avisos del cuerpo, partidos a mano (sin el analizador): `{ preamble, notices: [[cabecera, texto]], sections }`. */
+function noticesByHand(body) {
+  const begin = body.indexOf("===== BEGIN NOTICES =====\n");
+  const end = body.indexOf("\n===== END NOTICES =====\n");
+  const notices = body
+    .slice(begin + "===== BEGIN NOTICES =====\n".length, end)
+    .split(`\n${DASH80}\n`)
+    .map((c) => [c.slice(0, c.indexOf("\n\n")).split("\n").join(", "), c.slice(c.indexOf("\n\n") + 2)]);
+  const sections = [...body.slice(end).matchAll(/^===== BEGIN (\S+) =====\n([\s\S]*?)\n===== END \1 =====$/gm)].map((m) => [m[1], m[2]]);
+  return { preamble: body.slice(0, begin), notices, sections };
+}
+
+/** Los pares (nombre del grupo, texto) publicados en el DOM, en el orden de la página. */
+const publishedPairs = (groups) => groups.flatMap((g) => g.texts.map((t) => [g.name, t]));
+
+/**
+ * CA-027-02 (c): recorriendo los grupos de la página en orden y reinsertando cabeceras, separadores y marcadores,
+ * sale el cuerpo desde «BEGIN NOTICES». Los últimos [sectionCount] grupos son las secciones (contadas a mano).
+ */
+function rebuildFromPage(groups, sectionCount) {
+  const packages = groups.slice(0, groups.length - sectionCount);
+  const sections = groups.slice(groups.length - sectionCount);
+  const notices = packages.flatMap((g) => g.texts.map((t) => `${g.name.split(", ").join("\n")}\n\n${t}`));
+  const lines = ["===== BEGIN NOTICES =====", notices.join(`\n${DASH80}\n`), "===== END NOTICES ====="];
+  for (const s of sections) lines.push(`===== BEGIN ${s.name} =====`, s.texts.join(""), `===== END ${s.name} =====`);
+  return `${lines.join("\n")}\n`;
+}
+
+/** Lo que tiene que cumplir la página frente al cuerpo [body] (CA-027-02 a, b y c; CA-027-03). Lanza si no. */
+function assertPageMatchesBody(html, body) {
+  const { preamble, groups } = noticesBlockOf(html);
+  const hand = noticesByHand(body);
+  assert.ok(preamble, "falta el preámbulo");
+  assert.equal(domText(preamble[1], { pre: true }), hand.preamble, "el preámbulo, tal cual");
+  const sorted = (pairs) => pairs.map((p) => JSON.stringify(p)).sort();
+  assert.deepEqual(sorted(publishedPairs(groups)), sorted([...hand.notices, ...hand.sections]), "(a) los pares (cabecera, texto)");
+  assert.equal(rebuildFromPage(groups, hand.sections.length), body.slice(body.indexOf("===== BEGIN NOTICES =====")), "(c) la reconstrucción");
+}
+
+/** Un cuerpo de prueba con todo lo que CA-027-01 y 02 piden ver. */
+const TRICKY = `\n  Copyright "x" & 'y'\n</pre><pre lang="x"></details><script>alert(1)</script> &lt; fin  \n\n`;
+const GROUPED_BODY = [
+  "Third-party notices",
+  "Version: 0.0.0+0",
+  "===== BEGIN ENTRIES =====",
+  "dart:a 1.0.0",
+  "===== END ENTRIES =====",
+  "",
+  "===== BEGIN NOTICES =====",
+  "a",
+  "",
+  "text a1",
+  DASH80,
+  "a",
+  "",
+  TRICKY,
+  DASH80,
+  "a",
+  "",
+  "text a1",
+  DASH80,
+  "b",
+  "c",
+  "",
+  "text bc",
+  DASH80,
+  "c",
+  "b",
+  "",
+  "text cb",
+  DASH80,
+  "dart",
+  "",
+  "text dart",
+  DASH80,
+  "dart",
+  "perfetto",
+  "",
+  "text dart perfetto",
+  "===== END NOTICES =====",
+  "===== BEGIN assets/x.txt =====",
+  "section x",
+  DASH80,
+  "more x",
+  "===== END assets/x.txt =====",
+  "===== BEGIN assets/y.txt =====",
+  "section y",
+  "===== END assets/y.txt =====",
+  "",
+].join("\n");
+
+describe("CA-027-01, 02, 03, 06 y 07: el bloque de avisos en grupos (archivo de prueba)", () => {
+  let w;
+  let html;
+  before(() => {
+    ({ w } = withNotices(fakeNotices(HEADER_BUILD, GROUPED_BODY)));
+    html = read(licenses(w));
+  });
+  after(() => w.cleanup());
+
+  test("CA-027-01: un grupo por cabecera exacta, en orden, con «, », y las secciones detrás con su ruta", () => {
+    const { groups } = noticesBlockOf(html);
+    assert.deepEqual(groups.map((g) => g.name), ["a", "b, c", "c, b", "dart", "dart, perfetto", "assets/x.txt", "assets/y.txt"]);
+    assert.deepEqual(groups[0].texts, ["text a1", TRICKY, "text a1"], "los avisos en el orden del archivo, también los idénticos (CL-027-2)");
+    assert.deepEqual(groups[5].texts, [`section x\n${DASH80}\nmore x`]);
+  });
+
+  test("CA-027-01: el recuento en español y en inglés («1 aviso» / «N avisos»), y todos plegados", () => {
+    const { groups } = noticesBlockOf(html);
+    assert.deepEqual(groups[0].count, { es: "3 avisos", en: "3 notices" });
+    for (const g of groups.slice(1)) assert.deepEqual(g.count, { es: "1 aviso", en: "1 notice" }, g.name);
+    for (const g of groups) assert.equal(g.attrs, ' class="group"', `${g.name}: sin open, sin id`);
+    assert.equal(html.split("<details").length - 1, groups.length, "ningún <details> que no sea un grupo");
+  });
+
+  test("CA-027-01: dentro de un grupo, solo un <pre lang=\"en\"> por aviso", () => {
+    for (const g of noticesBlockOf(html).groups) {
+      const rest = g.inner.replace(/<pre lang="en">[\s\S]*?<\/pre>/g, "");
+      assert.match(rest, /^\n*$/, `${g.name}: algo más que los <pre>`);
+    }
+  });
+
+  test("CA-027-02 (a), (b) y (c): pares, texto entero y reconstrucción", () => {
+    assertPageMatchesBody(html, GROUPED_BODY);
+  });
+
+  test("CA-027-02 (b): un texto con blancos, comillas, «</pre>», «</details>», «<script>» y «&lt;» sale entero y escapado", () => {
+    const at = html.indexOf('<section lang="en" aria-labelledby="notices">');
+    const groups = noticesBlockOf(html).groups;
+    // 2 <pre> fuera de los grupos (el código de la web y el preámbulo) y uno por aviso o sección.
+    assert.equal(html.split("<pre").length - 1, 2 + groups.reduce((n, g) => n + g.texts.length, 0));
+    assert.equal(html.split("<script").length - 1, 1, "solo el de /lang.js");
+    assert.equal(html.split("</details>").length - 1, groups.length);
+    assert.ok(html.slice(at).includes("&lt;/pre&gt;&lt;pre lang=&quot;x&quot;&gt;&lt;/details&gt;&lt;script&gt;alert(1)&lt;/script&gt; &amp;lt; fin"));
+    assert.deepEqual(checkSite(w.paths), []);
+  });
+
+  test("CA-027-02: la comparación detecta un aviso perdido, repetido o con un carácter cambiado (en el HTML)", () => {
+    const first = '<pre lang="en">text a1</pre>';
+    const tampered = [
+      html.replace(`${first}\n`, ""),
+      html.replace(first, `${first}\n${first}`),
+      html.replace(first, '<pre lang="en">text a2</pre>'),
+      html.replace('<pre lang="en">text bc</pre>', '<pre lang="en">text bc </pre>'),
+      html.replace("section y", "section  y"),
+      html.replace("dart:a 1.0.0", "dart:a 1.0.1"),
+    ];
+    for (const t of tampered) {
+      assert.notEqual(t, html);
+      assert.throws(() => assertPageMatchesBody(t, GROUPED_BODY), assert.AssertionError);
+    }
+  });
+
+  test("CA-027-03: el preámbulo va primero, tal cual y sin plegar, antes del primer grupo", () => {
+    const { block, preamble, groups } = noticesBlockOf(html);
+    assert.ok(preamble.index < groups[0].at);
+    assert.equal(block.indexOf("<pre"), preamble.index, "es el primer <pre> del bloque");
+    assert.equal(domText(preamble[1], { pre: true }), GROUPED_BODY.slice(0, GROUPED_BODY.indexOf("===== BEGIN NOTICES =====")));
+  });
+
+  test("CA-027-06: el enlace de saltar antes del primer grupo y su destino (el enlace al archivo) tras el último, dentro del bloque", () => {
+    const { block, groups } = noticesBlockOf(html);
+    const both = (es, en) => `<span lang="es" data-l="es">${es}</span><span data-l="sep"> / </span><span lang="en" data-l="en">${en}</span>`;
+    const skip = `<p><a href="#notices-end" class="block-link"><span>${both("Saltar la lista de avisos", "Skip the notices list")}</span></a></p>`;
+    const end = `<p class="notices__end"><a id="notices-end" href="/third-party-notices.txt" class="block-link"><span>${both("Ver el archivo de avisos como texto", "View the notices file as plain text")}</span></a></p>`;
+    assert.ok(block.includes(skip), "el enlace de saltar, con el texto bilingüe en un solo <span>");
+    assert.ok(block.indexOf(skip) < groups[0].at);
+    assert.ok(block.indexOf(end) > groups.at(-1).end, "el destino, tras el último grupo");
+    assert.ok(block.endsWith(`${end}\n</section>`), "y dentro de la sección");
+    assert.equal(html.split('id="notices-end"').length - 1, 1);
+    assert.ok(!/\sid="(es|en)-/.test(block), "ningún id del bloque empieza por es- o en- (lang.js lo tomaría por un idioma)");
+  });
+
+  test("CA-027-07: el texto de un aviso sale una sola vez, y #notices sigue existiendo", () => {
+    assert.equal(html.split("text dart perfetto").length - 1, 1);
+    assert.equal(html.split('id="notices"').length - 1, 1);
+  });
+});
+
+describe("CA-027-01, 02, 03 y 08: el bloque de avisos en grupos (archivo real)", () => {
+  const body = () => norm(parseNotices(read(base.paths.notices)).body);
+  const norm = (t) => t.replace(/\r\n?/g, "\n");
+
+  test("CA-027-01: grupos y avisos = recuento independiente; todos plegados y con su recuento", () => {
+    const { groups } = noticesBlockOf(read(licenses(base)));
+    const hand = countByHand(body());
+    const sections = noticesByHand(body()).sections.length;
+    assert.equal(groups.length, hand.distinct + sections);
+    assert.equal(groups.reduce((n, g) => n + g.texts.length, 0), hand.notices + sections);
+    for (const g of groups) {
+      const n = g.texts.length;
+      assert.deepEqual(g.count, n === 1 ? { es: "1 aviso", en: "1 notice" } : { es: `${n} avisos`, en: `${n} notices` }, g.name);
+      assert.equal(g.attrs, ' class="group"', g.name);
+    }
+  });
+
+  test("CA-027-02 (a), (b) y (c) y CA-027-03: el DOM da el archivo", () => {
+    assertPageMatchesBody(read(licenses(base)), body());
+  });
+
+  test("CA-027-08: el HTML pesa como mucho el texto publicado más 250 KB", () => {
+    const hand = noticesByHand(body());
+    const published = hand.preamble + [...hand.notices, ...hand.sections].map(([, t]) => t).join("");
+    const size = Buffer.byteLength(read(licenses(base)));
+    assert.ok(size <= Buffer.byteLength(published) + 250_000, `${size} bytes frente a ${Buffer.byteLength(published)} de texto`);
+  });
+});
+
+describe("CA-027-07: el archivo de texto, byte a byte", () => {
+  test("dist/third-party-notices.txt es el de landing/, también con saltos de línea de Windows", () => {
+    const crlf = fakeNotices(HEADER_BUILD, GROUPED_BODY.replaceAll("\n", "\r\n")); // la cabecera no admite \r
+    const { w } = withNotices(crlf);
+    try {
+      assert.ok(readFileSync(join(w.dist, "third-party-notices.txt")).equals(Buffer.from(crlf, "utf8")));
+      assertPageMatchesBody(read(licenses(w)), GROUPED_BODY);
+    } finally {
+      w.cleanup();
+    }
+  });
+});
+
+describe("CA-027-02: la construcción comprueba la ida y vuelta", () => {
+  // Pendiente de T-027-02: no basta con probar `assertNoticesRoundTrip` aparte; `renderSite` la llama con lo que
+  // devuelve el analizador y saca el HTML de ese mismo resultado.
+  const tamperedParser = (tamper) => (b, o) => {
+    const p = parseNoticesBody(b, o);
+    tamper(p);
+    return p;
+  };
+
+  test("con el analizador de verdad, construye", () => {
+    assert.ok(renderSite(base.paths, { parseBody: tamperedParser(() => {}) }).files.has("licenses/index.html"));
+  });
+
+  for (const [label, tamper] of [
+    ["pierde un aviso", (p) => p.groups.find((g) => g.notices.length > 1).notices.pop()],
+    ["repite un aviso", (p) => p.groups[0].notices.push(p.groups[0].notices[0])],
+    ["cambia un carácter", (p) => (p.groups[0].notices[0] = `${p.groups[0].notices[0]} `)],
+    ["cambia una sección", (p) => (p.sections[0].text = p.sections[0].text.slice(1))],
+  ]) {
+    test(`renderSite falla si el analizador ${label}`, () => {
+      assert.throws(() => renderSite(base.paths, { parseBody: tamperedParser(tamper) }), /no reconstruyen el archivo/);
+    });
+  }
 });

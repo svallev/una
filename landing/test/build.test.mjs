@@ -197,10 +197,12 @@ describe("CA-026-01, 05, 09, 12 y 16: la página nueva, sin JavaScript", () => {
     assert.ok(t.includes('<a class="logo" href="/">'));
   });
 
-  test("CA-026-12: licencias: los avisos una sola vez, en inglés y fuera de las mitades; el título del código de la web en los dos idiomas", () => {
+  // CA-027-01: desde la 027, el bloque de avisos lleva el preámbulo y un <pre> por aviso (antes, uno solo).
+  test("CA-026-12, CA-027-01: licencias: los avisos una sola vez, en inglés y fuera de las mitades; el título del código de la web en los dos idiomas", () => {
     const t = html("licenses/index.html");
-    const pres = [...t.matchAll(/<pre([^>]*)>/g)];
-    assert.deepEqual(pres.map((m) => m[1]), [' lang="en"', ' lang="en"'], "dos <pre> (código de la web y avisos de la app), los dos en inglés");
+    const pres = [...t.matchAll(/<pre([^>]*)>/g)].map((m) => m[1]);
+    assert.deepEqual(pres.slice(0, 2), [' lang="en"', ' lang="en" class="notices__preamble"'], "el código de la web y el preámbulo de los avisos de la app, en inglés");
+    assert.ok(pres.length > 2 && pres.slice(2).every((a) => a === ' lang="en"'), "cada aviso, en un <pre> en inglés");
     assert.ok(t.includes(`<h2 id="web-code">${both("Código de esta web", "Code of this website", " · ")}</h2>`));
     const enEnd = t.indexOf("</section>", t.indexOf('<section class="half" lang="en"'));
     assert.ok(t.indexOf("<pre") > enEnd, "los avisos van después de las dos mitades");

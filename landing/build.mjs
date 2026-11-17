@@ -1061,6 +1061,42 @@ function bilingualName(es, en, cls = "") {
   return `<span${c} lang="es" data-l="es">${esc(es)}</span><span${c} lang="en" data-l="en">${esc(en)}</span>`;
 }
 
+/**
+ * Un `<pre>` con [text] tal cual en el DOM: el HTML se salta un salto de línea justo tras `<pre>`, así que un texto
+ * que empieza por uno lleva otro delante (CA-027-02 b). [attrs] van en la etiqueta.
+ */
+const preOf = (text, attrs = 'lang="en"') => `<pre ${attrs}>${text.startsWith("\n") ? "\n" : ""}${esc(text)}</pre>`;
+
+/**
+ * El bloque de avisos de terceros agrupado por cabecera (spec 027, plan §1.2): la región con su `<h2 id="notices">`,
+ * el preámbulo tal cual y sin plegar (CA-027-03), el enlace de saltar la lista, un `<details>` plegado por cabecera
+ * y por sección `assets/…` (nombre con «, », recuento en los dos idiomas con los paréntesis fuera; un `<pre>` por
+ * aviso, CA-027-01 y 02) y, tras el último, el destino del salto: el enlace al archivo de texto (CA-027-06).
+ */
+function noticesSectionHtml(parsed, s) {
+  const count = (n) => {
+    const key = n === 1 ? "webNoticesCountOne" : "webNoticesCountMany";
+    return bilingual(fill(s.es[key], { n: String(n) }), fill(s.en[key], { n: String(n) }));
+  };
+  const group = (names, texts) =>
+    [
+      `<details class="group"><summary><span class="group__name">${esc(names.join(", "))}</span> <span class="group__count">(${count(texts.length)})</span></summary>`,
+      ...texts.map((text) => preOf(text)),
+      "</details>",
+    ].join("\n");
+  const blockLink = (attrs, key) => `<a ${attrs} class="block-link"><span>${bilingual(s.es[key], s.en[key])}</span></a>`;
+  return [
+    '<section lang="en" aria-labelledby="notices">',
+    `<h2 id="notices">${esc(s.en.webNoticesTitle)}</h2>`,
+    preOf(parsed.preamble, 'lang="en" class="notices__preamble"'),
+    `<p>${blockLink('href="#notices-end"', "webNoticesSkip")}</p>`,
+    ...parsed.groups.map((g) => group(g.names, g.notices)),
+    ...parsed.sections.map((sec) => group([sec.path], [sec.text])),
+    `<p class="notices__end">${blockLink(`id="notices-end" href="/${NOTICES_FILE}"`, "webLicensesFile")}</p>`,
+    "</section>",
+  ].join("\n");
+}
+
 /** Cada mitad de la página (plan §2.1): la oculta el programa cuando se elige el otro idioma. */
 function section(lang, body) {
   return `<section class="half" lang="${lang}" data-l="${lang}" aria-labelledby="${lang}">\n${body}\n</section>`;
@@ -1138,7 +1174,7 @@ function pageTitles(s, name, es, en) {
  * Todas las páginas en memoria: `files` (ruta de salida → contenido) y `meta` (de cada página, el
  * `<title>`, los títulos de cada idioma y el `<h1>` que le tocan según las ARB, la identidad y `strings.json`).
  */
-export function renderSite(paths) {
+export function renderSite(paths, { parseBody = parseNoticesBody } = {}) {
   const site = loadSite(paths);
   const { identity, strings: s, tokens, arb } = site;
   const name = identity.displayName;
@@ -1177,9 +1213,10 @@ export function renderSite(paths) {
   checkNoticesText(noticesText);
   const notices = parseNotices(noticesText);
   // Spec 027 (CA-027-05): la estructura del cuerpo, que se reconoce entero o la construcción falla, y la ida y
-  // vuelta. [Pendiente, T-027-03] el HTML de los grupos; de momento, el bloque único de siempre.
+  // vuelta: el HTML de los grupos sale solo de lo que reconstruye el archivo tal cual (CA-027-02).
   const noticesBody = norm(notices.body);
-  assertNoticesRoundTrip(noticesBody, parseNoticesBody(noticesBody, { firstLine: 3 }));
+  const groupedNotices = parseBody(noticesBody, { firstLine: 3 });
+  assertNoticesRoundTrip(noticesBody, groupedNotices);
   const versionLine = (lang) =>
     notices.kind === "version"
       ? fill(s[lang].webLicensesVersion, { [lang === "es" ? "versión" : "version"]: notices.version })
@@ -1195,7 +1232,7 @@ export function renderSite(paths) {
   // dos idiomas y el texto en inglés.
   const webNotices = parseWebNotices(readText(paths.webNotices, "web-notices.txt"));
   const webSection = `<section aria-labelledby="web-code">\n<h2 id="web-code">${bilingualH1(s.es.licensesWebTitle, s.en.licensesWebTitle)}</h2>\n<pre lang="en">${esc(webNotices.body)}</pre>\n</section>`;
-  const noticesSection = `<section lang="en" aria-labelledby="notices">\n<h2 id="notices">${esc(s.en.webNoticesTitle)}</h2>\n<pre lang="en">${esc(norm(notices.body))}</pre>\n</section>`;
+  const noticesSection = noticesSectionHtml(groupedNotices, s);
   page("licenses/index.html", {
     ...pageTitles(s, name, arb.es.licenses, arb.en.licenses),
     h1: bilingualH1(arb.es.licenses, arb.en.licenses),
