@@ -31,7 +31,7 @@ import {
 } from "./build.mjs";
 
 /**
- * Las páginas sin JavaScript que tiene que haber: las tres webs de la app y la de error. La de inicio la
+ * Las páginas de contenido (sin dependencias; solo el programa de idioma, ADR-0028) que tiene que haber: las tres webs de la app y la de error. La de inicio la
  * construye Vite (spec 025) y no pasa estas reglas: tiene las suyas, en `checkHome`.
  */
 export const REQUIRED_PAGES = ["privacy/index.html", "licenses/index.html", "help/index.html", "404.html"];

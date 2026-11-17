@@ -137,7 +137,7 @@ describe("CA-026-01, 05, 09, 12 y 16: la página nueva, sin JavaScript", () => {
       assert.deepEqual(links.filter((m) => m[2]).map((m) => m[1]), CURRENT[f] ? [CURRENT[f]] : [], f);
       assert.equal(html(f).split("aria-current").length - 1, CURRENT[f] ? 1 : 0, `${f}: aria-current fuera del pie`);
       assert.ok(footer.includes(`<a href="/help"${f === "help/index.html" ? ' aria-current="page"' : ""}>${both("Ayuda", "Help")}</a>`), f);
-      assert.ok(footer.includes('<nav aria-labelledby="footer-nav">\n<span id="footer-nav" class="vh"><span lang="es" data-l="es">Ayuda, privacidad y licencias</span><span lang="en" data-l="en">Help, privacy and licenses</span></span>'), f);
+      assert.ok(footer.includes('<nav aria-labelledby="footer-nav">\n<span id="footer-nav" class="vh"><span class="vh" lang="es" data-l="es">Ayuda, privacidad y licencias</span><span class="vh" lang="en" data-l="en">Help, privacy and licenses</span></span>'), f);
       assert.ok(footer.includes('<p lang="es" data-l="es">Contacto: [CONTACTO]</p>\n<p lang="en" data-l="en">Contact: [CONTACT]</p>'), f);
       // La fecha y «Volver al inicio» ya no van en el pie.
       assert.ok(!/Última actualización|Last updated|Volver al inicio|Back to home/.test(footer), `${f}: el pie lleva la fecha o «Volver al inicio»`);
@@ -179,7 +179,7 @@ describe("CA-026-01, 05, 09, 12 y 16: la página nueva, sin JavaScript", () => {
       assert.ok(t.includes(`<html lang="es" data-title-es="${es} · ${name}" data-title-en="${en} · ${name}">`), f);
       assert.ok(t.includes(`<title>${es} · ${name} / ${en} · ${name}</title>`), f);
       assert.ok(t.includes(`<h1>${both(es, en, " · ")}</h1>`), f);
-      assert.ok(t.includes(`<span id="langs-name" class="vh"><span lang="es" data-l="es">Idioma</span><span lang="en" data-l="en">Language</span></span>`), f);
+      assert.ok(t.includes(`<span id="langs-name" class="vh"><span class="vh" lang="es" data-l="es">Idioma</span><span class="vh" lang="en" data-l="en">Language</span></span>`), f);
       if (f !== "404.html") assert.ok(t.includes(`<p><a class="back" href="/"><span aria-hidden="true">← </span>${both("Volver al inicio", "Back to home")}</a></p>`), f);
       // Toda pieza marcada con un idioma lleva ese idioma; los separadores, ninguno.
       for (const m of t.matchAll(/<[a-z0-9]+ [^>]*data-l="([^"]+)"[^>]*>/g)) {

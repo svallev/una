@@ -1,5 +1,5 @@
 // Construye la web de la app (spec 023, CA-023-03, 04, 13 a 17): la política de privacidad, las licencias de
-// terceros, la Ayuda y la página de error, en español e inglés en la misma dirección, sin JavaScript; y, con
+// terceros, la Ayuda y la página de error, en español e inglés en la misma dirección, sin dependencias y con solo el programa de idioma (ADR-0028); y, con
 // Vite, la página de inicio (spec 025, ADR-0027) desde `landing/home/`.
 //
 //   npm ci --ignore-scripts      (una vez, en landing/)
@@ -764,7 +764,7 @@ export const FONT_DIRS = [...new Set(FONT_FILES.map((f) => f.dir))];
 
 /**
  * `tokens.css`: las variables de `design/tokens.json` (rem para texto y espacios) y las fuentes (las cuatro
- * páginas sin JavaScript; la de inicio trae sus propios estilos, los de la maqueta).
+ * páginas de contenido, sin dependencias; la de inicio trae sus propios estilos, los de la maqueta).
  */
 export function tokensCss(tokens) {
   const vars = [];
@@ -910,7 +910,7 @@ function chrome(file, { identity, strings: s, landing: l }) {
     `<a href="#${lang}" hreflang="${lang}" lang="${lang}"><span>${lang.toUpperCase()}</span><span class="vh">, ${esc(s[lang].webLanguageName)}</span></a>`;
   const langs = [
     '<div class="langs" role="group" aria-labelledby="langs-name">',
-    `<span id="langs-name" class="vh">${bilingualName(l.es.nav.lang, l.en.nav.lang)}</span>`,
+    `<span id="langs-name" class="vh">${bilingualName(l.es.nav.lang, l.en.nav.lang, "vh")}</span>`,
     option("es"),
     option("en"),
     "</div>",
@@ -927,7 +927,7 @@ function chrome(file, { identity, strings: s, landing: l }) {
     '<footer class="end">',
     legal,
     '<nav aria-labelledby="footer-nav">',
-    `<span id="footer-nav" class="vh">${bilingualName(l.es.footer.nav, l.en.footer.nav)}</span>`,
+    `<span id="footer-nav" class="vh">${bilingualName(l.es.footer.nav, l.en.footer.nav, "vh")}</span>`,
     ...links,
     "</nav>",
     `<p lang="es" data-l="es">${esc(s.es.webContact)}</p>`,

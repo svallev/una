@@ -368,7 +368,7 @@ describe("CA-026-14: la política dice la verdad sobre el programa del idioma de
     for (const source of ["landing/src/lang.js", "una-lang", "landing/vercel.json", "ADR-0028", "landing/check.mjs", "landing/test/lang.test.mjs"]) {
       assert.ok(notes.slice(notes.search(/^19\. /m)).includes(source), `la nota 19 no cita ${source}`);
     }
-    assert.match(notes, /en los puntos 18 y 19/, "la nota 8 sigue remitiendo solo al punto 18");
+    assert.match(notes, /en los puntos 18 y 19/, "la nota 8 remite a los puntos 18 y 19");
   });
 
   test("lo publicado en /privacy lleva el texto nuevo en los dos idiomas y no las notas", () => {

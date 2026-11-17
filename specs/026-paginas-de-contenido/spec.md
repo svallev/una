@@ -1,6 +1,6 @@
 # Spec 026: Páginas de contenido
 
-- **Estado:** **Aprobada** por el propietario el 2026-11-17 («aprobado»), con las suposiciones del §9 confirmadas. Antes **Borrador** (2026-11-17; revisión del `spec-reviewer` aplicada el mismo día: 2 bloqueantes, 8 importantes y 11 menores)
+- **Estado:** **Implementada** el 2026-11-17 (rama `feat/026-paginas-de-contenido`, T-026-01 a 10; sin push ni PR hasta que lo confirme el propietario). Antes **Aprobada** por el propietario el 2026-11-17 («aprobado»), con las suposiciones del §9 confirmadas. Antes **Borrador** (2026-11-17; revisión del `spec-reviewer` aplicada el mismo día: 2 bloqueantes, 8 importantes y 11 menores)
 - **Reglas de producto:** R15 (idioma): las páginas la **siguen**, no la cambian. Ninguna regla de la app cambia.
 - **Pantallas del prototipo:** **sin diseño en el prototipo ni en la maqueta.** El prototipo no tiene páginas web (DEV-58) y la maqueta de la landing (`UnaWeb/www`, versión A) solo tiene la página de inicio. El diseño sale de: la pauta de la maqueta para estas páginas (`UnaWeb/design.md` §8: «la misma maqueta en columna de 600 px, titulares con regla gruesa superior, sin adornos»); las piezas de la landing (logotipo, botón «Descargar», pie); y la **estructura** de las páginas legales de superplay.co (`/terms`, vista por última vez el 2026-11-17), que el propietario dio como referencia. Se registra como desviación **DEV-60** al implementar; el propietario lo revisa en el navegador (C-026-1).
 - **Decisiones y ADR relacionados:** P-012-2 (una sola dirección para ES y EN), ADR-0009 (`landing/`) y ADR-0027 (herramientas de la landing): los dos dicen que estas cuatro páginas van **sin JavaScript**, así que **[Pendiente, plan] un ADR nuevo los enmienda** (un programa propio, sin dependencias, solo para el idioma, en las cuatro páginas; la constitución pide un ADR para cambiar uno aceptado). ADR-0010 (Vercel), ADR-0026 (licencias de terceros), D17, D26.
@@ -267,7 +267,7 @@ Que quien pasa de la landing a la Ayuda, la política o las licencias (o llega a
 
 ## 10. Enmiendas
 
-Se anotan al aprobar esta spec como «Enmienda (spec 026, Aprobada; en vigor cuando la 026 se implemente)».
+Se anotaron al aprobar esta spec como «Enmienda (spec 026, Aprobada; en vigor cuando la 026 se implemente)»; **[Hecho, 2026-11-17]** pasan a «en vigor desde el 2026-11-17, con la 026 implementada (T-026-10)» en la 023 y la 025.
 
 ### 10 a. Spec 023
 
