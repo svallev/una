@@ -23,6 +23,7 @@ export function world() {
     srcDir,
     strings: join(srcDir, "strings.json"),
     siteCss: join(srcDir, "site.css"),
+    langJs: join(srcDir, "lang.js"),
     helpEs: join(srcDir, "help.es.md"),
     helpEn: join(srcDir, "help.en.md"),
     notices: join(dir, "third-party-notices.txt"),

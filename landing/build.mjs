@@ -42,6 +42,7 @@ export function defaultPaths(repoRoot = REPO_ROOT) {
     srcDir: join(landingDir, "src"),
     strings: join(landingDir, "src/strings.json"),
     siteCss: join(landingDir, "src/site.css"),
+    langJs: join(landingDir, "src/lang.js"),
     helpEs: join(landingDir, "src/help.es.md"),
     helpEn: join(landingDir, "src/help.en.md"),
     notices: join(landingDir, "third-party-notices.txt"),
@@ -55,6 +56,10 @@ export function defaultPaths(repoRoot = REPO_ROOT) {
 }
 
 // ─── Utilidades ──────────────────────────────────────────────────────────────────────────────────
+
+/** El programa de idioma de las cuatro páginas (spec 026, ADR-0028): su archivo en `dist/` y su ruta absoluta. */
+export const LANG_FILE = "lang.js";
+export const LANG_SCRIPT = `/${LANG_FILE}`;
 
 /** Escapa el texto para HTML (también en atributos). */
 export const esc = (s) =>
@@ -806,6 +811,8 @@ export function tokensCss(tokens) {
  * marcado con `data-l="es|en"` (y su `lang`) y los separadores con `data-l="sep"`: sin JavaScript se ve todo.
  */
 function shell({ titleEs, titleEn, h1, back, main, chrome }) {
+  // El programa de idioma, clásico y síncrono tras las hojas de estilo: marca <html> antes del primer pintado
+  // (CA-026-08, plan §1.2).
   return `<!doctype html>
 <html lang="es" data-title-es="${esc(titleEs)}" data-title-en="${esc(titleEn)}">
 <head>
@@ -815,6 +822,7 @@ function shell({ titleEs, titleEn, h1, back, main, chrome }) {
 <title>${esc(`${titleEs} / ${titleEn}`)}</title>
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/site.css">
+<script src="${LANG_SCRIPT}"></script>
 </head>
 <body>
 ${chrome.header}
@@ -1016,6 +1024,8 @@ export function renderSite(paths) {
 
   files.set("tokens.css", tokensCss(tokens));
   files.set("site.css", readText(paths.siteCss, "site.css"));
+  // El programa de idioma, tal cual: sin empaquetar ni minificar (ADR-0028, CA-026-15).
+  files.set(LANG_FILE, readText(paths.langJs, "lang.js"));
   return { files, meta };
 }
 

@@ -208,17 +208,20 @@ describe("CA-025-12: dos reglas de cabeceras; la de «/» solo añade script-src
   fails("«/» con 'unsafe-inline' en los programas", (w) => cspOf(w, "/", (v) => v.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")), /script-src.*regla «\/»/);
   fails("«/» con connect-src", (w) => cspOf(w, "/", (v) => `${v}; connect-src 'self'`), /connect-src.*regla «\/»/);
   fails("el resto de páginas con estilos en línea", (w) => cspOf(w, "/(.+)", (v) => v.replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")), /style-src tiene que ser 'self'/);
-  fails("el resto de páginas con script-src", (w) => cspOf(w, "/(.+)", (v) => `${v}; script-src 'self'`), /script-src no se admite$/);
+  // Desde la spec 026 (CA-026-13) las cuatro páginas admiten programas del propio origen, y nada más.
+  fails("CA-026-13: el resto de páginas con programas en línea", (w) => cspOf(w, "/(.+)", (v) => v.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")), /script-src tiene que ser 'self'/);
+  fails("CA-026-13: el resto de páginas sin Trusted Types", (w) => cspOf(w, "/(.+)", (v) => v.replace("; trusted-types 'none'", "")), /falta trusted-types/);
+  fails("CA-026-13: «/» con Trusted Types (la de la página de inicio no cambia)", (w) => cspOf(w, "/", (v) => `${v}; trusted-types 'none'`), /trusted-types no se admite \(regla «\/»\)/);
   fails("HSTS distinto solo en «/»", (w) => mutate(w, (json) => {
     for (const h of json.headers.find((r) => r.source === "/").headers) if (h.key === "Strict-Transport-Security") h.value = "max-age=63072001; includeSubDomains";
   }), /iguales salvo.*strict-transport-security/);
 
-  test("un <script> en /help sigue fallando", () => {
+  test("CA-026-13: el programa de la página de inicio en /help sigue fallando (allí solo /lang.js)", () => {
     const w = cloneWorld(base);
     try {
       edit(join(w.dist, "help/index.html"), (t) => t.replace("</body>", '<script type="module" src="/assets/x.js"></script></body>'));
       const errors = specificErrors(checkSite(w.paths));
-      assert.ok(errors.some((e) => /^help\/index\.html: tiene un <script>/.test(e)), errors.join("\n"));
+      assert.ok(errors.some((e) => /^help\/index\.html: tiene 2 <script>/.test(e)), errors.join("\n"));
     } finally {
       w.cleanup();
     }

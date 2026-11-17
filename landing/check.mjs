@@ -1,12 +1,13 @@
 // Comprobaciones de la web construida (spec 023): CA-023-04 (la política publicada es la del
 // documento), CA-023-13 (páginas, idiomas), CA-023-14 (sin terceros ni rastreo, cabeceras),
-// CA-023-15 (tokens, contraste, estructura, foco) y CA-023-16 (el bloque de avisos de terceros); y, con su
-// propio juego de reglas (`checkHome`), la página de inicio de la spec 025 (CA-025-12), la única con
-// programa. Falla cerrada: lo que no entiende es un error.
+// CA-023-15 (tokens, contraste, estructura, foco) y CA-023-16 (el bloque de avisos de terceros); el programa de
+// idioma de las cuatro páginas (spec 026, CA-026-13 y 15: un único `<script src="/lang.js">`, lo que el programa no
+// puede usar, su tamaño y la CSP con Trusted Types); y, con su propio juego de reglas (`checkHome`), la página de
+// inicio de la spec 025 (CA-025-12). Falla cerrada: lo que no entiende es un error.
 //
 //   node landing/check.mjs [--dist <carpeta>]      (después de `node landing/build.mjs`)
 //
-// Solo módulos de Node. `checkSite` (las cuatro páginas sin JavaScript y `vercel.json`) y `checkHome` (la
+// Solo módulos de Node. `checkSite` (las cuatro páginas, su programa de idioma y `vercel.json`) y `checkHome` (la
 // de inicio) devuelven la lista de errores (vacía si todo está bien) para poder probar cada regla con un caso
 // que falla (`landing/test`).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -19,6 +20,8 @@ import {
   FOOTER_LINKS,
   NOTICES_FILE,
   FONT_FILES,
+  LANG_FILE,
+  LANG_SCRIPT,
   defaultPaths,
   kebab,
   loadStrings,
@@ -96,14 +99,16 @@ function checkPage(file, html, meta, errors) {
     if (n !== 1) fail(`tiene ${n} ${label} (tiene que haber uno)`);
   }
 
-  // Sin JavaScript, sin estilos en línea, sin recursos de otro origen, sin formularios ni medios.
+  // Solo el programa de idioma (spec 026), sin estilos en línea, sin recursos de otro origen, sin formularios ni
+  // medios.
+  checkScript(html, t, fail);
   for (const x of t) {
     if (x.closing) continue;
     for (const attr of Object.keys(x.attrs)) {
-      if (/^on/.test(attr)) fail(`<${x.name}> lleva el manejador ${attr} (la web no usa JavaScript)`);
+      if (/^on/.test(attr)) fail(`<${x.name}> lleva el manejador ${attr} (la CSP lo bloquearía: los programas, solo por src)`);
       if (attr === "style") fail(`<${x.name}> lleva style en línea (la CSP lo bloquearía)`);
     }
-    if (x.name === "script") fail("tiene un <script> (la web no usa JavaScript)");
+    if (x.name === "script") continue;
     else if (x.name === "style") fail("tiene un <style> en línea (la CSP lo bloquearía)");
     else if (FRAMES.includes(x.name)) fail(`tiene un <${x.name}> (nada incrustado)`);
     else if (FORMS.includes(x.name)) fail(`tiene un <${x.name}> (la web no tiene formularios)`);
@@ -200,6 +205,42 @@ function inside(t, open) {
   const close = closeOf(t, open);
   const to = close?.start ?? Infinity;
   return t.filter((x) => !x.closing && x.start >= open.end && x.end <= to);
+}
+
+/** Lo único que carga cada página, en este orden (CA-026-15): las dos hojas y el programa de idioma. */
+const PAGE_RESOURCES = ["/tokens.css", "/site.css", LANG_SCRIPT];
+
+/**
+ * El programa de idioma en la página (spec 026, CA-026-08 y 13; plan §6.1): un único `<script src="/lang.js">`,
+ * clásico y síncrono (sin `type`, `async`, `defer`, `nomodule` ni ningún otro atributo), vacío, en el `<head>`
+ * después de las hojas de estilo; y la página no carga nada más que esas hojas y ese programa.
+ */
+function checkScript(html, t, fail) {
+  const open = t.filter((x) => !x.closing);
+  const scripts = open.filter((x) => x.name === "script");
+  if (scripts.length !== 1) fail(`tiene ${scripts.length} <script> (tiene que haber uno: <script src="${LANG_SCRIPT}">, CA-026-13)`);
+  const headEnd = t.find((x) => x.closing && x.name === "head");
+  const sheets = open.filter((x) => x.name === "link");
+  for (const s of scripts) {
+    const close = t.find((x) => x.closing && x.name === "script" && x.start >= s.end);
+    if (!close || html.slice(s.end, close.start) !== "") fail("un <script> con código escrito dentro de la página (el programa, solo por src)");
+    const src = s.attrs.src;
+    if (src === undefined) fail("un <script> sin src (el programa, solo por src)");
+    else if (src !== LANG_SCRIPT) fail(`un <script> que no carga ${LANG_SCRIPT} («${src}»): solo el programa de idioma, por su ruta absoluta`);
+    const extra = Object.keys(s.attrs).filter((a) => a !== "src");
+    if (extra.length > 0) fail(`un <script> con el atributo ${extra.join(", ")} (clásico y síncrono: solo src, CA-026-08)`);
+    if (!headEnd || s.start > headEnd.start) fail("el <script> tiene que ir en el <head> (CA-026-08)");
+    if (sheets.some((l) => l.start > s.start)) fail("el <script> tiene que ir después de las hojas de estilo (CA-026-08)");
+  }
+  const loaded = [];
+  for (const x of open) {
+    for (const [attr, value] of Object.entries(x.attrs)) {
+      if (RESOURCE_ATTRS.includes(attr) || (x.name === "link" && attr === "href")) loaded.push(value);
+    }
+  }
+  if (loaded.join(" ") !== PAGE_RESOURCES.join(" ")) {
+    fail(`carga ${loaded.join(", ") || "nada"} (recursos de cada página: ${PAGE_RESOURCES.join(", ")}, en ese orden, y nada más, CA-026-15)`);
+  }
 }
 
 /**
@@ -753,8 +794,13 @@ const CSP = {
  * línea (la maqueta usa atributos `style=`).
  */
 const HOME_CSP = { ...CSP, "script-src": "'self'", "style-src": "'self' 'unsafe-inline'" };
-/** Las directivas en que la CSP de la página de inicio puede ser distinta de la de las demás. */
-const HOME_CSP_EXTRA = ["script-src", "style-src"];
+/**
+ * La de las cuatro páginas (spec 026, CA-026-13 y su enmienda): programas solo del propio origen (`/lang.js`) y
+ * Trusted Types, que el navegador hace cumplir (el programa no usa ningún sumidero de HTML).
+ */
+const CONTENT_CSP = { ...CSP, "script-src": "'self'", "require-trusted-types-for": "'script'", "trusted-types": "'none'" };
+/** Las directivas en que pueden diferir las CSP de las dos reglas (la de «/» y la de las cuatro páginas). */
+const CSP_DIFFERENCES = ["style-src", "require-trusted-types-for", "trusted-types"];
 /** Cómo instala Vercel las dependencias de la página de inicio (lo mismo que la CI). */
 const INSTALL_COMMAND = "npm ci --ignore-scripts";
 const PERMISSIONS = ["accelerometer", "autoplay", "camera", "display-capture", "geolocation", "gyroscope", "interest-cohort", "magnetometer", "microphone", "payment", "usb"];
@@ -776,8 +822,9 @@ function checkVercel(path, errors) {
   if (json.installCommand !== INSTALL_COMMAND) fail(`installCommand tiene que ser "${INSTALL_COMMAND}" (es ${JSON.stringify(json.installCommand)})`);
   if (json.outputDirectory !== "dist") fail('outputDirectory tiene que ser "dist"');
   for (const key of ["rewrites", "redirects", "routes"]) if (key in json) fail(`la web no necesita «${key}»`);
-  // Dos reglas que no se solapan (spec 025): «/(.+)», la de siempre, para todo menos la página de inicio, y «/»,
-  // la misma con `script-src 'self'` y `style-src 'self' 'unsafe-inline'`; iguales en todo lo demás.
+  // Dos reglas que no se solapan (spec 025): «/(.+)», para todo menos la página de inicio, con `script-src 'self'` y
+  // Trusted Types (spec 026), y «/», con `script-src 'self'` y `style-src 'self' 'unsafe-inline'`; iguales en todo
+  // lo demás.
   const sources = Array.isArray(json.headers) ? json.headers.map((r) => r?.source) : [];
   if (sources.length !== 2 || !sources.includes("/(.+)") || !sources.includes("/")) {
     fail('tiene que haber dos reglas de cabeceras, con source "/(.+)" (todo menos la página de inicio) y "/" (la página de inicio)');
@@ -785,15 +832,15 @@ function checkVercel(path, errors) {
   }
   for (const rule of json.headers) {
     const home = rule.source === "/";
-    checkHeaderRule(rule, home ? HOME_CSP : CSP, home ? (msg) => fail(`${msg} (regla «/»)`) : fail);
+    checkHeaderRule(rule, home ? HOME_CSP : CONTENT_CSP, home ? (msg) => fail(`${msg} (regla «/»)`) : fail);
   }
   const rest = headerMap(json.headers.find((r) => r.source === "/(.+)"));
   const home = headerMap(json.headers.find((r) => r.source === "/"));
   for (const key of new Set([...rest.keys(), ...home.keys()])) {
     const [a, b] = key === "content-security-policy"
-      ? [cspText(rest.get(key), { without: HOME_CSP_EXTRA }), cspText(home.get(key), { without: HOME_CSP_EXTRA })]
+      ? [cspText(rest.get(key), { without: CSP_DIFFERENCES }), cspText(home.get(key), { without: CSP_DIFFERENCES })]
       : [rest.get(key), home.get(key)];
-    if (a !== b) fail(`las dos reglas de cabeceras tienen que ser iguales salvo script-src y style-src de «/»: ${key} difiere («${rest.get(key) ?? "falta"}» frente a «${home.get(key) ?? "falta"}»)`);
+    if (a !== b) fail(`las dos reglas de cabeceras tienen que ser iguales salvo style-src y Trusted Types (require-trusted-types-for, trusted-types): ${key} difiere («${rest.get(key) ?? "falta"}» frente a «${home.get(key) ?? "falta"}»)`);
   }
 }
 
@@ -1035,6 +1082,78 @@ function checkProgram(file, code, errors) {
   for (const re of ANALYTICS) if (re.test(code)) fail(`rastro de analítica (${re})`);
 }
 
+// ─── El programa de idioma (spec 026) ────────────────────────────────────────────────────────────
+
+/** Lo que más puede pesar `lang.js` sin comprimir (CA-026-15). */
+export const LANG_MAX_BYTES = 10_240;
+
+/**
+ * Lo que el programa de idioma no puede usar además de `FORBIDDEN_APIS` (CA-026-13, plan §6.1): escribir HTML,
+ * texto o estilos, crear elementos, navegar, hablar con otras ventanas, temporizadores, escuchar el almacenamiento
+ * de otras pestañas (CL-026-7) ni cargar dependencias. Es la lista de lo que se busca, no de lo permitido.
+ */
+const LANG_FORBIDDEN = [
+  [/\binnerHTML\b/, "innerHTML"],
+  [/\bouterHTML\b/, "outerHTML"],
+  [/\binsertAdjacent(?:HTML|Element|Text)\b/, "insertAdjacentHTML"],
+  [/\bdocument\s*\.\s*write/, "document.write"],
+  [/\btextContent\b/, "textContent"],
+  [/\binnerText\b/, "innerText"],
+  [/\bcreateElement/, "createElement"],
+  [/\.\s*style\b/, ".style"],
+  [/\bsetAttributeNS\b/, "setAttributeNS"],
+  [/\btoggleAttribute\b/, "toggleAttribute"],
+  [/\bimport\b/, "import"],
+  [/\brequire\s*\(/, "require("],
+  [/\blocation\s*\.\s*href\s*=(?!=)/, "location.href ="],
+  [/\blocation\s*=(?!=)/, "location ="],
+  [/\blocation\s*\.\s*(?:assign|replace)\b/, "location.assign o location.replace"],
+  [/\bopen\s*\(/, "window.open"],
+  [/\bpostMessage\b/, "postMessage"],
+  [/\bsetTimeout\b/, "setTimeout"],
+  [/\bsetInterval\b/, "setInterval"],
+  [/\bonstorage\b/, "onstorage"],
+  [/addEventListener\s*\(\s*["'`]storage/, 'addEventListener("storage"'],
+];
+
+/** Los únicos atributos que el programa pone o quita (lista blanca, plan §6.1). */
+const LANG_ATTRIBUTES = /^\s*(["'])(?:role|aria-pressed)\1/;
+/** El único uso de `localStorage`: leer o escribir el idioma con la clave de la landing. */
+const LANG_STORAGE = /^\s*\.\s*(?:getItem|setItem)\s*\(\s*(["'])una-lang\1/;
+
+/** `dist/lang.js`: lo que no puede usar, ningún dominio (ni los de la página de inicio) y su tamaño. */
+function checkLangProgram(file, bytes, errors) {
+  const fail = (msg) => errors.push(`${file}: ${msg}`);
+  const code = bytes.toString("utf8");
+  if (bytes.length > LANG_MAX_BYTES) fail(`pesa ${bytes.length} bytes (${LANG_MAX_BYTES} como mucho, CA-026-15)`);
+  for (const [re, api] of [...FORBIDDEN_APIS, ...LANG_FORBIDDEN]) if (re.test(code)) fail(`usa ${api} (CA-026-13)`);
+  for (const m of code.matchAll(/\b(setAttribute|removeAttribute)\s*\(/g)) {
+    const rest = code.slice(m.index + m[0].length);
+    if (!LANG_ATTRIBUTES.test(rest)) fail(`usa ${m[1]} con «${rest.slice(0, 20).split("\n")[0]}…» (solo "role" y "aria-pressed", CA-026-13)`);
+  }
+  for (const m of code.matchAll(/\blocalStorage\b/g)) {
+    const rest = code.slice(m.index + m[0].length);
+    if (!LANG_STORAGE.test(rest)) fail(`usa localStorage con «${rest.slice(0, 20).split("\n")[0]}…» (solo getItem y setItem de "una-lang", CA-026-13)`);
+  }
+  for (const m of code.matchAll(/\b[A-Za-z][A-Za-z0-9+.-]*:\/\/[^\s"'`)]*/g)) fail(`nombra un dominio («${m[0]}»): el programa no nombra ninguno`);
+  for (const m of code.matchAll(/["'`]\s*\/\/[^\s"'`]+/g)) fail(`nombra un dominio sin protocolo («${m[0]}»)`);
+  if (/sourceMappingURL/.test(code)) fail("apunta a un mapa de código (sourceMappingURL)");
+  for (const re of ANALYTICS) if (re.test(code)) fail(`rastro de analítica (${re})`);
+}
+
+/** Las páginas que puede haber en `dist/`: con `script-src 'self'`, un `.html` de más podría ejecutar programas. */
+const ALLOWED_HTML = new Set([HOME_PAGE, ...REQUIRED_PAGES]);
+/** Los programas que puede haber en `dist/`: el de idioma y los de la página de inicio (Vite, en `assets/`). */
+const allowedProgram = (f) => f === LANG_FILE || /^assets\/[^/]+\.js$/.test(f);
+
+/** Ningún `.html` ni programa de más en [dist] (plan §6.1). */
+function checkDistFiles(dist, errors) {
+  for (const f of existsSync(dist) ? filesOf(dist) : []) {
+    if (/\.x?html?$/i.test(f) && !ALLOWED_HTML.has(f)) errors.push(`${f}: un .html de más en dist/ (solo la de inicio y las cuatro páginas, CA-026-13)`);
+    else if (/\.(?:[cm]?js|jsx|wasm)$/i.test(f) && !allowedProgram(f)) errors.push(`${f}: un programa de más en dist/ (solo ${LANG_FILE} y assets/*.js, CA-026-13)`);
+  }
+}
+
 // ─── Todo junto ──────────────────────────────────────────────────────────────────────────────────
 
 /** Las comprobaciones de la web ya construida en [dist]. Devuelve los errores (vacía si todo bien). */
@@ -1051,7 +1170,7 @@ export function checkSite(paths = defaultPaths(), { dist = paths.out } = {}) {
   }
 
   // Archivos.
-  const needed = [...REQUIRED_PAGES, "tokens.css", "site.css", NOTICES_FILE];
+  const needed = [...REQUIRED_PAGES, "tokens.css", "site.css", LANG_FILE, NOTICES_FILE];
   for (const d of FONT_DIRS) needed.push(`fonts/${d}/OFL.txt`);
   for (const f of FONT_FILES) needed.push(`fonts/${f.dir}/${f.file}`);
   const missing = new Set(needed.filter((f) => !existsSync(join(dist, f))));
@@ -1073,6 +1192,8 @@ export function checkSite(paths = defaultPaths(), { dist = paths.out } = {}) {
     checkPage(page, pages.get(page), site.meta.get(page), errors);
   }
   checkAnchors(pages, errors);
+  if (!missing.has(LANG_FILE)) checkLangProgram(LANG_FILE, readFileSync(join(dist, LANG_FILE)), errors);
+  checkDistFiles(dist, errors);
   if (!missing.has("privacy/index.html")) checkPolicy(paths, dist, identity.displayName, errors);
 
   // CSS.

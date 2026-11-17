@@ -1,6 +1,7 @@
-// Sin terceros ni rastreo (spec 023, CA-023-14): cada regla con un caso que falla.
+// Sin terceros ni rastreo (spec 023, CA-023-14; spec 026, CA-026-13 y 15: el programa de idioma y la CSP con
+// programas del propio origen y Trusted Types): cada regla con un caso que falla.
 import assert from "node:assert/strict";
-import { rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
 import { checkSite } from "../check.mjs";
@@ -117,7 +118,7 @@ describe("CA-023-14: las cabeceras de vercel.json", () => {
 
   fails("la CSP admite el propio origen por defecto", (w) => csp(w, (v) => v.replace("default-src 'none'", "default-src 'self'")), /default-src/);
   fails("la CSP admite estilos en línea", (w) => csp(w, (v) => v.replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")), /style-src|unsafe-inline/);
-  fails("la CSP admite scripts", (w) => csp(w, (v) => `${v}; script-src 'self'`), /script-src/);
+  fails("la CSP admite programas en línea", (w) => csp(w, (v) => v.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")), /script-src/);
   fails("la CSP admite otro origen de fuentes", (w) => csp(w, (v) => v.replace("font-src 'self'", "font-src 'self' https://fonts.gstatic.com")), /font-src/);
   fails("la CSP permite incrustar la web", (w) => csp(w, (v) => v.replace("frame-ancestors 'none'", "frame-ancestors 'self'")), /frame-ancestors/);
   fails("la CSP no cierra object-src", (w) => csp(w, (v) => v.replace("object-src 'none'; ", "")), /object-src/);
@@ -175,4 +176,135 @@ describe("CA-023-14: las cabeceras de vercel.json", () => {
     json.rewrites = [{ source: "/(.*)", destination: "https://evil.example/$1" }];
     writeFileSync(vercel(w), JSON.stringify(json, null, 2));
   }, /rewrites|redirects/i);
+});
+
+// ─── Spec 026: el programa de idioma (CA-026-13 y 15, plan §6.1) ───────────────────────────────────────────────────
+
+const program = (w) => join(w.dist, "lang.js");
+const SCRIPT = '<script src="/lang.js"></script>';
+
+describe("CA-026-13: un único <script src=\"/lang.js\"> por página, clásico, en el <head> tras las hojas", () => {
+  fails("el programa escrito dentro de la página", (w) => edit(page(w), (t) => t.replace(SCRIPT, "<script>1</script>")), /<script>.*(dentro|sin src)/);
+  fails("código dentro del <script src=\"/lang.js\">", (w) => edit(page(w), (t) => t.replace(SCRIPT, '<script src="/lang.js">alert(1)</script>')), /<script> con código escrito dentro/);
+  fails("un segundo programa del propio origen", (w) => edit(page(w), (t) => t.replace("</body>", '<script src="/lang.js"></script></body>')), /tiene 2 <script>/);
+  fails("un programa de otro origen", (w) => edit(page(w), (t) => t.replace(SCRIPT, '<script src="https://cdn.example/lang.js"></script>')), /<script>.*\/lang\.js/);
+  fails("un src relativo (la página de error se sirve en cualquier ruta)", (w) => edit(page(w), (t) => t.replace(SCRIPT, '<script src="lang.js"></script>')), /<script>.*\/lang\.js/);
+  fails("otro programa del propio origen", (w) => edit(page(w), (t) => t.replace(SCRIPT, '<script src="/assets/x.js"></script>')), /<script>.*\/lang\.js/);
+  for (const attr of ["async", "defer", 'type="module"', 'type="text/javascript"', "nomodule", 'integrity="sha256-x"']) {
+    fails(`un <script> con ${attr}`, (w) => edit(page(w), (t) => t.replace(SCRIPT, `<script ${attr} src="/lang.js"></script>`)), /<script>.*(atributo|clásico)/);
+  }
+  fails("el <script> en el <body>", (w) => edit(page(w), (t) => t.replace(`${SCRIPT}\n`, "").replace("</body>", `${SCRIPT}\n</body>`)), /<script>.*<head>/);
+  fails("el <script> antes de las hojas de estilo", (w) => edit(page(w), (t) => t.replace(`${SCRIPT}\n`, "").replace('<link rel="stylesheet" href="/tokens.css">', `${SCRIPT}\n<link rel="stylesheet" href="/tokens.css">`)), /<script>.*hojas de estilo/);
+  fails("sin el programa", (w) => edit(page(w), (t) => t.replace(`${SCRIPT}\n`, "")), /tiene 0 <script>/);
+  fails("una hoja de estilo de más del propio origen (recursos de cada página)", (w) => edit(page(w), (t) => t.replace(SCRIPT, `<link rel="stylesheet" href="/x.css">\n${SCRIPT}`)), /recursos/);
+  fails("un estilo en línea sigue prohibido", (w) => edit(page(w), (t) => t.replace("<main>", '<main style="color:red">')), /style en línea/);
+});
+
+describe("CA-026-13: lo que el programa de idioma no puede usar", () => {
+  test("lo construido pasa (el programa de verdad, sin dominios ni API prohibidas)", () => {
+    assert.deepEqual(checkSite(base.paths), []);
+  });
+
+  for (const [label, code] of [
+    ["innerHTML", 'html.innerHTML = "";'],
+    ["outerHTML", 'html.outerHTML = "";'],
+    ["insertAdjacentHTML", 'html.insertAdjacentHTML("beforeend", "");'],
+    ["document.write", 'document.write("");'],
+    ["fetch", 'fetch("/x");'],
+    ["XMLHttpRequest", "new XMLHttpRequest();"],
+    ["sendBeacon", 'navigator.sendBeacon("/x");'],
+    ["location.assign", 'location.assign("/x");'],
+    ["location.replace", 'location.replace("/x");'],
+    ["location.href =", 'location.href = "/x";'],
+    ["location =", 'location = "/x";'],
+    ["window.open", 'window.open("/x");'],
+    ["postMessage", 'parent.postMessage("x", "*");'],
+    ["setTimeout", "setTimeout(apply, 0);"],
+    ["setInterval", "setInterval(apply, 10);"],
+    ["textContent", 'html.textContent = "";'],
+    ["innerText", 'html.innerText = "";'],
+    ["createElement", 'document.createElement("p");'],
+    [".style", 'html.style.color = "red";'],
+    ["setAttribute de style", 'html.setAttribute("style", "color: red");'],
+    ["setAttribute de otro atributo", 'html.setAttribute("href", "/x");'],
+    ["removeAttribute de otro atributo", 'html.removeAttribute("hidden");'],
+    ["setAttribute con un nombre que no es un texto", "html.setAttribute(name, 1);"],
+    ["setAttributeNS", 'html.setAttributeNS(null, "role", "x");'],
+    ["toggleAttribute", 'html.toggleAttribute("hidden");'],
+    ['addEventListener("storage"', 'addEventListener("storage", apply);'],
+    ["onstorage", "onstorage = apply;"],
+    ["otra clave de localStorage", 'localStorage.setItem("otra", "x");'],
+    ["localStorage.removeItem", 'localStorage.removeItem("una-lang");'],
+    ["localStorage con corchetes", 'localStorage["una-lang"] = "es";'],
+    ["sessionStorage", 'sessionStorage.setItem("una-lang", "es");'],
+    ["document.cookie", 'document.cookie = "a=b";'],
+    ["import estático", 'import x from "./x.js";'],
+    ["import() dinámico", 'import("./x.js");'],
+    ["require", 'require("x");'],
+    ["eval", 'eval("1");'],
+    ["new Function", 'new Function("return 1");'],
+    ["un dominio", 'var u = "https://evil.example/x";'],
+    ["un dominio sin protocolo", 'var u = "//evil.example/x";'],
+    ["un dominio de los que admite la página de inicio", 'var u = "https://www.w3.org/2000/svg";'],
+  ]) {
+    fails(`usa ${label}`, (w) => edit(program(w), (t) => `${t}\n${code}\n`), /lang\.js: /);
+  }
+
+  test("las dos únicas apariciones de localStorage son la lectura y la escritura de «una-lang»", () => {
+    const code = read(program(base));
+    assert.equal(code.match(/\blocalStorage\b/g)?.length, 2);
+    assert.equal(code.match(/"una-lang"/g)?.length, 2);
+  });
+
+  fails("CA-026-15: 10 241 bytes", (w) => {
+    const code = read(program(w));
+    writeFileSync(program(w), `${code}//${"x".repeat(10_241 - Buffer.byteLength(code) - 2)}`);
+  }, /lang\.js: pesa 10241 bytes/);
+
+  test("CA-026-15: 10 240 bytes justos pasan", () => {
+    const w = cloneWorld(base);
+    try {
+      const code = read(program(w));
+      writeFileSync(program(w), `${code}//${"x".repeat(10_240 - Buffer.byteLength(code) - 2)}`);
+      assert.deepEqual(specificErrors(checkSite(w.paths)).filter((e) => /pesa/.test(e)), []);
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  fails("sin lang.js en dist/", (w) => rmSync(program(w)), /lang\.js: falta/);
+});
+
+describe("CA-026-13: ningún HTML ni programa de más en dist/", () => {
+  fails("un .html de más en la raíz", (w) => writeFileSync(join(w.dist, "extra.html"), "<p>x</p>"), /extra\.html: .*de más/);
+  fails("un .html de más en una carpeta", (w) => writeFileSync(join(w.dist, "privacy/old.html"), "<p>x</p>"), /privacy\/old\.html: .*de más/);
+  fails("un .js de más en la raíz", (w) => writeFileSync(join(w.dist, "x.js"), ""), /x\.js: .*de más/);
+  fails("un .js de más en una carpeta que no es assets/", (w) => writeFileSync(join(w.dist, "fonts/x.js"), ""), /fonts\/x\.js: .*de más/);
+  fails("un .js en una subcarpeta de assets/", (w) => {
+    mkdirSync(join(w.dist, "assets/sub"), { recursive: true });
+    writeFileSync(join(w.dist, "assets/sub/x.js"), "");
+  }, /assets\/sub\/x\.js: .*de más/);
+  fails("un .HTML en mayúsculas", (w) => writeFileSync(join(w.dist, "X.HTML"), "<p>x</p>"), /X\.HTML: .*de más/);
+  fails("un .mjs", (w) => writeFileSync(join(w.dist, "x.mjs"), ""), /x\.mjs: .*de más/);
+});
+
+describe("CA-026-13: la CSP de las cuatro páginas: script-src 'self' y Trusted Types", () => {
+  const csp = (w, fn) =>
+    setHeaders(w, (h) => h.map((x) => (x.key === "Content-Security-Policy" ? { ...x, value: fn(x.value) } : x)));
+
+  test("la regla «/(.+)» lleva script-src 'self' y Trusted Types", () => {
+    const value = headers(base).find((h) => h.key === "Content-Security-Policy").value;
+    assert.match(value, /(^|; )script-src 'self'(;|$)/);
+    assert.match(value, /(^|; )require-trusted-types-for 'script'(;|$)/);
+    assert.match(value, /(^|; )trusted-types 'none'(;|$)/);
+    assert.match(value, /(^|; )style-src 'self'(;|$)/);
+  });
+
+  fails("sin script-src", (w) => csp(w, (v) => v.replace("script-src 'self'; ", "")), /falta script-src/);
+  for (const extra of ["'unsafe-inline'", "'unsafe-eval'", "https://cdn.example", "data:", "'strict-dynamic'"]) {
+    fails(`script-src con ${extra}`, (w) => csp(w, (v) => v.replace("script-src 'self'", `script-src 'self' ${extra}`)), /script-src tiene que ser 'self'/);
+  }
+  fails("sin require-trusted-types-for", (w) => csp(w, (v) => v.replace("; require-trusted-types-for 'script'", "")), /falta require-trusted-types-for/);
+  fails("sin trusted-types", (w) => csp(w, (v) => v.replace("; trusted-types 'none'", "")), /falta trusted-types/);
+  fails("trusted-types con una política", (w) => csp(w, (v) => v.replace("trusted-types 'none'", "trusted-types default")), /trusted-types tiene que ser 'none'/);
 });

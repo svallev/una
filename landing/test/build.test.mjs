@@ -23,7 +23,7 @@ const pages = ["privacy/index.html", "licenses/index.html", "help/index.html", "
 
 describe("CA-023-13: las páginas", () => {
   test("salen las tres webs de la app y la de error, más los estilos, los avisos y las fuentes", () => {
-    for (const f of [...pages, "tokens.css", "site.css", "third-party-notices.txt"]) {
+    for (const f of [...pages, "tokens.css", "site.css", "lang.js", "third-party-notices.txt"]) {
       assert.ok(existsSync(join(base.dist, f)), `falta ${f}`);
     }
     for (const f of [
@@ -54,10 +54,16 @@ describe("CA-023-13: las páginas", () => {
     }
   });
 
-  test("ninguna página lleva JavaScript", () => {
+  // Desde la spec 026 (CA-026-08, plan §1.2) cada página carga el programa de idioma: uno solo, clásico y síncrono,
+  // en el <head> después de las dos hojas de estilo; nada escrito dentro de la página ni manejadores on….
+  test("CA-026-08: un único <script src=\"/lang.js\"> en el <head>, tras las hojas de estilo, sin manejadores", () => {
     for (const f of pages) {
       const html = read(join(base.dist, f)).replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/g, " "); // los avisos de terceros son texto escapado
-      assert.ok(!/<script/i.test(html), `${f} tiene <script>`);
+      assert.equal(html.match(/<script\b/gi)?.length, 1, `${f}: tiene que haber un solo <script>`);
+      assert.ok(
+        html.includes('<link rel="stylesheet" href="/tokens.css">\n<link rel="stylesheet" href="/site.css">\n<script src="/lang.js"></script>\n</head>'),
+        `${f}: el <script> no va justo tras las hojas de estilo, al final del <head>`,
+      );
       assert.ok(!/\son[a-z]+\s*=/i.test(html), `${f} tiene un manejador on…`);
     }
   });
@@ -541,4 +547,63 @@ describe("CA-026-01: los textos de las páginas", () => {
     return JSON.stringify(json, null, 2);
   }), /strings\.es\.json.*footer\./);
   breaks("CA-026-09: «webSwitchToEnglish» en strings.json ya no es una clave conocida", (w) => edit(w.paths.strings, (t) => t.replace('"webOnThisPage": "On this page"', '"webOnThisPage": "On this page",\n    "webSwitchToEnglish": "Read in English"')), /webSwitchToEnglish.*no es una clave conocida/);
+});
+
+// Spec 026, T-026-06: el programa de idioma se publica tal cual y cada página no carga nada más que hoy salvo él.
+describe("CA-026-13 y 15: el programa de idioma en la web", () => {
+  const source = () => join(base.paths.srcDir, "lang.js");
+
+  test("CA-026-15: dist/lang.js es el fuente tal cual (byte a byte) y no pasa de 10 KB", () => {
+    const built = readFileSync(join(base.dist, "lang.js"));
+    assert.ok(built.equals(readFileSync(source())), "dist/lang.js no es igual a landing/src/lang.js");
+    assert.ok(built.length <= 10_240, `lang.js pesa ${built.length} bytes`);
+  });
+
+  test("CA-026-15: cada página carga /tokens.css, /site.css y /lang.js, y nada más", () => {
+    for (const f of pages) {
+      const html = read(join(base.dist, f)).replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/g, " ");
+      const loaded = [...html.matchAll(/<(link|script)\b[^>]*\s(?:href|src)="([^"]*)"/g)].map((m) => m[2]);
+      assert.deepEqual(loaded, ["/tokens.css", "/site.css", "/lang.js"], f);
+      assert.ok(!/<(?:img|source|iframe|object|embed|video|audio)\b/.test(html), `${f}: carga algún medio`);
+    }
+  });
+
+  test("CA-026-13: data-title-es y data-title-en salen escapados y, al leerlos, son los títulos de cada idioma", () => {
+    const w = cloneWorld(base);
+    try {
+      // El lector de identity.yaml no admite comillas dobles en el valor: «&», «<» y «'» bastan para el escape.
+      edit(w.paths.identity, (t) => t.replace(/displayName: "[^"]*"/, "displayName: \"A&B <'C'>\""));
+      w.build();
+      const html = read(join(w.dist, "help/index.html"));
+      const attr = (lang) => new RegExp(`<html lang="es" [^>]*data-title-${lang}="([^"]*)"`).exec(html)?.[1];
+      const unescape = (s) => s.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", '"').replaceAll("&#39;", "'").replaceAll("&amp;", "&");
+      for (const lang of ["es", "en"]) {
+        const raw = attr(lang);
+        assert.ok(raw, `falta data-title-${lang}`);
+        assert.ok(!/[<>']|&(?!(?:amp|lt|gt|quot|#39);)/.test(raw), `data-title-${lang} sin escapar: ${raw}`);
+        assert.equal(unescape(raw), lang === "es" ? "Ayuda · A&B <'C'>" : "Help · A&B <'C'>");
+      }
+    } finally {
+      w.cleanup();
+    }
+  });
+
+  test("CA-026-13: la clave «una-lang» de lang.js no cuenta como el nombre escrito a mano (plan §6.1)", () => {
+    const code = read(source());
+    assert.ok(code.includes('"una-lang"'));
+    assert.deepEqual(checkSite(base.paths).filter((e) => /lang\.js/.test(e)), []);
+  });
+
+  test("CA-026-13: el nombre escrito a mano en lang.js hace fallar la comprobación", () => {
+    for (const value of [name, readIdentity(read(base.paths.identity)).wordmark]) {
+      const w = cloneWorld(base);
+      try {
+        edit(join(w.paths.srcDir, "lang.js"), (t) => t.replace('"use strict";', `"use strict";\n  // Lo guarda ${value} para la landing.`));
+        const errors = checkSite(w.paths);
+        assert.ok(errors.some((e) => /a mano/.test(e) && /src\/lang\.js:\d+/.test(e)), errors.join("\n"));
+      } finally {
+        w.cleanup();
+      }
+    }
+  });
 });
