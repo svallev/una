@@ -83,6 +83,36 @@ describe("CA-023-15: contraste AA, solo con los pares de docs/design/tokens.md",
   });
 });
 
+describe("CA-026-03: tinta sobre blanco (el texto del botón «Descargar»)", () => {
+  test("CA-026-03: el par ink/surface pasa", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.siteCss, (t) => `${t}\n.btn { color: var(--color-ink); background-color: var(--color-surface); }\n`);
+      w.build();
+      assert.deepEqual(checkSite(w.paths), []);
+    } finally {
+      w.cleanup();
+    }
+  });
+  test("CA-026-03: ink/surface con poco contraste (por unos tokens cambiados) falla", () => {
+    const w = cloneWorld(base);
+    try {
+      edit(w.paths.siteCss, (t) => `${t}\n.btn { color: var(--color-ink); background-color: var(--color-surface); }\n`);
+      const tokens = JSON.parse(read(w.paths.tokens));
+      tokens.color.surface.$value = "#333333";
+      const copy = join(w.dir, "tokens.json");
+      writeFileSync(copy, JSON.stringify(tokens));
+      w.paths.tokens = copy;
+      w.build();
+      const errors = specificErrors(checkSite(w.paths));
+      assert.ok(errors.some((e) => /ink\/surface/.test(e) && /contraste/.test(e)), errors.join("\n"));
+    } finally {
+      w.cleanup();
+    }
+  });
+  fails("CA-026-03: un par con blanco que no está en la tabla sigue fallando", addCss("p { color: var(--color-line); background-color: var(--color-surface); }"), /par de colores line\/surface/);
+});
+
 describe("CA-023-15: idioma, viewport, estructura", () => {
   const viewport = '<meta name="viewport" content="width=device-width, initial-scale=1">';
   fails("sin viewport", (w) => edit(privacy(w), (t) => t.replace(viewport, "")), /viewport/);

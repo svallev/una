@@ -1,6 +1,6 @@
 # Tareas — Spec 026: Páginas de contenido
 
-**Siguiente:** T-026-01, en una sesión nueva (`/spec-implement 026`), en la rama `feat/026-paginas-de-contenido` desde `main` actualizado con la spec y este plan. Plan **Aprobado** el 2026-11-17.
+**Siguiente:** T-026-02 (T-026-01 hecha), en la rama `feat/026-paginas-de-contenido`. Plan **Aprobado** el 2026-11-17.
 
 Reglas: tareas **pequeñas** (≤ medio día), **ordenadas** (las dependencias arriba) y **verificables** (cada una dice cómo se comprueba). Se hacen **de una en una, en orden** (nada en paralelo). La columna **Toca** dice qué archivos o zonas cambia cada tarea, para revisar el plan y acotar lo que lee el subagente. Los textos y los tokens van juntos en una tarea al principio. Una PR puede agrupar varias tareas consecutivas.
 
@@ -32,3 +32,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (tests,
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-026-01 | **Hecha** (2026-11-17). `webOnThisPage` ES/EN; `loadLandingStrings`/`LANDING_STRING_KEYS` en `build.mjs` (lee `nav.*`/`footer.*` de `home/src/shared/strings.{es,en}.json` vía `paths.homeDir`, `{app}` literal, falla si falta, vacío u otro marcador; `loadSite` los da en `landing`, sin usar hasta T-026-02); par `ink/surface` (18,88) en `ALLOWED_PAIRS` y `tokens.md`. Build + check verdes, 547 tests de la web (32 nuevos), `check_release_config_test` 402. `webSwitchTo*`/`webNoticesTitle` de un idioma, fuera del test ES = EN hasta T-026-02 | (este commit) |

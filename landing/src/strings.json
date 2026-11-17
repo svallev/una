@@ -12,7 +12,8 @@
     "webLicensesFile": "Ver el archivo de avisos como texto",
     "webSwitchToSpanish": "Leer en español",
     "webLanguageName": "Español",
-    "licensesWebTitle": "Código de esta web"
+    "licensesWebTitle": "Código de esta web",
+    "webOnThisPage": "En esta página"
   },
   "en": {
     "webPageTitle": "{page} · {appName}",
@@ -28,6 +29,7 @@
     "webNoticesTitle": "Third-party notices (full text)",
     "webSwitchToEnglish": "Read in English",
     "webLanguageName": "English",
-    "licensesWebTitle": "Code of this website"
+    "licensesWebTitle": "Code of this website",
+    "webOnThisPage": "On this page"
   }
 }

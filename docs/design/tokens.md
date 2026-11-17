@@ -43,6 +43,7 @@ Se multiplica por el `textScaler` del sistema con un **límite de ×1,6** para l
 | Combinación | Ratio | Resultado |
 |---|---|---|
 | ink sobre paper | 16,74 | AA |
+| ink sobre surface (texto de «Descargar» en las páginas de la web, spec 026) | 18,88 | AA |
 | ink sobre cualquier nota (classic) | 9,84 – 14,94 | AA |
 | ink sobre neon | 7,32 – 17,28 | AA |
 | textMuted sobre paper / surface | 6,81 / 7,68 | AA |

@@ -601,6 +601,8 @@ const STRING_KEYS = {
   webLanguageName: { es: [], en: [] },
   // Título del bloque de avisos del código de la web en /licenses (spec 025, CA-025-18).
   licensesWebTitle: { es: [], en: [] },
+  // Nombre visible de la navegación del índice de la política y la Ayuda (spec 026, CA-026-04).
+  webOnThisPage: { es: [], en: [] },
 };
 const LANG_ONLY = { webSwitchToSpanish: { es: [] }, webSwitchToEnglish: { en: [] }, webNoticesTitle: { en: [] } };
 
@@ -629,6 +631,42 @@ export function loadStrings(text, label = "strings.json") {
     }
   }
   return json;
+}
+
+/**
+ * Los textos de la landing que usan la cabecera y el pie de las cuatro páginas (spec 026, plan §1.5): una sola
+ * fuente, `landing/home/src/shared/strings.{es,en}.json`, sin copia en `strings.json`.
+ */
+export const LANDING_STRING_KEYS = ["nav.home", "nav.download", "nav.lang", "footer.help", "footer.privacy", "footer.licenses", "footer.legal", "footer.nav"];
+
+/**
+ * Lee de los textos de la landing las claves de [LANDING_STRING_KEYS], con `{app}` sustituido por [appName]
+ * (tal cual: sin interpretar `$&`). Falla si falta alguna, si no es un texto o si lleva otro marcador.
+ * Devuelve `{ es: { nav: {…}, footer: {…} }, en: … }`.
+ */
+export function loadLandingStrings(paths, appName) {
+  const out = {};
+  for (const lang of ["es", "en"]) {
+    const label = `home/src/shared/strings.${lang}.json`;
+    const text = readText(join(paths.homeDir, "src/shared", `strings.${lang}.json`), label);
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      throw new BuildError(`${label}: no es JSON válido (${e.message})`);
+    }
+    out[lang] = {};
+    for (const key of LANDING_STRING_KEYS) {
+      const [group, leaf] = key.split(".");
+      const value = json?.[group]?.[leaf];
+      if (typeof value !== "string" || value.trim() === "") throw new BuildError(`${label}: falta «${key}» (texto)`);
+      for (const m of value.matchAll(/\{([^{}]*)\}/g)) {
+        if (m[1] !== "app") throw new BuildError(`${label}: «${key}» lleva el marcador {${m[1]}}, que no admite (solo {app})`);
+      }
+      (out[lang][group] ??= {})[leaf] = value.replaceAll("{app}", () => appName);
+    }
+  }
+  return out;
 }
 
 export function fill(template, values) {
@@ -729,6 +767,8 @@ function loadSite(paths) {
   const identity = readIdentity(readText(paths.identity, "identity.yaml"), basename(paths.identity));
   const strings = loadStrings(readText(paths.strings, "strings.json"), basename(paths.strings));
   const tokens = JSON.parse(readText(paths.tokens, "tokens.json"));
+  // La cabecera y el pie (spec 026): se leen ya aquí para que un texto que falta haga fallar la construcción.
+  const landing = loadLandingStrings(paths, identity.displayName);
   const arb = {};
   for (const [lang, path] of [["es", paths.arbEs], ["en", paths.arbEn]]) {
     const json = JSON.parse(readText(path, `app_${lang}.arb`));
@@ -738,7 +778,7 @@ function loadSite(paths) {
       arb[lang][key] = json[name];
     }
   }
-  return { identity, strings, tokens, arb };
+  return { identity, strings, landing, tokens, arb };
 }
 
 /** El archivo de avisos tal como se publica (CA-023-16). */

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
-import { build, defaultPaths, fill, readIdentity, tokensCss } from "../build.mjs";
+import { build, defaultPaths, fill, loadLandingStrings, LANDING_STRING_KEYS, readIdentity, tokensCss } from "../build.mjs";
 import { checkSite, mentionsName } from "../check.mjs";
 import { cloneWorld, edit, read, world } from "./support.mjs";
 
@@ -338,4 +338,87 @@ describe("tokens.css sale de design/tokens.json", () => {
     assert.ok(!css.includes("--palette"));
     assert.ok(!css.includes("--shadow"));
   });
+});
+
+// Spec 026, T-026-01: los textos nuevos y los de la landing que usan la cabecera y el pie.
+describe("CA-026-01: los textos de las páginas", () => {
+  const strings = () => JSON.parse(read(base.paths.strings));
+  // Solo en un idioma: los enlaces al otro idioma (se retiran en T-026-02) y el título de los avisos, en inglés.
+  const langOnly = { es: ["webSwitchToSpanish"], en: ["webSwitchToEnglish", "webNoticesTitle"] };
+
+  test("CA-026-01: «webOnThisPage» en español y en inglés", () => {
+    assert.equal(strings().es.webOnThisPage, "En esta página");
+    assert.equal(strings().en.webOnThisPage, "On this page");
+  });
+
+  test("CA-026-01: las claves de strings.json son las mismas en ES y en EN (salvo las de un solo idioma)", () => {
+    const keys = (lang) => Object.keys(strings()[lang]).filter((k) => !langOnly[lang].includes(k)).sort();
+    assert.deepEqual(keys("es"), keys("en"));
+  });
+
+  const breaks = (label, mutate, pattern) =>
+    test(label, () => {
+      const w = cloneWorld(base);
+      try {
+        mutate(w);
+        assert.throws(() => w.build(), pattern);
+      } finally {
+        w.cleanup();
+      }
+    });
+  const landingStrings = (w, lang) => join(w.paths.homeDir, "src/shared", `strings.${lang}.json`);
+
+  breaks("CA-026-01: sin «webOnThisPage» en español, la construcción falla", (w) => edit(w.paths.strings, (t) => {
+    const json = JSON.parse(t);
+    delete json.es.webOnThisPage;
+    return JSON.stringify(json, null, 2);
+  }), /es\.webOnThisPage/);
+  breaks("CA-026-01: sin «webOnThisPage» en inglés, la construcción falla", (w) => edit(w.paths.strings, (t) => {
+    const json = JSON.parse(t);
+    delete json.en.webOnThisPage;
+    return JSON.stringify(json, null, 2);
+  }), /en\.webOnThisPage/);
+  breaks("CA-026-01: un marcador en «webOnThisPage» hace fallar", (w) => edit(w.paths.strings, (t) => t.replace("En esta página", "En {página}")), /\{página\}/);
+
+  test("CA-026-01: la construcción lee de la landing la cabecera y el pie, con el nombre de la identidad", () => {
+    const s = loadLandingStrings(base.paths, name);
+    assert.deepEqual(s.es, {
+      nav: { home: `${name}, inicio`, download: "Descargar", lang: "Idioma" },
+      footer: { help: "Ayuda", privacy: "Privacidad", licenses: "Licencias", legal: `© 2026 ${name}`, nav: "Ayuda, privacidad y licencias" },
+    });
+    assert.deepEqual(s.en, {
+      nav: { home: `${name}, home`, download: "Download", lang: "Language" },
+      footer: { help: "Help", privacy: "Privacy", licenses: "Licenses", legal: `© 2026 ${name}`, nav: "Help, privacy and licenses" },
+    });
+  });
+
+  test("CA-026-01: {app} se sustituye por el nombre tal cual (sin interpretar $&)", () => {
+    const s = loadLandingStrings(base.paths, "A$&B$1");
+    assert.equal(s.es.nav.home, "A$&B$1, inicio");
+    assert.equal(s.en.footer.legal, "© 2026 A$&B$1");
+  });
+
+  test("CA-026-01: las claves que se leen son las de la cabecera y el pie", () => {
+    assert.deepEqual(LANDING_STRING_KEYS, ["nav.home", "nav.download", "nav.lang", "footer.help", "footer.privacy", "footer.licenses", "footer.legal", "footer.nav"]);
+  });
+
+  for (const key of ["nav.home", "nav.download", "nav.lang", "footer.help", "footer.privacy", "footer.licenses", "footer.legal", "footer.nav"]) {
+    for (const lang of ["es", "en"]) {
+      breaks(`CA-026-01: sin «${key}» en strings.${lang}.json de la landing, la construcción falla`, (w) => edit(landingStrings(w, lang), (t) => {
+        const json = JSON.parse(t);
+        const [group, leaf] = key.split(".");
+        delete json[group][leaf];
+        return JSON.stringify(json, null, 2);
+      }), new RegExp(`strings\\.${lang}\\.json.*${key.replace(".", "\\.")}`));
+    }
+  }
+  breaks("CA-026-01: un texto de la landing que no es texto hace fallar", (w) => edit(landingStrings(w, "en"), (t) => t.replace('"download": "Download"', '"download": 3')), /strings\.en\.json.*nav\.download/);
+  breaks("CA-026-01: un texto de la landing vacío hace fallar", (w) => edit(landingStrings(w, "es"), (t) => t.replace('"lang": "Idioma"', '"lang": "  "')), /strings\.es\.json.*nav\.lang/);
+  breaks("CA-026-01: un marcador que no es {app} en un texto de la landing hace fallar", (w) => edit(landingStrings(w, "es"), (t) => t.replace("© 2026 {app}", "© {año} {app}")), /strings\.es\.json.*\{año\}/);
+  breaks("CA-026-01: un archivo de textos de la landing que no es JSON hace fallar", (w) => edit(landingStrings(w, "en"), () => "{"), /strings\.en\.json.*no es JSON/);
+  breaks("CA-026-01: sin el grupo «footer» en la landing, la construcción falla", (w) => edit(landingStrings(w, "es"), (t) => {
+    const json = JSON.parse(t);
+    delete json.footer;
+    return JSON.stringify(json, null, 2);
+  }), /strings\.es\.json.*footer\./);
 });

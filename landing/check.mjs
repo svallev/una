@@ -292,7 +292,7 @@ const ratio = (a, b) => {
 const hexRgb = (hex) => [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 16));
 
 /** Los pares de texto y fondo de `docs/design/tokens.md` (tabla de contraste) que usa la web. */
-const ALLOWED_PAIRS = new Set(["ink/paper", "textMuted/paper", "textMuted/surface", "error/paper", "error/surface", "ink/dangerFill", "onInk/ink", "onInkMuted/ink"]);
+const ALLOWED_PAIRS = new Set(["ink/paper", "ink/surface", "textMuted/paper", "textMuted/surface", "error/paper", "error/surface", "ink/dangerFill", "onInk/ink", "onInkMuted/ink"]);
 
 function checkCss(file, text, { tokens, definedVars }, errors, { strict }) {
   const fail = (msg) => errors.push(`${file}: ${msg}`);
