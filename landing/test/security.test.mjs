@@ -1,7 +1,7 @@
 // Sin terceros ni rastreo (spec 023, CA-023-14; spec 026, CA-026-13 y 15: el programa de idioma y la CSP con
 // programas del propio origen y Trusted Types): cada regla con un caso que falla.
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
 import { checkSite } from "../check.mjs";
@@ -307,4 +307,48 @@ describe("CA-026-13: la CSP de las cuatro páginas: script-src 'self' y Trusted 
   fails("sin require-trusted-types-for", (w) => csp(w, (v) => v.replace("; require-trusted-types-for 'script'", "")), /falta require-trusted-types-for/);
   fails("sin trusted-types", (w) => csp(w, (v) => v.replace("; trusted-types 'none'", "")), /falta trusted-types/);
   fails("trusted-types con una política", (w) => csp(w, (v) => v.replace("trusted-types 'none'", "trusted-types default")), /trusted-types tiene que ser 'none'/);
+});
+
+// ─── Spec 027 (T-027-04): los grupos de avisos no traen programa, estilos, archivos ni cabeceras nuevos ─────
+
+describe("CA-027-04: sin programa nuevo y con las mismas guardias", () => {
+  const FIXTURES = join(import.meta.dirname, "fixtures", "027");
+  const licenses = (w) => join(w.dist, "licenses/index.html");
+  const GROUP_OPEN = '<details class="group"><summary>';
+
+  test("CA-027-04: vercel.json (CSP incluida) es el de main antes de la 027", () => {
+    assert.deepEqual(JSON.parse(read(vercel(base))), JSON.parse(read(join(FIXTURES, "vercel-main.json"))));
+    const value = headers(base).find((h) => h.key === "Content-Security-Policy").value;
+    assert.equal(
+      value,
+      "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'",
+    );
+  });
+
+  test("CA-027-04: los archivos de dist/ (sin la página de inicio) son los de main antes de la 027", () => {
+    const files = [];
+    const walk = (dir, prefix = "") => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const rel = `${prefix}${e.name}`;
+        if (e.isDirectory()) walk(join(dir, e.name), `${rel}/`);
+        else files.push(rel);
+      }
+    };
+    walk(base.dist);
+    assert.deepEqual(files.sort(), read(join(FIXTURES, "dist-files.txt")).trim().split("\n"));
+  });
+
+  test("CA-027-04: la página de licencias carga solo el programa de idioma y no lleva estilos en línea", () => {
+    const html = read(licenses(base));
+    assert.deepEqual([...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0]), ['<script src="/lang.js">']);
+    assert.ok(!/\sstyle\s*=/.test(html));
+    assert.ok(html.includes(GROUP_OPEN));
+  });
+
+  fails("CA-027-04: un <script> en la cabecera de un grupo", (w) => edit(licenses(w), (t) => t.replace(GROUP_OPEN, `${GROUP_OPEN}<script>1</script>`)), /script/);
+  fails("CA-027-04: un programa por src en un grupo", (w) => edit(licenses(w), (t) => t.replace(GROUP_OPEN, `${GROUP_OPEN}<script src="/x.js"></script>`)), /script/);
+  fails("CA-027-04: un style= en un grupo", (w) => edit(licenses(w), (t) => t.replace(GROUP_OPEN, '<details class="group" style="display:block"><summary>')), /style/);
+  fails("CA-027-04: un style= en la cabecera de un grupo", (w) => edit(licenses(w), (t) => t.replace(GROUP_OPEN, '<details class="group"><summary style="list-style:none">')), /style/);
+  fails("CA-027-04: un manejador ontoggle en un grupo", (w) => edit(licenses(w), (t) => t.replace(GROUP_OPEN, '<details class="group" ontoggle="x()"><summary>')), /ontoggle/);
+  fails("CA-027-04: un archivo de más en dist/", (w) => writeFileSync(join(w.dist, "groups.js"), ""), /groups\.js: .*de más/);
 });

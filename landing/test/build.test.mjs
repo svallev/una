@@ -197,10 +197,12 @@ describe("CA-026-01, 05, 09, 12 y 16: la página nueva, sin JavaScript", () => {
     assert.ok(t.includes('<a class="logo" href="/">'));
   });
 
-  test("CA-026-12: licencias: los avisos una sola vez, en inglés y fuera de las mitades; el título del código de la web en los dos idiomas", () => {
+  // CA-027-01: desde la 027, el bloque de avisos lleva el preámbulo y un <pre> por aviso (antes, uno solo).
+  test("CA-026-12, CA-027-01: licencias: los avisos una sola vez, en inglés y fuera de las mitades; el título del código de la web en los dos idiomas", () => {
     const t = html("licenses/index.html");
-    const pres = [...t.matchAll(/<pre([^>]*)>/g)];
-    assert.deepEqual(pres.map((m) => m[1]), [' lang="en"', ' lang="en"'], "dos <pre> (código de la web y avisos de la app), los dos en inglés");
+    const pres = [...t.matchAll(/<pre([^>]*)>/g)].map((m) => m[1]);
+    assert.deepEqual(pres.slice(0, 2), [' lang="en"', ' lang="en" class="notices__preamble"'], "el código de la web y el preámbulo de los avisos de la app, en inglés");
+    assert.ok(pres.length > 2 && pres.slice(2).every((a) => a === ' lang="en"'), "cada aviso, en un <pre> en inglés");
     assert.ok(t.includes(`<h2 id="web-code">${both("Código de esta web", "Code of this website", " · ")}</h2>`));
     const enEnd = t.indexOf("</section>", t.indexOf('<section class="half" lang="en"'));
     assert.ok(t.indexOf("<pre") > enEnd, "los avisos van después de las dos mitades");
@@ -606,5 +608,78 @@ describe("CA-026-13 y 15: el programa de idioma en la web", () => {
         w.cleanup();
       }
     }
+  });
+});
+
+// Spec 027, T-027-01: los textos del bloque de avisos agrupado por paquete (§7 de la spec) y el fragmento de
+// referencia de /licenses fuera de ese bloque (CA-027-07), sacado de la construcción de `main` antes de la 027.
+describe("CA-027-09: los textos de los grupos de avisos", () => {
+  const strings = () => JSON.parse(read(base.paths.strings));
+  const texts = {
+    webNoticesCountOne: { es: "1 aviso", en: "1 notice" },
+    webNoticesCountMany: { es: "{n} avisos", en: "{n} notices" },
+    webNoticesSkip: { es: "Saltar la lista de avisos", en: "Skip the notices list" },
+  };
+
+  for (const [key, byLang] of Object.entries(texts)) {
+    test(`CA-027-09: «${key}» en español y en inglés, con los textos de §7`, () => {
+      for (const lang of ["es", "en"]) assert.equal(strings()[lang][key], byLang[lang], `${lang}.${key}`);
+    });
+  }
+
+  test("CA-027-09: {n} solo va en «webNoticesCountMany» (y relleno da el número)", () => {
+    for (const lang of ["es", "en"]) {
+      for (const key of Object.keys(texts)) {
+        assert.equal(strings()[lang][key].includes("{n}"), key === "webNoticesCountMany", `${lang}.${key}`);
+      }
+    }
+    assert.equal(fill(strings().es.webNoticesCountMany, { n: 552 }), "552 avisos");
+    assert.equal(fill(strings().en.webNoticesCountMany, { n: 552 }), "552 notices");
+  });
+
+  const breaks = (label, mutate, pattern) =>
+    test(label, () => {
+      const w = cloneWorld(base);
+      try {
+        mutate(w);
+        assert.throws(() => w.build(), pattern);
+      } finally {
+        w.cleanup();
+      }
+    });
+  const without = (lang, key) => (w) => edit(w.paths.strings, (t) => {
+    const json = JSON.parse(t);
+    delete json[lang][key];
+    return JSON.stringify(json, null, 2);
+  });
+
+  for (const key of Object.keys(texts)) {
+    for (const lang of ["es", "en"]) {
+      breaks(`CA-027-09: sin «${key}» en ${lang}, la construcción falla`, without(lang, key), new RegExp(`${lang}\\.${key}`));
+    }
+  }
+  breaks("CA-027-09: {n} en «webNoticesCountOne» hace fallar", (w) => edit(w.paths.strings, (t) => t.replace('"1 aviso"', '"{n} aviso"')), /es\.webNoticesCountOne.*\{n\}/);
+  breaks("CA-027-09: {n} en «webNoticesSkip» hace fallar", (w) => edit(w.paths.strings, (t) => t.replace('"Skip the notices list"', '"Skip the {n} notices"')), /en\.webNoticesSkip.*\{n\}/);
+  breaks("CA-027-09: un marcador de más en «webNoticesCountMany» hace fallar", (w) => edit(w.paths.strings, (t) => t.replace('"{n} avisos"', '"{n} avisos de {total}"')), /es\.webNoticesCountMany.*\{total\}/);
+  breaks("CA-027-09: otro marcador en vez de {n} hace fallar", (w) => edit(w.paths.strings, (t) => t.replace('"{n} notices"', '"{count} notices"')), /en\.webNoticesCountMany.*\{count\}/);
+});
+
+describe("CA-027-07 (base): el fragmento de referencia de /licenses fuera del bloque de avisos", () => {
+  const reference = join(import.meta.dirname, "fixtures/027/licenses-outside-notices.html");
+  const noticesSection = /<section lang="en" aria-labelledby="notices">[\s\S]*?<\/section>/g;
+
+  test("CA-027-07: la referencia no trae el bloque de avisos y sí el resto de la página", () => {
+    const ref = read(reference);
+    assert.ok(!ref.includes('aria-labelledby="notices"'));
+    assert.ok(!ref.includes('id="notices"'));
+    for (const piece of ['aria-labelledby="web-code"', 'href="/third-party-notices.txt"', "</footer>"]) assert.ok(ref.includes(piece), piece);
+  });
+
+  // Hasta T-027-03 la página no cambia: lo que hay fuera del bloque es la referencia. Desde T-027-03 este test
+  // compara con el bloque nuevo quitado (la misma `<section>`).
+  test("CA-027-07: la página construida, sin el bloque de avisos, es igual a la referencia", () => {
+    const html = read(join(base.dist, "licenses/index.html"));
+    assert.equal(html.match(noticesSection)?.length, 1);
+    assert.equal(html.replace(noticesSection, ""), read(reference));
   });
 });

@@ -32,6 +32,32 @@ function fakeLink(lang) {
   };
 }
 
+/** Un `<details>` (un grupo de avisos, spec 027) que apunta cada cambio de su estado abierto en `changes`. */
+function fakeDetails(initial) {
+  let open = initial;
+  const changes = [];
+  return {
+    tagName: "DETAILS",
+    changes,
+    get open() {
+      return open;
+    },
+    set open(value) {
+      changes.push(["open", value]);
+      open = Boolean(value);
+    },
+    setAttribute(name, value) {
+      changes.push(["setAttribute", name, value]);
+    },
+    removeAttribute(name) {
+      changes.push(["removeAttribute", name]);
+    },
+    toggleAttribute(name) {
+      changes.push(["toggleAttribute", name]);
+    },
+  };
+}
+
 /** Un evento falso que recuerda si se llamó a `preventDefault`. */
 function fakeEvent(props = {}) {
   return { defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...props };
@@ -51,6 +77,7 @@ function run({
   readyState = "loading",
   titles = { titleEs: "Ayuda · Una", titleEn: "Help · Una" },
   titleThrows = false,
+  details = [],
 } = {}) {
   const store = new Map(stored === undefined ? [] : [["una-lang", stored]]);
   const writes = [];
@@ -70,8 +97,16 @@ function run({
   const docListeners = {};
   const winListeners = {};
   let title = "Ayuda · Una / Help · Una";
+  // Los grupos de avisos (spec 027): `<details>` falsos que apuntan cualquier cambio de su estado abierto.
+  const groups = details.map((open) => fakeDetails(open));
   const document = {
     documentElement: html,
+    getElementsByTagName(name) {
+      return name.toLowerCase() === "details" ? groups : [];
+    },
+    getElementById() {
+      return null;
+    },
     readyState,
     activeElement: null,
     get title() {
@@ -125,6 +160,7 @@ function run({
   const env = {
     html,
     links,
+    groups,
     store,
     writes,
     replaced,
@@ -418,3 +454,29 @@ describe("CL-026-5: si el programa falla, no marca `<html>`", () => {
     assert.deepEqual(env.writes, []);
   });
 });
+
+describe("CA-027-04: cambiar de idioma no cambia qué grupos de avisos están abiertos", () => {
+  test("CA-027-04: clic, Espacio y anclas de idioma no tocan el estado abierto de ningún <details>", () => {
+    const env = run({ language: "es-ES", pathname: "/licenses", details: [true, false, true] });
+    env.loaded();
+    env.click("en");
+    env.key("es", " ");
+    env.hashChange("#en");
+    env.hashChange("#es-x");
+    env.pageshow(true);
+    assert.equal(env.html.dataset.lang, "es");
+    assert.deepEqual(env.groups.map((g) => g.open), [true, false, true]);
+    for (const g of env.groups) assert.deepEqual(g.changes, []);
+  });
+
+  test("CA-027-06: el salto a #notices-end no se toma por un idioma", () => {
+    const env = run({ stored: "en", language: "es-ES", pathname: "/licenses", details: [false] });
+    env.loaded();
+    env.hashChange("#notices-end");
+    assert.equal(env.html.dataset.lang, "en");
+    assert.deepEqual(env.writes, []);
+    const opened = run({ hash: "#notices-end", stored: "en", pathname: "/licenses" });
+    assert.equal(opened.html.dataset.lang, "en", "abrir la página con ese ancla tampoco");
+  });
+});
+

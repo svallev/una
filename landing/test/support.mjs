@@ -104,9 +104,18 @@ export const HEADER_VERSION = "Versión: 1.2.3+4";
 export const HEADER_BUILD =
   "Compilación de main: 2e835cf9e1d8e1c7e203c90426f28f66e7ba4181 (trabajo de publicación, modo testers, ejecución 38874734623)";
 
-/** Un archivo de avisos de prueba, pequeño, con la cabecera [header] y [body] (el del artefacto). */
-export const fakeNotices = (header = HEADER_BUILD, body = "Third-party notices\nVersion: 0.0.0+0\n\nLicencia de prueba.\n") =>
-  `${header}\n\n${body}`;
+/**
+ * El cuerpo mínimo que se reconoce (spec 027, CA-027-05): el preámbulo, la parte `NOTICES` con un aviso del
+ * paquete `paquete` cuyo texto es [text] y su cierre.
+ */
+export const noticesBody = (text = "Licencia de prueba.") =>
+  `Third-party notices\nVersion: 0.0.0+0\n\n===== BEGIN NOTICES =====\npaquete\n\n${text}\n===== END NOTICES =====\n`;
+
+/**
+ * Un archivo de avisos de prueba, pequeño, con la cabecera [header] y [body] (el del artefacto). Desde la spec 027
+ * (CA-027-05) el cuerpo por defecto es la estructura mínima válida (`BEGIN/END NOTICES` y un aviso).
+ */
+export const fakeNotices = (header = HEADER_BUILD, body = noticesBody()) => `${header}\n\n${body}`;
 
 /** La mitad [lang] (`es` o `en`) de una página construida: de su `<section class="half">` a su cierre. */
 export function halfOf(html, lang) {

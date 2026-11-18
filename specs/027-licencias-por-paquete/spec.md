@@ -1,6 +1,6 @@
 # Spec 027: Licencias agrupadas por paquete
 
-- **Estado:** **Aprobada** por el propietario el 2026-11-17 (Q-027-1 resuelta: cabecera exacta; grupos plegados; antes Borrador; revisión 1 del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 7 importantes y 6 menores; revisión 2: 5 importantes y 6 menores, aplicados)
+- **Estado:** **Implementada** el 2026-11-17 (T-027-01 a 06; aprobada antes por el propietario el 2026-11-17 (Q-027-1 resuelta: cabecera exacta; grupos plegados; **plan Aprobado** el 2026-11-17, con la enmienda de CA-027-04 de Q-P-1; antes Borrador; revisión 1 del `spec-reviewer` aplicada el mismo día: 4 bloqueantes, 7 importantes y 6 menores; revisión 2: 5 importantes y 6 menores, aplicados)
 - **Reglas de producto:** ninguna de la app. Sirve a **P6** (accesible) y **P4** (la web sigue sin rastreo ni recursos de otro origen); los avisos legales se publican completos y sin alterar por ADR-0026.
 - **Pantallas del prototipo:** **sin diseño en el prototipo ni en la maqueta** (DEV-60 cubre las páginas de contenido; esta spec solo cambia cómo se ordena el bloque de avisos de la página de licencias). El propietario lo revisa en el navegador (C-027-1).
 - **Decisiones y ADR relacionados:** decisión del propietario del 2026-11-17 («opción 1, agrúpalo por paquete»; la opción de consolidar copyrights queda fuera, §8). ADR-0026 (licencias en la web; la revisión legal sigue siendo punto bloqueante de F6), ADR-0028 (las páginas de contenido, sin más programa que el del idioma).
@@ -55,12 +55,12 @@ Que quien abre la página de licencias vea qué paquetes de terceros lleva la ap
   - **Dado** la página de licencias con o sin JavaScript
   - **Cuando** se abre y se pulsa un grupo
   - **Entonces** el grupo se despliega y se pliega **sin ningún programa nuevo**: la página sigue cargando solo el programa de idioma (CA-026-13), sin estilos en línea, con la misma política de contenido (CSP) y sin archivos más que hoy. **Cambiar de idioma no cambia qué grupos están abiertos.** Las guardias que hoy miran el texto de los avisos (CA-023-19: sin rutas de la máquina de compilación; y los huecos de identidad al publicar) **siguen mirando todo el texto de los grupos**.
-  - **Verificable:** test de la construcción (recursos y CSP iguales que hoy; ningún `<script>` ni `style=` nuevo; un `[DATE]` o una ruta de una carpeta personal en el texto de un aviso hacen fallar igual) y test de `lang.js` (el estado abierto no cambia al cambiar de idioma).
+  - **Verificable:** test de la construcción (recursos y CSP iguales que hoy; ningún `<script>` ni `style=` nuevo; **enmienda del plan, Q-P-1, 2026-11-17:** un `[DATE]` en el **texto** de un aviso sigue sin contar como hueco de identidad, como en la 023, y en el **nombre** de un grupo sí cuenta; una ruta de una carpeta personal (`/Users/`, `/home/` salvo `/home/runner/`, `C:\Users\`) o un carácter de control o de dirección en **cualquier parte** del archivo hace fallar la construcción) y test de `lang.js` (el estado abierto no cambia al cambiar de idioma).
 
 - **CA-027-05** · Falla cerrado
   - **Dado** un archivo de avisos con una estructura que no se reconoce
   - **Cuando** se construye la web
-  - **Entonces** la construcción **falla con un mensaje que dice qué y dónde**, y **no** publica una página agrupada a medias ni vuelve al bloque único sin avisar. Son estructura no reconocida: `BEGIN` sin `END`, `END` sin `BEGIN`, partes anidadas, o una ruta de sección repetida; ningún aviso; una **cabecera** no válida (vacía, o con un nombre que lleva espacios); un aviso sin texto; una **cabecera que reaparece lejos de su primer tramo** (los avisos de una cabecera deben estar seguidos); y **cualquier texto que no sea espacio en blanco fuera de una parte reconocida** (entre `BEGIN NOTICES` y el primer aviso, entre `END NOTICES` y la primera sección, entre secciones o tras la última). El separador es **una línea de exactamente 80 guiones, y solo dentro de la parte de avisos**; las demás líneas de guiones son texto. El resto de comprobaciones de la página (CA-023-16 y 19: versión o compilación en la cabecera, sin rutas de la máquina de compilación) siguen igual.
+  - **Entonces** la construcción **falla con un mensaje que dice qué y dónde**, y **no** publica una página agrupada a medias ni vuelve al bloque único sin avisar. Son estructura no reconocida: `BEGIN` sin `END`, `END` sin `BEGIN`, partes anidadas, o una ruta de sección repetida; ningún aviso; una **cabecera** no válida (vacía, o con un nombre que lleva espacios); un aviso sin texto; una **cabecera que reaparece lejos de su primer tramo** (los avisos de una cabecera deben estar seguidos); y **cualquier texto que no sea espacio en blanco fuera de una parte reconocida** (entre `BEGIN NOTICES` y el primer aviso —salvo líneas en blanco, que el analizador no distingue y que cuentan como cabecera vacía y fallan igual—, entre `END NOTICES` y la primera sección, entre secciones o tras la última). El separador es **una línea de exactamente 80 guiones, y solo dentro de la parte de avisos**; las demás líneas de guiones son texto. El resto de comprobaciones de la página (CA-023-16 y 19: versión o compilación en la cabecera, sin rutas de la máquina de compilación) siguen igual.
   - **Verificable:** test de la construcción, un caso por cada estructura de esa lista.
 
 - **CA-027-06** · Accesibles
@@ -139,11 +139,11 @@ Los textos de los avisos y los nombres de paquete **no se traducen** (inglés, `
 ## 9. Preguntas abiertas
 
 - **[Hecho, Q-027-1 resuelta por el propietario el 2026-11-17: «por cabecera exacta»; los grupos empiezan todos plegados]** El agrupado es por **cabecera exacta**, no por paquete suelto: 69 cabeceras comparten varios paquetes (por ejemplo `async, cli_util, collection, mime, stream_channel, typed_data`), y el mismo paquete (`dart`, `icu`…) aparece en varias cabeceras. Agrupar «por paquete» de verdad obligaría a **repetir** un aviso bajo cada uno de sus paquetes (duplica texto legal, contra CA-027-02). **Recomendación: cabecera exacta** (lo supuesto aquí). ¿Es lo que querías al decir «por paquete»? (Los grupos empiezan todos plegados, CA-027-01 **[Suposición]**: con 164 grupos, abrir uno solo no ahorra nada.)
-- **[Pendiente, plan]** Cómo se reconoce la estructura del archivo (partes, cabeceras y secciones `assets/…`) sin listas escritas a mano y cómo se carga el marcador `{n}` de las claves nuevas; cómo se garantiza CA-027-02; cómo se separan visualmente los avisos de un grupo y cómo entra el recuento bilingüe sin que el programa de idioma escriba texto.
+- **[Hecho, plan Aprobado el 2026-11-17: `plan.md` §1]** Cómo se reconoce la estructura del archivo (partes, cabeceras y secciones `assets/…`) sin listas escritas a mano y cómo se carga el marcador `{n}` de las claves nuevas; cómo se garantiza CA-027-02; cómo se separan visualmente los avisos de un grupo y cómo entra el recuento bilingüe sin que el programa de idioma escriba texto.
 
 ## 10. Enmiendas
 
-Se anotan al aprobar esta spec como «Enmienda (spec 027, Aprobada; en vigor cuando la 027 se implemente)».
+Se anotaron al aprobar esta spec como «Enmienda (spec 027, Aprobada; en vigor cuando la 027 se implemente)»; **[Hecho, 2026-11-17]** pasan a «en vigor desde el 2026-11-17, con la 027 implementada (T-027-06)» en la 023, la 025 y la 026.
 
 | Spec | Criterio | Qué cambia |
 |---|---|---|
