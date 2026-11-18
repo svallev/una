@@ -21,11 +21,6 @@ secrets/
 *.secret
 .vercel
 
-# ─── Web de la app (spec 023): lo que construye landing/build.mjs ────
-landing/dist/
-# Spec 025: lo que build.mjs genera para Vite (nombre, tokens, la página con el contenido).
-landing/home/gen/
-
 # ─── Claude Code (local) ─────────────────────────────────────────────
 .claude/settings.local.json
 .claude/*.local.*

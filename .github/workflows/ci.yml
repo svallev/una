@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build: ${{ steps.check.outputs.build }}
-      web: ${{ steps.check.outputs.web }}
+      store: ${{ steps.check.outputs.store }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,7 +41,7 @@ jobs:
           fetch-depth: 2
       - id: check
         # La lógica vive en tools/ci-detect.sh (con su test, app/test/tool/ci_detect_test.dart):
-        # `build` = compilar y probar la app; `web` = construir y comprobar la web y la ficha
+        # `build` = compilar y probar la app; `store` = comprobar la ficha de tienda
         # (CA-023-18). Va a nivel de job (`if:` de los trabajos) y no con `paths:` en `on:`: un job
         # saltado cuenta como superado para las comprobaciones obligatorias; un workflow que no
         # arranca las deja pendientes. En main se compila y se construye siempre. Falla cerrada: si
@@ -165,7 +165,7 @@ jobs:
         # Tras compilar: usa la caché de Gradle (--offline) y lo que ya está instalado; no instala nada.
         # Emite app/build/third-party-notices.txt del APK de release comprobado y lo verifica ya emitido.
         run: bash ../tools/check-licenses.sh
-      - name: Archivo de avisos de terceros (el que se publica en la web; caduca a los 90 días)
+      - name: Archivo de avisos de terceros (el que publica la web, svallev/una-web; caduca a los 90 días)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: third-party-notices
@@ -198,12 +198,12 @@ jobs:
           flutter pub get --enforce-lockfile
           flutter build ios --debug --no-codesign
 
-  web:
-    name: Web y ficha
-    # Solo la web y la ficha de tienda (CA-023-18): construir, comprobar y probar. Sin despliegue, sin
-    # secretos y sin tocar la app; el proyecto de Vercel y el dominio llegan en F6.
+  store:
+    name: Ficha
+    # Solo la ficha de tienda (CA-023-18): comprobar y probar. Sin despliegue y sin secretos. La web vive
+    # en su propio repositorio, con su CI (svallev/una-web, ADR-0029).
     needs: detect
-    if: needs.detect.outputs.web == 'true'
+    if: needs.detect.outputs.store == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -211,25 +211,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Dependencias de la página de inicio (Vite, GSAP, Lenis; spec 025)
-        # Solo lo que fija `landing/package-lock.json`, sin scripts de instalación (`.npmrc` también lo
-        # dice). Con el Node del runner, como el resto del trabajo. Nunca `npm install` ni `npx`.
-        working-directory: landing
-        run: npm ci --ignore-scripts
-      - name: Construir la web
-        run: node landing/build.mjs
-      - name: Comprobar la web (HTML, contraste, enlaces, textos, dist al día)
-        run: node landing/check.mjs
-      - name: Tests de Node (web y ficha)
-        # Los archivos van con el glob de la shell: en Node 24 `node --test landing/test` falla. Falla
+      - name: Tests de Node (ficha)
+        # Los archivos van con el glob de la shell: en Node 24 `node --test <carpeta>` falla. Falla
         # cerrada: si la salida no trae el recuento, o es menor que el mínimo, el paso falla (un glob
         # que no encuentra nada o un reportero que cambia de forma no pueden dar un «0 tests, bien»). El
-        # reportero `tap` fija el formato del recuento (`# tests N`; hoy 508). El mínimo no es una cifra
+        # reportero `tap` fija el formato del recuento (`# tests N`; hoy 137). El mínimo no es una cifra
         # exacta, solo el suelo que prueba que se ejecutó la batería.
         run: |
           set -euo pipefail
           min=100
-          node --test --test-reporter=tap landing/test/*.test.mjs store/google-play/test/*.test.mjs | tee "$RUNNER_TEMP/node-tests.txt"
+          node --test --test-reporter=tap store/google-play/test/*.test.mjs | tee "$RUNNER_TEMP/node-tests.txt"
           n="$(sed -nE 's/^# tests ([0-9]+)$/\1/p' "$RUNNER_TEMP/node-tests.txt" | tail -n 1)"
           if [ -z "$n" ] || [ "$n" -lt "$min" ]; then
             echo "::error::Se esperaban al menos $min tests de Node y se contaron '${n:-ninguno}'"

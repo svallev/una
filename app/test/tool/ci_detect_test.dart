@@ -5,9 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yaml/yaml.dart';
 
 /// `tools/ci-detect.sh` (CA-023-18, plan §1.4): decide, a partir de los archivos que cambia una PR,
-/// si hay que compilar la app (`build`) y si hay que construir la web y la ficha (`web`). Recibe los
-/// nombres separados por NUL en la entrada estándar (la salida de `git diff --name-only -z`) y
-/// escribe `build=…` y `web=…`. Falla cerrado: una lista vacía en una PR lo da todo, y lo que no
+/// si hay que compilar la app (`build`) y si hay que comprobar la ficha de tienda (`store`; la web vive
+/// en su propio repositorio, svallev/una-web, ADR-0029). Recibe los nombres separados por NUL en la
+/// entrada estándar (la salida de `git diff --name-only -z`) y escribe `build=…` y `store=…`. Falla cerrado: una lista vacía en una PR lo da todo, y lo que no
 /// entiende es un fallo, nunca un «no hace falta».
 const _script = '../tools/ci-detect.sh';
 const _ci = '../.github/workflows/ci.yml';
@@ -49,27 +49,22 @@ Future<_Result> _detect(
 Future<void> _expectFlags(
   List<String> files, {
   required bool build,
-  required bool web,
+  required bool store,
   String event = 'pull_request',
 }) async {
   final r = await _detect(files, event: event);
   expect(r.code, 0, reason: '${files.join(' ')}: ${r.err}');
-  expect(r.out, {'build': '$build', 'web': '$web'}, reason: files.join(' '));
+  expect(r.out, {
+    'build': '$build',
+    'store': '$store',
+  }, reason: files.join(' '));
 }
 
 void main() {
-  group('CA-023-18: la web', () {
+  group('CA-023-18: la ficha', () {
     const triggers = [
-      'landing/build.mjs',
-      'landing/src/site.css',
-      'landing/test/build.test.mjs',
-      'landing/third-party-notices.txt',
-      'landing/package.json',
-      'landing/package-lock.json',
-      'landing/.npmrc',
-      'landing/home/src/main.js',
-      'landing/home/index.html',
       'store/google-play/check.mjs',
+      'store/google-play/lib.mjs',
       'store/google-play/data-safety.md',
       'store/google-play/play-console.md',
       'store/google-play/listing/es-ES/title.txt',
@@ -77,30 +72,28 @@ void main() {
       'store/google-play/screenshots/es-ES/1-tarea.png',
       'docs/legal/privacy-policy.md',
       'app/identity.yaml',
-      'design/tokens.json',
-      'app/lib/l10n/app_es.arb',
-      'app/lib/l10n/app_en.arb',
-      'app/assets/fonts/Archivo-Variable.ttf',
       'tools/check-android-permissions.sh',
-      'tools/validate-tokens.mjs',
       'tools/ci-detect.sh',
       '.github/workflows/ci.yml',
     ];
     for (final f in triggers) {
-      test('CA-023-18: $f construye y comprueba la web', () async {
+      test('CA-023-18: $f comprueba la ficha', () async {
         final r = await _detect([f]);
         expect(r.code, 0, reason: r.err);
-        expect(r.out['web'], 'true', reason: f);
+        expect(r.out['store'], 'true', reason: f);
       });
     }
 
-    const noWeb = [
+    const noStore = [
       'app/lib/main.dart',
       'app/lib/ui/home/home_screen.dart',
       'app/lib/l10n/l10n.dart',
+      'app/lib/l10n/app_es.arb',
+      'app/assets/fonts/archivo/Archivo-Variable.ttf',
       'app/pubspec.yaml',
       'app/assets/images/x.png',
       'app/android/app/build.gradle.kts',
+      'design/tokens.json',
       'store/google-play/icon-512.png',
       'docs/glossary.md',
       'docs/security/threat-model.md',
@@ -109,14 +102,15 @@ void main() {
       'README.md',
       'tools/check-size.sh',
       'tools/check-licenses.sh',
+      'tools/validate-tokens.mjs',
       '.github/workflows/release.yml',
       '.github/workflows/security.yml',
     ];
-    for (final f in noWeb) {
-      test('CA-023-18: $f no construye la web', () async {
+    for (final f in noStore) {
+      test('CA-023-18: $f no comprueba la ficha', () async {
         final r = await _detect([f]);
         expect(r.code, 0, reason: r.err);
-        expect(r.out['web'], 'false', reason: f);
+        expect(r.out['store'], 'false', reason: f);
       });
     }
 
@@ -125,54 +119,27 @@ void main() {
         [
           'app/lib/main.dart',
           'docs/adr/x.md',
-          'landing/build.mjs',
+          'store/google-play/check.mjs',
           'README.md',
         ],
         build: true,
-        web: true,
+        store: true,
       );
     });
   });
 
   group('CA-023-18: la app', () {
-    test('CA-023-18: un cambio en app/ compila la app y no la web', () async {
-      await _expectFlags(['app/lib/x.dart'], build: true, web: false);
+    test('CA-023-18: un cambio en app/ compila la app y no la ficha', () async {
+      await _expectFlags(['app/lib/x.dart'], build: true, store: false);
     });
 
-    test('CA-023-18: landing/ y store/ no compilan la app', () async {
-      await _expectFlags(['landing/x'], build: false, web: true);
-      await _expectFlags(['landing/src/site.css'], build: false, web: true);
-      await _expectFlags(
-        ['landing/test/a11y.test.mjs'],
-        build: false,
-        web: true,
-      );
-      await _expectFlags(
-        ['store/google-play/check.mjs'],
-        build: false,
-        web: true,
-      );
-      await _expectFlags(
-        ['store/google-play/listing/en-US/short.txt'],
-        build: false,
-        web: true,
-      );
-      await _expectFlags(
-        ['store/google-play/play-console.md'],
-        build: false,
-        web: true,
-      );
-    });
-
-    test('CA-025-19: las dependencias y la página de inicio de landing/ no compilan la app', () async {
+    test('CA-023-18: store/ no compila la app', () async {
       for (final f in [
-        'landing/package.json',
-        'landing/package-lock.json',
-        'landing/home/src/main.js',
-        'landing/home/src/a/page.js',
-        'landing/home/index.html',
+        'store/google-play/check.mjs',
+        'store/google-play/listing/en-US/short.txt',
+        'store/google-play/play-console.md',
       ]) {
-        await _expectFlags([f], build: false, web: true);
+        await _expectFlags([f], build: false, store: true);
       }
     });
 
@@ -180,24 +147,21 @@ void main() {
       await _expectFlags(
         ['store/google-play/icon-512.png'],
         build: true,
-        web: false,
+        store: false,
       );
       await _expectFlags(
         ['store/google-play/feature-graphic.png'],
         build: true,
-        web: true,
+        store: true,
       );
     });
 
-    test('CA-023-18: lo que leen los tests de la app dentro de landing/ y store/ la sigue compilando', () async {
-      for (final f in [
-        'landing/src/strings.json',
-        'landing/src/help.es.md',
-        'landing/src/help.en.md',
-        'store/google-play/data-safety.md',
-      ]) {
-        await _expectFlags([f], build: true, web: true);
-      }
+    test('CA-023-18: lo que leen los tests de la app dentro de store/ la sigue compilando', () async {
+      await _expectFlags(
+        ['store/google-play/data-safety.md'],
+        build: true,
+        store: true,
+      );
     });
 
     test('CA-023-18: lo que ya compilaba la app la sigue compilando', () async {
@@ -228,7 +192,7 @@ void main() {
         'README.md',
         'CLAUDE.md',
       ]) {
-        await _expectFlags([f], build: false, web: false);
+        await _expectFlags([f], build: false, store: false);
       }
     });
 
@@ -238,41 +202,52 @@ void main() {
         await _expectFlags(
           ['docs/PLAN.md', 'app/lib/x.dart'],
           build: true,
-          web: false,
+          store: false,
         );
         await _expectFlags(
           ['app/lib/x.dart', 'docs/PLAN.md'],
           build: true,
-          web: false,
+          store: false,
         );
       },
     );
 
     test('CA-023-18: un nombre con espacios, saltos de línea o no ASCII no despista', () async {
-      await _expectFlags(['docs/mi nota.md'], build: false, web: false);
-      await _expectFlags(['docs/a\nlanding/x.md'], build: false, web: false);
-      await _expectFlags(['docs/a\napp/lib/x.dart'], build: false, web: false);
-      await _expectFlags(['docs/año/ñ.md'], build: false, web: false);
-      // Una barra invertida no se interpreta: `landing\/x` no es `landing/x` y, ante la duda, compila.
-      await _expectFlags([r'landing\/x'], build: true, web: false);
-      await _expectFlags(['landing/p\nágina.html'], build: false, web: true);
+      await _expectFlags(['docs/mi nota.md'], build: false, store: false);
+      await _expectFlags(['docs/a\nstore/x.md'], build: false, store: false);
+      await _expectFlags(
+        ['docs/a\napp/lib/x.dart'],
+        build: false,
+        store: false,
+      );
+      await _expectFlags(['docs/año/ñ.md'], build: false, store: false);
+      // Una barra invertida no se interpreta: `store\/x` no es `store/x` y, ante la duda, compila.
+      await _expectFlags([r'store\/x'], build: true, store: false);
+      await _expectFlags(
+        ['store/google-play/p\nágina.html'],
+        build: false,
+        store: true,
+      );
     });
 
     test('CA-023-18: un nombre sin NUL final también se lee', () async {
-      final r = await _detect(['landing/x', 'docs/a.md'], terminated: false);
+      final r = await _detect([
+        'store/google-play/x',
+        'docs/a.md',
+      ], terminated: false);
       expect(r.code, 0, reason: r.err);
-      expect(r.out, {'build': 'false', 'web': 'true'});
+      expect(r.out, {'build': 'false', 'store': 'true'});
       final r2 = await _detect([
         'docs/a.md',
         'app/lib/x.dart',
       ], terminated: false);
-      expect(r2.out, {'build': 'true', 'web': 'false'});
+      expect(r2.out, {'build': 'true', 'store': 'false'});
     });
   });
 
   group('CA-023-18: falla cerrada', () {
     test('CA-023-18: una lista vacía en una PR lo da todo', () async {
-      await _expectFlags([], build: true, web: true);
+      await _expectFlags([], build: true, store: true);
     });
 
     test(
@@ -280,24 +255,24 @@ void main() {
       () async {
         final r = await _detect(['', '', '']);
         expect(r.code, 0, reason: r.err);
-        expect(r.out, {'build': 'true', 'web': 'true'});
+        expect(r.out, {'build': 'true', 'store': 'true'});
       },
     );
 
     test(
       'CA-023-18: fuera de una PR (main) se compila y se construye todo',
       () async {
-        await _expectFlags([], build: true, web: true, event: 'push');
+        await _expectFlags([], build: true, store: true, event: 'push');
         await _expectFlags(
           ['docs/PLAN.md'],
           build: true,
-          web: true,
+          store: true,
           event: 'push',
         );
         await _expectFlags(
           ['README.md'],
           build: true,
-          web: true,
+          store: true,
           event: 'workflow_dispatch',
         );
       },
@@ -322,7 +297,7 @@ void main() {
       }
     });
 
-    test('CA-023-18: sin app/pubspec.yaml no se compila la app (como antes), pero la web sí se decide', () async {
+    test('CA-023-18: sin app/pubspec.yaml no se compila la app (como antes), pero la ficha sí se decide', () async {
       final tmp = Directory.systemTemp.createTempSync('ci_detect_');
       try {
         Directory('${tmp.path}/tools').createSync();
@@ -330,35 +305,35 @@ void main() {
         final script = '${tmp.path}/tools/ci-detect.sh';
         var r = await _detect(['app/lib/x.dart'], script: script);
         expect(r.code, 0, reason: r.err);
-        expect(r.out, {'build': 'false', 'web': 'false'});
-        r = await _detect(['landing/x'], script: script);
-        expect(r.out, {'build': 'false', 'web': 'true'});
+        expect(r.out, {'build': 'false', 'store': 'false'});
+        r = await _detect(['store/google-play/x'], script: script);
+        expect(r.out, {'build': 'false', 'store': 'true'});
         r = await _detect([], event: 'push', script: script);
-        expect(r.out, {'build': 'false', 'web': 'true'});
+        expect(r.out, {'build': 'false', 'store': 'true'});
         // Con la app, lo mismo da en el repositorio real.
         Directory('${tmp.path}/app').createSync();
         File('${tmp.path}/app/pubspec.yaml').writeAsStringSync('name: x\n');
         r = await _detect(['app/lib/x.dart'], script: script);
-        expect(r.out, {'build': 'true', 'web': 'false'});
+        expect(r.out, {'build': 'true', 'store': 'false'});
       } finally {
         tmp.deleteSync(recursive: true);
       }
     });
 
     test(
-      'CA-023-18: escribe solo build= y web=, sin nada más en la salida',
+      'CA-023-18: escribe solo build= y store=, sin nada más en la salida',
       () async {
         final p = await Process.start('bash', [
           _script,
           '--event',
           'pull_request',
         ]);
-        p.stdin.add(utf8.encode('landing/x\u0000'));
+        p.stdin.add(utf8.encode('store/google-play/x\u0000'));
         await p.stdin.close();
         final out = await utf8.decodeStream(p.stdout);
         await p.stderr.drain<void>();
         expect(await p.exitCode, 0);
-        expect(out.trimRight().split('\n'), ['build=false', 'web=true']);
+        expect(out.trimRight().split('\n'), ['build=false', 'store=true']);
       },
     );
 
@@ -383,24 +358,27 @@ void main() {
     final doc = loadYaml(text) as YamlMap;
     final jobs = doc['jobs'] as YamlMap;
     final detect = jobs['detect'] as YamlMap;
-    final web = jobs['web'] as YamlMap;
+    final store = jobs['store'] as YamlMap;
     List<YamlMap> stepsOf(YamlMap job) => [
       for (final s in job['steps'] as YamlList) s as YamlMap,
     ];
     String run(YamlMap s) => (s['run'] ?? '') as String;
 
-    test('CA-023-18: detect saca build y web, y los dos vienen del script', () {
-      final outputs = detect['outputs'] as YamlMap;
-      expect(outputs.keys.toSet(), {'build', 'web'});
-      expect(outputs['build'], r'${{ steps.check.outputs.build }}');
-      expect(outputs['web'], r'${{ steps.check.outputs.web }}');
-      final check = stepsOf(detect).firstWhere((s) => s['id'] == 'check');
-      expect(run(check), contains('tools/ci-detect.sh'));
-      expect(run(check), contains('--event'));
-      // Ya no repite la lista de rutas en el workflow.
-      expect(run(check), isNot(contains('glossary.md')));
-      expect(run(check), isNot(contains('case ')));
-    });
+    test(
+      'CA-023-18: detect saca build y store, y los dos vienen del script',
+      () {
+        final outputs = detect['outputs'] as YamlMap;
+        expect(outputs.keys.toSet(), {'build', 'store'});
+        expect(outputs['build'], r'${{ steps.check.outputs.build }}');
+        expect(outputs['store'], r'${{ steps.check.outputs.store }}');
+        final check = stepsOf(detect).firstWhere((s) => s['id'] == 'check');
+        expect(run(check), contains('tools/ci-detect.sh'));
+        expect(run(check), contains('--event'));
+        // Ya no repite la lista de rutas en el workflow.
+        expect(run(check), isNot(contains('glossary.md')));
+        expect(run(check), isNot(contains('case ')));
+      },
+    );
 
     test('CA-023-18: detect falla cerrado si git diff falla', () {
       final check = stepsOf(detect).firstWhere((s) => s['id'] == 'check');
@@ -438,26 +416,24 @@ void main() {
       }
     });
 
-    test('CA-023-18: el trabajo «Web y ficha» existe, depende de detect y solo con web', () {
-      expect(web['name'], 'Web y ficha');
-      expect(web['needs'], 'detect');
-      expect(web['if'], "needs.detect.outputs.web == 'true'");
-      expect(web['runs-on'], 'ubuntu-latest');
-      expect(web['permissions'], {'contents': 'read'});
+    test('CA-023-18: el trabajo «Ficha» existe, depende de detect y solo con store', () {
+      expect(store['name'], 'Ficha');
+      expect(store['needs'], 'detect');
+      expect(store['if'], "needs.detect.outputs.store == 'true'");
+      expect(store['runs-on'], 'ubuntu-latest');
+      expect(store['permissions'], {'contents': 'read'});
     });
 
-    test('CA-023-18: «Web y ficha» no despliega, no usa secretos ni acciones de más', () {
-      final body = [for (final s in stepsOf(web)) '${s['uses'] ?? ''}${run(s)}']
-          .join('\n');
+    test('CA-023-18: «Ficha» no despliega, no usa secretos, ni npm, ni acciones de más', () {
+      final body = [
+        for (final s in stepsOf(store)) '${s['uses'] ?? ''}${run(s)}',
+      ].join('\n');
       expect(text, isNot(contains('secrets.')));
       expect(text, isNot(contains('vercel')));
       expect(body, isNot(contains('deploy')));
-      // La única orden de npm es `npm ci --ignore-scripts` (CA-025-19); nunca `npm install` ni `npx`.
-      expect(body, isNot(contains('npm install')));
-      expect(body, isNot(contains('npm i ')));
+      expect(body, isNot(contains('npm')));
       expect(body, isNot(contains('npx')));
-      expect(RegExp(r'\bnpm\b').allMatches(body).length, 1, reason: body);
-      for (final s in stepsOf(web)) {
+      for (final s in stepsOf(store)) {
         final uses = s['uses'] as String?;
         if (uses == null) continue;
         expect(uses, startsWith('actions/checkout@'));
@@ -470,42 +446,21 @@ void main() {
       }
     });
 
-    test('CA-023-18: «Web y ficha» construye y comprueba la web y la ficha, en este orden', () {
-      final runs = [for (final s in stepsOf(web)) run(s)]
+    test('CA-023-18: «Ficha» prueba y comprueba la ficha, en este orden', () {
+      final runs = [for (final s in stepsOf(store)) run(s)]
           .where((r) => r.isNotEmpty)
           .join('\n');
-      final build = runs.indexOf('node landing/build.mjs');
-      final checkWeb = runs.indexOf('node landing/check.mjs');
       final tests = runs.indexOf('node --test');
       final checkStore = runs.indexOf('node store/google-play/check.mjs');
-      expect(build, greaterThanOrEqualTo(0));
-      expect(checkWeb, greaterThan(build));
       expect(tests, greaterThanOrEqualTo(0));
       expect(checkStore, greaterThan(tests));
-      expect(runs, contains('landing/test/*.test.mjs'));
       expect(runs, contains('store/google-play/test/*.test.mjs'));
-      // `node --test landing/test` (una carpeta) falla en Node 24: se pasa el glob de la shell.
-      expect(runs, isNot(contains('node --test landing/test ')));
+      // `node --test <carpeta>` falla en Node 24: se pasa el glob de la shell.
+      expect(runs, isNot(contains('node --test store/google-play/test ')));
     });
 
-    test('CA-025-19: «Web y ficha» instala landing/ con npm ci --ignore-scripts antes de construir', () {
-      final steps = stepsOf(web).toList();
-      final npm = steps.indexWhere((s) => run(s).contains('npm'));
-      final build = steps.indexWhere(
-        (s) => run(s).contains('node landing/build.mjs'),
-      );
-      expect(npm, greaterThanOrEqualTo(0));
-      expect(build, greaterThan(npm));
-      expect(run(steps[npm]).trim(), 'npm ci --ignore-scripts');
-      expect(steps[npm]['working-directory'], 'landing');
-      // Con el Node del runner, como el resto del trabajo: sin `setup-node`.
-      for (final s in steps) {
-        expect('${s['uses'] ?? ''}', isNot(contains('setup-node')));
-      }
-    });
-
-    test('CA-023-18: «Web y ficha» exige un mínimo de tests ejecutados', () {
-      final step = stepsOf(web)
+    test('CA-023-18: «Ficha» exige un mínimo de tests ejecutados', () {
+      final step = stepsOf(store)
           .firstWhere((s) => run(s).contains('node --test'));
       final r = run(step);
       expect(r, contains('set -euo pipefail'));
@@ -519,7 +474,7 @@ void main() {
     test(
       'CA-023-18: el recuento mínimo del trabajo lo cumplen los tests de hoy',
       () async {
-        final step = stepsOf(web)
+        final step = stepsOf(store)
             .firstWhere((s) => run(s).contains('node --test'));
         final min = int.parse(
           RegExp(r'min=(\d+)').firstMatch(run(step))!.group(1)!,
@@ -528,11 +483,6 @@ void main() {
         final r = await Process.run('node', [
           '--test',
           '--test-reporter=tap',
-          ...Directory('../landing/test')
-              .listSync()
-              .whereType<File>()
-              .where((f) => f.path.endsWith('.test.mjs'))
-              .map((f) => f.path),
           ...Directory('../store/google-play/test')
               .listSync()
               .whereType<File>()
@@ -552,7 +502,7 @@ void main() {
     );
 
     test('CA-023-18: el trabajo no corre nada de la app', () {
-      final body = [for (final s in stepsOf(web)) run(s)].join('\n');
+      final body = [for (final s in stepsOf(store)) run(s)].join('\n');
       expect(body, isNot(contains('flutter')));
       expect(body, isNot(contains('dart ')));
       expect(body, isNot(contains('gradlew')));

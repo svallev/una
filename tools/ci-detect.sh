@@ -4,7 +4,8 @@
 # una por línea, listas para añadir a `$GITHUB_OUTPUT`:
 #
 #   build=true|false   ¿hay que compilar y probar la app (trabajos flutter, android e ios)?
-#   web=true|false     ¿hay que construir y comprobar la web y la ficha de tienda («Web y ficha»)?
+#   store=true|false   ¿hay que comprobar la ficha de tienda («Ficha»)? (La web vive en su propio
+#                      repositorio, svallev/una-web, con su CI; ADR-0029.)
 #
 #   git diff --name-only -z HEAD^1 HEAD | tools/ci-detect.sh --event pull_request
 #
@@ -28,65 +29,63 @@ usage() {
 [ $# -eq 2 ] && [ "$1" = "--event" ] && [ -n "$2" ] || usage
 event="$2"
 
-# ¿Compila esta ruta la app? Documentación y especificaciones, no; la web y la ficha, tampoco, salvo lo
-# que leen los tests de `app/test`: si un test nuevo lee otro archivo de `docs/`, `specs/`, `landing/` o
-# `store/`, hay que añadirlo aquí. Cualquier otra ruta con carpeta (o un archivo de la raíz que no es
+# ¿Compila esta ruta la app? Documentación y especificaciones, no; la ficha, tampoco, salvo lo que leen
+# los tests de `app/test`: si un test nuevo lee otro archivo de `docs/`, `specs/` o `store/`, hay que
+# añadirlo aquí. Cualquier otra ruta con carpeta (o un archivo de la raíz que no es
 # `.md`) compila.
 is_build() {
   case "$1" in
     # Los que leen los tests de la app: glosario, modelo de amenazas, política de privacidad.
     docs/glossary.md|docs/security/threat-model.md|docs/legal/privacy-policy.md) return 0 ;;
     docs/*|specs/*) return 1 ;;
-    # La puerta de la 020 lee los textos de la web; el test de Data Safety, `data-safety.md`; los de
-    # iconos, `icon-512.png`; el *golden* del gráfico, `feature-graphic.png`.
-    landing/src/strings.json|landing/src/help.es.md|landing/src/help.en.md) return 0 ;;
+    # El test de Data Safety lee `data-safety.md`; los de iconos, `icon-512.png`; el *golden* del
+    # gráfico, `feature-graphic.png`.
     store/google-play/data-safety.md|store/google-play/icon-512.png|store/google-play/feature-graphic.png) return 0 ;;
-    landing/*|store/*) return 1 ;;
+    store/*) return 1 ;;
     */*) return 0 ;;
     *.md) return 1 ;;
     *) return 0 ;;
   esac
 }
 
-# ¿Construye esta ruta la web y la ficha? Lo suyo (`landing/`, `store/google-play/` salvo el icono, que
-# no entra en la ficha que se comprueba) y aquello de lo que depende la web.
-is_web() {
+# ¿Comprueba esta ruta la ficha? Lo suyo (`store/google-play/` salvo el icono, que no entra en la ficha
+# que se comprueba) y lo que lee `store/google-play/check.mjs`.
+is_store() {
   case "$1" in
     store/google-play/icon-512.png) return 1 ;;
-    landing/*|store/google-play/*) return 0 ;;
-    docs/legal/privacy-policy.md|app/identity.yaml|design/tokens.json) return 0 ;;
-    app/lib/l10n/app_*.arb|app/assets/fonts/*) return 0 ;;
-    tools/check-android-permissions.sh|tools/validate-tokens.mjs|tools/ci-detect.sh) return 0 ;;
+    store/google-play/*) return 0 ;;
+    docs/legal/privacy-policy.md|app/identity.yaml) return 0 ;;
+    tools/check-android-permissions.sh|tools/ci-detect.sh) return 0 ;;
     .github/workflows/ci.yml) return 0 ;;
     *) return 1 ;;
   esac
 }
 
 build=false
-web=false
+store=false
 has_app=false
 [ -f "$ROOT/app/pubspec.yaml" ] && has_app=true
 
 if [ "$event" != "pull_request" ]; then
   # En main (y a mano) se construye todo lo que existe.
   build=$has_app
-  web=true
+  store=true
 else
   seen=0
   while IFS= read -r -d '' f || [ -n "$f" ]; do
     [ -n "$f" ] || continue
     seen=$((seen + 1))
     if is_build "$f"; then build=true; fi
-    if is_web "$f"; then web=true; fi
+    if is_store "$f"; then store=true; fi
   done
   if [ "$seen" -eq 0 ]; then
     # Una PR sin archivos no existe: si la lista llega vacía, algo falló al pedirla.
     build=true
-    web=true
+    store=true
   fi
-  # Sin la app no hay nada que compilar (como antes); la web sí se decide.
+  # Sin la app no hay nada que compilar (como antes); la ficha sí se decide.
   if [ "$has_app" != true ]; then build=false; fi
 fi
 
 echo "build=$build"
-echo "web=$web"
+echo "store=$store"

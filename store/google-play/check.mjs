@@ -10,8 +10,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { BuildError, extractPolicy, gapPattern, readIdentity } from "../../landing/build.mjs";
-import { mentionsName } from "../../landing/check.mjs";
+import { BuildError, extractPolicy, gapPattern, mentionsName, readIdentity } from "./lib.mjs";
 
 /**
  * ¿Se exigen el gráfico de funciones y las capturas? Sí desde T-023-10, que las crea (antes, si existían se
