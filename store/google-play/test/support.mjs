@@ -3,7 +3,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { deflateSync } from "node:zlib";
-import { REPO_ROOT } from "../../../landing/build.mjs";
+import { REPO_ROOT } from "../check.mjs";
 import { storePaths } from "../check.mjs";
 
 /** Lo que la comprobación lee del repositorio, con la misma disposición de carpetas. */

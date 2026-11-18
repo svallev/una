@@ -7,7 +7,7 @@ import '../../tool/check_release_config.dart' as gate;
 // La política real (`docs/legal/privacy-policy.md`, spec 023, T-023-05): su estructura, lo que tiene
 // que decir (CA-023-02) y los nombres de permisos de la declaración de Data Safety (CA-023-08). El
 // resto de la puerta (huecos y marcas) se prueba en `check_release_config_test.dart`; la comparación
-// con la web, en `landing/test` (T-023-06).
+// con la web publicada, en los tests de `svallev/una-web` (T-023-06; ADR-0029).
 
 const _esStart = '# Política de privacidad (ES)';
 const _enStart = '# Privacy policy (EN)';

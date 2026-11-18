@@ -65,7 +65,7 @@
 | «The developer's data retention and deletion policy» | Cubierto («Cuánto tiempo se guarda y cómo borrarlo») | Sin cambios. |
 | «Clear labeling as a privacy policy» | El título lo dice | Sin cambios. |
 | «The entity named in the store listing must appear in the privacy policy or the app must be named in the privacy policy» | La app sale con `{appName}`; la entidad, con `[RESPONSABLE]` | Sin cambios. |
-| URL pública, sin restricción geográfica, **no PDF** y **no editable** | La web de `landing/` (HTML estático, sin PDF) | Sin cambios. |
+| URL pública, sin restricción geográfica, **no PDF** y **no editable** | La web de `svallev/una-web` (HTML estático, sin PDF; ADR-0029) | Sin cambios. |
 | Coherencia con Data Safety (F2, «Data safety section»: «the section must be consistent with the disclosures made in the app's privacy policy») | — | Las secciones de la política y las filas W-1 a W-13 se leen juntas (CA-023-02, 05 y 08). |
 
 ## 4. Acceso a la app: notas para los revisores (CA-023-21)

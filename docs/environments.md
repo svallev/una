@@ -41,7 +41,8 @@
 
 ## 3. Web de pruebas en Vercel (ADR-0010)
 
-- Proyecto de Vercel conectado al repo, Root Directory `app/`, install `bash ../tools/install-flutter.sh`, build `flutter build web --release --wasm --no-web-resources-cdn`, output `build/web`.
+- Proyecto de Vercel `una` conectado al repo, Root Directory `.` (la raíz), con la configuración de `vercel.json`: install `bash tools/install-flutter.sh`, build `cd app && flutter build web --release --wasm --no-web-resources-cdn`, output `app/build/web`. Público en https://una-rho.vercel.app.
+- La web pública de la app (landing y páginas de contenido) es otro proyecto de Vercel, `una-web`, del repositorio `svallev/una-web` (ADR-0029).
 - **Preview** por PR (con Deployment Protection) y **producción** desde `main`.
 - Sin variables secretas: la web no tiene backend.
 - Plan Hobby gratuito: suficiente para pruebas personales. **[Suposición]** Uso no comercial; si la app pasa a ser un producto de pago, revisar las condiciones del plan.

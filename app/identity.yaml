@@ -7,7 +7,7 @@ displayName: "Una"    # nombre bajo el icono y en el sistema
 wordmark: "una."      # logotipo dentro de la app
 
 # Direcciones de las tres webs (spec 012, CA-012-04/05; spec 015, CA-015-13a/13b): una sola de cada una
-# para ES y EN, sin `?` ni `#`. Se abren en el navegador del sistema, nunca dentro de la app. Solo
+# para ES y EN, sin `?` ni `#`. Las publica la web, en su propio repositorio (svallev/una-web, ADR-0029). Se abren en el navegador del sistema, nunca dentro de la app. Solo
 # `https`, y las tres tienen que ser distintas entre sí.
 # [Pendiente PD-2] MARCADORES: las webs aún no existen. `tools/check-release-config.sh` impide publicar
 # con un dominio reservado (example.com…) o con dos direcciones iguales; cámbialas por las definitivas
@@ -15,9 +15,3 @@ wordmark: "una."      # logotipo dentro de la app
 privacyPolicyUrl: "https://example.com/privacy"        # política de privacidad
 thirdPartyLicensesUrl: "https://example.com/licenses"  # licencias de terceros (ADR-0026)
 helpUrl: "https://example.com/help"                    # ayuda
-
-# Fichas de las tiendas (spec 025, CA-025-08): las enlaza la página de inicio de la web, no la app. Vacías
-# ("") hasta que exista cada ficha (F6): sin dirección, el rótulo de la tienda no es un enlace y la web dice
-# «Muy pronto». Solo `https://` con el anfitrión exacto de su tienda; `landing/build.mjs` rechaza lo demás.
-appStoreUrl: ""      # https://apps.apple.com/…
-googlePlayUrl: ""    # https://play.google.com/…

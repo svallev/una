@@ -10,7 +10,7 @@
 
 ## Estado
 
-🛠️ **F5 Endurecimiento** (fase actual). La app Flutter está implementada en `app/` con las specs **001 a 026** hechas: primer uso, crear, completar, eliminar con deshacer, editar, listado y reordenar, adjuntos (varias fotos en carrusel, PDF y web), Ajustes, notificaciones, ocultar «Recientes», idioma ES/EN, modo siempre claro, iconos, y la web (landing y páginas de contenido). Las specs 020 a 024 cubren la puerta de publicación, la auditoría en dispositivo y sus correcciones; la 025 y la 026 son la landing y las páginas de contenido (Privacidad, Licencias, Ayuda y error).
+🛠️ **F5 Endurecimiento** (fase actual). La app Flutter está implementada en `app/` con las specs **001 a 024** hechas: primer uso, crear, completar, eliminar con deshacer, editar, listado y reordenar, adjuntos (varias fotos en carrusel, PDF y web), Ajustes, notificaciones, ocultar «Recientes», idioma ES/EN, modo siempre claro e iconos. Las specs 020 a 024 cubren la puerta de publicación, la auditoría en dispositivo y sus correcciones, la política de privacidad y la ficha de tienda. La web (landing y páginas de Privacidad, Licencias, Ayuda y error; specs 025 a 027) vive en su propio repositorio, [svallev/una-web](https://github.com/svallev/una-web) ([ADR-0029](docs/adr/0029-la-web-en-su-propio-repositorio.md)).
 
 - **Android primero.** iOS se decidirá al final (no hay Xcode por ahora).
 - **Sin publicar.** Es un proyecto personal de aprendizaje del ciclo completo: de momento no se sube a Google Play ni hay testers. Lo que falta para la primera subida es la lista cerrada de **F6** en [docs/PLAN.md](docs/PLAN.md).
@@ -21,7 +21,7 @@
 | Qué | Enlace |
 |---|---|
 | **App web de pruebas** (Flutter web, solo para probar; la app real es móvil) | [una-rho.vercel.app](https://una-rho.vercel.app) |
-| **Landing** (vista previa; huecos de identidad aún sin rellenar, contacto provisional) | [una-landing-git-web-preview-salvadorvalle-8227s-projects.vercel.app](https://una-landing-git-web-preview-salvadorvalle-8227s-projects.vercel.app) |
+| **Web** (landing y páginas de contenido; repositorio [svallev/una-web](https://github.com/svallev/una-web)) | [una-web-nu.vercel.app](https://una-web-nu.vercel.app) |
 
 Son entornos de prueba, no la publicación: ver [docs/PLAN.md](docs/PLAN.md) (F6) para lo que falta antes de publicar.
 
@@ -31,7 +31,7 @@ Son entornos de prueba, no la publicación: ver [docs/PLAN.md](docs/PLAN.md) (F6
 |---|---|
 | [specs/constitution.md](specs/constitution.md) | Principios que no se negocian y Definition of Done |
 | [docs/PLAN.md](docs/PLAN.md) | Fases, hitos, riesgos, trazabilidad y decisiones pendientes |
-| [specs/](specs/) | Especificaciones (001–026) y plantillas; cada una con su `plan.md` y `tasks.md` |
+| [specs/](specs/) | Especificaciones (001–024; las de la web, 025–027, en `svallev/una-web`) y plantillas; cada una con su `plan.md` y `tasks.md` |
 | [docs/adr/](docs/adr/) | Decisiones de arquitectura |
 | [docs/architecture.md](docs/architecture.md) | Capas, arranque, modelo de datos (Mermaid) |
 | [docs/security/](docs/security/) | Modelo de amenazas y checklist de seguridad |
@@ -45,7 +45,6 @@ Son entornos de prueba, no la publicación: ver [docs/PLAN.md](docs/PLAN.md) (F6
 
 ```
 app/        App Flutter (identidad en app/identity.yaml)
-landing/    Web estática: landing de producto, Privacidad, Licencias, Ayuda y error
 store/      Ficha de Google Play (textos, Data Safety, capturas)
 design/     tokens.json (fuente única) y copia del prototipo
 docs/       Plan, ADR, arquitectura, seguridad, diseño, textos legales
@@ -58,7 +57,7 @@ spikes/     Pruebas técnicas de las primeras fases
 
 ## Stack (provisional)
 
-Flutter (versión en `.fvmrc`), Dart, SQLite con drift, Riverpod; Android 8+ (API 26) e iOS 16+ (al final). La web (`landing/`) es Node sin dependencias para las páginas de contenido y Vite, GSAP y Lenis para la landing; se aloja en Vercel. Justificación en [ADR-0001](docs/adr/0001-stack-tecnologico.md), [ADR-0009](docs/adr/0009-monorepo-y-landing.md) y [ADR-0027](docs/adr/0027-landing-con-vite-gsap-y-lenis.md).
+Flutter (versión en `.fvmrc`), Dart, SQLite con drift, Riverpod; Android 8+ (API 26) e iOS 16+ (al final). La web vive en otro repositorio ([svallev/una-web](https://github.com/svallev/una-web)) y se aloja en Vercel. Justificación en [ADR-0001](docs/adr/0001-stack-tecnologico.md) y [ADR-0029](docs/adr/0029-la-web-en-su-propio-repositorio.md).
 
 ### Comandos
 
@@ -71,7 +70,7 @@ flutter analyze --fatal-infos
 flutter test
 
 node tools/validate-tokens.mjs                 # tokens (desde la raíz)
-node landing/build.mjs && node landing/check.mjs && node --test landing/test/*.test.mjs   # web
+node --test store/google-play/test/*.test.mjs && node store/google-play/check.mjs   # ficha de tienda
 ```
 
 Con FVM, antepón `fvm` a `flutter` y `dart`. El detalle y las convenciones están en [CLAUDE.md](CLAUDE.md).

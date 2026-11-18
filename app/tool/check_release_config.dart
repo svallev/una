@@ -1,21 +1,18 @@
 // Puerta de publicación (spec 012, CA-012-05; spec 015, CA-015-13b; spec 020, CA-020-05 y 09 a 12;
 // spec 023, CA-023-01): falla si alguna de las tres direcciones de `identity.yaml` (política de
 // privacidad, licencias de terceros y ayuda) no sirve para publicar, si dos de ellas son la misma, si
-// el texto de la política (o los de la web: `landing/src/strings.json` y la Ayuda) sigue con huecos de
-// identidad, con marcas de documento (`[Suposición]`, `[Pendiente]`…) o con texto entre corchetes que
+// el texto de la política sigue con huecos de identidad, con marcas de documento (`[Suposición]`, `[Pendiente]`…) o con texto entre corchetes que
 // no sea un enlace, o si lo generado desde `identity.yaml` no está al día.
 //
 //   dart run tool/check_release_config.dart [--identity <archivo>] [--policy <archivo>]
-//                                           [--web-text <archivo>]... [--web-defaults]
 //                                           [--generated-root <carpeta>] [--json <archivo>]
 //
-// Sin argumentos lee `identity.yaml`, la política de `../docs/legal/privacy-policy.md` y los textos de
-// la web de `defaultWebTexts` (se ejecuta desde `app/`; lo normal es llamarla con
+// Sin argumentos lee `identity.yaml` y la política de `../docs/legal/privacy-policy.md` (se ejecuta desde `app/`; lo normal es llamarla con
 // `tools/check-release-config.sh`, que pasa `--generated-root` para comprobar también, con
 // `tool/gen_identity.dart --check`, que lo generado desde el yaml está al día). Con `--policy` se
-// prueban valores propios y la web solo se mira si se pasa `--web-text` (una o varias veces: `.json` o
-// `.md`; un archivo dado que falta es un fallo) o `--web-defaults`. Con una compilación de desarrollo o
-// local NO se usa: los marcadores `https://example.com/…` son normales mientras se desarrolla.
+// prueban valores propios. Los textos de la web (pie y Ayuda) no se miran aquí: la web vive en su propio
+// repositorio (svallev/una-web, ADR-0029) y no se publica con huecos (`UNA_RELEASE=1`). Con una
+// compilación de desarrollo o local NO se usa: los marcadores `https://example.com/…` son normales mientras se desarrolla.
 //
 // Cada dirección debe ser `https`, sin usuario, sin puerto, sin `?`, `#` ni `\`, con un dominio
 // público solo ASCII (ni una IP ni `localhost`) que no sea un dominio reservado para ejemplos o
@@ -43,7 +40,7 @@ enum GateIssueKind {
   /// Una dirección marcador o con un dominio reservado (aviso de identidad, CA-020-05 a).
   placeholderAddress,
 
-  /// Un hueco de identidad sin rellenar en la política o en un texto de la web (aviso de identidad,
+  /// Un hueco de identidad sin rellenar en la política (aviso de identidad,
   /// CA-020-05 c; la lista cerrada es [_gap]).
   policyGap,
 
@@ -144,7 +141,7 @@ const _idnTestTlds = [
 ];
 
 /// Los huecos de identidad (CA-023-01), una lista **cerrada** con su versión española y su inglesa:
-/// datos que solo existen en F6. En la política y en los textos de la web son un aviso en el modo
+/// datos que solo existen en F6. En la política son un aviso en el modo
 /// testers y un fallo en el estricto. El nombre de la app **no** es un hueco: sale de
 /// `identity.yaml` y se escribe `{appName}` ([_oldName]).
 final _gap = RegExp(
@@ -561,124 +558,6 @@ List<GateIssue> checkPolicyText(String text) {
   ];
 }
 
-/// Los errores de un texto de la web en Markdown ([text] es el archivo entero, p. ej. la Ayuda):
-/// las mismas reglas que la política, en todo el archivo (CA-023-01, P-023-1 a). [subject] es el
-/// archivo.
-List<GateIssue> checkWebMarkdown(String text, {required String subject}) =>
-    _scanPart(
-      text,
-      0,
-      text.length,
-      subject: subject,
-      place: (offset) => 'la línea ${_lineAt(text, offset)}',
-      published: 'un texto publicado',
-    );
-
-/// Los errores de `strings.json` ([json] es el archivo entero): las mismas reglas que la política,
-/// sobre cada texto del JSON ya decodificado (los corchetes de la sintaxis no cuentan) y con la
-/// clave de cada uno en el mensaje. Un JSON que no se lee es un `fault`.
-List<GateIssue> checkWebStrings(String json, {required String subject}) {
-  final Object? root;
-  try {
-    root = jsonDecode(json);
-  } on FormatException catch (e) {
-    return [
-      GateIssue(
-        GateIssueKind.fault,
-        subject,
-        'no es JSON válido (${_shorten(e.message)})',
-      ),
-    ];
-  }
-  final issues = <GateIssue>[];
-  void visit(Object? node, String path) {
-    switch (node) {
-      case final String value:
-        issues.addAll(
-          _scanPart(
-            value,
-            0,
-            value.length,
-            subject: subject,
-            place: (_) => '«$path»',
-            published: 'un texto publicado',
-          ),
-        );
-      case final Map<String, Object?> map:
-        for (final e in map.entries) {
-          visit(e.value, path.isEmpty ? e.key : '$path.${e.key}');
-        }
-      case final List<Object?> list:
-        for (var i = 0; i < list.length; i++) {
-          visit(list[i], path.isEmpty ? '$i' : '$path.$i');
-        }
-    }
-  }
-
-  visit(root, '');
-  return issues;
-}
-
-/// Los textos de la web que la puerta mira por defecto (P-023-1 a; relativos a `app/`).
-const defaultWebTexts = [
-  '../landing/src/strings.json',
-  '../landing/src/help.es.md',
-  '../landing/src/help.en.md',
-];
-
-/// Si los textos de [defaultWebTexts] tienen que existir: sí (T-023-07), la web tiene que llevar sus
-/// textos y la Ayuda en español y en inglés para poder publicarse.
-const webTextsRequired = true;
-
-/// Los errores del texto de la web en [path] (`.json` o `.md`): si no se puede leer o no es de un
-/// tipo conocido es un `fault` que nombra el archivo (CA-020-12); si no, los de
-/// [checkWebStrings] o [checkWebMarkdown].
-List<GateIssue> checkWebTextFile(String path) {
-  final subject = path.split(RegExp(r'[/\\]')).last;
-  final (text, issue) = _readText(path, subject);
-  if (issue != null) return [issue];
-  final lower = subject.toLowerCase();
-  if (lower.endsWith('.json')) return checkWebStrings(text!, subject: subject);
-  if (lower.endsWith('.md')) return checkWebMarkdown(text!, subject: subject);
-  return [
-    GateIssue(
-      GateIssueKind.fault,
-      subject,
-      'no es un texto de la web que sepa leer (solo `.json` y `.md`) ($path)',
-    ),
-  ];
-}
-
-/// Qué textos de la web se miran y si tienen que existir. Los dados ([explicit], `--web-text`) se miran
-/// siempre y tienen que existir; sin ellos, los de [defaultWebTexts] si no se dio otra política
-/// ([policyGiven] falso: son los valores del repositorio) o si se pidió con [webDefaults]
-/// (`--web-defaults`, que añade `tools/check-release-config.sh`), y hacen falta si [webTextsRequired].
-(List<String>, bool) selectWebTexts({
-  required List<String> explicit,
-  required bool policyGiven,
-  required bool webDefaults,
-}) {
-  if (explicit.isNotEmpty) return (explicit, true);
-  return (
-    webDefaults || !policyGiven ? defaultWebTexts : const <String>[],
-    webTextsRequired,
-  );
-}
-
-/// De [paths], los que hay que mirar: todos si [required]; si no, solo los que existen.
-List<String> webTextsToCheck(List<String> paths, {required bool required}) => [
-  for (final p in paths)
-    if (required ||
-        FileSystemEntity.typeSync(p) != FileSystemEntityType.notFound)
-      p,
-];
-
-/// Los errores de los textos de la web de [paths] (ver [webTextsToCheck]).
-List<GateIssue> checkWebTexts(List<String> paths, {required bool required}) => [
-  for (final p in webTextsToCheck(paths, required: required))
-    ...checkWebTextFile(p),
-];
-
 /// El texto de la marca que casa [m] en [part], para el mensaje: desde el corchete hasta el de
 /// cierre en la misma línea (o hasta el final de la línea), acotado a 60 caracteres.
 String _markText(String part, RegExpMatch m) {
@@ -802,7 +681,7 @@ Never _usage(String message) {
   stderr.writeln('::error::$message');
   stderr.writeln(
     'Uso: dart run tool/check_release_config.dart [--identity <archivo>] '
-    '[--policy <archivo>] [--web-text <archivo>]... [--web-defaults] '
+    '[--policy <archivo>] '
     '[--generated-root <carpeta>] [--json <archivo>]',
   );
   exit(2);
@@ -827,9 +706,6 @@ void _writeJson(String path, List<GateIssue> issues, List<String> checks) {
 void main(List<String> args) {
   var identityPath = 'identity.yaml';
   var policyPath = '../docs/legal/privacy-policy.md';
-  var policyGiven = false;
-  var webDefaults = false;
-  final webTexts = <String>[];
   String? generatedRoot;
   String? jsonPath;
   for (var i = 0; i < args.length; i++) {
@@ -840,12 +716,6 @@ void main(List<String> args) {
       case '--policy':
         if (++i >= args.length) _usage('--policy necesita un valor');
         policyPath = args[i];
-        policyGiven = true;
-      case '--web-text':
-        if (++i >= args.length) _usage('--web-text necesita un valor');
-        webTexts.add(args[i]);
-      case '--web-defaults':
-        webDefaults = true;
       case '--generated-root':
         if (++i >= args.length) _usage('--generated-root necesita un valor');
         generatedRoot = args[i];
@@ -859,26 +729,14 @@ void main(List<String> args) {
 
   // Cada comprobación se hace aunque otra haya fallado: el resumen del trabajo de publicación
   // lista todo lo que falla de una vez. Un archivo que no se puede leer es un fallo (CA-020-12).
-  //
-  // Los textos de la web (CA-023-01): los dados con `--web-text` tienen que existir; los de
-  // [defaultWebTexts] solo se miran sin `--policy` (o con `--web-defaults`) y hacen falta si
-  // [webTextsRequired].
-  final (webPaths, webRequired) = selectWebTexts(
-    explicit: webTexts,
-    policyGiven: policyGiven,
-    webDefaults: webDefaults,
-  );
-  final webToCheck = webTextsToCheck(webPaths, required: webRequired);
   final checks = [
     'addresses',
     'policy',
-    if (webToCheck.isNotEmpty) 'web-texts',
     if (generatedRoot != null) 'generated',
   ];
   final issues = <GateIssue>[
     ...checkIdentityFile(identityPath),
     ...checkPolicyFile(policyPath),
-    ...checkWebTexts(webPaths, required: webRequired),
     if (generatedRoot != null) ...checkGenerated(generatedRoot),
   ];
 
@@ -896,7 +754,7 @@ void main(List<String> args) {
   if (issues.isEmpty) {
     stdout.writeln(
       'OK las tres direcciones (${addressKeys.join(', ')}), el texto de la '
-      'política${webToCheck.isNotEmpty ? ' y los de la web' : ''} sin huecos ni marcas'
+      'política sin huecos ni marcas'
       '${generatedRoot != null ? ' y lo generado al día' : ''}',
     );
     return;
