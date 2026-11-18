@@ -21,7 +21,7 @@
 | Qué | Enlace |
 |---|---|
 | **App web de pruebas** (Flutter web, solo para probar; la app real es móvil) | [una-rho.vercel.app](https://una-rho.vercel.app) |
-| **Web** (landing y páginas de contenido; repositorio [svallev/una-web](https://github.com/svallev/una-web)) | [una-web.vercel.app](https://una-web.vercel.app) |
+| **Web** (landing y páginas de contenido; repositorio [svallev/una-web](https://github.com/svallev/una-web)) | [una-web-nu.vercel.app](https://una-web-nu.vercel.app) |
 
 Son entornos de prueba, no la publicación: ver [docs/PLAN.md](docs/PLAN.md) (F6) para lo que falta antes de publicar.
 
