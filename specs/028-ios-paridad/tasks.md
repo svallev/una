@@ -1,6 +1,6 @@
 # Tareas — Spec 028: Una en iOS, igual que en Android (paridad)
 
-**Siguiente:** T-028-01 (cuando el propietario apruebe el plan) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-028-01 (plan y tareas **Aprobados** el 2026-11-19; empezar en una sesión nueva con `/spec-implement 028`, rama `feat/028-i2-base`) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
 
 Reglas: tareas **pequeñas** (≤ medio día; T-028-13 y 18 se aceptan más largas, `plan.md` §1.1), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden**. La columna **Toca** acota lo que cambia y lo que lee el subagente. Los textos van juntos al principio (T-028-02).
 

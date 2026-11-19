@@ -3,7 +3,7 @@
 - **Spec:** `specs/028-ios-paridad/spec.md` (estado: **Aprobada**, 2026-11-19)
 - **Documentos de partida:** `plan-f-ios.md` (fases I0–I9, modelo por fase, decisiones del propietario), `matriz.md` (matriz de paridad) y `docs/ios/channel-contract.md` (contrato de los canales). Este plan **no repite** lo que ya dicen: fija el orden, cómo se reparte el trabajo y cómo se verifica.
 - **ADR aplicables:** ADR-0030 (notificaciones en iOS, opción A), ADR-0031 (deshacer sin tiempo del sistema), ADR-0032 (copias en iOS sin adjuntos), ADR-0004 y 0005 (copias y Data Protection), ADR-0013 a 0018 (adjuntos y web), ADR-0019 (selector de apps), ADR-0021 (deshacer), ADR-0025 (notificaciones, parte Android). **Sin ADR nuevo**: `openAppSettings` y `tools/ios-parity.sections` son contrato y herramienta, no arquitectura. Solo si I5 lleva a un **Diverge** de las redirecciones (R-3) habría un CA nuevo en la 028 con la decisión del propietario.
-- **Estado del plan:** **Borrador** (2026-11-19). Revisado por `spec-reviewer` el 2026-11-19 (2 bloqueantes, 10 importantes y 13 menores, **aplicados**; el B1 deja una pregunta al propietario, Q-P-1 en §7).
+- **Estado del plan:** **Aprobado** por el propietario el 2026-11-19 («sí, aprobados con la recomendación»), con Q-P-1 aceptada. Antes **Borrador** (2026-11-19). Revisado por `spec-reviewer` el 2026-11-19 (2 bloqueantes, 10 importantes y 13 menores, **aplicados**; el B1 deja una pregunta al propietario, Q-P-1 en §7).
 
 ## 1. Resumen del enfoque
 
@@ -185,5 +185,5 @@ Todos los tests citan su CA (`'CA-028-NN: …'`; en XCTest, en el nombre de la f
 
 **Preguntas para el propietario:**
 
-- **Q-P-1** CA-028-02 dice que hoy solo se salta **un** caso en iOS. Con el plan se saltan además, **solo en el simulador**, los **5 tests de rendimiento** (`*_perf_test`, que necesitan el modo *profile*), y sus medidas se toman en el iPad (T-028-23). Recomendación: **aceptarlo** y anotar en la spec que son seis los saltados, con su sustituto.
+- **Q-P-1 [Resuelta: aceptada, propietario, 2026-11-19; anotada en CA-028-02]** CA-028-02 dice que hoy solo se salta **un** caso en iOS. Con el plan se saltan además, **solo en el simulador**, los **5 tests de rendimiento** (`*_perf_test`, que necesitan el modo *profile*), y sus medidas se toman en el iPad (T-028-23). Recomendación: **aceptarlo** y anotar en la spec que son seis los saltados, con su sustituto.
 - Quedan las ya previstas: Q-028-5 (en T-028-20) y, solo si se da R-3, la de las redirecciones (T-028-17).
