@@ -1,9 +1,9 @@
 # Spec 028: Una en iOS, igual que en Android (paridad)
 
-- **Estado:** **Borrador** (2026-11-19, fase I1 del plan F-iOS). Revisada por `spec-reviewer` el 2026-11-19 (2 bloqueantes, 6 importantes y menores, **aplicados**; los bloqueantes quedan como preguntas al propietario, Q-028-1 a 6). Pendiente de la aprobación del propietario.
+- **Estado:** **Borrador** (2026-11-19, fase I1 del plan F-iOS). Revisada por `spec-reviewer` el 2026-11-19 (2 bloqueantes, 6 importantes y menores, **aplicados**; los bloqueantes quedan como preguntas al propietario, Q-028-1 a 6). **Preguntas Q-028-1 a 4 y 6 respondidas por el propietario el 2026-11-19** (§9) y aplicadas (ADR-0030 aceptado; ADR-0031 y ADR-0032 nuevos; constitución 1.11). **En revisión**: falta la aprobación del propietario.
 - **Reglas de producto:** las de las specs 001–024, sin cambios salvo lo que diga esta spec.
 - **Pantallas del prototipo:** las mismas (`design/prototype/`); ninguna nueva.
-- **Decisiones y ADR relacionados:** D17 y PD-7 (= sí, propietario, 2026-11-19); **ADR-0030** (notificaciones en iOS, opción A, **Propuesto** con esta spec); ADR-0004 (copias de seguridad, parte iOS), ADR-0005 (Data Protection), ADR-0013 a 0018 (adjuntos y web), ADR-0019 (selector de apps), ADR-0021 (deshacer), ADR-0025 (notificaciones, parte Android).
+- **Decisiones y ADR relacionados:** D17 y PD-7 (= sí, propietario, 2026-11-19); **ADR-0030** (notificaciones en iOS, opción A), **ADR-0031** (deshacer sin tiempo del sistema) y **ADR-0032** (copias en iOS sin adjuntos), los tres **Aceptados** el 2026-11-19; constitución **1.11**; ADR-0004 (copias de seguridad, parte iOS), ADR-0005 (Data Protection), ADR-0013 a 0018 (adjuntos y web), ADR-0019 (selector de apps), ADR-0021 (deshacer), ADR-0025 (notificaciones, parte Android).
 - **Dependencias:** specs 001–024 **Implementadas** en Android. Xcode instalado (fase I0, propietario).
 - **Documentos de esta spec:**
   - `matriz.md`: la **matriz de paridad** (cada CA de 001–024 que depende de la plataforma → mecanismo Android → mecanismo iOS → cómo se verifica).
@@ -89,7 +89,7 @@ Los CA son de dos tipos: **por referencia** (CA-028-01 y 02: los de 001–024 se
 - **CA-028-10 Hacer foto: iOS pide permiso para la cámara** *(diverge de CA-007-02)*
   - **Dado** la hoja «Añadir a la tarea»
   - **Cuando** el usuario elige «Hacer foto» por primera vez
-  - **Entonces** iOS pregunta si la app puede usar la cámara (en iOS no hay forma de abrir la cámara sin ese permiso), con un texto en el idioma del sistema según CA-028-08 que dice **para qué**: hacer la foto de una tarea. **Concedido:** sigue igual que CA-007-02 (la foto pasa la misma validación y no queda ninguna otra copia de lo que escribió la cámara). **Denegado ahora o antes:** la hoja se cierra y se ve un aviso que dice que la cámara no tiene permiso y que se puede dar en los Ajustes del sistema, con un botón para abrirlos **[Pendiente, Q-028-1: textos y si hay botón]**; nada más cambia. **Sin cámara** (el simulador): el mismo aviso que hoy (`errNoCamera`, CL-007-1). La app **no pide ningún otro permiso** para las fotos ni para los PDF. El aviso nuevo es **accesible como los demás avisos de error** (CA-007-22): se anuncia al aparecer, el foco va a él y su botón mide ≥ 44 pt, con texto grande al 200 % sin cortarse.
+  - **Entonces** iOS pregunta si la app puede usar la cámara (en iOS no hay forma de abrir la cámara sin ese permiso), con el texto de §7 en el idioma del sistema según CA-028-08: «Para hacer la foto de una tarea.» **Concedido:** sigue igual que CA-007-02 (la foto pasa la misma validación y no queda ninguna otra copia de lo que escribió la cámara). **Denegado ahora o antes:** la hoja se cierra y se ve el aviso `errCameraDenied` con el botón `errCameraDeniedOpenSettings`, que abre los Ajustes de la app en el sistema (Q-028-1); nada más cambia. **Sin cámara** (el simulador): el mismo aviso que hoy (`errNoCamera`, CL-007-1). La app **no pide ningún otro permiso** para las fotos ni para los PDF. El aviso nuevo es **accesible como los demás avisos de error** (CA-007-22): se anuncia al aparecer, el foco va a él y su botón mide ≥ 44 pt, con texto grande al 200 % sin cortarse.
   - **Verificable:** XCTest del manejo de los estados del permiso; test de widgets del aviso (anuncio, foco, tamaño, 200 %); `check-ios-parity.sh` (la **única** descripción de uso que declara el proyecto es la de la cámara: iOS no pide descripción para las notificaciones); en el iPad: conceder, denegar, volver a intentar, con VoiceOver.
 
 - **CA-028-11 Galería y PDF sin permisos, con los mismos límites**
@@ -117,7 +117,7 @@ Los CA son de dos tipos: **por referencia** (CA-028-01 y 02: los de 001–024 se
 - **CA-028-14 Duración de la card de deshacer en iOS** *(CA-014-06; ADR-0021)*
   - **Dado** la card de deshacer
   - **Cuando** aparece en iOS
-  - **Entonces** dura **4 s** sin tecnología de apoyo y **10 s** con VoiceOver o Control por botón activos (iOS no tiene «Tiempo para actuar»; es la misma regla que Android 8 y 9) **[Pendiente, Q-028-2: el propietario confirma; amplía la excepción del ADR-0021 a iOS]**. Con VoiceOver, la card no caduca mientras tiene el foco (CA-014-17), como ya hace hoy la rama de iOS de la card.
+  - **Entonces** dura **4 s** sin tecnología de apoyo y **10 s** con VoiceOver o Control por botón activos (iOS no tiene «Tiempo para actuar»; es la misma regla que Android 8 y 9; ADR-0031, Q-028-2). Con VoiceOver, la card no caduca mientras tiene el foco (CA-014-17), como ya hace hoy la rama de iOS de la card.
   - **Verificable:** test de `UndoDuration` con los hechos de iOS (sin recomendado, servicio activo → 10 s); XCTest de `una/a11y`; en el iPad con VoiceOver.
 
 ### 3.6 Notificaciones (ADR-0030)
@@ -136,7 +136,7 @@ Los CA son de dos tipos: **por referencia** (CA-028-01 y 02: los de 001–024 se
     - **Excepción a CA-019-23 (y a la nota de P4 y a T-2):** el texto de la tarea actual **sale de la BD** a la programación del sistema (los avisos pendientes de iOS) mientras el interruptor está encendido. Nada más: ni ajustes, ni caché, ni registros. Al completar o eliminar la tarea, o al apagar, ese texto se borra de la programación **en ese momento**.
     - **Hora exacta** (sin la ventana de CA-019-11); **iOS los conserva** al reiniciar, cambiar la hora o el huso y actualizar la app, sin código propio (CA-019-13); un aviso perdido con el móvil apagado **no se recupera** (CA-019-14 no aplica).
     - **Sin canal** de notificaciones (CA-019-22): no hay nada que nombrar en Ajustes del sistema; sin sonido propio ni insignia.
-    - **Pantalla de bloqueo** (CA-019-17): con la opción por defecto de iOS («Mostrar previsualizaciones: si está desbloqueado») la pantalla de bloqueo **no** enseña la tarea; en su lugar va el texto genérico («Tienes una tarea pendiente.»). La línea de privacidad de Ajustes (CA-019-29) tiene una **versión para iOS** que lo dice con verdad **[Pendiente, Q-028-3: texto]**.
+    - **Pantalla de bloqueo** (CA-019-17): con la opción por defecto de iOS («Mostrar previsualizaciones: si está desbloqueado») la pantalla de bloqueo **no** enseña la tarea; en su lugar va el texto genérico («Tienes una tarea pendiente.»). La línea de privacidad de Ajustes (CA-019-29) usa en iOS su propia versión, `settingsNotificationsPrivacyIos` (§7, Q-028-3).
     - **Antes del primer desbloqueo** (CA-019-30): no aplica; iOS ya tiene el texto programado.
     - **Una sola a la vez** (CA-019-18): al reprogramar y al abrir la app se quitan las entregadas. En el iPad se comprueba si, sin abrir la app, llegan a juntarse varias en el centro de notificaciones. Resultado **«una»** → CA-019-18 se cumple; resultado **«hasta 3»** → el propietario decide en I6 entre aceptarlo (se anota aquí como divergencia) o programar con un único identificador (Q-028-5).
   - **Verificable:** tests de Dart del programador con un reloj y un canal falsos (qué se programa, cuándo se reprograma, que se cancela todo al apagar o sin tareas, que la etiqueta cumple CA-019-16 y 21); XCTest del canal (solo programa lo que recibe, sin guardar nada más); en el iPad: cambiar la tarea y ver el aviso siguiente con la nueva, reiniciar y recibirlo, pantalla de bloqueo con la opción por defecto.
@@ -149,10 +149,10 @@ Los CA son de dos tipos: **por referencia** (CA-028-01 y 02: los de 001–024 se
   - **Entonces** lleva un **manifiesto de privacidad** que declara: sin rastreo, sin dominios de rastreo, **ningún dato recogido**, y la razón de cada API de «motivo obligatorio» que use el código propio (p. ej. espacio libre en disco para `freeSpace`); los paquetes de Flutter que lo necesiten traen el suyo. Sin red salvo la página que pide el usuario y las webs de Ajustes (P4, ADR-0016, ADR-0026); sin analítica ni informes de errores; sin registrar URI, rutas, nombres, metadatos ni texto de tareas (CL-007-10, CL-009-9, CA-019-23 salvo su excepción).
   - **Verificable:** `check-ios-parity.sh` (el manifiesto existe y es válido); `security-reviewer` sobre el Swift en I8; `/security-check`.
 
-- **CA-028-18 Datos en reposo y copias de seguridad (ADR-0004, ADR-0005)** *(diverge de CA-007-18, CA-008-17 y CA-016-17)*
+- **CA-028-18 Datos en reposo y copias de seguridad (ADR-0004, ADR-0005)** *(enmienda la parte iOS del ADR-0004: ADR-0032)*
   - **Dado** la BD, los adjuntos y los archivos de preparación
   - **Cuando** el iPhone está bloqueado o hace su copia de seguridad
-  - **Entonces** la BD y los adjuntos usan la protección de datos por defecto de iOS («hasta el primer desbloqueo», ADR-0005); la BD y los adjuntos **entran** en la copia de iCloud o del ordenador (ADR-0004, parte iOS) y lo temporal (la preparación de una importación) **no**. **Diferencia con Android:** allí las fotos y los PDF **no** van a la nube; en iOS **sí**, y la copia de iCloud solo está cifrada de extremo a extremo si el usuario activa la Protección Avanzada de Datos **[Pendiente, Q-028-6: el propietario lo confirma o pide excluir los adjuntos de la copia, como en Android]**. Ningún archivo propio se guarda fuera de las carpetas de la app.
+  - **Entonces** la BD y los adjuntos usan la protección de datos por defecto de iOS («hasta el primer desbloqueo», ADR-0005); la BD **entra** en la copia de iCloud o del ordenador; los adjuntos y lo temporal (la preparación de una importación) **no**. **Como en Android** (Q-028-6, ADR-0032): los adjuntos **no** entran en la copia (la carpeta de adjuntos se marca como excluida); al restaurar en otro iPhone, sus tareas muestran «Adjunto no disponible» (CA-007-19, CA-016-18a/b). Ningún archivo propio se guarda fuera de las carpetas de la app.
   - **Verificable:** XCTest o test de integración que lee la clase de protección y la exclusión de copia de los archivos que crea el Swift; nota en `docs/environments.md`.
 
 - **CA-028-19 La web en iOS: mismo aislamiento**
@@ -194,7 +194,7 @@ Los CA son de dos tipos: **por referencia** (CA-028-01 y 02: los de 001–024 se
 
 | Estado | Cuándo | Qué ve el usuario |
 |---|---|---|
-| Cámara sin permiso | CA-028-10 | Aviso nuevo **[Pendiente, Q-028-1]**. |
+| Cámara sin permiso | CA-028-10 | `errCameraDenied` con el botón «Abrir Ajustes». |
 | Cámara no disponible | Simulador o dispositivo sin cámara | `errNoCamera`, como hoy. |
 | Notificaciones bloqueadas | CA-019-08 | Lo mismo que en Android (`settingsNotificationsBlocked` y el botón a los Ajustes del sistema). |
 | Resto de errores | Importación, web, guardar | Los de 007–019, con los mismos códigos de canal (`channel-contract.md`). |
@@ -210,10 +210,10 @@ Los CA son de dos tipos: **por referencia** (CA-028-01 y 02: los de 001–024 se
 
 | Clave | ES | EN | Notas |
 |---|---|---|---|
-| (texto del permiso de cámara de iOS) | **[Pendiente, Q-028-1]** p. ej. «Para hacer la foto de una tarea.» | «To take the photo for a task.» | No es un ARB: va en los textos del sistema del proyecto iOS (CA-028-08). |
-| `errCameraDenied` (nueva) | **[Pendiente, Q-028-1]** p. ej. «La cámara no tiene permiso. Puedes darlo en los Ajustes del iPhone.» | «The camera has no permission. You can allow it in iPhone Settings.» | Aviso de CA-028-10. |
-| `errCameraDeniedOpenSettings` (nueva) | **[Pendiente, Q-028-1]** p. ej. «Abrir Ajustes» | «Open Settings» | Botón del aviso, si se aprueba. |
-| `settingsNotificationsPrivacyIos` (nueva) | **[Pendiente, Q-028-3]** | **[Pendiente, Q-028-3]** | Versión iOS de `settingsNotificationsPrivacy` (CA-028-16). |
+| (texto del permiso de cámara de iOS) | «Para hacer la foto de una tarea.» | «To take the photo for a task.» | No es un ARB: va en los textos del sistema del proyecto iOS (CA-028-08). |
+| `errCameraDenied` (nueva) | «La cámara no tiene permiso. Puedes darlo en los Ajustes del iPhone.» | «The camera has no permission. You can allow it in iPhone Settings.» | Aviso de CA-028-10. |
+| `errCameraDeniedOpenSettings` (nueva) | «Abrir Ajustes» | «Open Settings» | Botón del aviso. |
+| `settingsNotificationsPrivacyIos` (nueva) | «La notificación muestra tu tarea actual. Con el iPhone bloqueado, iOS solo la enseña si permites las previsualizaciones siempre.» | «The notification shows your current task. When your iPhone is locked, iOS only shows it if you always allow previews.» | Versión iOS de `settingsNotificationsPrivacy` (CA-028-16). |
 
 Los textos de la notificación (`notificationTitle`, `notificationPublic`, `attachmentPhoto`…) ya están en los ARB; en iOS los usa Dart directamente.
 
@@ -226,11 +226,11 @@ Los textos de la notificación (`notificationTitle`, `notificationPublic`, `atta
 
 ## 9. Preguntas abiertas
 
-- **Q-028-1 [Pendiente, propietario]** Textos del permiso de la cámara y del aviso de permiso denegado (CA-028-10). ¿El aviso lleva un botón «Abrir Ajustes» (propuesta: sí, como el de notificaciones)?
-- **Q-028-2 [Pendiente, propietario]** ¿10 s para deshacer con VoiceOver o Control por botón en iOS (CA-028-14)? Propuesta: sí. Como cambia una excepción de P6 de un ADR aceptado, se hace con un **ADR nuevo (0031)** que enmienda el ADR-0021 («sin ajuste de tiempo del sistema» en lugar de «Android 8 y 9»), y la **constitución 1.11** recoge a la vez P4 (ADR-0030) y P6 (ADR-0031).
-- **Q-028-3 [Pendiente, propietario]** Texto de la línea de privacidad de notificaciones en iOS (CA-028-16). Propuesta ES: «La notificación muestra tu tarea actual. Con el iPhone bloqueado, iOS solo la enseña si permites las previsualizaciones siempre.»
-- **Q-028-4 [Pendiente, propietario]** El ADR-0030 (opción A) cambia la **nota de P4 de la constitución** («sin copias del texto fuera de la base de datos») y T-2: hace falta la **versión 1.11** de la constitución (con P6 si Q-028-2 es sí), que se aprueba con esta spec.
-- **Q-028-6 [Pendiente, propietario]** Copias de seguridad (CA-028-18): ¿se aceptan los adjuntos en la copia de iCloud (ADR-0004, parte iOS) o se excluyen como en Android? Propuesta: aceptarlo; el usuario controla su iCloud y la Protección Avanzada de Datos, y perder las fotos al cambiar de iPhone sería peor.
+Respondidas por el propietario el 2026-11-19 («1. ok, 2. ok, 3. ok, 4. ok, 5. Que se comporte igual que Android»):
 
-**Para aprobar la spec** hace falta la respuesta del propietario a Q-028-1, 2, 3, 4 y 6; Q-028-5 se decide en I6 con el resultado del iPad.
-- **Q-028-5 [Pendiente, plan I6]** «Una sola a la vez» (CA-019-18) con avisos programados de antemano: si iOS no sustituye la entregada anterior al llegar la siguiente, se quitan las entregadas al reprogramar y al abrir; se comprueba en el iPad. Si no basta, se acepta ver hasta 3 en el centro de notificaciones (el propietario decide en I6).
+- **Q-028-1 [Resuelta: ok]** Textos del permiso de cámara y del aviso con botón «Abrir Ajustes», como se proponían (§7).
+- **Q-028-2 [Resuelta: ok]** 10 s con VoiceOver o Control por botón en iOS (CA-028-14): **ADR-0031**, que enmienda el ADR-0021.
+- **Q-028-3 [Resuelta: ok]** Línea de privacidad de iOS como se proponía (§7).
+- **Q-028-4 [Resuelta: ok]** **Constitución 1.11**: notas de P4 (ADR-0030) y P6 (ADR-0031).
+- **Q-028-6 [Resuelta: igual que Android]** Los adjuntos **no** entran en la copia de seguridad de iOS (CA-028-18): **ADR-0032**, que enmienda la parte iOS del ADR-0004.
+- **Q-028-5 [Pendiente, plan I6]** «Una sola a la vez» (CA-019-18): se decide con el resultado del iPad (CA-028-16).

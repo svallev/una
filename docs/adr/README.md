@@ -33,6 +33,8 @@ Formato MADR simplificado ([plantilla](0000-template.md)). Nuevos ADR con la ski
 | 0027 | La landing de producto se construye con Vite y lleva GSAP y Lenis | Trasladado a `svallev/una-web` (`docs/adr/`) con la web (ADR-0029) |
 | 0028 | Programa propio de idioma en las páginas de contenido | Trasladado a `svallev/una-web` (`docs/adr/`) con la web (ADR-0029) |
 | [0029](0029-la-web-en-su-propio-repositorio.md) | La web en su propio repositorio (`svallev/una-web`), con copias de lo que toma de la app | Aceptado (2026-11-18); sustituye al ADR-0009 |
-| [0030](0030-notificaciones-en-ios.md) | Notificaciones en iOS: el texto se calcula en Dart y se programa por adelantado | Propuesto (2026-11-19; spec 028); enmienda la parte iOS del ADR-0025 |
+| [0030](0030-notificaciones-en-ios.md) | Notificaciones en iOS: el texto se calcula en Dart y se programa por adelantado | Aceptado (2026-11-19; spec 028); enmienda la parte iOS del ADR-0025 |
+| [0031](0031-deshacer-sin-tiempo-del-sistema.md) | Deshacer en iOS: 10 s con VoiceOver o Control por botón, como en Android 8 y 9 | Aceptado (2026-11-19; spec 028); enmienda el ADR-0021 |
+| [0032](0032-copias-de-seguridad-en-ios-sin-adjuntos.md) | Copias de seguridad en iOS: la BD sí, los adjuntos no (como en Android) | Aceptado (2026-11-19; spec 028); enmienda la parte iOS del ADR-0004 |
 
-El siguiente ADR libre es el 0031. El ADR-0023 y el ADR-0026 los desarrolla la spec 015, ya implementada; su decisión de aceptar el comportamiento de TalkBack al volver del navegador (2026-10-05) es una enmienda de la spec (CA-015-16 y 20h), no un ADR.
+El siguiente ADR libre es el 0033. El ADR-0023 y el ADR-0026 los desarrolla la spec 015, ya implementada; su decisión de aceptar el comportamiento de TalkBack al volver del navegador (2026-10-05) es una enmienda de la spec (CA-015-16 y 20h), no un ADR.

@@ -1,6 +1,6 @@
 # ADR-0030: Notificaciones en iOS: el texto se calcula en Dart y se programa por adelantado
 
-- **Estado:** **Propuesto** (2026-11-19). La opción la eligió el propietario al aprobar el plan F-iOS (decisión 4, 2026-11-19); se **acepta** al aprobar la spec 028, junto con la versión 1.11 de la constitución (Q-028-4).
+- **Estado:** **Aceptado** (propietario, 2026-11-19: opción A en el plan F-iOS, decisión 4, y Q-028-4 de la spec 028, «ok», con la versión 1.11 de la constitución).
 - **Fecha:** 2026-11-19
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
 - **Relacionado:** spec 028 (CA-028-15 y 16, Q-028-3 a 5), spec 019 (CA-019-11, 13, 14, 16, 17, 18, 22, 23, 28, 29 y 30); **enmienda la parte iOS del ADR-0025** (su viñeta «iOS (D17) no está cubierto»); ADR-0005 (ya enmendado por el ADR-0025); constitución **P4** (nota de la spec 019); `docs/security/threat-model.md` (T-2, T-17); `docs/ios/channel-contract.md` §4.
