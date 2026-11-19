@@ -1,6 +1,6 @@
 # ADR-0004: Incluir los datos en las copias de seguridad del sistema
 
-- **Estado:** Aceptado (D14), **revisado el 2026-09-24 tras el spike S5**
+- **Estado:** Aceptado (D14), **revisado el 2026-09-24 tras el spike S5**. **Parte iOS enmendada por el [ADR-0032](0032-copias-de-seguridad-en-ios-sin-adjuntos.md) (2026-11-19):** en iOS, como en Android, los adjuntos no entran en la copia.
 - **Fecha:** 2026-09-24
 - **Relacionado:** ADR-0005, modelo de amenazas (A-1, T-7)
 

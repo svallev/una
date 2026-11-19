@@ -1,6 +1,6 @@
 # ADR-0021: Eliminar con deshacer: la tarea sale de la BD al instante y sus archivos esperan a que el borrado sea definitivo
 
-- **Estado:** Aceptado (propietario, 2026-10-04, con la spec 014); incluye una excepción a P6 (ver Consecuencias)
+- **Estado:** Aceptado (propietario, 2026-10-04, con la spec 014); incluye una excepción a P6 (ver Consecuencias). **Enmendado por el [ADR-0031](0031-deshacer-sin-tiempo-del-sistema.md) (2026-11-19):** la excepción vale también en iOS (10 s con VoiceOver o Control por botón).
 - **Fecha:** 2026-10-04
 - **Nota de estado (spec 022, CA-022-06, 2026-10-16; no cambia la decisión):** los 10 s de Android 8 y 9 (la excepción a P6 de abajo) **no se han visto en un dispositivo**: el propietario cerró sin verificar esa casilla (CA-014-06 en API 26 y 28; alcance 2 de la 022). La excepción y su mitigación (contador parado mientras la card tiene el foco) siguen como están.
 - **Decisores:** propietario del producto; Claude Code (propuesta técnica)
