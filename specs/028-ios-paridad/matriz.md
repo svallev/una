@@ -1,6 +1,6 @@
 # Matriz de paridad Android → iOS (spec 028)
 
-- **Estado:** Borrador (2026-11-19, I1). Se rellena la columna **Resultado** en cada fase y se cierra en I8 (CA-028-01).
+- **Estado:** Aprobada con la spec 028 (2026-11-19). Se rellena la columna **Resultado** en cada fase y se cierra en I8 (CA-028-01).
 - **Cómo se lee:** una fila por CA (o grupo de CA) de 001–024 que **depende de la plataforma**. Lo que no aparece es **Dart compartido** y se cubre con CA-028-02 (suite de Dart sin cambios + tests de integración en el simulador).
 - **Verificación:** **D** = tests de Dart que ya existen · **IT** = test de integración en el simulador de iOS · **XCT** = XCTest del Swift · **Script** = `tools/check-ios-parity.sh` · **Disp** = pasada en el iPad de 6.ª gen. (I8) · **VO** = con VoiceOver en esa pasada.
 - **Resultado:** vacío hasta su fase; luego **Hecho** (con la prueba), **Diverge → CA-028-NN**, **No aplica** (motivo) o **[Pendiente]** (motivo y cuándo).
