@@ -78,3 +78,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (simula
 
 | Tareas | Estado | Commit |
 |---|---|---|
+| T-028-01 | **Herramientas hechas; `/ios-check` de punta a punta NO verificado.** `check-ios-parity.sh` (13 secciones; activa: `network`; pasa sobre el repo), `ios-parity.sections`, sumas de la plantilla, test (149; 20 mutaciones del script detectadas), skill `/ios-check`, `docs/testing.md`, trampa. `dart format`, `analyze` y `flutter test -j 3` verdes (4672 + 224 omitidos). **[Pendiente]** build, XCTest e IT: SwiftPM se cuelga al bajar el xcframework de PDFium en este entorno (reproducido 3 veces; `curl` sí lo baja y la suma coincide): ¿lo prueba el propietario en su terminal? | (este commit) |

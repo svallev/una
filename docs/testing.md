@@ -46,6 +46,27 @@ Principio P9: nada está hecho sin tests que prueben sus criterios de aceptació
 
 **Qué compila una PR.** Los trabajos `flutter`, `android` e `ios` corren **en paralelo** (los dos últimos ya no esperan a `flutter`) y solo si el trabajo `detect` dice `build=true`: la app existe y, en una PR, algo de lo que cambia no es documentación (`docs/`, `specs/` o un `.md` de la raíz). Las excepciones, que **sí** compilan, son los tres documentos que leen los tests de `app/test` (`docs/glossary.md`, `docs/security/threat-model.md` y `docs/legal/privacy-policy.md`): si un test nuevo lee otro archivo de `docs/`, `specs/` o `store/`, hay que añadirlo a `is_build` de `tools/ci-detect.sh` (la lógica de `detect` vive ahí, con su test `app/test/tool/ci_detect_test.dart`). Desde la 023, `store/**` **no** compila la app, salvo lo que leen sus tests (`data-safety.md`, `icon-512.png` y `feature-graphic.png`); a cambio, `detect` saca además `store=true|false` y el trabajo **«Ficha»** (`node --test store/google-play/test/*.test.mjs` con un mínimo de tests y `store/google-play/check.mjs`) corre cuando cambia la ficha o algo de lo que depende (política, identidad, `check-android-permissions.sh`, el propio `detect` y `ci.yml`). La web vive en su propio repositorio (`svallev/una-web`, ADR-0029) con su CI. Falla cerrado: sin lista de archivos en una PR, todo es `true`. En `main` se compila y se construye siempre. La condición va en el `if:` de cada trabajo y no en `paths:` de `on:` porque un trabajo saltado cuenta como superado para las comprobaciones obligatorias del *ruleset*, y un *workflow* que no arranca las deja pendientes. Sin cachés (threat-model §5).
 
+## iOS: simulador, XCTest y paridad (spec 028, T-028-01)
+
+Todo lo de iOS se verifica **sin firma** y en un simulador; el iPad físico es de la sesión coordinadora con el propietario (`specs/028-ios-paridad/plan-f-ios.md`). La receta completa, la que sigue cada tarea de la 028, es la skill **`/ios-check`** (`.claude/skills/ios-check/SKILL.md`); estos son sus comandos, **desde `app/`**:
+
+```bash
+SIM=$(xcrun simctl list devices available | grep -m1 'iPhone' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
+xcrun simctl boot "$SIM"                                  # si no está arrancado
+flutter build ios --simulator --debug                      # 1. compila (sin firma)
+xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner \
+  -destination "platform=iOS Simulator,id=$SIM"            # 2. XCTest (app/ios/RunnerTests/)
+flutter test integration_test/settings_flow_test.dart -d "$SIM"   # 3. integración (los archivos que pida la tarea)
+bash ../tools/check-ios-parity.sh                          # 4. paridad (secciones activas)
+flutter analyze --fatal-infos && flutter test              # 5. Dart
+```
+
+- **`tools/check-ios-parity.sh [--root DIR] [--section NOMBRE]…`** (bash + `python3` de la biblioteca estándar, sin red; los plist con `plistlib`, así que corre también en Linux) comprueba el proyecto de iOS contra la spec: `project` (familia de dispositivos e iOS 16), `plist` (`Info.plist`), `l10n` (`InfoPlist.strings`), `launch` (color de arranque = `paper`), `icon` (ni iconos de la plantilla ni alfa), `privacy` (manifiesto y API de motivo obligatorio), `network` (ni red propia ni registros en el Swift) y `channel:una/<canal>` (cada método del `when` de Kotlin tiene su `case` en el Swift espejo). Sin `--section` corre las **activas** de `tools/ios-parity.sections` y lista las demás como `PENDIENTE`; con `--section` corre esa aunque esté inactiva. Cada tarea que hace verde una sección la añade a la lista; en T-028-21 están todas. **Falla cerrado:** un archivo que falta o está vacío es un fallo que lo nombra. Salida 0 = todo lo que corrió pasa, 1 = algún fallo, 2 = uso.
+- **Test del propio script:** `app/test/tool/check_ios_parity_test.dart` (un árbol de mentira en un directorio temporal y `--root`; una copia del script con sus propias sumas de iconos). Cada sección pasa con un árbol bueno y falla con su rotura. Las sumas de los iconos de la plantilla de Flutter están en `tools/fixtures/ios-template-icons.sha256`.
+- **Certificado de pruebas en el simulador** (solo para los IT de la web con TLS local): `xcrun simctl keychain "$SIM" add-root-cert <pem>`, con el PEM sacado de `integration_test/fixtures/selfsigned_tls.dart` (receta en `/ios-check`).
+- **Primer `flutter build ios` / `xcodebuild`:** Xcode resuelve Swift Package Manager y `pdfium_flutter` baja un *xcframework* binario de GitHub (24 MB, suma fija en su `Package.swift`; T-028-08 lo inventaría). Si la descarga no avanza (`xcodebuild` parado en «Resolve Package Graph»), el build y el XCTest quedan **sin verificar**; no se da un verde con un paso saltado.
+- Los IT de rendimiento (`*_perf_test`) no se miden en el simulador (llevan su `skip:` motivado desde T-028-06): se miden en el iPad.
+
 ## Eliminar con deshacer (spec 014, ADR-0021)
 
 La cuenta atrás de la card, el foco del lector y lo que ocurre fuera de la app se prueban con tres métodos. Guía y resultados: `specs/014-eliminar-con-deshacer/dispositivo.md`.
