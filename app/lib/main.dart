@@ -5,6 +5,7 @@ import 'app/providers.dart';
 import 'app/storage_errors.dart';
 import 'app/una_app.dart';
 import 'data/image_services.dart';
+import 'data/platform/attachment_rotation.dart';
 import 'data/repository_factory.dart';
 import 'features/attachments/pdf_boot.dart';
 
@@ -21,6 +22,8 @@ Future<void> bootstrap({
   Future<Repositories> Function() open = openRepositories,
   Future<ImageServices> Function() openImages = openImageServices,
 }) async {
+  // Solo vertical antes de abrir nada ni dibujar el primer fotograma (iOS).
+  await AttachmentRotation.lockPortraitAtStart();
   try {
     final repos = await open();
     final images = await openImages();
