@@ -235,6 +235,6 @@ Vive en su propio repositorio, `svallev/una-web` (ADR-0029): sus tests, su CI y 
 ## Pruebas en el móvil del propietario (lecciones aprendidas)
 
 - Las pruebas de integración se instalan como apps aparte: `invalid.pending.app.debug` (debug) e `invalid.pending.app.profile` (profile). Solo esas pueden borrar su base de datos (las pruebas lo comprueban).
-- **`flutter drive` desinstala al terminar el paquete *base* (`invalid.pending.app`), no el que ha instalado**: el 2026-09-25 borró así la app real del propietario y sus tareas de prueba. En el móvil del propietario se usa **siempre** `--keep-app-running` y después se desinstala a mano solo `invalid.pending.app.profile`.
+- **`flutter drive` desinstala al terminar el paquete *base* (`invalid.pending.app`), no el que ha instalado**: el 2026-09-25 borró así la app real del propietario y sus tareas de prueba. En el móvil del propietario se usa **siempre** `--keep-app-running` y después se desinstala a mano solo `invalid.pending.app.profile`. **No basta (2026-11-20, segunda pérdida):** si el `adb install` falla (en HyperOS, la confirmación «Instalar vía USB» caduca: `INSTALL_FAILED_USER_RESTRICTED`), Flutter reintenta desinstalando **`invalid.pending.app`** (el id base, sin sufijo) aunque se haya pasado `--keep-app-running`. En el móvil del propietario: el propietario delante del móvil **antes** de lanzar nada, o mejor el emulador; nunca dejar que Flutter instale sin esa confirmación preparada.
 - No se maneja el móvil por `adb` mientras el propietario lo está usando.
 
