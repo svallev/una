@@ -254,6 +254,43 @@ Uint8List encodePng(PngImage image) {
   return out.takeBytes();
 }
 
+/// Codifica [image] como PNG **RGB** de 8 bits, **sin canal alfa** (sin filtro, comprimido con
+/// zlib): lo que pide el icono de iOS, que rechaza la transparencia (spec 028, CA-028-07). El
+/// alfa de [image] se **descarta**: quien llama comprueba antes que es opaca ([isOpaque]).
+Uint8List encodePngRgb(PngImage image) {
+  final stride = image.width * 3;
+  final raw = Uint8List((stride + 1) * image.height);
+  for (var y = 0; y < image.height; y++) {
+    var to = y * (stride + 1) + 1; // el byte anterior es el filtro 0 (ninguno)
+    var from = y * image.width * 4;
+    for (var x = 0; x < image.width; x++) {
+      raw[to++] = image.rgba[from];
+      raw[to++] = image.rgba[from + 1];
+      raw[to++] = image.rgba[from + 2];
+      from += 4;
+    }
+  }
+  final header = ByteData(13)
+    ..setUint32(0, image.width)
+    ..setUint32(4, image.height)
+    ..setUint8(8, 8) // bits por canal
+    ..setUint8(9, 2); // RGB
+  final out = BytesBuilder(copy: false)
+    ..add(_signature)
+    ..add(pngChunk('IHDR', header.buffer.asUint8List()))
+    ..add(pngChunk('IDAT', ZLibCodec(level: 9).encode(raw)))
+    ..add(pngChunk('IEND', const []));
+  return out.takeBytes();
+}
+
+/// Si todos los píxeles de [image] tienen alfa 255.
+bool isOpaque(PngImage image) {
+  for (var i = 3; i < image.rgba.length; i += 4) {
+    if (image.rgba[i] != 255) return false;
+  }
+  return true;
+}
+
 /// Un bloque PNG: longitud, tipo, datos y CRC. Público para que los tests construyan PNG a mano.
 Uint8List pngChunk(String type, List<int> body) {
   final out = Uint8List(12 + body.length);

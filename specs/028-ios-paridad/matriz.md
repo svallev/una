@@ -128,8 +128,8 @@
 | CA-016-18a/b Faltan fotos | `regenerate` | Igual | XCT + IT | I4 | |
 | CA-017-10 Giro con el bloqueo | `una/screen` | Como 007 | **[Pendiente sin iPhone]** | I3 | |
 | CA-017-13 Lupa del sistema | Ampliación de Android | Zoom de accesibilidad de iOS | Disp | I8 | |
-| CA-018-01 a 08, 14, 15 Icono | Adaptable + Play | Icono de iOS desde el de 1024 → CA-028-07 | Script | I2 | |
-| CA-018-06 Nada de Flutter | Android | Ahora también iOS → CA-028-07 | Script | I2 | |
+| CA-018-01 a 08, 14, 15 Icono | Adaptable + Play | Icono de iOS desde el de 1024 → CA-028-07 | Script | I2 | **Hecho** (T-028-04): `gen_icons.dart ios` + sección `icon`; en el simulador el icono sale en la pantalla de inicio; máscara y tamaños en el iPad: T-028-23 |
+| CA-018-06 Nada de Flutter | Android | Ahora también iOS → CA-028-07 | Script | I2 | **Hecho** (T-028-04): sección `icon` (ningún PNG igual a la plantilla, sin alfa) y `LaunchImage.imageset` retirado |
 
 ### 019 Notificaciones (ADR-0030)
 
@@ -163,7 +163,7 @@
 | CA-020-01 a 08 Trabajo de publicación | `release.yml` (APK/AAB) | Fuera de alcance (I9) | — | I9 | |
 | CA-020-22 a 26 MASTG, hallazgos, documentación | Pasada MASTG de Android | No aplica (el Swift lo revisa `security-reviewer` en I8; MASTG de iOS, en I9) | — | I9 | |
 | CA-020-09 a 21, 27, 28 | Código de Android y Dart | Lo de Dart vale igual; el Swift lo revisa `security-reviewer` | D + I8 | I8 | |
-| CA-021-01 a 05, 09, 10, 12 Arranque y barras | Temas de Android | CA-028-05 y 06 | Script + Disp | I2 | |
+| CA-021-01 a 05, 09, 10, 12 Arranque y barras | Temas de Android | CA-028-05 y 06 | Script + Disp | I2 | Script **Hecho** (T-028-03 y 04: secciones `plist`, `project` y `launch`; `LaunchBackground` = `paper`, sin oscuro ni imagen; visto en el simulador sin destello); **[Pendiente]** Disp en el iPad (T-028-23) |
 | CA-021-06/07 Igual en oscuro | Tema fijo | `UIUserInterfaceStyle = Light` → CA-028-05 | IT + Disp | I2 | |
 | CA-021-08 Web en claro | `noDarkening` | Estilo claro en la `WKWebView` → CA-028-05/19 | IT + Disp | I5 | |
 | CA-021-11 Sin nada nuevo | — | Solo lo de esta spec | Script | I2 | |

@@ -679,7 +679,7 @@ void main() {
 
     test('CA-018-12: un objetivo o una opción desconocidos fallan con el uso '
         'y no escriben nada', () {
-      expect(run(['ios']), 2);
+      expect(run(['windows']), 2);
       expect(stderrBuf.toString(), contains('android'));
       expect(runGenIcons(['--nope'], out: stdoutBuf, err: stderrBuf), 2);
       expect(runGenIcons(['--out'], out: stdoutBuf, err: stderrBuf), 2);
