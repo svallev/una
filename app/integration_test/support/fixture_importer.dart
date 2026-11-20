@@ -8,8 +8,10 @@ import 'package:app/domain/ports/image_importer.dart';
 
 import '../fixtures/image_fixtures.g.dart';
 
-/// Selector de pruebas: el canal nativo de verdad, salvo `pick`, que devuelve
-/// el fichero de prueba [next].
+/// Selector de pruebas: el canal nativo de verdad, salvo `pick` y `pickMany`,
+/// que devuelven el fichero de prueba [next] (en `pickMany`, como una sola
+/// elegida, que es la 007: CA-016-03). El selector del sistema es otra app y
+/// no se puede conducir desde aquí (`photo_group_import_test` lo abre a mano).
 class FixtureImporter implements ImageImporter {
   FixtureImporter(this.native, this.cache);
 
@@ -25,8 +27,8 @@ class FixtureImporter implements ImageImporter {
       (token: next, origin: origin);
 
   @override
-  Future<PickedImages?> pickMany({required int max}) =>
-      native.pickMany(max: max);
+  Future<PickedImages?> pickMany({required int max}) async =>
+      (items: [(token: next, origin: AttachmentOrigin.gallery)], total: 1);
 
   @override
   Future<int?> freeSpace() => native.freeSpace();

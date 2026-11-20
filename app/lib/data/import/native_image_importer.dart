@@ -155,6 +155,20 @@ class NativeImageImporter implements ImageImporter {
     }),
   );
 
+  /// Solo iOS: abre los Ajustes de la app en el sistema, donde se da el
+  /// permiso de la cámara (botón del aviso `errCameraDenied`, CA-028-10).
+  /// Devuelve si se abrieron; sin canal o con error, false (sin texto del
+  /// error: nunca se registra nada).
+  static Future<bool> openAppSettings() async {
+    try {
+      return await _channel.invokeMethod<Object?>('openAppSettings') == true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   @override
   Future<void> cancel(String id) =>
       _channel.invokeMethod<void>('cancel', {'id': id});
@@ -172,6 +186,10 @@ class NativeImageImporter implements ImageImporter {
           ImageImportError.tooManyPixels,
         ),
         'noCamera' => const ImageImportFailure(ImageImportError.noCamera),
+        // Solo iOS: la cámara sin permiso (CA-028-10).
+        'cameraDenied' => const ImageImportFailure(
+          ImageImportError.cameraDenied,
+        ),
         'noSpace' => const ImageImportFailure(ImageImportError.noSpace),
         'cancelled' => const ImageImportCancelled(),
         _ => const ImageImportFailure(ImageImportError.unreadable),

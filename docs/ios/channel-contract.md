@@ -32,7 +32,7 @@
 
 ## 2. `una/images` (I4)
 
-Todo lo que escribe va a la preparación (`import/<id>/`) o, para `encodeJpeg`/`regenerate` con destino guardado, a `attachments/<id>/`. **Nunca** a la fototeca ni a archivos compartidos. Errores [Hecho]: `busy`, `noCamera`, `unreadable`, `tooLarge`, `tooManyPixels`, `noSpace`, `cancelled` (Dart traduce cualquier otro a `unreadable`). **Nuevo en iOS [Hecho en Swift, T-028-13]:** `cameraDenied` (CA-028-10: permiso de cámara denegado ahora o antes, o restringido); hasta que Dart lo conozca (T-028-15), Dart lo trata como `unreadable`. [Hecho, T-028-13] `Images.swift` (selección y copia) y `PickedItems.swift`; [Hecho, T-028-14] `sanitize`, `regenerate` y `encodeJpeg` en `Images.swift` con `ImageSanitizer.swift`: el canal está completo.
+Todo lo que escribe va a la preparación (`import/<id>/`) o, para `encodeJpeg`/`regenerate` con destino guardado, a `attachments/<id>/`. **Nunca** a la fototeca ni a archivos compartidos. Errores [Hecho]: `busy`, `noCamera`, `unreadable`, `tooLarge`, `tooManyPixels`, `noSpace`, `cancelled` (Dart traduce cualquier otro a `unreadable`). **Nuevo en iOS [Hecho en Swift, T-028-13]:** `cameraDenied` (CA-028-10: permiso de cámara denegado ahora o antes, o restringido); Dart lo traduce a `ImageImportError.cameraDenied` → aviso `errCameraDenied` con el botón «Abrir Ajustes» [Hecho, T-028-15]. [Hecho, T-028-13] `Images.swift` (selección y copia) y `PickedItems.swift`; [Hecho, T-028-14] `sanitize`, `regenerate` y `encodeJpeg` en `Images.swift` con `ImageSanitizer.swift`: el canal está completo.
 
 | Método | Argumentos | Respuesta | Comportamiento [Hecho, Android] | iOS |
 |---|---|---|---|---|
@@ -46,7 +46,7 @@ Todo lo que escribe va a la preparación (`import/<id>/`) o, para `encodeJpeg`/`
 | `encodeJpeg` | `{id, target: "staging"\|"stored", width (1…8192), height (1…16384), bgra: bool, pixels: Uint8List}` | `null` | Tamaño fuera de rango o `pixels.size != w*h*4` → `unreadable` (`ImageImport.kt:534-535, 572-573`); BGRA→RGBA si `bgra`; escribe `screen.tmp` y renombra a `screen.jpg` (calidad 85). Si el directorio de destino no existe (**cualquiera de los dos**, `:536-538`) → éxito sin hacer nada. | `CGContext` con `byteOrder32Little` + `premultipliedFirst` para BGRA (sin copiar); escritura atómica (`.atomic`). **[Hecho, T-028-14]** Con un `CGImage` sobre los mismos bytes (`CGDataProvider`), sin lienzo intermedio. |
 | `cancel` | `{id}` | `null` | Marca la cancelación, cierra el flujo abierto (desbloquea una lectura parada) y borra `import/<id>/` e `import/<id>.camera` en otro hilo. | Igual; cancela además la `Progress` de `loadFileRepresentation` si está en curso. |
 | `debugPickManyDocuments` | `{max}` | como `pickMany` | Solo en depuración; fuerza el selector de documentos de Android 8–12. | `FlutterMethodNotImplemented` (no hay equivalente; el test de integración que lo usa se salta en iOS). |
-| `openAppSettings` (**solo iOS**) | — | `bool` (si se abrió) | No existe. | `UIApplication.open(openSettingsURLString)`: los Ajustes de la app en el sistema, donde se da el permiso de la cámara (botón `errCameraDeniedOpenSettings` de CA-028-10, Q-028-1) [Hecho, T-028-13]. Dart lo llama en T-028-15. |
+| `openAppSettings` (**solo iOS**) | — | `bool` (si se abrió) | No existe. | `UIApplication.open(openSettingsURLString)`: los Ajustes de la app en el sistema, donde se da el permiso de la cámara (botón `errCameraDeniedOpenSettings` de CA-028-10, Q-028-1) [Hecho, T-028-13]. Dart: `NativeImageImporter.openAppSettings()` vía `appSettingsOpenerProvider` (sin canal o con error, `false`) [Hecho, T-028-15]. |
 | `debugCopyFile` | `{path, id, maxBytes, headBytes?}` | como `copy` | Solo en depuración (`FLAG_DEBUGGABLE`); `path` dentro de `cache/fixtures/` o `/dev/zero`, `/dev/urandom`. | Solo con `#if DEBUG`; `path` dentro de `Caches/fixtures/` (comparando rutas canónicas) o `/dev/zero`, `/dev/urandom`. |
 
 Notas [Hecho]: `pending` sin llamada al volver (la app murió con la cámara abierta) se ignora; el barrido de Dart borra lo que quede. Dart vuelve a recortar `tokens` a `max` y rechaza tipos inesperados.
@@ -112,7 +112,7 @@ Errores [Hecho]: `invalid_argument` (argumentos inválidos) y `failed` (cualquie
 | Test | Gancho | iOS |
 |---|---|---|
 | `image_import_test`, `image_flow_test`, `photo_group_*`, `pdf_import_test` | `debugCopyFile` (copia desde `cache/fixtures/`) | `#if DEBUG`; los tests escriben los fixtures en `getTemporaryDirectory()/fixtures/` desde Dart [Hecho: `fixture_importer.dart`], que en iOS es `Caches/fixtures/`. |
-| `photo_group_import_test` (recorte con el selector de documentos) | `debugPickManyDocuments` | No aplica en iOS: el test se salta con `skip:` en iOS y el tope se prueba con XCTest. |
+| `photo_group_import_test` (recorte con el selector de documentos) | `debugPickManyDocuments` | No aplica en iOS: el test se salta con `skip:` en iOS (con el motivo en el test) y el tope se prueba con XCTest (`PickedItemsTests`, `ImagesTests`) [Hecho, T-028-15]. |
 | `web_page_controller_test`, `webview_hardening_test` | `nativeId` + `una/webview` | Funcionan con `WebKitWebViewController.webViewIdentifier` (§10). |
 
 ## 10. Cambios en Dart que pide iOS
@@ -122,6 +122,6 @@ Todos con su test y sin cambiar Android (CA-028-03):
 1. `lib/app/providers.dart`: `notificationsPlatformProvider` también `true` en iOS (I6); `notificationGatewayProvider` usa en iOS el programador de Dart (I6).
 2. **Programador de notificaciones en Dart** (I6): etiqueta y textos de CA-019-16 y 21 portados de `TaskLabel.kt`/`NotificationText.kt` (con sus casos de prueba JUnit pasados a Dart), cálculo de los `slots` y reprogramación al cambiar la tarea actual, el idioma, el interruptor o la cantidad, y al arrancar (después del primer fotograma, P2).
 3. `lib/features/web/webview_page_driver.dart` (I5): `nativeId` también con `WebKitWebViewController.webViewIdentifier`; el error `webContentProcessTerminated` → `onProcessGone(crashed: true)`; la rama de descargas de §3.
-4. `NativeImageImporter`/`NativePdfImporter` (I4, T-028-15): el código `cameraDenied` → aviso `errCameraDenied` y el método `openAppSettings` para su botón (Q-028-1 decidida en CA-028-10; el Swift ya los tiene desde T-028-13).
+4. `NativeImageImporter`/`NativePdfImporter` (I4, T-028-15): el código `cameraDenied` → aviso `errCameraDenied` y el método `openAppSettings` para su botón (Q-028-1 decidida en CA-028-10; el Swift ya los tiene desde T-028-13). [Hecho, T-028-15] `ImageImportError.cameraDenied`, `NativeImageImporter.openAppSettings`, `appSettingsOpenerProvider` y `CameraDeniedNotice` (`lib/features/attachments/camera_denied_notice.dart`); Android no da nunca ese código.
 5. `settingsNotificationsPrivacy` con su versión iOS (I6, Q-028-3).
 6. Los comentarios que dicen «iOS aún, D17» se actualizan donde el canal ya exista.

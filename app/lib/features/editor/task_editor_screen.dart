@@ -10,7 +10,6 @@ import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../domain/entities/attachment.dart';
 import '../../domain/entities/queue_position.dart';
-import '../../domain/entities/staged_attachment.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/ports/image_importer.dart';
 import '../../domain/services/commit_group.dart';
@@ -25,6 +24,7 @@ import '../../ui/wordmark.dart';
 import '../attachments/attach_sheet.dart';
 import '../attachments/attachment_import_controller.dart';
 import '../attachments/attachment_preview.dart';
+import '../attachments/camera_denied_notice.dart';
 import '../attachments/group_health.dart';
 import '../attachments/import_error_text.dart';
 import '../attachments/import_notice_banner.dart';
@@ -315,6 +315,24 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       setState(() => _cancelSignal++);
     }
     final error = now.error;
+    if (error == ImageImportError.cameraDenied && before?.error == null) {
+      // Solo iOS: el aviso lleva "Abrir Ajustes" y el foco (CA-028-10). Se
+      // lee el abridor ahora: el botón puede tocarse con el editor ya cerrado.
+      showCameraDeniedNotice(
+        context,
+        openAppSettings: ref.read(appSettingsOpenerProvider),
+        margin: _aboveButtons(),
+        // Al cerrarse, el foco vuelve a (+), como con los demás (CA-007-22).
+        onClosed: () {
+          if (mounted) _focusPlus();
+        },
+      );
+      ref.read(attachmentImportProvider.notifier).clearError();
+      // Sin lector ni teclado el foco queda en (+); con ellos, lo toma el
+      // aviso en cuanto la hoja termina de bajar.
+      _focusPlus();
+      return;
+    }
     if (error != null && before?.error == null) {
       final l10n = AppLocalizations.of(context);
       // El aviso se anuncia solo (spec 007 §5).
