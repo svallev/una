@@ -85,9 +85,9 @@
 
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
-| CA-010-05 Nombre de la app | `values`/`values-es` desde `identity.yaml` | Nombre del paquete por idioma desde `identity.yaml` → CA-028-08 | Script | I2 | |
+| CA-010-05 Nombre de la app | `values`/`values-es` desde `identity.yaml` | Nombre del paquete por idioma desde `identity.yaml` → CA-028-08 | Script | I2 | **Hecho** (T-028-02: `{en,es,ca}.lproj/InfoPlist.strings` generadas, sección `l10n`, `gen_identity_test.dart`) |
 | CA-010-10 Voz del lector | TalkBack | VoiceOver | VO | I8 | |
-| (CA-024-04) `ca-ES, en-US` en español | `values-ca` | Correspondencia `ca` → español en lo del sistema → CA-028-08 | Script + simulador | I2 | |
+| (CA-024-04) `ca-ES, en-US` en español | `values-ca` | Correspondencia `ca` → español en lo del sistema → CA-028-08 | Script + simulador | I2 | Script **hecho** (T-028-02); **[Pendiente]** simulador con `ca-ES, en-US` en T-028-22 |
 
 ### 011 Recientes
 
@@ -170,4 +170,4 @@
 | 022 Auditoría | Xiaomi + emulador | La pasada de CA-028-21 | Disp | I8 | |
 | 023 Ficha y privacidad | Play | Fuera de alcance (I9); la política no cambia salvo ADR-0030 | — | I9 | |
 | CA-024-01 a 03 Iconos de las barras | Android | CA-028-05 | Disp | I2 | |
-| CA-024-04 `ca` en español | `values-ca` | CA-028-08 | Script | I2 | |
+| CA-024-04 `ca` en español | `values-ca` | CA-028-08 | Script | I2 | **Hecho** (T-028-02, como CA-010-05) |

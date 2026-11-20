@@ -1,0 +1,3 @@
+/* GENERADO por tool/gen_identity.dart desde identity.yaml. No editar a mano. */
+"CFBundleDisplayName" = "Una";
+"NSCameraUsageDescription" = "Para hacer la foto de una tarea.";

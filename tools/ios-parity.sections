@@ -1,2 +1,3 @@
 # Secciones de tools/check-ios-parity.sh que ya pasan (una por línea; cada tarea de la 028 añade las suyas, T-028-21 las completa).
 network
+l10n

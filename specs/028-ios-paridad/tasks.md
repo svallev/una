@@ -1,6 +1,6 @@
 # Tareas — Spec 028: Una en iOS, igual que en Android (paridad)
 
-**Siguiente:** T-028-02 (rama `feat/028-i2-base`)
+**Siguiente:** T-028-03 (rama `feat/028-i2-base`)
 
 Reglas: tareas **pequeñas** (≤ medio día; T-028-13 y 18 se aceptan más largas, `plan.md` §1.1), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden**. La columna **Toca** acota lo que cambia y lo que lee el subagente. Los textos van juntos al principio (T-028-02).
 
@@ -79,3 +79,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (simula
 | Tareas | Estado | Commit |
 |---|---|---|
 | T-028-01 | **Hecha.** `check-ios-parity.sh` (13 secciones; activa: `network`; pasa sobre el repo), `ios-parity.sections`, sumas de la plantilla, test (149; 20 mutaciones detectadas), skill `/ios-check`, `docs/testing.md`, trampa. `dart format`, `analyze` y `flutter test -j 3` verdes (4672 + 224 omitidos). `/ios-check` completado por el coordinador (2026-11-20): build de simulador y XCTest de la plantilla en verde (el cuelgue era el diálogo del llavero de SwiftPM, ver Trampas). | c6f5453 |
+| T-028-02 | **Hecha.** 3 claves ARB (ES/EN) + `gen_identity.dart` genera `{en,es,ca}.lproj/InfoPlist.strings` (`ca` = `es`), `CFBundleLocalizations` y la descripción **base** `NSCameraUsageDescription` (en) en `Info.plist`; `project.pbxproj` con la variante `InfoPlist.strings` en Recursos y regiones `es`, `ca`; sección `l10n` activa. Tests nuevos `gen_identity_test.dart` (15; 5 mutaciones detectadas) y `spec_028_strings_test.dart`; `format`/`analyze` limpios, `flutter test -j 3` verde. `/ios-check` (iPhone 18 Pro, iOS 27.2): build y XCTest verdes, lproj dentro del `.app`; `l10n` OK. **[Suposición]** `ca-ES, en-US` → español en el simulador: T-028-22. | (este commit) |
