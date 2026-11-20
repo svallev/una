@@ -27,7 +27,9 @@ class UndoDuration {
   ///   del sistema, nunca menos de [base] ni más de [max];
   /// - Android 8 y 9 (sin `recommendedMs`): [legacyA11y] con un servicio de
   ///   accesibilidad activo y, si no, [base];
-  /// - sin canal (iOS, web de pruebas, tests): `(null, false)` → [base].
+  /// - iOS (sin `recommendedMs`, ADR-0031, CA-028-14): la misma regla, con
+  ///   VoiceOver o Control por botón como servicio activo;
+  /// - sin canal (web de pruebas, tests): `(null, false)` → [base].
   Duration call(SystemTimeouts timeouts) {
     final recommended = timeouts.recommendedMs;
     if (recommended != null) {

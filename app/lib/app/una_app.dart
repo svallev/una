@@ -20,6 +20,7 @@ import '../features/first_run/welcome_intro.dart';
 import '../features/settings/settings_controller.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../ui/full_width.dart';
+import '../ui/ios_back_gesture.dart';
 import '../ui/semantics_action_order.dart';
 import 'app_identity.g.dart';
 import 'locale_resolution.dart';
@@ -250,7 +251,7 @@ class HomeRouter extends ConsumerWidget {
         showActions: !crumpling,
         focusSignal: focusSignal,
         onCreate: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
+          UnaMaterialPageRoute<void>(
             builder: (_) => TaskEditorScreen(
               colorKey: ref.read(colorPickerProvider).pick(),
             ),

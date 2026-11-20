@@ -117,7 +117,7 @@ void main() {
     });
   });
 
-  test('CA-014-06: sin canal (iOS, web de pruebas, tests), 4 s', () {
+  test('CA-014-06: sin canal (web de pruebas, tests), 4 s', () {
     // El puerto devuelve (null, false) sin canal o con un error.
     expect(
       rule((
@@ -127,6 +127,43 @@ void main() {
       )),
       UnaMotion.undoWindow,
     );
+  });
+
+  group('CA-028-14: los hechos de iOS (sin "Tiempo para actuar")', () {
+    // `una/a11y` en iOS devuelve `recommendedMs: null` y un servicio activo con
+    // VoiceOver o Control por botón (ADR-0031): la regla de Android 8 y 9.
+    test('VoiceOver (servicio y exploración táctil): 10 s', () {
+      expect(
+        rule((
+          recommendedMs: null,
+          serviceEnabled: true,
+          touchExploration: true,
+        )),
+        UnaMotion.undoWindowLegacyA11y,
+      );
+    });
+
+    test('Control por botón (servicio sin exploración táctil): 10 s', () {
+      expect(
+        rule((
+          recommendedMs: null,
+          serviceEnabled: true,
+          touchExploration: false,
+        )),
+        UnaMotion.undoWindowLegacyA11y,
+      );
+    });
+
+    test('sin tecnología de apoyo: 4 s', () {
+      expect(
+        rule((
+          recommendedMs: null,
+          serviceEnabled: false,
+          touchExploration: false,
+        )),
+        UnaMotion.undoWindow,
+      );
+    });
   });
 
   test('CA-014-06: la exploración táctil no cambia la duración (solo decide '

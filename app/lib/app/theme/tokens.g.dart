@@ -253,6 +253,7 @@ abstract final class UnaSizes {
   static const double linkButton = 44.0;
   static const double bodyMaxWidth = 300.0;
   static const double confettiBorder = 2.0;
+  static const double backGestureEdge = 20.0;
   static const double sheetRowTall = 64.0;
   static const double imageCaptionBottom = 146.0;
   static const double imageCaptionPadX = 14.0;
@@ -487,6 +488,9 @@ abstract final class UnaMotion {
 
   /// Las opciones de Notificaciones se despliegan y pliegan (prototipo: grid-template-rows .24s con la curva sheet; la opacidad .2s se une a esta). Sin ninguna animación con reducir movimiento. CA-019-03
   static const Duration accordion = Duration(milliseconds: 240);
+
+  /// Lo que tarda en terminar el gesto atrás de iOS al soltar: vuelve a su sitio o se va del todo (spec 028, CA-028-09; la de CupertinoPageRoute). Con reducir movimiento, 0
+  static const Duration backGestureSettle = Duration(milliseconds: 350);
 
   /// Transición de una foto a otra del carrusel, con la curva photoSwipe (prototipo: transform .28s). Sin transición con reducir movimiento. CA-016-09, CA-016-22
   static const Duration photoSwipe = Duration(milliseconds: 280);

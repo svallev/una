@@ -5,7 +5,7 @@ import XCTest
 @testable import Runner
 
 /// Mensajero de mentira: guarda el manejador que cada canal registra y permite lanzarle llamadas.
-private final class RecordingMessenger: NSObject, FlutterBinaryMessenger {
+final class RecordingMessenger: NSObject, FlutterBinaryMessenger {
   var handlers: [String: FlutterBinaryMessageHandler] = [:]
   private var next: FlutterBinaryMessengerConnection = 1
 
@@ -24,9 +24,9 @@ private final class RecordingMessenger: NSObject, FlutterBinaryMessenger {
   func cleanUpConnection(_ connection: FlutterBinaryMessengerConnection) {}
 
   /// Devuelve la respuesta cruda del canal (`nil` = «no implementado»).
-  func call(_ channel: String, method: String) -> Data? {
+  func call(_ channel: String, method: String, arguments: Any? = nil) -> Data? {
     let message = FlutterStandardMethodCodec.sharedInstance().encode(
-      FlutterMethodCall(methodName: method, arguments: nil))
+      FlutterMethodCall(methodName: method, arguments: arguments))
     var reply: Data?
     var answered = false
     handlers[channel]?(message) { data in
@@ -35,6 +35,16 @@ private final class RecordingMessenger: NSObject, FlutterBinaryMessenger {
     }
     XCTAssertTrue(answered, "\(channel) no respondió")
     return reply
+  }
+
+  /// La respuesta ya decodificada: el valor del éxito, o el `FlutterError` si la llamada falló.
+  /// Falla el test si el canal respondió «no implementado».
+  func value(_ channel: String, method: String, arguments: Any? = nil) -> Any? {
+    guard let data = call(channel, method: method, arguments: arguments) else {
+      XCTFail("\(channel).\(method) responde «no implementado»")
+      return nil
+    }
+    return FlutterStandardMethodCodec.sharedInstance().decodeEnvelope(data)
   }
 }
 
@@ -51,12 +61,24 @@ class RunnerTests: XCTestCase {
     XCTAssertEqual(messenger.handlers.keys.sorted(), expected)
   }
 
+  /// Los canales que ya tienen su manejador (cada tarea de canal añade el suyo, T-028-09 a 19).
+  private let implemented: Set<String> = ["una/links", "una/a11y", "una/screen"]
+
   func testEveryChannelAnswersNotImplementedUntilItsPhase() {
     // CA-028-20: hasta que cada fase los implemente, ningún método responde otra cosa.
     let messenger = RecordingMessenger()
     UnaChannels.register(messenger: messenger)
-    for name in UnaChannels.names {
+    for name in UnaChannels.names where !implemented.contains(name) {
       XCTAssertNil(messenger.call(name, method: "anything"), "\(name) debería no estar implementado")
+    }
+  }
+
+  func testImplementedChannelsStillRefuseUnknownMethods() {
+    // CA-028-20 y contrato §0.2: un método desconocido es siempre «no implementado».
+    let messenger = RecordingMessenger()
+    UnaChannels.register(messenger: messenger)
+    for name in implemented {
+      XCTAssertNil(messenger.call(name, method: "anything"), "\(name) debería rechazar lo desconocido")
     }
   }
 }

@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 
 /// Evita que la pantalla se apague por inactividad (CA-007-12). En Android,
 /// `FLAG_KEEP_SCREEN_ON` de la ventana: sin permisos (`WAKE_LOCK` no hace
-/// falta) y se quita solo al salir de la app.
+/// falta) y se quita solo al salir de la app. En iOS, `isIdleTimerDisabled`
+/// (CA-028-13); al pasar a segundo plano el sistema lo ignora y, al volver,
+/// `KeepScreenOnController` lo pide de nuevo.
 abstract interface class ScreenAwake {
   Future<void> keepOn(bool on);
 }
@@ -20,7 +22,7 @@ class ChannelScreenAwake implements ScreenAwake {
     try {
       await _channel.invokeMethod<void>('keepOn', on);
     } on MissingPluginException {
-      // Plataforma sin el canal (iOS aún, D17; tests): sin efecto.
+      // Plataforma sin el canal (la web de pruebas y los tests): sin efecto.
     } on PlatformException {
       // Solo es comodidad: sin registrar nada.
     }

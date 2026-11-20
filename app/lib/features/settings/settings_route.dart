@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../app/theme/tokens.g.dart';
+import '../../ui/ios_back_gesture.dart';
 
 /// Duración de la transición entre niveles de Ajustes (spec 015, CA-015-01d;
 /// antes, de la 012): un fundido de 160 ms, o ninguno con "reducir movimiento"
@@ -15,7 +16,7 @@ Duration settingsTransition(BuildContext context) =>
 /// nivel que la abre.
 Route<T> settingsRoute<T>(BuildContext context, WidgetBuilder builder) {
   final duration = settingsTransition(context);
-  return PageRouteBuilder<T>(
+  return UnaPageRoute<T>(
     transitionDuration: duration,
     reverseTransitionDuration: duration,
     pageBuilder: (context, _, _) => builder(context),
@@ -33,7 +34,7 @@ Route<T> settingsRoute<T>(BuildContext context, WidgetBuilder builder) {
 /// dedo.
 Route<T> settingsSheetRoute<T>(BuildContext context, WidgetBuilder builder) {
   final reduced = MediaQuery.disableAnimationsOf(context);
-  return PageRouteBuilder<T>(
+  return UnaPageRoute<T>(
     transitionDuration: reduced ? Duration.zero : UnaMotion.sheetIn,
     reverseTransitionDuration: reduced ? Duration.zero : UnaMotion.sheetOut,
     pageBuilder: (context, _, _) => builder(context),

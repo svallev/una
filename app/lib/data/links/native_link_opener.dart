@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import '../../domain/entities/link_target.dart';
 import '../../domain/ports/link_opener.dart';
 
-/// [LinkOpener] sobre el canal `una/links` (`LinkOpener.kt`).
+/// [LinkOpener] sobre el canal `una/links` (`LinkOpener.kt` en Android, `Links.swift` en iOS).
 class NativeLinkOpener implements LinkOpener {
   const NativeLinkOpener();
 

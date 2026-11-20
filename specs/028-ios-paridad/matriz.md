@@ -34,7 +34,7 @@
 
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
-| CA-002-07, CA-005-05, CA-006-03 (volver / cancelar) | Botón y gesto atrás del sistema | Gesto desde el borde → CA-028-09 | D (plataforma iOS) | I3 | |
+| CA-002-07, CA-005-05, CA-006-03 (volver / cancelar) | Botón y gesto atrás del sistema | Gesto desde el borde → CA-028-09 | D (plataforma iOS) | I3 | **Hecho** (T-028-12): `ios_back_gesture.dart` + `ios_back_gesture_test.dart` (el editor descarta sin preguntar con el gesto, Ajustes, Idioma y listado vuelven; la tarea actual no tiene atrás). **[Pendiente]** el escape de VoiceOver y el gesto con el dedo, en el iPad: T-028-23 |
 | CA-003-01, CA-006-04/05 (mantener, arrastrar) | Gestos de Flutter | Igual; háptica de iOS si la hay | D + Disp | I8 | |
 | CA-003-07, 004-10, 006-16/17 (acciones del lector) | TalkBack | VoiceOver (acciones personalizadas del rotor) | VO | I8 | |
 
@@ -45,8 +45,8 @@
 | CA-007-02 Hacer foto sin permisos | Intent de cámara, sin permiso | **Diverge → CA-028-10** (`UIImagePickerController`, permiso de cámara) | XCT + Disp | I4 | |
 | CA-007-03 Subir imagen sin permisos | Selector de fotos / documentos | `PHPickerViewController`, sin permiso | XCT + IT + Disp | I4 | |
 | CA-007-07 Copia propia sin datos ocultos | `ImageSanitizer.kt` (recodifica desde píxeles) | ImageIO/Core Graphics: recodificar desde píxeles, sin EXIF/GPS/XMP ni vídeo de Live Photo, orientación aplicada | XCT (casos JUnit portados) + IT (`image_import`) | I4 | |
-| CA-007-11 Solo gira la tarea con imagen | `AttachmentRotation.kt` (acelerómetro) | `supportedInterfaceOrientations` + `requestGeometryUpdate` | XCT + **[Pendiente sin iPhone]** | I3 | |
-| CA-007-12 Pantalla encendida | `FLAG_KEEP_SCREEN_ON` | `isIdleTimerDisabled` | XCT + Disp | I3 | |
+| CA-007-11 Solo gira la tarea con imagen | `AttachmentRotation.kt` (acelerómetro) | `supportedInterfaceOrientations` + `requestGeometryUpdate` | XCT + **[Pendiente sin iPhone]** | I3 | **Hecho en lo comprobable** (T-028-10): igual que CA-008-11 (`SystemChrome` abre y cierra las horizontales; sin `requestGeometryUpdate` nativo, el motor lo hace). **[Pendiente sin iPhone]** el giro real: T-028-23 |
+| CA-007-12 Pantalla encendida | `FLAG_KEEP_SCREEN_ON` | `isIdleTimerDisabled` | XCT + Disp | I3 | **Hecho** (T-028-10): `Screen.swift` `keepOn` = `isIdleTimerDisabled` (solo un `true` exacto la enciende; en el principal), 9 XCTest (`ScreenTests`) y 4 tests de Dart del canal. **[Pendiente]** que se apague de verdad al bloquear/volver, en el iPad: T-028-23 (el simulador no lo enseña) |
 | CA-007-13/14 Tipos, límites, importación acotada | `copy` acotado, `cache/import/` | Igual, en `Caches/import/` (mismo `getTemporaryDirectory`) | XCT + IT | I4 | |
 | CA-007-15 Preparando | `sanitize` en un solo hilo | Igual, una cola serie | XCT + IT | I4 | |
 | CA-007-16 Ningún archivo huérfano | `cancel` + barrido de Dart | Igual | XCT + IT | I4 | |
@@ -62,9 +62,9 @@
 | CA-008-02/03/14 Solo PDF, límites, acotada | `copy` con `headBytes` | Igual | XCT + IT (`pdf_import`) | I4 | |
 | CA-008-07 Nombre del archivo | `DISPLAY_NAME` | `URL.lastPathComponent` del documento elegido | XCT | I4 | |
 | CA-008-08/09 Página y última posición | `encodeJpeg` (pdfrx dibuja en Dart) | `encodeJpeg` en Swift; pdfrx igual | XCT + IT (`pdf_flow`) | I4 | |
-| CA-008-11 Girar | `AttachmentRotation.kt` | Como CA-007-11 | **[Pendiente sin iPhone]** | I3 | |
-| CA-008-12 Enlaces del PDF | `LinkOpener.kt` | `UIApplication.open` → CA-028-13 | XCT + Disp | I3 | |
-| CA-008-13 Pantalla encendida | Como CA-007-12 | Como CA-007-12 | XCT | I3 | |
+| CA-008-11 Girar | `AttachmentRotation.kt` | Como CA-007-11 | **[Pendiente sin iPhone]** | I3 | **Hecho en lo comprobable** (T-028-10): `rotateWithAttachment` responde sin hacer nada; `SystemChrome` basta: en el simulador, tras `request(on: true)` el `FlutterViewController` permite vertical + las dos horizontales (máscara 26) y tras soltar, solo vertical (2); test de Dart del par abrir/soltar. **[Pendiente sin iPhone]** el giro real con el aparato girado y con el bloqueo de rotación (el simulador no gira por línea de comandos): T-028-23 |
+| CA-008-12 Enlaces del PDF | `LinkOpener.kt` | `UIApplication.open` → CA-028-13 | XCT + Disp | I3 | **Hecho** (T-028-09): `Links.swift` abre `web` (`http(s)`), `mail` (`mailto`) y `tel` solo con su esquema; `open` responde con el resultado del sistema y `canOpen` con `canOpenURL`; 13 XCTest (`LinksTests`) y la llamada real desde Dart en el simulador (`https` → `true`). **[Pendiente]** `mailto:`/`tel:` con una app real y el aviso «No hay ninguna app»: T-028-23 (el simulador no tiene Mail ni teléfono: `false` con y sin `LSApplicationQueriesSchemes`) |
+| CA-008-13 Pantalla encendida | Como CA-007-12 | Como CA-007-12 | XCT | I3 | Como CA-007-12 (mismo canal) |
 | CA-008-15/16 Preparando, ningún huérfano | `copy`, `encodeJpeg`, `cancel` | Igual | XCT + IT (`pdf_import`) | I4 | |
 | CA-008-17 Copia de seguridad | Como CA-007-18 | Igual (ADR-0032) → CA-028-18 | XCT/IT | I2 | **Hecho** (T-028-07): `DataAtRest.swift` crea `Application Support/attachments/` al arrancar el motor y la excluye de la copia (`isExcludedFromBackup`), BD en `Documents/` incluida; XCTest en el simulador (`DataAtRestTests`). **[Pendiente]** ver la exclusión en una copia real: T-028-23 |
 | CA-008-18 Adjunto no disponible | `encodeJpeg` sobre el guardado | Igual | XCT + IT | I4 | |
@@ -76,9 +76,9 @@
 | CA-009-06/07 Tarea web, se carga cada vez | `webview_flutter_android` | `webview_flutter_wkwebview` (fijado, P11) | IT (`web_flow`) | I5 | |
 | CA-009-08/09/10 Sin conexión, solo segura, certificado | Delegado del paquete | Igual (errores de WebKit → mismos tipos) | IT | I5 | |
 | CA-009-11 y CL-009-1 Sin navegación; redirecciones del servidor (incluida la red local bloqueada) | `RenderGoneClient` avisa `mainFrameRequest` | Ver `channel-contract.md` §3 (sin sustituir el delegado del paquete); si no se consigue, **Diverge** con su CA en la 028 | IT + XCT | I5 | |
-| CA-009-12 Atrás | Atrás del sistema | Gesto desde el borde (CA-028-09); la página no navega atrás | D | I3 | |
+| CA-009-12 Atrás | Atrás del sistema | Gesto desde el borde (CA-028-09); la página no navega atrás | D | I3 | **Hecho** (T-028-12): el gesto es de la ruta de la pantalla (`UnaPageRoute`), no de la página, que no navega atrás; la web en el simulador, en T-028-16 |
 | CA-009-13 Aislamiento y borrado | `harden` + `clearData` | Ajustes de `WKWebView` + `WKWebsiteDataStore.removeData` → CA-028-19 | XCT + IT (`webview_hardening`) | I5 | |
-| CA-009-15/16 Girar, pantalla encendida | `una/screen` | Como 007 | XCT / **[Pendiente sin iPhone]** | I3 | |
+| CA-009-15/16 Girar, pantalla encendida | `una/screen` | Como 007 | XCT / **[Pendiente sin iPhone]** | I3 | Como CA-007-12 y CA-008-11 (mismo canal) |
 | ADR-0017 Fallo del proceso de la página | `onRenderProcessGone` | El paquete lo da como error `webContentProcessTerminated` | IT + XCT | I5 | |
 
 ### 010 Idioma
@@ -93,25 +93,25 @@
 
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
-| CA-011-01/02 Sin contenido | `RecentsPrivacy.kt` | Vista `paper` al pasar a inactiva → CA-028-12 | XCT/IT + Disp | I3 | |
-| CA-011-03 Vuelta sin parpadeo | — | Quitar la vista al volver, sin destello | Disp | I3 | |
-| CA-011-04 Capturas permitidas | Sin `FLAG_SECURE` en primer plano | Sin bloqueo de capturas | Disp | I3 | |
-| CA-011-05/06 Arranque, sin permisos | — | Igual | Disp + Script | I3 | |
-| CA-011-08 Ciclo completo | Regresión de Android | Igual en iOS con CA-028-12 | IT + Disp | I3 | |
-| CA-011-07 Otras plataformas | iOS «como antes» | **Diverge → CA-028-12** (iOS sí oculta) | — | I3 | |
+| CA-011-01/02 Sin contenido | `RecentsPrivacy.kt` | Vista `paper` al pasar a inactiva → CA-028-12 | XCT/IT + Disp | I3 | **Hecho** (T-028-11): `RecentsPrivacy.swift` + `SceneDelegate.swift`; 12 XCTest (`RecentsPrivacyTests`), incluida la escena real (la ventana de Flutter dibujada con la vista puesta es solo `paper`). **[Pendiente]** la miniatura del selector real, en el iPad: T-028-23 |
+| CA-011-03 Vuelta sin parpadeo | — | Quitar la vista al volver, sin destello | Disp | I3 | **Parcial** (T-028-11): se quita en el acto y sin animación (XCTest, también dentro de un bloque animado); el destello a ojo, en el iPad: T-028-23 |
+| CA-011-04 Capturas permitidas | Sin `FLAG_SECURE` en primer plano | Sin bloqueo de capturas | Disp | I3 | **Parcial** (T-028-11): XCTest que lee el Swift (sin `isSecureTextEntry`, `isCaptured` ni escuchar capturas) y la vista solo existe con la escena inactiva; una captura real, en el iPad: T-028-23 |
+| CA-011-05/06 Arranque, sin permisos | — | Igual | Disp + Script | I3 | **Hecho** (T-028-11): la vista no pide permiso ni entitlement ni toca `Info.plist`; el arranque no cambia (la vista solo se pone al pasar a inactiva); `check-ios-parity.sh` verde |
+| CA-011-08 Ciclo completo | Regresión de Android | Igual en iOS con CA-028-12 | IT + Disp | I3 | **Parcial** (T-028-11): ciclo inactiva/activa repetido en XCTest; el ciclo con la app entera, en el iPad: T-028-23 |
+| CA-011-07 Otras plataformas | iOS «como antes» | **Diverge → CA-028-12** (iOS sí oculta) | — | I3 | **Hecho** (T-028-11) |
 
 ### 013–015
 
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
 | CA-013-01 Nombre de las bibliotecas de Android | Android | No aplica (ADR-0026 retiró la pantalla) | — | — | |
-| CA-014-06 Duración de la card | `una/a11y` («Tiempo para actuar») | **Diverge → CA-028-14** | D + XCT + VO | I3 | |
+| CA-014-06 Duración de la card | `una/a11y` («Tiempo para actuar») | **Diverge → CA-028-14** | D + XCT + VO | I3 | **Hecho** (T-028-09): `A11y.swift` da `recommendedMs: null`, servicio = VoiceOver o Control por botón y lector = VoiceOver; Dart sin cambios de lógica (`UndoDuration`: 10 s con servicio, 4 s sin él), 6 tests de Dart nuevos y 9 XCTest (`A11yTests`). **[Pendiente]** con VoiceOver real: T-028-23 |
 | CA-014-17/18/20 Foco, lector, teclado y switch | TalkBack, Switch Access | VoiceOver, Control por botón, teclado externo | VO + Disp | I8 | |
 | CA-014-13 La app muere | Proceso de Android | Igual (iOS mata la app en segundo plano) | IT | I8 | |
-| CA-015-03 a 04d Pantalla siempre activa | `keepOn` | `isIdleTimerDisabled` | XCT + Disp | I3 | |
-| CA-015-12a/b, 16 Abrir una web | `una/links` | `UIApplication.open` | XCT + Disp | I3 | |
+| CA-015-03 a 04d Pantalla siempre activa | `keepOn` | `isIdleTimerDisabled` | XCT + Disp | I3 | **Hecho** (T-028-10): `Screen.swift` `keepOn` = `isIdleTimerDisabled` (solo un `true` exacto la enciende; en el principal), 9 XCTest (`ScreenTests`) y 4 tests de Dart del canal. **[Pendiente]** que se apague de verdad al bloquear/volver, en el iPad: T-028-23 (el simulador no lo enseña) |
+| CA-015-12a/b, 16 Abrir una web | `una/links` | `UIApplication.open` | XCT + Disp | I3 | **Hecho** (T-028-09): igual que CA-008-12 (mismo canal y mismo `Links.swift`); en el iPad (política, licencias y ayuda abiertas en Safari): T-028-23 |
 | CA-015-11 Voz con el idioma elegido (ADR-0023) | TalkBack | VoiceOver | VO | I8 | |
-| CA-015-18 «Recientes» | 011 | CA-028-12 | Disp | I3 | |
+| CA-015-18 «Recientes» | 011 | CA-028-12 | Disp | I3 | **Parcial** (T-028-11): como CA-011-01/02; la miniatura real, en el iPad: T-028-23 |
 | CA-015-23 Arranque | Medido | CA-028-06 | Disp | I8 | |
 
 ### 016–018
@@ -120,13 +120,13 @@
 |---|---|---|---|---|---|
 | CA-016-01/02 Selector con tope de 10 | `pickMany` + `PickedItems.kt` | `PHPickerConfiguration.selectionLimit = 10` + recorte → CA-028-11 | XCT + IT (`photo_group_import`) | I4 | |
 | CA-016-03/04 Importar el grupo | Canal `una/images` | Igual | IT | I4 | |
-| CA-016-12/13 Giro, pantalla, recientes | `una/screen`, 011 | Como 007 y CA-028-12 | XCT / **[Pendiente sin iPhone]** | I3 | |
+| CA-016-12/13 Giro, pantalla, recientes | `una/screen`, 011 | Como 007 y CA-028-12 | XCT / **[Pendiente sin iPhone]** | I3 | **Parcial** (T-028-10): giro y pantalla como CA-007-12 y CA-008-11; los recientes, **hechos** en T-028-11 (CA-028-12; la miniatura real, en el iPad: T-028-23) |
 | CA-016-23 Memoria con 10 fotos | Medido en el Xiaomi (ADR-0024) | Medido en el iPad (2 GB) | Disp | I8 | |
 | CA-016-24 Seguridad del grupo | Tope antes de abrir | Igual | XCT | I4 | |
 | CA-016-14/16 Copia limpia y con orden, sin huérfanos | `sanitize`, `cancel` | Igual | XCT + IT | I4 | |
 | CA-016-17 Copia de seguridad | Adjuntos fuera de la nube | Igual (ADR-0032) → CA-028-18 | — | I2 | **Hecho** (T-028-07): `DataAtRest.swift` crea `Application Support/attachments/` al arrancar el motor y la excluye de la copia (`isExcludedFromBackup`), BD en `Documents/` incluida; XCTest en el simulador (`DataAtRestTests`). **[Pendiente]** ver la exclusión en una copia real: T-028-23 |
 | CA-016-18a/b Faltan fotos | `regenerate` | Igual | XCT + IT | I4 | |
-| CA-017-10 Giro con el bloqueo | `una/screen` | Como 007 | **[Pendiente sin iPhone]** | I3 | |
+| CA-017-10 Giro con el bloqueo | `una/screen` | Como 007 | **[Pendiente sin iPhone]** | I3 | Como CA-008-11: en iOS el bloqueo de orientación del sistema ya deja la app en vertical. **[Pendiente sin iPhone]** T-028-23 |
 | CA-017-13 Lupa del sistema | Ampliación de Android | Zoom de accesibilidad de iOS | Disp | I8 | |
 | CA-018-01 a 08, 14, 15 Icono | Adaptable + Play | Icono de iOS desde el de 1024 → CA-028-07 | Script | I2 | **Hecho** (T-028-04): `gen_icons.dart ios` + sección `icon`; en el simulador el icono sale en la pantalla de inicio; máscara y tamaños en el iPad: T-028-23 |
 | CA-018-06 Nada de Flutter | Android | Ahora también iOS → CA-028-07 | Script | I2 | **Hecho** (T-028-04): sección `icon` (ningún PNG igual a la plantilla, sin alfa) y `LaunchImage.imageset` retirado |

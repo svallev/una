@@ -13,6 +13,7 @@ import '../../domain/entities/task.dart';
 import '../../domain/usecases/delete_pending_task.dart' show TaskNotPending;
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
+import '../../ui/ios_back_gesture.dart';
 import '../../ui/square_icon_button.dart';
 import '../../ui/una_icons.dart';
 import '../attachments/task_labels.dart';
@@ -69,7 +70,7 @@ class TaskListScreen extends ConsumerStatefulWidget {
 
   /// Como en el prototipo, el listado aparece y desaparece sin transición.
   static Route<void> route(List<Task> initial, {Task? restored}) =>
-      PageRouteBuilder<void>(
+      UnaPageRoute<void>(
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
         pageBuilder: (_, _, _) =>
