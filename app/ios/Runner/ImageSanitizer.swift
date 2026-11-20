@@ -11,8 +11,9 @@ struct SanitizedImage: Equatable {
 }
 
 /// Recodifica una imagen **desde los píxeles** (spec 007, CA-007-07; espejo de `ImageSanitizer.kt`;
-/// contrato §2): cada JPEG se escribe con `CGImageDestination` y **solo** la calidad como propiedad,
-/// así que no sobrevive ningún byte del original (EXIF, GPS, XMP, miniatura interna, la parte de
+/// contrato §2): cada JPEG se escribe con `CGImageDestination` y **solo** la calidad como propiedad
+/// (y sin los segmentos de metadatos que ImageIO añade por su cuenta, `stripMetadata`), así que no
+/// sobrevive ningún byte del original (EXIF, GPS, XMP, miniatura interna, la parte de
 /// vídeo de una Live Photo, la *gainmap* HDR ni datos tras el final). Escribe en la carpeta:
 ///
 /// - `full-<fila>-<col>.jpg`: la versión completa en teselas de ≤ 4096 px (reducida solo si pasa de
@@ -61,7 +62,8 @@ final class ImageSanitizer {
 
   /// Limpia `source` y deja sus versiones en `outDir`. No borra `source` (lo hace quien llama).
   func sanitize(source: URL, outDir: URL) throws -> SanitizedImage {
-    let image = try flattenOnWhite(try decode(source))  // CL-007-4: transparencia sobre blanco
+    // CL-007-4: transparencia sobre blanco
+    let image = try flattenOnWhite(try decode(source))
     try checkCancelled()
     do {
       try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
@@ -109,6 +111,11 @@ final class ImageSanitizer {
       let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
       let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue
     else {
+      // ImageIO no da las dimensiones de un PNG enorme (60 000 × 60 000, [Hecho, T-028-14]): como
+      // `inJustDecodeBounds` en Android, se miran en su IHDR para responder `tooManyPixels`.
+      if let (width, height) = ImageSanitizer.pngHeaderSize(source), tooMany(width, height) {
+        throw ImageImportCode.tooManyPixels
+      }
       throw ImageImportCode.unreadable
     }
     if tooMany(width, height) { throw ImageImportCode.tooManyPixels }
@@ -133,10 +140,22 @@ final class ImageSanitizer {
   }
 
   /// Dibuja en un lienzo sRGB opaco **blanco**: la transparencia queda sobre blanco, el color pasa a
-  /// sRGB y a 8 bits (fuera la *gainmap* HDR y los 16 bits).
+  /// sRGB y a 8 bits (fuera la *gainmap* HDR y los 16 bits). Además garantiza ancho × alto ≤
+  /// `storedMaxPixels` [Hecho, T-028-14]: ImageIO redondea **hacia arriba** el lado corto de la
+  /// miniatura (8000 × 7990 a 24 MP salía en 4902 × 4896 = 24 000 192), así que, si se pasa, el lado
+  /// corto se queda en `storedMaxPixels / lado largo` (menos de 1 px de diferencia de proporción).
   private func flattenOnWhite(_ image: CGImage) throws -> CGImage {
-    let context = try ImageSanitizer.canvas(image.width, image.height)
-    context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    var width = image.width
+    var height = image.height
+    if Int64(width) * Int64(height) > storedMaxPixels {
+      if width >= height {
+        height = Swift.max(1, Int(storedMaxPixels / Int64(width)))
+      } else {
+        width = Swift.max(1, Int(storedMaxPixels / Int64(height)))
+      }
+    }
+    let context = try ImageSanitizer.canvas(width, height)
+    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
     guard let flat = context.makeImage() else { throw ImageImportCode.unreadable }
     return flat
   }
@@ -286,6 +305,20 @@ final class ImageSanitizer {
 
   // MARK: - Utilidades
 
+  /// Ancho y alto del IHDR de un PNG (solo los 24 primeros bytes); `nil` si no es un PNG.
+  static func pngHeaderSize(_ file: URL) -> (Int, Int)? {
+    guard let handle = try? FileHandle(forReadingFrom: file) else { return nil }
+    defer { try? handle.close() }
+    guard let head = try? handle.read(upToCount: 24), head.count == 24 else { return nil }
+    let bytes = [UInt8](head)
+    let signature: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+    guard Array(bytes[0..<8]) == signature, Array(bytes[12..<16]) == Array("IHDR".utf8) else {
+      return nil
+    }
+    func int(_ at: Int) -> Int { bytes[at..<(at + 4)].reduce(0) { $0 << 8 | Int($1) } }
+    return (int(16), int(20))
+  }
+
   /// Lienzo sRGB de 8 bits, opaco y relleno de blanco.
   private static func canvas(_ width: Int, _ height: Int) throws -> CGContext {
     guard let space = CGColorSpace(name: CGColorSpace.sRGB),
@@ -361,7 +394,38 @@ final class ImageSanitizer {
     guard CGImageDestinationFinalize(destination), data.length > 0 else {
       throw ImageImportCode.unreadable
     }
-    return data as Data
+    return try stripMetadata(data as Data)
+  }
+
+  /// Quita los segmentos de metadatos que ImageIO añade **por su cuenta** a todo JPEG, aunque no se le
+  /// pase ninguna propiedad [Hecho, T-028-14]: un APP1 «Exif» mínimo (también desde un PNG sin EXIF)
+  /// y un APP13 «Photoshop». Deja SOI, APP0 (JFIF), el perfil ICC (APP2 `ICC_PROFILE`) si lo hay, las
+  /// tablas y, desde SOS, el resto tal cual. Fuera: APP1, APP2 que no sea ICC, APP13 y comentarios
+  /// (como en Android y como comprueba `image_import_test`).
+  static func stripMetadata(_ jpeg: Data) throws -> Data {
+    let bytes = [UInt8](jpeg)
+    guard bytes.count >= 4, bytes[0] == 0xFF, bytes[1] == 0xD8 else {
+      throw ImageImportCode.unreadable
+    }
+    var out = Data(bytes[0..<2])
+    var i = 2
+    while true {
+      guard i + 3 < bytes.count, bytes[i] == 0xFF else { throw ImageImportCode.unreadable }
+      let marker = bytes[i + 1]
+      if marker == 0xDA {
+        out.append(contentsOf: bytes[i...])
+        return out
+      }
+      let end = i + 2 + (Int(bytes[i + 2]) << 8 | Int(bytes[i + 3]))
+      guard end <= bytes.count, end > i + 3 else { throw ImageImportCode.unreadable }
+      let isIcc =
+        marker == 0xE2 && i + 15 <= end
+        && Array(bytes[(i + 4)..<(i + 15)]) == Array("ICC_PROFILE".utf8)
+      let isMetadata =
+        marker == 0xE1 || marker == 0xED || marker == 0xFE || (marker == 0xE2 && !isIcc)
+      if !isMetadata { out.append(contentsOf: bytes[i..<end]) }
+      i = end
+    }
   }
 
   private static func save(_ data: Data, _ url: URL, _ writer: Writer) throws {

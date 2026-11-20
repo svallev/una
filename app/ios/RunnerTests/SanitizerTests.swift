@@ -252,6 +252,30 @@ class SanitizerTests: XCTestCase {
     XCTAssertNil(exif[kCGImagePropertyExifUserComment], file: file, line: line)
     let orientation = (p[kCGImagePropertyOrientation] as? Int) ?? 1
     XCTAssertEqual(orientation, 1, "orientación ya aplicada", file: file, line: line)
+    try assertNoMetadataSegments(url, file: file, line: line)
+  }
+
+  /// Como `_expectClean` del IT `image_import_test` (y como Android): entre SOI y SOS no hay ningún
+  /// segmento de metadatos (APP1 EXIF/XMP, APP13, comentario ni APP2 que no sea el perfil ICC), aunque
+  /// no lleve ninguna clave; y nada tras el final.
+  private func assertNoMetadataSegments(
+    _ url: URL, file: StaticString = #filePath, line: UInt = #line
+  ) throws {
+    let bytes = [UInt8](try Data(contentsOf: url))
+    XCTAssertEqual(Array(bytes.suffix(2)), [0xFF, 0xD9], "nada tras el final", file: file, line: line)
+    var i = 2
+    while i + 3 < bytes.count, bytes[i] == 0xFF {
+      let marker = bytes[i + 1]
+      if marker == 0xDA { break }
+      let length = Int(bytes[i + 2]) << 8 | Int(bytes[i + 3])
+      let isIcc =
+        marker == 0xE2 && i + 15 <= bytes.count
+        && String(decoding: bytes[(i + 4)..<(i + 15)], as: UTF8.self) == "ICC_PROFILE"
+      XCTAssertTrue(
+        isIcc || ![0xE1, 0xE2, 0xED, 0xFE].contains(marker),
+        "\(url.lastPathComponent): segmento 0x\(String(marker, radix: 16))", file: file, line: line)
+      i += 2 + length
+    }
   }
 
   private func files(_ directory: URL) -> [String] {
@@ -275,6 +299,16 @@ class SanitizerTests: XCTestCase {
     }
     let full = try Data(contentsOf: directory.appendingPathComponent("full-0-0.jpg"))
     XCTAssertEqual(answer?["byteSize"] as? Int, full.count)
+  }
+
+  func testAPngWithoutMetadataGivesJpegsWithoutAnyApp1() throws {
+    // CA-007-07: ImageIO añade por su cuenta un APP1 «Exif» mínimo a todo JPEG; no debe quedar.
+    try stage("m1", encode(quadrants(400, 300), .png))
+    XCTAssertNotNil(invoke("sanitize", sanitizeArguments("m1")) as? [String: Any])
+    let directory = importRoot.appendingPathComponent("m1")
+    for name in ["full-0-0.jpg", "screen.jpg", "thumb.jpg"] {
+      try assertNoMetadataSegments(directory.appendingPathComponent(name))
+    }
   }
 
   func testTheEightExifOrientationsAreApplied() throws {
@@ -336,6 +370,24 @@ class SanitizerTests: XCTestCase {
     XCTAssertEqual(answer?["width"] as? Int, 100)
   }
 
+  func testAPngHeaderTooLargeForImageIOIsTooManyPixels() throws {
+    // CA-007-13: ImageIO no da las dimensiones de un PNG de 60 000 × 60 000 (`fake_dims_huge.png` del
+    // IT, 69 bytes); se leen de su IHDR y es `tooManyPixels`, no `unreadable`.
+    let hex =
+      "89504e470d0a1a0a0000000d494844520000ea600000ea6008020000000fb0e2150000000c49444154789c63"
+      + "6818e2000032dd60019074be810000000049454e44ae426082"
+    var bytes = Data()
+    var index = hex.startIndex
+    while index < hex.endIndex {
+      let next = hex.index(index, offsetBy: 2)
+      bytes.append(UInt8(hex[index..<next], radix: 16)!)
+      index = next
+    }
+    try stage("h1", bytes)
+    assertError(invoke("sanitize", sanitizeArguments("h1")), "tooManyPixels")
+    XCTAssertFalse(exists(importRoot.appendingPathComponent("h1")))
+  }
+
   func testAboveStoredMaxPixelsTheFullVersionIsReduced() throws {
     // Contrato §2: se reduce a ≤ `storedMaxPixels` (aquí, a la mitad de lado).
     try stage("r1", encode(quadrants(200, 100), .png))
@@ -347,6 +399,20 @@ class SanitizerTests: XCTestCase {
     XCTAssertEqual(width, 100)
     XCTAssertEqual(height, 50)
     XCTAssertEqual(try size(importRoot.appendingPathComponent("r1/full-0-0.jpg")).0, 100)
+  }
+
+  func testTheReducedSizeNeverExceedsStoredMaxPixels() throws {
+    // CA-007-13: ImageIO redondea hacia arriba el lado corto (8000 × 7990 a 24 MP salía en
+    // 4902 × 4896 = 24 000 192); aquí, la misma proporción en pequeño: 93 × 86 > 7 980.
+    try stage("r2", encode(quadrants(152, 140), .png))
+    let answer =
+      invoke("sanitize", sanitizeArguments("r2", storedMaxPixels: 7_980)) as? [String: Any]
+    let width = try XCTUnwrap(answer?["width"] as? Int)
+    let height = try XCTUnwrap(answer?["height"] as? Int)
+    XCTAssertLessThanOrEqual(width * height, 7_980, "\(width) × \(height)")
+    XCTAssertGreaterThan(width * height, 7_980 * 95 / 100, "sin reducir de más")
+    let full = try size(importRoot.appendingPathComponent("r2/full-0-0.jpg"))
+    XCTAssertTrue(full == (width, height))
   }
 
   func testWideImagesAreWrittenInTilesOf4096() throws {
