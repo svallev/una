@@ -24,6 +24,8 @@
 		A0280000000000000000001F /* A11yTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000001E /* A11yTests.swift */; };
 		A02800000000000000000021 /* Screen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000020 /* Screen.swift */; };
 		A02800000000000000000023 /* ScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000022 /* ScreenTests.swift */; };
+		A02800000000000000000025 /* RecentsPrivacy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000024 /* RecentsPrivacy.swift */; };
+		A02800000000000000000027 /* RecentsPrivacyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000026 /* RecentsPrivacyTests.swift */; };
 		A02800000000000000000013 /* DataAtRest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000012 /* DataAtRest.swift */; };
 		A02800000000000000000015 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000014 /* PrivacyInfo.xcprivacy */; };
 		A02800000000000000000017 /* DataAtRestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000016 /* DataAtRestTests.swift */; };
@@ -67,6 +69,8 @@
 		A0280000000000000000001E /* A11yTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = A11yTests.swift; sourceTree = "<group>"; };
 		A02800000000000000000020 /* Screen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Screen.swift; sourceTree = "<group>"; };
 		A02800000000000000000022 /* ScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTests.swift; sourceTree = "<group>"; };
+		A02800000000000000000024 /* RecentsPrivacy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentsPrivacy.swift; sourceTree = "<group>"; };
+		A02800000000000000000026 /* RecentsPrivacyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentsPrivacyTests.swift; sourceTree = "<group>"; };
 		A02800000000000000000012 /* DataAtRest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataAtRest.swift; sourceTree = "<group>"; };
 		A02800000000000000000014 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A02800000000000000000016 /* DataAtRestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataAtRestTests.swift; sourceTree = "<group>"; };
@@ -105,6 +109,7 @@
 				A0280000000000000000001E /* A11yTests.swift */,
 				A0280000000000000000001C /* LinksTests.swift */,
 				A02800000000000000000022 /* ScreenTests.swift */,
+				A02800000000000000000026 /* RecentsPrivacyTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -157,6 +162,7 @@
 				A0280000000000000000001A /* A11y.swift */,
 				A02800000000000000000018 /* Links.swift */,
 				A02800000000000000000020 /* Screen.swift */,
+				A02800000000000000000024 /* RecentsPrivacy.swift */,
 				A02800000000000000000014 /* PrivacyInfo.xcprivacy */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -317,6 +323,7 @@
 				A0280000000000000000001F /* A11yTests.swift in Sources */,
 				A0280000000000000000001D /* LinksTests.swift in Sources */,
 				A02800000000000000000023 /* ScreenTests.swift in Sources */,
+				A02800000000000000000027 /* RecentsPrivacyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,6 +339,7 @@
 				A0280000000000000000001B /* A11y.swift in Sources */,
 				A02800000000000000000019 /* Links.swift in Sources */,
 				A02800000000000000000021 /* Screen.swift in Sources */,
+				A02800000000000000000025 /* RecentsPrivacy.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

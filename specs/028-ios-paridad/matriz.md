@@ -93,12 +93,12 @@
 
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
-| CA-011-01/02 Sin contenido | `RecentsPrivacy.kt` | Vista `paper` al pasar a inactiva → CA-028-12 | XCT/IT + Disp | I3 | |
-| CA-011-03 Vuelta sin parpadeo | — | Quitar la vista al volver, sin destello | Disp | I3 | |
-| CA-011-04 Capturas permitidas | Sin `FLAG_SECURE` en primer plano | Sin bloqueo de capturas | Disp | I3 | |
-| CA-011-05/06 Arranque, sin permisos | — | Igual | Disp + Script | I3 | |
-| CA-011-08 Ciclo completo | Regresión de Android | Igual en iOS con CA-028-12 | IT + Disp | I3 | |
-| CA-011-07 Otras plataformas | iOS «como antes» | **Diverge → CA-028-12** (iOS sí oculta) | — | I3 | |
+| CA-011-01/02 Sin contenido | `RecentsPrivacy.kt` | Vista `paper` al pasar a inactiva → CA-028-12 | XCT/IT + Disp | I3 | **Hecho** (T-028-11): `RecentsPrivacy.swift` + `SceneDelegate.swift`; 12 XCTest (`RecentsPrivacyTests`), incluida la escena real (la ventana de Flutter dibujada con la vista puesta es solo `paper`). **[Pendiente]** la miniatura del selector real, en el iPad: T-028-23 |
+| CA-011-03 Vuelta sin parpadeo | — | Quitar la vista al volver, sin destello | Disp | I3 | **Parcial** (T-028-11): se quita en el acto y sin animación (XCTest, también dentro de un bloque animado); el destello a ojo, en el iPad: T-028-23 |
+| CA-011-04 Capturas permitidas | Sin `FLAG_SECURE` en primer plano | Sin bloqueo de capturas | Disp | I3 | **Parcial** (T-028-11): XCTest que lee el Swift (sin `isSecureTextEntry`, `isCaptured` ni escuchar capturas) y la vista solo existe con la escena inactiva; una captura real, en el iPad: T-028-23 |
+| CA-011-05/06 Arranque, sin permisos | — | Igual | Disp + Script | I3 | **Hecho** (T-028-11): la vista no pide permiso ni entitlement ni toca `Info.plist`; el arranque no cambia (la vista solo se pone al pasar a inactiva); `check-ios-parity.sh` verde |
+| CA-011-08 Ciclo completo | Regresión de Android | Igual en iOS con CA-028-12 | IT + Disp | I3 | **Parcial** (T-028-11): ciclo inactiva/activa repetido en XCTest; el ciclo con la app entera, en el iPad: T-028-23 |
+| CA-011-07 Otras plataformas | iOS «como antes» | **Diverge → CA-028-12** (iOS sí oculta) | — | I3 | **Hecho** (T-028-11) |
 
 ### 013–015
 
@@ -111,7 +111,7 @@
 | CA-015-03 a 04d Pantalla siempre activa | `keepOn` | `isIdleTimerDisabled` | XCT + Disp | I3 | **Hecho** (T-028-10): `Screen.swift` `keepOn` = `isIdleTimerDisabled` (solo un `true` exacto la enciende; en el principal), 9 XCTest (`ScreenTests`) y 4 tests de Dart del canal. **[Pendiente]** que se apague de verdad al bloquear/volver, en el iPad: T-028-23 (el simulador no lo enseña) |
 | CA-015-12a/b, 16 Abrir una web | `una/links` | `UIApplication.open` | XCT + Disp | I3 | **Hecho** (T-028-09): igual que CA-008-12 (mismo canal y mismo `Links.swift`); en el iPad (política, licencias y ayuda abiertas en Safari): T-028-23 |
 | CA-015-11 Voz con el idioma elegido (ADR-0023) | TalkBack | VoiceOver | VO | I8 | |
-| CA-015-18 «Recientes» | 011 | CA-028-12 | Disp | I3 | |
+| CA-015-18 «Recientes» | 011 | CA-028-12 | Disp | I3 | **Parcial** (T-028-11): como CA-011-01/02; la miniatura real, en el iPad: T-028-23 |
 | CA-015-23 Arranque | Medido | CA-028-06 | Disp | I8 | |
 
 ### 016–018
@@ -120,7 +120,7 @@
 |---|---|---|---|---|---|
 | CA-016-01/02 Selector con tope de 10 | `pickMany` + `PickedItems.kt` | `PHPickerConfiguration.selectionLimit = 10` + recorte → CA-028-11 | XCT + IT (`photo_group_import`) | I4 | |
 | CA-016-03/04 Importar el grupo | Canal `una/images` | Igual | IT | I4 | |
-| CA-016-12/13 Giro, pantalla, recientes | `una/screen`, 011 | Como 007 y CA-028-12 | XCT / **[Pendiente sin iPhone]** | I3 | **Parcial** (T-028-10): giro y pantalla como CA-007-12 y CA-008-11; los recientes, en T-028-11 (CA-028-12) |
+| CA-016-12/13 Giro, pantalla, recientes | `una/screen`, 011 | Como 007 y CA-028-12 | XCT / **[Pendiente sin iPhone]** | I3 | **Parcial** (T-028-10): giro y pantalla como CA-007-12 y CA-008-11; los recientes, **hechos** en T-028-11 (CA-028-12; la miniatura real, en el iPad: T-028-23) |
 | CA-016-23 Memoria con 10 fotos | Medido en el Xiaomi (ADR-0024) | Medido en el iPad (2 GB) | Disp | I8 | |
 | CA-016-24 Seguridad del grupo | Tope antes de abrir | Igual | XCT | I4 | |
 | CA-016-14/16 Copia limpia y con orden, sin huérfanos | `sanitize`, `cancel` | Igual | XCT + IT | I4 | |
