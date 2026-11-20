@@ -18,6 +18,10 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A02800000000000000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000002 /* InfoPlist.strings */; };
+		A02800000000000000000019 /* Links.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000018 /* Links.swift */; };
+		A0280000000000000000001B /* A11y.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000001A /* A11y.swift */; };
+		A0280000000000000000001D /* LinksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000001C /* LinksTests.swift */; };
+		A0280000000000000000001F /* A11yTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000001E /* A11yTests.swift */; };
 		A02800000000000000000013 /* DataAtRest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000012 /* DataAtRest.swift */; };
 		A02800000000000000000015 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000014 /* PrivacyInfo.xcprivacy */; };
 		A02800000000000000000017 /* DataAtRestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000016 /* DataAtRestTests.swift */; };
@@ -55,6 +59,10 @@
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		A02800000000000000000018 /* Links.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Links.swift; sourceTree = "<group>"; };
+		A0280000000000000000001A /* A11y.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = A11y.swift; sourceTree = "<group>"; };
+		A0280000000000000000001C /* LinksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinksTests.swift; sourceTree = "<group>"; };
+		A0280000000000000000001E /* A11yTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = A11yTests.swift; sourceTree = "<group>"; };
 		A02800000000000000000012 /* DataAtRest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataAtRest.swift; sourceTree = "<group>"; };
 		A02800000000000000000014 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A02800000000000000000016 /* DataAtRestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataAtRestTests.swift; sourceTree = "<group>"; };
@@ -90,6 +98,8 @@
 			children = (
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 				A02800000000000000000016 /* DataAtRestTests.swift */,
+				A0280000000000000000001E /* A11yTests.swift */,
+				A0280000000000000000001C /* LinksTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -139,6 +149,8 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				A02800000000000000000010 /* UnaChannels.swift */,
 				A02800000000000000000012 /* DataAtRest.swift */,
+				A0280000000000000000001A /* A11y.swift */,
+				A02800000000000000000018 /* Links.swift */,
 				A02800000000000000000014 /* PrivacyInfo.xcprivacy */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -296,6 +308,8 @@
 			files = (
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
 				A02800000000000000000017 /* DataAtRestTests.swift in Sources */,
+				A0280000000000000000001F /* A11yTests.swift in Sources */,
+				A0280000000000000000001D /* LinksTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -308,6 +322,8 @@
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				A02800000000000000000011 /* UnaChannels.swift in Sources */,
 				A02800000000000000000013 /* DataAtRest.swift in Sources */,
+				A0280000000000000000001B /* A11y.swift in Sources */,
+				A02800000000000000000019 /* Links.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

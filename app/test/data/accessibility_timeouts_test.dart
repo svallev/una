@@ -64,6 +64,52 @@ void main() {
     });
   });
 
+  group('CA-028-14: la respuesta de iOS (`A11y.swift`) da 4 s o 10 s', () {
+    const rule = UndoDuration(
+      base: UnaMotion.undoWindow,
+      legacyA11y: UnaMotion.undoWindowLegacyA11y,
+      max: UnaMotion.undoWindowMax,
+    );
+
+    Future<Duration> durationFor({
+      required bool voiceOver,
+      required bool switchControl,
+    }) async {
+      // Lo que responde `A11y.swift`: `recommendedMs` siempre nulo.
+      answer(
+        (_) async => {
+          'recommendedMs': null,
+          'serviceEnabled': voiceOver || switchControl,
+          'touchExploration': voiceOver,
+        },
+      );
+      return rule(await timeouts.read());
+    }
+
+    test('VoiceOver: 10 s y cuenta como lector', () async {
+      expect(
+        await durationFor(voiceOver: true, switchControl: false),
+        const Duration(seconds: 10),
+      );
+      expect((await timeouts.read()).touchExploration, isTrue);
+    });
+
+    test('Control por botón: 10 s y no cuenta como lector', () async {
+      expect(
+        await durationFor(voiceOver: false, switchControl: true),
+        const Duration(seconds: 10),
+      );
+      expect((await timeouts.read()).touchExploration, isFalse);
+    });
+
+    test('sin tecnología de apoyo: 4 s', () async {
+      expect(
+        await durationFor(voiceOver: false, switchControl: false),
+        const Duration(seconds: 4),
+      );
+    });
+  });
+
   group('CA-014-17: la exploración táctil (TalkBack) sale del canal, no de '
       'accessibleNavigation', () {
     test('TalkBack: touchExploration true', () async {

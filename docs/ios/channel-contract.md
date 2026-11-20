@@ -93,8 +93,8 @@ Errores [Hecho]: `invalid_argument` (argumentos inválidos) y `failed` (cualquie
 
 | Método | Argumentos | Respuesta | Android [Hecho] | iOS |
 |---|---|---|---|---|
-| `open` | `{kind: "web"\|"mail"\|"tel", uri}` | `bool` | Solo `http(s)` (web), `mailto` (mail) y `tel` (tel), y solo si hay app; nunca registra el enlace. | Misma validación de esquema por `kind`; `UIApplication.shared.open(url)` y responde con su *completion* (`false` si no se abrió). |
-| `canOpen` | igual | `bool` | Mismo intent sin abrir. | `canOpenURL`; para `mailto` y `tel` hace falta declararlos en `LSApplicationQueriesSchemes` [Suposición: comprobar en I3; si no hace falta, no se declaran]. En el simulador `tel:` da `false`. |
+| `open` | `{kind: "web"\|"mail"\|"tel", uri}` | `bool` | Solo `http(s)` (web), `mailto` (mail) y `tel` (tel), y solo si hay app; nunca registra el enlace. | Misma validación de esquema por `kind`; `UIApplication.shared.open(url)` y responde con su *completion* (`false` si no se abrió). **[Hecho, T-028-09]** Sin tipo, con otro tipo, sin dirección o con argumentos que no son texto: `false`, sin tocar el sistema. Un `kind` o `uri` ausente no es un error (como en Kotlin). |
+| `canOpen` | igual | `bool` | Mismo intent sin abrir. | `canOpenURL` tras la misma validación de esquema. **[Hecho, T-028-09]** No se declara `LSApplicationQueriesSchemes`: en el simulador `https` y `sms` dan `true` sin declarar nada y `mailto`/`tel` dan `false` **con y sin** declararlos (sin Mail ni teléfono), así que la declaración no cambia nada. **[Suposición]** en un aparato `mailto`/`tel` responden sin declarar (son esquemas del sistema); si en el iPad (T-028-23) `mailto` da `false` con Mail instalado, se declaran `mailto` y `tel` y `LinksTests.testTheQuerySchemesDeclaredInTheAppMatchTheDecision` se actualiza. En el simulador `tel:` da `false`. |
 
 ## 7. `una/a11y` (I3)
 

@@ -2,9 +2,10 @@ import Flutter
 
 /// Canales de plataforma de la app (los mismos seis que en Android, spec 028 y contrato §0).
 ///
-/// Esqueleto de la T-028-05: cada canal existe y responde `FlutterMethodNotImplemented` hasta que
-/// la tarea de su fase le ponga el manejador real (I3 a I5). Dart ya sabe tratar «no implementado»
-/// como «no disponible» (`MissingPluginException`), así que un canal vacío nunca rompe la app.
+/// Cada canal responde `FlutterMethodNotImplemented` hasta que la tarea de su fase le ponga el
+/// manejador real (`una/links` y `una/a11y` en T-028-09; el resto, hasta I6). Dart ya sabe tratar
+/// «no implementado» como «no disponible» (`MissingPluginException`), así que un canal vacío nunca
+/// rompe la app.
 enum UnaChannels {
   /// Nombres de los canales, iguales a los de Dart y a los de Kotlin.
   static let names = [
@@ -17,12 +18,22 @@ enum UnaChannels {
   ]
 
   /// Crea los seis canales sobre `messenger`. Quien llama conserva el resultado mientras viva el motor.
+  /// Los manejadores de los canales ya implementados se pueden sustituir (los tests inyectan los suyos).
   @discardableResult
-  static func register(messenger: FlutterBinaryMessenger) -> [FlutterMethodChannel] {
+  static func register(
+    messenger: FlutterBinaryMessenger,
+    links: Links = Links(),
+    a11y: A11y = A11y()
+  ) -> [FlutterMethodChannel] {
     return names.map { name in
       let channel = FlutterMethodChannel(name: name, binaryMessenger: messenger)
-      channel.setMethodCallHandler { _, result in
-        result(FlutterMethodNotImplemented)
+      switch name {
+      case "una/links":
+        channel.setMethodCallHandler { call, result in links.handle(call, result: result) }
+      case "una/a11y":
+        channel.setMethodCallHandler { call, result in a11y.handle(call, result: result) }
+      default:
+        channel.setMethodCallHandler { _, result in result(FlutterMethodNotImplemented) }
       }
       return channel
     }

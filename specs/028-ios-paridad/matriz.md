@@ -63,7 +63,7 @@
 | CA-008-07 Nombre del archivo | `DISPLAY_NAME` | `URL.lastPathComponent` del documento elegido | XCT | I4 | |
 | CA-008-08/09 Página y última posición | `encodeJpeg` (pdfrx dibuja en Dart) | `encodeJpeg` en Swift; pdfrx igual | XCT + IT (`pdf_flow`) | I4 | |
 | CA-008-11 Girar | `AttachmentRotation.kt` | Como CA-007-11 | **[Pendiente sin iPhone]** | I3 | |
-| CA-008-12 Enlaces del PDF | `LinkOpener.kt` | `UIApplication.open` → CA-028-13 | XCT + Disp | I3 | |
+| CA-008-12 Enlaces del PDF | `LinkOpener.kt` | `UIApplication.open` → CA-028-13 | XCT + Disp | I3 | **Hecho** (T-028-09): `Links.swift` abre `web` (`http(s)`), `mail` (`mailto`) y `tel` solo con su esquema; `open` responde con el resultado del sistema y `canOpen` con `canOpenURL`; 13 XCTest (`LinksTests`) y la llamada real desde Dart en el simulador (`https` → `true`). **[Pendiente]** `mailto:`/`tel:` con una app real y el aviso «No hay ninguna app»: T-028-23 (el simulador no tiene Mail ni teléfono: `false` con y sin `LSApplicationQueriesSchemes`) |
 | CA-008-13 Pantalla encendida | Como CA-007-12 | Como CA-007-12 | XCT | I3 | |
 | CA-008-15/16 Preparando, ningún huérfano | `copy`, `encodeJpeg`, `cancel` | Igual | XCT + IT (`pdf_import`) | I4 | |
 | CA-008-17 Copia de seguridad | Como CA-007-18 | Igual (ADR-0032) → CA-028-18 | XCT/IT | I2 | **Hecho** (T-028-07): `DataAtRest.swift` crea `Application Support/attachments/` al arrancar el motor y la excluye de la copia (`isExcludedFromBackup`), BD en `Documents/` incluida; XCTest en el simulador (`DataAtRestTests`). **[Pendiente]** ver la exclusión en una copia real: T-028-23 |
@@ -105,11 +105,11 @@
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
 | CA-013-01 Nombre de las bibliotecas de Android | Android | No aplica (ADR-0026 retiró la pantalla) | — | — | |
-| CA-014-06 Duración de la card | `una/a11y` («Tiempo para actuar») | **Diverge → CA-028-14** | D + XCT + VO | I3 | |
+| CA-014-06 Duración de la card | `una/a11y` («Tiempo para actuar») | **Diverge → CA-028-14** | D + XCT + VO | I3 | **Hecho** (T-028-09): `A11y.swift` da `recommendedMs: null`, servicio = VoiceOver o Control por botón y lector = VoiceOver; Dart sin cambios de lógica (`UndoDuration`: 10 s con servicio, 4 s sin él), 6 tests de Dart nuevos y 9 XCTest (`A11yTests`). **[Pendiente]** con VoiceOver real: T-028-23 |
 | CA-014-17/18/20 Foco, lector, teclado y switch | TalkBack, Switch Access | VoiceOver, Control por botón, teclado externo | VO + Disp | I8 | |
 | CA-014-13 La app muere | Proceso de Android | Igual (iOS mata la app en segundo plano) | IT | I8 | |
 | CA-015-03 a 04d Pantalla siempre activa | `keepOn` | `isIdleTimerDisabled` | XCT + Disp | I3 | |
-| CA-015-12a/b, 16 Abrir una web | `una/links` | `UIApplication.open` | XCT + Disp | I3 | |
+| CA-015-12a/b, 16 Abrir una web | `una/links` | `UIApplication.open` | XCT + Disp | I3 | **Hecho** (T-028-09): igual que CA-008-12 (mismo canal y mismo `Links.swift`); en el iPad (política, licencias y ayuda abiertas en Safari): T-028-23 |
 | CA-015-11 Voz con el idioma elegido (ADR-0023) | TalkBack | VoiceOver | VO | I8 | |
 | CA-015-18 «Recientes» | 011 | CA-028-12 | Disp | I3 | |
 | CA-015-23 Arranque | Medido | CA-028-06 | Disp | I8 | |
