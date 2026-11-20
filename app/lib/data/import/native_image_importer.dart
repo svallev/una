@@ -5,14 +5,15 @@ import '../../domain/entities/image_type.dart';
 import '../../domain/ports/image_importer.dart';
 
 /// Importador de imágenes sobre el canal nativo `una/images` (Android,
-/// `ImageImport.kt`). No registra nada (CL-007-10).
+/// `ImageImport.kt`; iOS, `Images.swift`, spec 028). No registra nada
+/// (CL-007-10).
 class NativeImageImporter implements ImageImporter {
   NativeImageImporter({required this.heicSupported});
 
   static const _channel = MethodChannel('una/images');
 
-  /// Sin canal (iOS aún no lo tiene, D17), HEIC no se admite y cada llamada
-  /// falla como `unreadable`: el arranque no depende de ello.
+  /// Sin canal (una plataforma sin `una/images`), HEIC no se admite y cada
+  /// llamada falla como `unreadable`: el arranque no depende de ello.
   static Future<NativeImageImporter> open() async {
     try {
       final caps = await _channel.invokeMapMethod<String, Object?>(
@@ -154,6 +155,20 @@ class NativeImageImporter implements ImageImporter {
     }),
   );
 
+  /// Solo iOS: abre los Ajustes de la app en el sistema, donde se da el
+  /// permiso de la cámara (botón del aviso `errCameraDenied`, CA-028-10).
+  /// Devuelve si se abrieron; sin canal o con error, false (sin texto del
+  /// error: nunca se registra nada).
+  static Future<bool> openAppSettings() async {
+    try {
+      return await _channel.invokeMethod<Object?>('openAppSettings') == true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   @override
   Future<void> cancel(String id) =>
       _channel.invokeMethod<void>('cancel', {'id': id});
@@ -171,6 +186,10 @@ class NativeImageImporter implements ImageImporter {
           ImageImportError.tooManyPixels,
         ),
         'noCamera' => const ImageImportFailure(ImageImportError.noCamera),
+        // Solo iOS: la cámara sin permiso (CA-028-10).
+        'cameraDenied' => const ImageImportFailure(
+          ImageImportError.cameraDenied,
+        ),
         'noSpace' => const ImageImportFailure(ImageImportError.noSpace),
         'cancelled' => const ImageImportCancelled(),
         _ => const ImageImportFailure(ImageImportError.unreadable),

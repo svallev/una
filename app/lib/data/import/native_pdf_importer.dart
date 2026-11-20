@@ -11,8 +11,9 @@ import '../../domain/ports/pdf_importer.dart';
 import 'pdf_engine.dart';
 
 /// Importador de PDF (spec 008): el selector, la copia acotada y el JPEG por el
-/// canal nativo `una/images` (`ImageImport.kt`); abrir, contar páginas y dibujar,
-/// con PDFium ([PdfEngine]). No registra nada (CL-008-11).
+/// canal nativo `una/images` (Android, `ImageImport.kt`; iOS, `Images.swift`,
+/// spec 028); abrir, contar páginas y dibujar, con PDFium ([PdfEngine]). No
+/// registra nada (CL-008-11).
 class NativePdfImporter implements PdfImporter {
   NativePdfImporter({
     required this.stagingFile,

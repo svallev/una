@@ -97,6 +97,8 @@ void main() {
     ('tooLarge', ImageImportError.tooLarge),
     ('tooManyPixels', ImageImportError.tooManyPixels),
     ('noCamera', ImageImportError.noCamera),
+    // Solo lo manda iOS (spec 028, CA-028-10); Android no lo usa.
+    ('cameraDenied', ImageImportError.cameraDenied),
     ('noSpace', ImageImportError.noSpace),
     ('unreadable', ImageImportError.unreadable),
     ('somethingElse', ImageImportError.unreadable),
@@ -116,6 +118,42 @@ void main() {
       );
     });
   }
+
+  test('CA-028-10: "cameraDenied" al hacer la foto es cameraDenied', () {
+    reply = (_) => throw PlatformException(code: 'cameraDenied');
+    final importer = NativeImageImporter(heicSupported: true);
+    expect(
+      importer.pick(AttachmentOrigin.camera, 'id-1'),
+      throwsA(
+        isA<ImageImportFailure>().having(
+          (e) => e.error,
+          'error',
+          ImageImportError.cameraDenied,
+        ),
+      ),
+    );
+  });
+
+  group('CA-028-10: openAppSettings (solo iOS)', () {
+    test('llama al canal sin argumentos y devuelve si se abrió', () async {
+      reply = (_) => true;
+      expect(await NativeImageImporter.openAppSettings(), isTrue);
+      expect(calls.single.method, 'openAppSettings');
+      expect(calls.single.arguments, isNull);
+      reply = (_) => false;
+      expect(await NativeImageImporter.openAppSettings(), isFalse);
+    });
+
+    test('una respuesta que no es true, un error o sin canal: false', () async {
+      reply = (_) => 'yes';
+      expect(await NativeImageImporter.openAppSettings(), isFalse);
+      reply = (_) => throw PlatformException(code: 'x');
+      expect(await NativeImageImporter.openAppSettings(), isFalse);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+      expect(await NativeImageImporter.openAppSettings(), isFalse);
+    });
+  });
 
   test('CA-007-15: "cancelled" es ImageImportCancelled', () {
     reply = (_) => throw PlatformException(code: 'cancelled');

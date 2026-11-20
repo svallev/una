@@ -15,6 +15,8 @@ String importErrorText(AppLocalizations l10n, Enum error) => switch (error) {
   ),
   ImageImportError.unreadable => l10n.errImageUnreadable,
   ImageImportError.noCamera => l10n.errNoCamera,
+  // Con el botón "Abrir Ajustes" (`CameraDeniedNotice`, CA-028-10).
+  ImageImportError.cameraDenied => l10n.errCameraDenied,
   ImageImportError.noSpace => l10n.storageErrorNoSpace,
   PdfImportError.notPdf => l10n.errPdfType,
   PdfImportError.tooLarge => l10n.errPdfTooBig(PdfLimits.maxBytesInMb),

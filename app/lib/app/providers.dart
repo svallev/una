@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/attachments/attachment_images.dart';
 import '../data/attachments/memory_attachment_store.dart';
+import '../data/import/native_image_importer.dart';
 import '../data/links/native_link_opener.dart';
 import '../data/links/new_tab.dart';
 import '../data/platform/accessibility_timeouts.dart';
@@ -78,7 +79,7 @@ final attachmentJanitorProvider = Provider<AttachmentJanitor>(
 );
 
 /// Cámara, selector y limpieza de imágenes. En `main` se sobrescribe con el
-/// canal nativo (Android); en los tests, con uno falso.
+/// canal nativo (Android e iOS); en los tests, con uno falso.
 final imageImporterProvider = Provider<ImageImporter>(
   (ref) => throw UnimplementedError(),
 );
@@ -90,6 +91,13 @@ final importImageProvider = Provider<ImportImage>(
     ids: ref.watch(idGeneratorProvider),
     clock: ref.watch(clockProvider),
   ),
+);
+
+/// Abre los Ajustes de la app en el sistema (solo iOS: el botón del aviso de
+/// la cámara sin permiso, CA-028-10). Devuelve si se abrieron; donde no hay
+/// canal (Android nunca da ese aviso, la web y los tests), false.
+final appSettingsOpenerProvider = Provider<Future<bool> Function()>(
+  (ref) => NativeImageImporter.openAppSettings,
 );
 
 /// Selector y comprobación de PDF (spec 008). En `main` se sobrescribe con el

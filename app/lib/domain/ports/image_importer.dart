@@ -25,6 +25,11 @@ enum ImageImportError {
   unreadable,
   noCamera,
   noSpace,
+
+  /// La cámara no tiene permiso (denegado ahora o antes, o restringido). Solo
+  /// en iOS, que pide permiso para la cámara (spec 028, CA-028-10); Android
+  /// abre la cámara sin permisos y nunca lo da.
+  cameraDenied,
 }
 
 /// Un fallo de importación. **Solo lleva el código**: nunca la excepción
@@ -51,7 +56,7 @@ abstract interface class ImageImporter {
   /// Abre la cámara o el selector del sistema, sin pedir permisos
   /// (CA-007-02/03). Lo que escriba la cámara va a la preparación [id].
   /// Devuelve null si el usuario cancela. Lanza [ImageImportFailure]
-  /// (`noCamera`).
+  /// (`noCamera`; en iOS, también `cameraDenied`, CA-028-10).
   Future<PickedImage?> pick(AttachmentOrigin origin, String id);
 
   /// Abre el selector del sistema para elegir **varias** imágenes (spec 016,

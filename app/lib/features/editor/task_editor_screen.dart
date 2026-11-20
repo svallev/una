@@ -10,7 +10,6 @@ import '../../app/theme/tokens.g.dart';
 import '../../app/theme/una_theme.dart';
 import '../../domain/entities/attachment.dart';
 import '../../domain/entities/queue_position.dart';
-import '../../domain/entities/staged_attachment.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/ports/image_importer.dart';
 import '../../domain/services/commit_group.dart';
@@ -25,6 +24,7 @@ import '../../ui/wordmark.dart';
 import '../attachments/attach_sheet.dart';
 import '../attachments/attachment_import_controller.dart';
 import '../attachments/attachment_preview.dart';
+import '../attachments/camera_denied_notice.dart';
 import '../attachments/group_health.dart';
 import '../attachments/import_error_text.dart';
 import '../attachments/import_notice_banner.dart';
@@ -126,6 +126,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   /// (CA-016-21); se cancela si el grupo cambia antes de que salga.
   Timer? _addedAnnouncement;
 
+  /// El aviso de la cámara sin permiso mientras se ve (CA-028-10): es del
+  /// editor y se cierra al salir de él (decisión del propietario, 2026-11-20).
+  ScaffoldMessengerState? _cameraNoticeMessenger;
+
   /// Lo recién elegido (una imagen, un PDF o un grupo de 2 a 10 fotos), aún en
   /// la preparación.
   List<StagedAttachment> get _staged =>
@@ -185,6 +189,14 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     _fieldFocus.dispose();
     _plusFocus.dispose();
     _addedAnnouncement?.cancel();
+    // Si el editor se quita sin cerrar su ruta (la primera tarea: la pantalla
+    // cambia debajo), aquí; tras el fotograma, porque el árbol está bloqueado.
+    final messenger = _cameraNoticeMessenger;
+    if (messenger != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (messenger.mounted) messenger.clearSnackBars();
+      });
+    }
     super.dispose();
   }
 
@@ -315,6 +327,33 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       setState(() => _cancelSignal++);
     }
     final error = now.error;
+    if (error == ImageImportError.cameraDenied && before?.error == null) {
+      // Solo iOS: el aviso lleva "Abrir Ajustes" y el foco (CA-028-10). Se
+      // lee el abridor ahora: el botón puede tocarse con el editor ya cerrado.
+      final messenger = ScaffoldMessenger.of(context);
+      _cameraNoticeMessenger = messenger;
+      showCameraDeniedNotice(
+        context,
+        openAppSettings: ref.read(appSettingsOpenerProvider),
+        margin: _aboveButtons(),
+        // Al cerrarse, el foco vuelve a (+), como con los demás (CA-007-22);
+        // no si se cierra porque el editor se va.
+        onClosed: () {
+          if (_cameraNoticeMessenger == messenger) {
+            _cameraNoticeMessenger = null;
+          }
+          if (mounted && (ModalRoute.isCurrentOf(context) ?? true)) {
+            _focusPlus();
+          }
+        },
+      );
+
+      ref.read(attachmentImportProvider.notifier).clearError();
+      // Sin lector ni teclado el foco queda en (+); con ellos, lo toma el
+      // aviso en cuanto la hoja termina de bajar.
+      _focusPlus();
+      return;
+    }
     if (error != null && before?.error == null) {
       final l10n = AppLocalizations.of(context);
       // El aviso se anuncia solo (spec 007 §5).
@@ -385,6 +424,14 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       });
     });
     WidgetsBinding.instance.scheduleFrame();
+  }
+
+  /// Cierra el aviso de la cámara sin permiso si sigue a la vista; con él se
+  /// van los avisos que esperaban detrás, que también eran del editor.
+  void _closeCameraNotice() {
+    final messenger = _cameraNoticeMessenger;
+    _cameraNoticeMessenger = null;
+    if (messenger != null && messenger.mounted) messenger.clearSnackBars();
   }
 
   void _focusPlus() {
@@ -682,208 +729,215 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       letterSpacing: UnaLetterSpacing.tighter * UnaFontSizes.display,
       color: UnaColors.ink,
     );
-    return Scaffold(
-      backgroundColor: UnaColors.paper,
-      body: StickyNote(
-        colorKey: _colorKey,
-        child: SafeArea(
-          // Ocupa toda la pantalla y, si no cabe (texto al 200 % con el
-          // teclado abierto), se desplaza en lugar de cortarse (CL-001-9).
-          child: CustomScrollView(
-            slivers: [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Misma cabecera que la tarea actual. En la primera tarea,
-                    // sin "Cancelar" ni menú (R2); al crear o editar,
-                    // "Cancelar" descarta sin preguntar (P-3).
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        UnaSpace.l,
-                        UnaSpace.l,
-                        UnaSpace.m,
-                        0,
+    return PopScope<Object?>(
+      // Al salir del editor (atrás, gesto o guardar), el aviso de la cámara no
+      // se queda en la pantalla de debajo (CA-028-10).
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _closeCameraNotice();
+      },
+      child: Scaffold(
+        backgroundColor: UnaColors.paper,
+        body: StickyNote(
+          colorKey: _colorKey,
+          child: SafeArea(
+            // Ocupa toda la pantalla y, si no cabe (texto al 200 % con el
+            // teclado abierto), se desplaza en lugar de cortarse (CL-001-9).
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Misma cabecera que la tarea actual. En la primera tarea,
+                      // sin "Cancelar" ni menú (R2); al crear o editar,
+                      // "Cancelar" descarta sin preguntar (P-3).
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          UnaSpace.l,
+                          UnaSpace.l,
+                          UnaSpace.m,
+                          0,
+                        ),
+                        // Al menos 48 dp, y más con el texto grande: el
+                        // logotipo no se corta (CA-007-23).
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minHeight: kMinInteractiveDimension,
+                          ),
+                          child: Row(
+                            children: [
+                              const Wordmark(),
+                              const Spacer(),
+                              if (widget.mode != EditorMode.first)
+                                UnaLinkButton(
+                                  label: l10n.editorCancel,
+                                  height: kMinInteractiveDimension,
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                      // Al menos 48 dp, y más con el texto grande: el
-                      // logotipo no se corta (CA-007-23).
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minHeight: kMinInteractiveDimension,
+                      if (withAttachment) ...[
+                        // Prototipo `hasDraftAtt`: vista previa y, debajo, el
+                        // texto opcional más pequeño.
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              UnaSpace.ml,
+                              UnaSizes.attachPreviewTop,
+                              UnaSpace.l,
+                              0,
+                            ),
+                            child: AttachmentPreview(
+                              image: previewImage,
+                              document: previewDocument,
+                              stack: stackPhotos == null
+                                  ? null
+                                  : PhotoStack(
+                                      photos: stackPhotos,
+                                      count: groupCount,
+                                    ),
+                              semanticLabel: pdf != null
+                                  ? l10n.a11yPdfOnly(pdf.name, pdf.size)
+                                  : previewIsPhoto
+                                  ? l10n.attachmentPhoto
+                                  : l10n.attachmentImage,
+                              preparingLabel: _preparingText(l10n, import),
+                              cancelLabel: preparingPdf
+                                  ? l10n.pdfPreparingCancel
+                                  : l10n.imagePreparingCancel,
+                              onRemove: _removeImage,
+                              preparing: import.showPreparing,
+                              onCancelPreparing: () => unawaited(
+                                ref
+                                    .read(attachmentImportProvider.notifier)
+                                    .cancel(),
+                              ),
+                              focusSignal: _previewSignal,
+                              cancelFocusSignal: _cancelSignal,
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            UnaSpace.m,
+                            UnaSpace.s + UnaSpace.xxs,
+                            UnaSpace.m,
+                            0,
+                          ),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minHeight: UnaSizes.attachTextField,
+                            ),
+                            child: _field(
+                              l10n,
+                              attachmentTextStyle,
+                              l10n.editorAttachmentPlaceholder,
+                            ),
+                          ),
+                        ),
+                      ] else
+                        // Texto centrado en la nota, como en el prototipo.
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              UnaSpace.m,
+                              0,
+                              UnaSpace.m,
+                              UnaSpace.l,
+                            ),
+                            child: Center(
+                              child: MediaQuery(
+                                // Mismo límite de escala que la nota (CA-001-07, CL-001-9).
+                                data: mq.copyWith(
+                                  textScaler: mq.textScaler.clamp(
+                                    maxScaleFactor:
+                                        CurrentTaskScreen.maxNoteTextScale,
+                                  ),
+                                ),
+                                // La etiqueta del prototipo está oculta: solo da
+                                // nombre al campo (spec 001 §6). Un solo nodo.
+                                child: _field(
+                                  l10n,
+                                  textStyle,
+                                  l10n.editorPlaceholder,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (length >= TaskEditorScreen.counterFrom)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: UnaSpace.l,
+                          ),
+                          child: Text(
+                            l10n.editorCharsLeft(Task.maxTextLength - length),
+                            style: UnaTheme.mono.copyWith(color: UnaColors.ink),
+                          ),
+                        ),
+                      // Fotos omitidas o más de 10 (CA-016-05, 21): un aviso sin
+                      // caducidad, encima de los botones.
+                      if (import.notice case final notice?
+                          when notice.hasWarnings)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            UnaSpace.l,
+                            UnaSpace.s,
+                            UnaSpace.l,
+                            0,
+                          ),
+                          child: ImportNoticeBanner(
+                            text: importNoticeText(l10n, notice),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          UnaSpace.l,
+                          UnaSpace.sm,
+                          UnaSpace.l,
+                          UnaSpace.xxl,
                         ),
                         child: Row(
+                          key: _buttonsKey,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Wordmark(),
-                            const Spacer(),
-                            if (widget.mode != EditorMode.first)
-                              UnaLinkButton(
-                                label: l10n.editorCancel,
-                                height: kMinInteractiveDimension,
-                                onPressed: () => Navigator.of(context).pop(),
+                            BrutalButton.icon(
+                              label: l10n.attachButton,
+                              icon: UnaIcons.plus,
+                              focusNode: _plusFocus,
+                              semanticsKey: _plusSemantics,
+                              // Mientras se prepara, no hace nada y el lector lo
+                              // anuncia como no disponible (CA-016-04).
+                              semanticsEnabled: !import.preparing,
+                              onPressed: _attach,
+                            ),
+                            const SizedBox(width: UnaSpace.m),
+                            Flexible(
+                              child: BrutalButton(
+                                label: switch (widget.mode) {
+                                  EditorMode.first => l10n.editorSaveFirst,
+                                  EditorMode.create => l10n.editorContinue,
+                                  EditorMode.edit => l10n.editorSaveChanges,
+                                },
+                                trailingIcon: UnaIcons.arrowRight,
+                                iconSize: UnaSizes.iconM,
+                                expand: false,
+                                singleLine: true,
+                                semanticsEnabled: !import.preparing,
+                                onPressed: _save,
                               ),
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                    if (withAttachment) ...[
-                      // Prototipo `hasDraftAtt`: vista previa y, debajo, el
-                      // texto opcional más pequeño.
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            UnaSpace.ml,
-                            UnaSizes.attachPreviewTop,
-                            UnaSpace.l,
-                            0,
-                          ),
-                          child: AttachmentPreview(
-                            image: previewImage,
-                            document: previewDocument,
-                            stack: stackPhotos == null
-                                ? null
-                                : PhotoStack(
-                                    photos: stackPhotos,
-                                    count: groupCount,
-                                  ),
-                            semanticLabel: pdf != null
-                                ? l10n.a11yPdfOnly(pdf.name, pdf.size)
-                                : previewIsPhoto
-                                ? l10n.attachmentPhoto
-                                : l10n.attachmentImage,
-                            preparingLabel: _preparingText(l10n, import),
-                            cancelLabel: preparingPdf
-                                ? l10n.pdfPreparingCancel
-                                : l10n.imagePreparingCancel,
-                            onRemove: _removeImage,
-                            preparing: import.showPreparing,
-                            onCancelPreparing: () => unawaited(
-                              ref
-                                  .read(attachmentImportProvider.notifier)
-                                  .cancel(),
-                            ),
-                            focusSignal: _previewSignal,
-                            cancelFocusSignal: _cancelSignal,
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          UnaSpace.m,
-                          UnaSpace.s + UnaSpace.xxs,
-                          UnaSpace.m,
-                          0,
-                        ),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            minHeight: UnaSizes.attachTextField,
-                          ),
-                          child: _field(
-                            l10n,
-                            attachmentTextStyle,
-                            l10n.editorAttachmentPlaceholder,
-                          ),
-                        ),
-                      ),
-                    ] else
-                      // Texto centrado en la nota, como en el prototipo.
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            UnaSpace.m,
-                            0,
-                            UnaSpace.m,
-                            UnaSpace.l,
-                          ),
-                          child: Center(
-                            child: MediaQuery(
-                              // Mismo límite de escala que la nota (CA-001-07, CL-001-9).
-                              data: mq.copyWith(
-                                textScaler: mq.textScaler.clamp(
-                                  maxScaleFactor:
-                                      CurrentTaskScreen.maxNoteTextScale,
-                                ),
-                              ),
-                              // La etiqueta del prototipo está oculta: solo da
-                              // nombre al campo (spec 001 §6). Un solo nodo.
-                              child: _field(
-                                l10n,
-                                textStyle,
-                                l10n.editorPlaceholder,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (length >= TaskEditorScreen.counterFrom)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: UnaSpace.l,
-                        ),
-                        child: Text(
-                          l10n.editorCharsLeft(Task.maxTextLength - length),
-                          style: UnaTheme.mono.copyWith(color: UnaColors.ink),
-                        ),
-                      ),
-                    // Fotos omitidas o más de 10 (CA-016-05, 21): un aviso sin
-                    // caducidad, encima de los botones.
-                    if (import.notice case final notice?
-                        when notice.hasWarnings)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          UnaSpace.l,
-                          UnaSpace.s,
-                          UnaSpace.l,
-                          0,
-                        ),
-                        child: ImportNoticeBanner(
-                          text: importNoticeText(l10n, notice),
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        UnaSpace.l,
-                        UnaSpace.sm,
-                        UnaSpace.l,
-                        UnaSpace.xxl,
-                      ),
-                      child: Row(
-                        key: _buttonsKey,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          BrutalButton.icon(
-                            label: l10n.attachButton,
-                            icon: UnaIcons.plus,
-                            focusNode: _plusFocus,
-                            semanticsKey: _plusSemantics,
-                            // Mientras se prepara, no hace nada y el lector lo
-                            // anuncia como no disponible (CA-016-04).
-                            semanticsEnabled: !import.preparing,
-                            onPressed: _attach,
-                          ),
-                          const SizedBox(width: UnaSpace.m),
-                          Flexible(
-                            child: BrutalButton(
-                              label: switch (widget.mode) {
-                                EditorMode.first => l10n.editorSaveFirst,
-                                EditorMode.create => l10n.editorContinue,
-                                EditorMode.edit => l10n.editorSaveChanges,
-                              },
-                              trailingIcon: UnaIcons.arrowRight,
-                              iconSize: UnaSizes.iconM,
-                              expand: false,
-                              singleLine: true,
-                              semanticsEnabled: !import.preparing,
-                              onPressed: _save,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

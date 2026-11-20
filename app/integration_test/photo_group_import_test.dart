@@ -400,9 +400,13 @@ void main() {
     },
   );
 
+  // En iOS no hay selector de documentos para fotos (el de Android 8-12):
+  // `debugPickManyDocuments` responde «no implementado» y el tope a 10 antes
+  // de abrir ninguna lo prueba XCTest (`PickedItemsTests`, `ImagesTests`;
+  // spec 028, CA-028-02, contrato §9).
   testWidgets(
     'CA-016-02: selector de documentos real (UNA_PICKER=documents)',
-    skip: _picker != 'documents',
+    skip: _picker != 'documents' || Platform.isIOS,
     timeout: const Timeout(Duration(minutes: 6)),
     (tester) async {
       await _realPicker(_native.debugPickManyDocuments);
