@@ -18,9 +18,13 @@ import WebKit
 /// - `clearData`: cookies, almacenamiento web y caché de todas las WebView (CA-009-13), sin
 ///   necesitar una vista viva.
 ///
-/// **No** se toca el delegado de navegación del paquete: el fallo del proceso de la página ya le
-/// llega (`webViewWebContentProcessDidTerminate`) y lo da a Dart como el error
-/// `webContentProcessTerminated`, así que aquí no hay envoltorio ni aviso `renderProcessGone`.
+/// **No** se sustituye el delegado de navegación del paquete: `harden` lo envuelve con un
+/// [NavigationWatcher] que le reenvía todo (como `RenderGoneClient` en Android) y solo añade los
+/// avisos `mainFrameRequest` (antes de cada petición del marco principal, con si es una redirección
+/// del servidor, T-009-12) y `downloadBlocked` (una respuesta del marco principal que no es una
+/// página, CL-009-4). El fallo del proceso de la página ya le llega al paquete
+/// (`webViewWebContentProcessDidTerminate`) y lo da a Dart como el error
+/// `webContentProcessTerminated`, así que no hay aviso `renderProcessGone`.
 /// Nunca envía ni registra direcciones ni contenido de páginas (CL-009-9).
 final class WebViewHardening {
   /// En la app, la vista del paquete con ese identificador (o `nil`).
@@ -28,6 +32,8 @@ final class WebViewHardening {
   private let dataStore: () -> WKWebsiteDataStore
   /// Si se deja la inspección como está (solo en depuración, como `isDebuggable` en Android).
   private let inspectionAllowed: Bool
+  /// Avisos a Dart (`mainFrameRequest`, `downloadBlocked`); lo pone `UnaChannels` con el canal.
+  var send: (String, [String: Any]) -> Void = { _, _ in }
 
   #if DEBUG
     static let isDebugBuild = true
@@ -48,8 +54,8 @@ final class WebViewHardening {
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "harden":
-      guard let view = webView(call) else { return result(false) }
-      result(harden(view))
+      guard let view = webView(call), let id = webViewId(call) else { return result(false) }
+      result(harden(view, id: id))
     case "state":
       guard let view = webView(call) else { return result(nil) }
       result(state(view))
@@ -73,14 +79,44 @@ final class WebViewHardening {
   }
 
   /// El `id` es un entero (contrato §0.3); un booleano, un texto o nada no valen.
-  private func webView(_ call: FlutterMethodCall) -> WKWebView? {
+  private func webViewId(_ call: FlutterMethodCall) -> Int64? {
     guard let args = call.arguments as? [String: Any],
       let id = args["id"] as? NSNumber, CFGetTypeID(id) != CFBooleanGetTypeID()
     else { return nil }
-    return lookup(id.int64Value)
+    return id.int64Value
   }
 
-  private func harden(_ view: WKWebView) -> Bool {
+  private func webView(_ call: FlutterMethodCall) -> WKWebView? {
+    webViewId(call).flatMap(lookup)
+  }
+
+  private func harden(_ view: WKWebView, id: Int64) -> Bool {
+    // Una sola vez por vista: el delegado del paquete, envuelto (se llama tras
+    // `setNavigationDelegate`, que no se vuelve a llamar; ADR-0017).
+    if !(view.navigationDelegate is NavigationWatcher) {
+      let watcher = NavigationWatcher(
+        inner: view.navigationDelegate,
+        onMainFrameRequest: { [weak self] in
+          self?.send("mainFrameRequest", ["id": id, "redirect": $0])
+        },
+        onDownloadBlocked: { [weak self] in self?.send("downloadBlocked", ["id": id]) })
+      // `navigationDelegate` es débil: la vista conserva al envoltorio.
+      objc_setAssociatedObject(
+        view, &NavigationWatcher.key, watcher, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      view.navigationDelegate = watcher
+    }
+    // Sin selector de archivos (`setOnShowFileSelector` en Android): iOS 16 no tiene API pública
+    // para impedirlo (`runOpenPanelWith` llega en iOS 18.4), así que un script de usuario lo corta.
+    let scripts = view.configuration.userContentController
+    if !scripts.userScripts.contains(where: { $0.source == Self.noFileChooserScript }) {
+      scripts.addUserScript(
+        WKUserScript(
+          source: Self.noFileChooserScript, injectionTime: .atDocumentStart,
+          forMainFrameOnly: false))
+    }
+    if !scripts.userScripts.contains(where: { $0.source == Self.noFileChooserScript }) {
+      return false
+    }
     let prefs = view.configuration.preferences
     prefs.javaScriptCanOpenWindowsAutomatically = false
     prefs.isFraudulentWebsiteWarningEnabled = true
@@ -101,7 +137,7 @@ final class WebViewHardening {
   ///   equivalente, `true`.
   /// - `noMixedContent`: WebKit bloquea el contenido mixto activo y, el pasivo, lo pasa a `https`
   ///   (comprobado en `webview_hardening_test`); no hay ajuste que leer, `true`.
-  /// - `wrapped`: sin envoltorio en iOS (el paquete ya recibe el fallo del proceso), `true`.
+  /// - `wrapped`: el delegado del paquete está envuelto por el [NavigationWatcher].
   private func state(_ view: WKWebView) -> [String: Bool] {
     let prefs = view.configuration.preferences
     return [
@@ -112,9 +148,39 @@ final class WebViewHardening {
       "safeBrowsing": prefs.isFraudulentWebsiteWarningEnabled,
       "noMultipleWindows": !prefs.javaScriptCanOpenWindowsAutomatically,
       "noDarkening": view.overrideUserInterfaceStyle == .light,
-      "wrapped": true,
+      "wrapped": view.navigationDelegate is NavigationWatcher,
     ]
   }
+
+  /// Corta el selector de archivos de `<input type=file>` en todos los marcos: el clic en uno (del
+  /// usuario, de una etiqueta o de `click()`, también dentro de un *shadow root*) se cancela antes de
+  /// que la página lo vea, y `showPicker()` falla. Se registra en `window` en la fase de captura
+  /// antes que cualquier script de la página, así que esta no puede pararlo antes.
+  static let noFileChooserScript = """
+    (function () {
+      function isFile(el) {
+        return el instanceof HTMLInputElement && String(el.type).toLowerCase() === 'file';
+      }
+      window.addEventListener('click', function (e) {
+        var path = e.composedPath ? e.composedPath() : [e.target];
+        for (var i = 0; i < path.length; i++) {
+          if (isFile(path[i])) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+          }
+        }
+      }, true);
+      var proto = HTMLInputElement.prototype;
+      if (proto.showPicker) {
+        var showPicker = proto.showPicker;
+        proto.showPicker = function () {
+          if (isFile(this)) throw new DOMException('', 'NotAllowedError');
+          return showPicker.apply(this, arguments);
+        };
+      }
+    })();
+    """
 
   /// Borra lo que haya dejado cualquier página (cookies, almacenamiento web, caché…) del almacén
   /// que usan las WebView del paquete. Responde `true` cuando WebKit confirma el borrado.
@@ -137,4 +203,118 @@ final class WebViewHardening {
       result(nil)
     }
   #endif
+}
+
+/// El delegado de navegación del paquete, envuelto sin cambiar nada de lo que hace (espejo de
+/// `RenderGoneClient` en Android): le reenvía todos sus métodos (`forwardingTarget`) y solo añade,
+/// en el principal y **antes** de pasarle cada decisión (el paquete la manda a Dart más tarde, con
+/// `DispatchQueue.main.async`, así que el aviso llega antes a Dart):
+/// - `mainFrameRequest` antes de cada petición del marco principal (T-009-12). **[Pendiente R-3]**
+///   siempre con `redirect: false`: WebKit avisa de la redirección del servidor
+///   (`didReceiveServerRedirectForProvisionalNavigation`) **después** de pedir la decisión sobre la
+///   dirección nueva (comprobado en el simulador, T-028-17), así que la opción (a) del contrato §3 no
+///   sirve tal cual; hasta que el propietario decida, las redirecciones del servidor no se siguen.
+/// - `downloadBlocked`: una respuesta del marco principal que no es una página (CL-009-4) se cancela
+///   sin descargar nada ni mostrarla ([isDownload]).
+///
+/// Y cambia **cuándo** le llega al paquete `didStartProvisionalNavigation` (su `onPageStarted`): en
+/// WebKit sale al pedir la dirección, antes de la respuesta, y una descarga o un fallo de conexión
+/// ya «empezaban a verse»; en Android (`WebViewClient.onPageStarted`) y en `WebPageListener`
+/// significa que la página empieza a verse. Se le pasa al confirmarse la navegación (`didCommit`),
+/// con la dirección final (tras las redirecciones); una navegación que no llega a confirmarse no
+/// lo envía.
+final class NavigationWatcher: NSObject, WKNavigationDelegate {
+  static var key: UInt8 = 0
+
+  /// El delegado del paquete (fuerte: `navigationDelegate` es débil y el envoltorio lo sustituye).
+  private let inner: WKNavigationDelegate?
+  private let onMainFrameRequest: (Bool) -> Void
+  private let onDownloadBlocked: () -> Void
+
+  init(
+    inner: WKNavigationDelegate?, onMainFrameRequest: @escaping (Bool) -> Void,
+    onDownloadBlocked: @escaping () -> Void
+  ) {
+    self.inner = inner
+    self.onMainFrameRequest = onMainFrameRequest
+    self.onDownloadBlocked = onDownloadBlocked
+  }
+
+  // WebKit pregunta qué métodos hay al poner el delegado: los del paquete, por reenvío.
+  override func responds(to aSelector: Selector!) -> Bool {
+    super.responds(to: aSelector) || (inner?.responds(to: aSelector) ?? false)
+  }
+
+  override func forwardingTarget(for aSelector: Selector!) -> Any? {
+    if let inner, inner.responds(to: aSelector) { return inner }
+    return super.forwardingTarget(for: aSelector)
+  }
+
+  func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+    // Se guarda para `didCommit` (ver la clase).
+  }
+
+  func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+    inner?.webView?(webView, didStartProvisionalNavigation: navigation)
+    inner?.webView?(webView, didCommit: navigation)
+  }
+
+  func webView(
+    _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+    decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
+  ) {
+    // Sin marco de destino es una ventana nueva: el paquete la da como de otro marco.
+    if navigationAction.targetFrame?.isMainFrame == true { onMainFrameRequest(false) }
+    if let inner {
+      inner.webView?(webView, decidePolicyFor: navigationAction, decisionHandler: decisionHandler)
+        ?? decisionHandler(.allow)
+    } else {
+      decisionHandler(.allow)
+    }
+  }
+
+  func webView(
+    _ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
+    decisionHandler: @escaping @MainActor (WKNavigationResponsePolicy) -> Void
+  ) {
+    if navigationResponse.isForMainFrame
+      && Self.isDownload(
+        mimeType: navigationResponse.response.mimeType,
+        canShow: navigationResponse.canShowMIMEType,
+        disposition: (navigationResponse.response as? HTTPURLResponse)?
+          .value(forHTTPHeaderField: "Content-Disposition"))
+    {
+      onDownloadBlocked()
+      return decisionHandler(.cancel)
+    }
+    if let inner {
+      inner.webView?(webView, decidePolicyFor: navigationResponse, decisionHandler: decisionHandler)
+        ?? decisionHandler(.allow)
+    } else {
+      decisionHandler(.allow)
+    }
+  }
+
+  /// Si una respuesta del marco principal es una descarga y no una página, como la trataría la
+  /// WebView de Android (que la pasa a su `DownloadListener`): un adjunto (`Content-Disposition:
+  /// attachment`), algo que WebKit no sabe mostrar, o un documento que WebKit mostraría con su
+  /// visor y Chromium no (un PDF, un documento de Office…). Es página el texto, las imágenes, el
+  /// audio, el vídeo, el HTML/XHTML, el XML y el JSON.
+  static func isDownload(mimeType: String?, canShow: Bool, disposition: String?) -> Bool {
+    if let disposition,
+      disposition.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("attachment")
+    {
+      return true
+    }
+    if !canShow { return true }
+    let mime = (mimeType ?? "").lowercased()
+    if mime.isEmpty { return false }
+    for prefix in ["text/", "image/", "audio/", "video/"] where mime.hasPrefix(prefix) {
+      return false
+    }
+    let pages: Set<String> = [
+      "application/xhtml+xml", "application/xml", "application/json", "application/javascript",
+    ]
+    return !(pages.contains(mime) || mime.hasSuffix("+xml") || mime.hasSuffix("+json"))
+  }
 }

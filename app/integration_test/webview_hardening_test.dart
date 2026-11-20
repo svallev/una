@@ -31,6 +31,22 @@ const _page = '''
 ''';
 const _origin = 'https://una.test/';
 
+/// Un campo de archivo arriba a la izquierda, su etiqueta y un botón; apunta
+/// en `window.seen` cada clic que ve la página.
+const _filePage = '''
+<!doctype html><html><head><meta name="viewport" content="width=device-width">
+<script>
+window.seen = [];
+document.addEventListener('click', function (e) {
+  window.seen.push(e.target.id || e.target.tagName);
+}, true);
+</script></head><body style="margin:0">
+<input type="file" id="archivo" style="display:block;width:300px;height:150px">
+<label for="archivo" id="etiqueta">Elegir</label>
+<button id="boton">Botón</button>
+</body></html>
+''';
+
 /// Una WebView montada, con su delegado y lo que ha recibido.
 class _Harness {
   _Harness(this.generation) {
@@ -163,14 +179,47 @@ void main() {
     await _loadPage(tester, h);
     expect(h.finished.last, _origin);
 
-    // R-21: un setNavigationDelegate posterior quita el envoltorio; la
-    // comprobación lo detecta y harden lo vuelve a poner. En iOS no hay
-    // envoltorio (`wrapped` siempre es `true`, contrato §3).
-    if (Platform.isAndroid) {
-      await h.setDelegate();
-      expect((await hardening.state(h.id))!['wrapped'], isFalse);
-      expect(await hardening.harden(h.id), isTrue);
+    // R-21: un setNavigationDelegate posterior quita el envoltorio (en iOS,
+    // el `NavigationWatcher`, contrato §3); la comprobación lo detecta y
+    // harden lo vuelve a poner.
+    await h.setDelegate();
+    expect((await hardening.state(h.id))!['wrapped'], isFalse);
+    expect(await hardening.harden(h.id), isTrue);
+    expect((await hardening.state(h.id))!['wrapped'], isTrue);
+  });
+
+  testWidgets('CA-009-13, CA-028-19: un <input type=file> no abre el selector '
+      'de archivos (ni con un toque, ni con click(), ni con showPicker())', (
+    tester,
+  ) async {
+    final h = _Harness(12);
+    await h.setDelegate();
+    await _mount(tester, h);
+    expect(await hardening.harden(h.id), isTrue);
+    final before = h.finished.length;
+    await h.controller.loadHtmlString(_filePage, baseUrl: _origin);
+    await _until(tester, () => h.finished.length > before);
+    // Un toque real sobre el campo (en Android el selector ya lo corta
+    // `setOnShowFileSelector` en Dart; en iOS, el script de `harden`).
+    await tester.tapAt(const Offset(100, 60));
+    await tester.pump(const Duration(milliseconds: 800));
+    await h.controller.runJavaScript(
+      "document.getElementById('archivo').click();"
+      "document.getElementById('etiqueta').click();"
+      "document.getElementById('boton').click();"
+      "try { document.getElementById('archivo').showPicker();"
+      " window.picker = 'abierto'; } catch (e) { window.picker = e.name; }",
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    if (Platform.isIOS) {
+      // La página no ve ningún clic en el campo de archivo (ni el del toque ni
+      // el que la etiqueta le pasa); los de la etiqueta y el botón, sí.
+      expect(await _js(h, "window.seen.join(',')"), 'etiqueta,boton');
+      expect(await _js(h, 'window.picker'), 'NotAllowedError');
     }
+    // Sigue la página a la vista, sin el selector encima.
+    expect(find.byType(WebViewWidget), findsOneWidget);
+    expect(await _js(h, 'document.visibilityState'), 'visible');
   });
 
   testWidgets('CA-021-08, CA-028-05: con el sistema en oscuro, la página se ve '
@@ -259,7 +308,7 @@ void main() {
     if (downloads != null && downloads.existsSync()) {
       expect(downloads.listSync(), isEmpty);
     }
-  }, skip: Platform.isIOS /* `downloadBlocked` en iOS: T-028-17 */);
+  });
 
   testWidgets('CA-009-13: al salir y en el arranque se borran cookies, '
       'almacenamiento web y caché', (tester) async {

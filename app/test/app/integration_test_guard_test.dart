@@ -87,7 +87,8 @@ void main() {
     test(
       'exactamente los 14 que borraban datos, ninguno con la guarda a mano',
       () {
-        expect(files.length, 19);
+        // 20 desde T-028-17 (`web_redirect_test`, que no borra datos).
+        expect(files.length, 20);
         expect(guarded.length, 14, reason: '$guarded');
         for (final f in files) {
           final text = f.readAsStringSync();

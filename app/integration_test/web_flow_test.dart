@@ -54,6 +54,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'fixtures/selfsigned_tls.dart';
+import 'support/js_result.dart';
 import 'support/test_app_guard.dart';
 import 'support/undo.dart';
 
@@ -83,10 +84,10 @@ bool _online = false;
 String _html = _page;
 
 /// Cómo se sirve `una.test` cuando hay red (los PDF, con `data:`).
-Future<void> Function(WebViewController web, Uri url) _serve = _servePage;
+Future<void> Function(_LocalPageDriver driver, Uri url) _serve = _servePage;
 
-Future<void> _servePage(WebViewController web, Uri url) =>
-    web.loadHtmlString(_html, baseUrl: url.toString());
+Future<void> _servePage(_LocalPageDriver driver, Uri url) =>
+    driver.serveHtml(_html, url);
 
 /// La WebView real; solo cambia de dónde salen las páginas de `una.test`.
 class _LocalPageDriver extends WebViewPageDriver {
@@ -98,9 +99,14 @@ class _LocalPageDriver extends WebViewPageDriver {
     loaded.add(url);
     if (url.host != 'una.test') return super.load(url);
     return _online
-        ? _serve(webView, url)
-        : webView.loadRequest(Uri.parse('https://127.0.0.1:1/'));
+        ? _serve(this, url)
+        : loadOwnRequest(Uri.parse('https://127.0.0.1:1/'));
   }
+
+  // Como cargas propias: en iOS, WebKit las pasa por `onNavigationRequest`.
+  Future<void> serveHtml(String html, Uri url) => loadOwnHtml(html, url);
+
+  Future<void> serveRequest(Uri url) => loadOwnRequest(url);
 }
 
 final _drivers = <_LocalPageDriver>[];
@@ -274,13 +280,7 @@ Future<void> _untilNotice(WidgetTester tester, String text) =>
 WebBar _bar(WidgetTester tester) => tester.widget<WebBar>(find.byType(WebBar));
 
 /// El resultado de [script] en la WebView actual, sin las comillas de JSON.
-Future<String> _js(String script) async {
-  final result =
-      '${await _drivers.last.webView.runJavaScriptReturningResult(script)}';
-  return result.length >= 2 && result.startsWith('"') && result.endsWith('"')
-      ? result.substring(1, result.length - 1)
-      : result;
-}
+Future<String> _js(String script) => jsText(_drivers.last.webView, script);
 
 /// Menú → Todas mis tareas.
 Future<void> _openList(WidgetTester tester) async {
@@ -330,12 +330,7 @@ class _Probe {
     await _until(tester, () => finished > before, reason: 'sonda cargada');
   }
 
-  Future<String> js(String script) async {
-    final r = '${await web.runJavaScriptReturningResult(script)}';
-    return r.length >= 2 && r.startsWith('"') && r.endsWith('"')
-        ? r.substring(1, r.length - 1)
-        : r;
-  }
+  Future<String> js(String script) => jsText(web, script);
 }
 
 const _setStorage =
@@ -627,8 +622,8 @@ fetch('$target/f').then(function () { window.result = 'loaded'; },
       (tester) async {
         final body = base64.encode(utf8.encode('%PDF-1.4\n%%EOF\n'));
         _online = true;
-        _serve = (web, url) =>
-            web.loadRequest(Uri.parse('data:$type;base64,$body'));
+        _serve = (driver, _) =>
+            driver.serveRequest(Uri.parse('data:$type;base64,$body'));
         await _seed(tester, web: 'https://una.test/carta.pdf');
         final l10n = _l10n(tester);
         await _untilNotice(tester, l10n.urlNotAPage);

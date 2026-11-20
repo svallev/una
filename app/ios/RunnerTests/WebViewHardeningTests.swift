@@ -11,6 +11,14 @@ private final class TerminationDelegate: NSObject, WKNavigationDelegate {
   func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { terminated = true }
 }
 
+/// Delegado de mentira: apunta la dirección de la vista cada vez que le llega `didStart…`.
+private final class StartRecorder: NSObject, WKNavigationDelegate {
+  var started: [String] = []
+  func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+    started.append(webView.url?.absoluteString ?? "")
+  }
+}
+
 /// `una/webview` (contrato §3; espejo de `WebViewHardening.kt`; CA-009-13, CA-021-08, ADR-0017 y
 /// CA-028-19). Trabaja con una `WKWebView` real del simulador: lo que `harden` pone se lee de vuelta
 /// de la propia vista, y `clearData` vacía el almacén de datos web de verdad.
@@ -238,6 +246,167 @@ class WebViewHardeningTests: XCTestCase {
         swift.range(of: "#endif", range: guardStart.upperBound..<hook.lowerBound),
         "\(marker), dentro de #if DEBUG")
     }
+  }
+
+  // MARK: envoltorio del delegado (mainFrameRequest, downloadBlocked) y selector de archivos
+
+  func testHardenWrapsThePackageDelegateOnceAndStateSaysSo() {
+    // ADR-0017 y R-21: el delegado del paquete queda envuelto (como `RenderGoneClient`), una sola
+    // vez; si otro `setNavigationDelegate` lo quita, `state` lo dice y `harden` lo vuelve a poner.
+    let (hardening, view) = make()
+    let inner = TerminationDelegate()
+    view.navigationDelegate = inner
+    XCTAssertEqual((call(hardening, "state", ["id": id]) as? [String: Bool])?["wrapped"], false)
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    let watcher = view.navigationDelegate
+    XCTAssertTrue(watcher is NavigationWatcher)
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    XCTAssertTrue(view.navigationDelegate === watcher, "no se envuelve dos veces")
+    view.navigationDelegate = inner
+    XCTAssertEqual((call(hardening, "state", ["id": id]) as? [String: Bool])?["wrapped"], false)
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    XCTAssertEqual((call(hardening, "state", ["id": id]) as? [String: Bool])?["wrapped"], true)
+  }
+
+  func testTheWrapperForwardsEverythingToThePackageDelegate() {
+    // El paquete sigue recibiendo todo lo suyo (aquí, el fallo del proceso de la página).
+    let inner = TerminationDelegate()
+    let watcher = NavigationWatcher(
+      inner: inner, onMainFrameRequest: { _ in }, onDownloadBlocked: {})
+    let selector = #selector(WKNavigationDelegate.webViewWebContentProcessDidTerminate(_:))
+    XCTAssertTrue(watcher.responds(to: selector))
+    XCTAssertFalse(
+      watcher.responds(to: #selector(WKNavigationDelegate.webView(_:didFinish:))),
+      "no dice tener lo que el paquete no tiene")
+    (watcher as WKNavigationDelegate).webViewWebContentProcessDidTerminate?(WKWebView())
+    XCTAssertTrue(inner.terminated)
+  }
+
+  func testMainFrameRequestBeforeEachMainFrameDecisionAndThePageStillLoads() {
+    // T-009-12: `mainFrameRequest {id, redirect}` antes de cada decisión del marco principal.
+    // [Pendiente R-3] `redirect` siempre `false`.
+    let (hardening, view) = make()
+    var sent: [(String, [String: Any])] = []
+    hardening.send = { sent.append(($0, $1)) }
+    view.navigationDelegate = TerminationDelegate()
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    let shown = expectation(
+      for: NSPredicate { _, _ in view.url?.host == "una.test" && !view.isLoading }, evaluatedWith: nil)
+    view.loadHTMLString("<h1>Una</h1>", baseURL: URL(string: "https://una.test/"))
+    wait(for: [shown], timeout: 10)
+    XCTAssertEqual(sent.map(\.0), ["mainFrameRequest"])
+    XCTAssertEqual(sent.first?.1["id"] as? Int64, id)
+    XCTAssertEqual(sent.first?.1["redirect"] as? Bool, false)
+  }
+
+  func testAResponseThatIsNotAPageIsCancelledWithDownloadBlocked() {
+    // CL-009-4: un PDF en el marco principal no se muestra (WebKit sabría) ni se descarga.
+    let (hardening, view) = make()
+    var sent: [String] = []
+    hardening.send = { method, arguments in
+      sent.append(method)
+      XCTAssertEqual(arguments.count, method == "downloadBlocked" ? 1 : 2, "sin la dirección")
+    }
+    view.navigationDelegate = TerminationDelegate()
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    let blocked = expectation(
+      for: NSPredicate { _, _ in sent.contains("downloadBlocked") && !view.isLoading },
+      evaluatedWith: nil)
+    view.load(URLRequest(url: URL(string: "data:application/pdf;base64,JVBERi0xLjQKJSVFT0YK")!))
+    wait(for: [blocked], timeout: 10)
+    XCTAssertNotEqual(view.url?.scheme, "data", "no se muestra")
+  }
+
+  func testThePackageHearsThatThePageStartsOnlyWhenItIsCommitted() {
+    // Como `onPageStarted` en Android y en `WebPageListener`: «empieza a verse», no «se pide». Una
+    // descarga (no llega a confirmarse) no lo envía; una página, una vez y con su dirección.
+    let (hardening, view) = make()
+    let inner = StartRecorder()
+    view.navigationDelegate = inner
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    var sent: [String] = []
+    hardening.send = { method, _ in sent.append(method) }
+    let blocked = expectation(
+      for: NSPredicate { _, _ in sent.contains("downloadBlocked") && !view.isLoading },
+      evaluatedWith: nil)
+    view.load(URLRequest(url: URL(string: "data:application/pdf;base64,JVBERi0xLjQKJSVFT0YK")!))
+    wait(for: [blocked], timeout: 10)
+    XCTAssertEqual(inner.started, [])
+    let shown = expectation(
+      for: NSPredicate { _, _ in view.url?.host == "una.test" && !view.isLoading }, evaluatedWith: nil)
+    view.loadHTMLString("<h1>Una</h1>", baseURL: URL(string: "https://una.test/a"))
+    wait(for: [shown], timeout: 10)
+    XCTAssertEqual(inner.started, ["https://una.test/a"])
+  }
+
+  func testWhatIsADownload() {
+    // CL-009-4: como la WebView de Android (`DownloadListener`).
+    let cases: [(String?, Bool, String?, Bool)] = [
+      ("text/html", true, nil, false),
+      ("text/plain", true, nil, false),
+      ("image/png", true, nil, false),
+      ("image/svg+xml", true, nil, false),
+      ("video/mp4", true, nil, false),
+      ("application/xhtml+xml", true, nil, false),
+      ("application/json", true, nil, false),
+      ("application/rss+xml", true, nil, false),
+      ("text/html", true, " Attachment; filename=a.html", true),
+      ("text/html", true, "inline", false),
+      ("application/pdf", true, nil, true),
+      ("application/msword", true, nil, true),
+      ("application/octet-stream", false, nil, true),
+      ("text/html", false, nil, true),
+      (nil, true, nil, false),
+    ]
+    for (mime, canShow, disposition, expected) in cases {
+      XCTAssertEqual(
+        NavigationWatcher.isDownload(mimeType: mime, canShow: canShow, disposition: disposition),
+        expected, "\(mime ?? "nil") \(canShow) \(disposition ?? "nil")")
+    }
+  }
+
+  func testHardenAddsTheNoFileChooserScriptOnceToEveryFrame() {
+    // CA-009-13 (sin selector de archivos): iOS 16 no tiene `runOpenPanelWith` (iOS 18.4).
+    let (hardening, view) = make()
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    let scripts = view.configuration.userContentController.userScripts.filter {
+      $0.source == WebViewHardening.noFileChooserScript
+    }
+    XCTAssertEqual(scripts.count, 1)
+    XCTAssertEqual(scripts.first?.injectionTime, .atDocumentStart)
+    XCTAssertEqual(scripts.first?.isForMainFrameOnly, false)
+  }
+
+  func testTheNoFileChooserScriptCancelsFileInputClicksOnly() {
+    // El script, en una página real: el clic en el campo de archivo (directo o de su etiqueta) no
+    // llega a la página y `showPicker()` falla; el de un botón, sí.
+    let (hardening, view) = make()
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    let shown = expectation(
+      for: NSPredicate { _, _ in view.url?.host == "una.test" && !view.isLoading }, evaluatedWith: nil)
+    view.loadHTMLString(
+      """
+      <script>window.seen=[];document.addEventListener('click',function(e){
+      window.seen.push(e.target.id);},true);</script>
+      <input type=file id=f><label for=f id=l>L</label><button id=b>B</button>
+      """, baseURL: URL(string: "https://una.test/"))
+    wait(for: [shown], timeout: 10)
+    let done = expectation(description: "js")
+    var result: Any?
+    view.evaluateJavaScript(
+      """
+      document.getElementById('f').click(); document.getElementById('l').click();
+      document.getElementById('b').click();
+      var p; try { document.getElementById('f').showPicker(); p = 'abierto'; } catch (e) { p = e.name; }
+      window.seen.join(',') + '|' + p
+      """
+    ) { value, _ in
+      result = value
+      done.fulfill()
+    }
+    wait(for: [done], timeout: 10)
+    XCTAssertEqual(result as? String, "l,b|NotAllowedError")
   }
 
   // MARK: canal
