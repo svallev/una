@@ -1,6 +1,6 @@
 # Tareas — Spec 028: Una en iOS, igual que en Android (paridad)
 
-**Siguiente:** T-028-12 (rama `feat/028-i3-canales-simples`; la fase I3 está abierta)
+**Siguiente:** T-028-13 (fase I4, Opus; rama `feat/028-i4-imagenes` desde `main` cuando se fusione la PR de la I3)
 
 Reglas: tareas **pequeñas** (≤ medio día; T-028-13 y 18 se aceptan más largas, `plan.md` §1.1), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden**. La columna **Toca** acota lo que cambia y lo que lee el subagente. Los textos van juntos al principio (T-028-02).
 
