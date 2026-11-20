@@ -1,6 +1,6 @@
 # Tareas — Spec 028: Una en iOS, igual que en Android (paridad)
 
-**Siguiente:** T-028-01 (plan y tareas **Aprobados** el 2026-11-19; empezar en una sesión nueva con `/spec-implement 028`, rama `feat/028-i2-base`) <!-- el coordinador la actualiza al cortar cada sesión: la tarea que va después -->
+**Siguiente:** T-028-02 (rama `feat/028-i2-base`)
 
 Reglas: tareas **pequeñas** (≤ medio día; T-028-13 y 18 se aceptan más largas, `plan.md` §1.1), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden**. La columna **Toca** acota lo que cambia y lo que lee el subagente. Los textos van juntos al principio (T-028-02).
 
@@ -78,4 +78,4 @@ Una fila por tarea, **≤ 3 líneas**: qué se hizo, dónde se verificó (simula
 
 | Tareas | Estado | Commit |
 |---|---|---|
-| T-028-01 | **Herramientas hechas; `/ios-check` de punta a punta NO verificado.** `check-ios-parity.sh` (13 secciones; activa: `network`; pasa sobre el repo), `ios-parity.sections`, sumas de la plantilla, test (149; 20 mutaciones del script detectadas), skill `/ios-check`, `docs/testing.md`, trampa. `dart format`, `analyze` y `flutter test -j 3` verdes (4672 + 224 omitidos). **[Pendiente]** build, XCTest e IT: SwiftPM se cuelga al bajar el xcframework de PDFium en este entorno (reproducido 3 veces; `curl` sí lo baja y la suma coincide): ¿lo prueba el propietario en su terminal? | (este commit) |
+| T-028-01 | **Hecha.** `check-ios-parity.sh` (13 secciones; activa: `network`; pasa sobre el repo), `ios-parity.sections`, sumas de la plantilla, test (149; 20 mutaciones detectadas), skill `/ios-check`, `docs/testing.md`, trampa. `dart format`, `analyze` y `flutter test -j 3` verdes (4672 + 224 omitidos). `/ios-check` completado por el coordinador (2026-11-20): build de simulador y XCTest de la plantilla en verde (el cuelgue era el diálogo del llavero de SwiftPM, ver Trampas). | c6f5453 |
