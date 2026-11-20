@@ -1,0 +1,42 @@
+# Binarios nativos que entran en la app de iOS sin ser código nuestro (spec 028, T-028-08, CA-028-17;
+# threat-model §5). Los lee `tools/check-pdfium.sh --ios`. El de Android sigue en tools/pdfium.lock.
+#
+# Inventario de lo que se compila para iOS (comprobado el 2026-11-20 con los paquetes del pubspec.lock):
+#   - PDFium: `pdfium_flutter` 0.4.1 trae un XCFramework binario que Swift Package Manager (y el podspec,
+#     para CocoaPods) descargan de github.com/espresso3389/pdfium-xcframework y verifican contra una suma
+#     fija en su Package.swift. NO se descarga el PDFium de bblanchon que usa Android: `pdfium_dart`
+#     salta su hook en iOS (`if (targetOS == OS.iOS) return;`). El release del XCFramework dice
+#     «built from bblanchon/pdfium-binaries chromium/8125» (la misma release que Android), sin V8: el
+#     binario del dispositivo pesa 7 MB (el .tgz de bblanchon para iOS pesa 6,6 MB sin V8 y 24,9 con él).
+#   - SQLite: el hook de `sqlite3` descarga libsqlite3.<arch>.<os>.dylib de simolus3/sqlite3.dart y lo
+#     verifica contra una suma fija dentro del paquete (`asset_hashes.dart`). Aquí van las tres de iOS
+#     (dispositivo, simulador arm64 y simulador x64).
+#   - `objective_c` (BSD-3) y `pdfrx_pdfium_gate` (MIT, `pdfium_dart`) se compilan desde su fuente en C
+#     con native_toolchain_c: sin descarga ni binario. Flutter.framework sale del SDK de Flutter, ya
+#     fijado por tools/flutter-sdk.lock.
+#
+# Licencias: el LICENSE y licenses/ del .tgz de bblanchon para iOS (pdfium-ios-device-arm64.tgz sha256
+# a9ab2295c65005d6fe81b11a172645160a5194ae55d1ffdf8444dd27124aad23 y pdfium-ios-simulator-x64.tgz sha256
+# 9ecdaf60af15bd51ace0c00ca829cec764307d3963a9c0764f9e803464ee217a, chromium/8125) son los mismos que
+# los de Android salvo que faltan catapult, cpu_features y libunwind (solo de Android) y que
+# licenses/pdfium.txt lleva los mismos 27 renglones con `//` delante: app/assets/licenses/pdfium.txt
+# (y sqlite.txt) ya cubren lo de iOS; no hace falta otro texto.
+#
+# Al actualizar pdfrx, pdfium_flutter o sqlite3: repetir la comprobación (la suma del .zip contra el
+# «digest» que publica GitHub para el asset, y los binarios extraídos) y actualizar este archivo en la
+# PR: `tools/check-pdfium.sh --ios` falla mientras no coincidan.
+#
+# Formato (una cosa por línea):
+#   xcframework-url <url>             la del Package.swift y el podspec de pdfium_flutter
+#   xcframework-zip <sha256>          suma del .zip (el checksum de Package.swift y PDFIUM_HASH del podspec)
+#   slice <carpeta> <sha256>          suma de <carpeta>/PDFium.framework/PDFium dentro del XCFramework
+#   sqlite3-release <etiqueta>        releaseTag de sqlite3 (asset_hashes.dart)
+#   sqlite3 <archivo> <sha256>        suma de ese archivo según asset_hashes.dart
+xcframework-url https://github.com/espresso3389/pdfium-xcframework/releases/download/v158.0.8125.0-20261029-150241/PDFium-chromium-8125-20261029-150241.xcframework.zip
+xcframework-zip 4e83df9e096b98963070a91e1c8fe7252d5c3a80d505e8acfda3f18ac904230d
+slice ios-arm64 f4bd61bbc1100d76f802ce7aef17cbe0a63bd0fa167c45eae1f6b5cfd2d8f3c2
+slice ios-arm64_x86_64-simulator 4aecd108439c912fd20c41484bf6f0093c2cfb0fcac47d4a7169e622b201948c
+sqlite3-release sqlite3-3.5.2
+sqlite3 libsqlite3.arm64.ios.dylib f1bc69a4304a21e472c15f849c34ae46539483cfa7ce901f54175c6d6cc17991
+sqlite3 libsqlite3.arm64.ios_sim.dylib 1ce8ac8ebbb3f61fd6282c45a4da15b9c6c6ec169eff40a918520357a502510b
+sqlite3 libsqlite3.x64.ios_sim.dylib 7bf9c4262f4a95e0d3f58f9b31d825ec6cb6b2f7b2031f00dfe496fff2fcfbd7
