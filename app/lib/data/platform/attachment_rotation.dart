@@ -8,7 +8,9 @@ import 'package:flutter/services.dart';
 /// únicas pantallas que giran: el resto de la app queda en vertical. En Android, la
 /// parte nativa lee el acelerómetro y fija la orientación, porque el sensor del
 /// sistema de HyperOS no avisa hasta el siguiente toque; respeta el bloqueo de
-/// rotación. Las orientaciones permitidas se piden además con `SystemChrome`.
+/// rotación. Las orientaciones permitidas se piden además con `SystemChrome`,
+/// que en iOS es todo lo que hace falta (CA-028-13): pedir el giro abre las
+/// dos horizontales y soltarlo deja solo vertical.
 abstract final class AttachmentRotation {
   static const _channel = MethodChannel('una/screen');
 
@@ -61,7 +63,8 @@ abstract final class AttachmentRotation {
     try {
       await _channel.invokeMethod<void>(method, arguments);
     } on MissingPluginException {
-      // Plataforma sin el canal (iOS aún, D17): basta `SystemChrome`.
+      // Plataforma sin el canal (tests): basta `SystemChrome`. En iOS el canal
+      // responde y no hace nada: `SystemChrome` ya abre o cierra las horizontales.
     } on PlatformException {
       // Sin el sensor, gira como lo decida el sistema.
     }

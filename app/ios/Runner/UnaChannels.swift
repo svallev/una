@@ -3,7 +3,7 @@ import Flutter
 /// Canales de plataforma de la app (los mismos seis que en Android, spec 028 y contrato §0).
 ///
 /// Cada canal responde `FlutterMethodNotImplemented` hasta que la tarea de su fase le ponga el
-/// manejador real (`una/links` y `una/a11y` en T-028-09; el resto, hasta I6). Dart ya sabe tratar
+/// manejador real (`una/links` y `una/a11y` en T-028-09, `una/screen` en T-028-10; el resto, hasta I6). Dart ya sabe tratar
 /// «no implementado» como «no disponible» (`MissingPluginException`), así que un canal vacío nunca
 /// rompe la app.
 enum UnaChannels {
@@ -23,7 +23,8 @@ enum UnaChannels {
   static func register(
     messenger: FlutterBinaryMessenger,
     links: Links = Links(),
-    a11y: A11y = A11y()
+    a11y: A11y = A11y(),
+    screen: Screen = Screen()
   ) -> [FlutterMethodChannel] {
     return names.map { name in
       let channel = FlutterMethodChannel(name: name, binaryMessenger: messenger)
@@ -32,6 +33,8 @@ enum UnaChannels {
         channel.setMethodCallHandler { call, result in links.handle(call, result: result) }
       case "una/a11y":
         channel.setMethodCallHandler { call, result in a11y.handle(call, result: result) }
+      case "una/screen":
+        channel.setMethodCallHandler { call, result in screen.handle(call, result: result) }
       default:
         channel.setMethodCallHandler { _, result in result(FlutterMethodNotImplemented) }
       }
