@@ -17,6 +17,7 @@ import '../../domain/services/commit_group.dart';
 import '../../domain/usecases/edit_task.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../ui/brutal_button.dart';
+import '../../ui/ios_back_gesture.dart';
 import '../../ui/sticky_note.dart';
 import '../../ui/una_icons.dart';
 import '../../ui/una_sheet.dart';
@@ -81,7 +82,7 @@ class TaskEditorScreen extends ConsumerStatefulWidget {
     final duration = reduced
         ? UnaMotion.reducedMotionFade
         : UnaMotion.introFade;
-    return PageRouteBuilder<Task?>(
+    return UnaPageRoute<Task?>(
       transitionDuration: duration,
       reverseTransitionDuration: reduced
           ? UnaMotion.reducedMotionFade

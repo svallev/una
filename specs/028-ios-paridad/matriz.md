@@ -34,7 +34,7 @@
 
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
-| CA-002-07, CA-005-05, CA-006-03 (volver / cancelar) | Botón y gesto atrás del sistema | Gesto desde el borde → CA-028-09 | D (plataforma iOS) | I3 | |
+| CA-002-07, CA-005-05, CA-006-03 (volver / cancelar) | Botón y gesto atrás del sistema | Gesto desde el borde → CA-028-09 | D (plataforma iOS) | I3 | **Hecho** (T-028-12): `ios_back_gesture.dart` + `ios_back_gesture_test.dart` (el editor descarta sin preguntar con el gesto, Ajustes, Idioma y listado vuelven; la tarea actual no tiene atrás). **[Pendiente]** el escape de VoiceOver y el gesto con el dedo, en el iPad: T-028-23 |
 | CA-003-01, CA-006-04/05 (mantener, arrastrar) | Gestos de Flutter | Igual; háptica de iOS si la hay | D + Disp | I8 | |
 | CA-003-07, 004-10, 006-16/17 (acciones del lector) | TalkBack | VoiceOver (acciones personalizadas del rotor) | VO | I8 | |
 
@@ -76,7 +76,7 @@
 | CA-009-06/07 Tarea web, se carga cada vez | `webview_flutter_android` | `webview_flutter_wkwebview` (fijado, P11) | IT (`web_flow`) | I5 | |
 | CA-009-08/09/10 Sin conexión, solo segura, certificado | Delegado del paquete | Igual (errores de WebKit → mismos tipos) | IT | I5 | |
 | CA-009-11 y CL-009-1 Sin navegación; redirecciones del servidor (incluida la red local bloqueada) | `RenderGoneClient` avisa `mainFrameRequest` | Ver `channel-contract.md` §3 (sin sustituir el delegado del paquete); si no se consigue, **Diverge** con su CA en la 028 | IT + XCT | I5 | |
-| CA-009-12 Atrás | Atrás del sistema | Gesto desde el borde (CA-028-09); la página no navega atrás | D | I3 | |
+| CA-009-12 Atrás | Atrás del sistema | Gesto desde el borde (CA-028-09); la página no navega atrás | D | I3 | **Hecho** (T-028-12): el gesto es de la ruta de la pantalla (`UnaPageRoute`), no de la página, que no navega atrás; la web en el simulador, en T-028-16 |
 | CA-009-13 Aislamiento y borrado | `harden` + `clearData` | Ajustes de `WKWebView` + `WKWebsiteDataStore.removeData` → CA-028-19 | XCT + IT (`webview_hardening`) | I5 | |
 | CA-009-15/16 Girar, pantalla encendida | `una/screen` | Como 007 | XCT / **[Pendiente sin iPhone]** | I3 | Como CA-007-12 y CA-008-11 (mismo canal) |
 | ADR-0017 Fallo del proceso de la página | `onRenderProcessGone` | El paquete lo da como error `webContentProcessTerminated` | IT + XCT | I5 | |

@@ -6,6 +6,20 @@ import 'tokens.g.dart';
 
 /// Tema de la app: Material 3 solo como base; la identidad sale de los tokens (P12).
 abstract final class UnaTheme {
+  /// Transiciones de página entre pantallas de Material (spec 028, CA-028-09):
+  /// en iOS, **las mismas que en Android**, no la de Cupertino (que entra por
+  /// la derecha). Al navegar con un botón, Android usa el fundido
+  /// [FadeForwardsPageTransitionsBuilder] (el predictivo solo actúa con su
+  /// gesto del sistema); iOS usa ese mismo y el gesto del borde
+  /// (`ios_back_gesture.dart`) lo mueve con el dedo. Android no cambia: sigue
+  /// con el que trae Flutter.
+  static final PageTransitionsTheme _pageTransitions = PageTransitionsTheme(
+    builders: {
+      ...const PageTransitionsTheme().builders,
+      TargetPlatform.iOS: const FadeForwardsPageTransitionsBuilder(),
+    },
+  );
+
   static ThemeData light() {
     const scheme = ColorScheme.light(
       primary: UnaColors.ink,
@@ -28,6 +42,7 @@ abstract final class UnaTheme {
       materialTapTargetSize: MaterialTapTargetSize.padded,
     );
     return base.copyWith(
+      pageTransitionsTheme: _pageTransitions,
       textTheme: base.textTheme.apply(
         bodyColor: UnaColors.ink,
         displayColor: UnaColors.ink,
