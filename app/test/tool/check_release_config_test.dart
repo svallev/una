@@ -68,6 +68,9 @@ const _generatedFiles = [
   'ios/Flutter/Debug.xcconfig',
   'ios/Flutter/Release.xcconfig',
   'ios/Runner/Info.plist',
+  'ios/Runner/en.lproj/InfoPlist.strings',
+  'ios/Runner/es.lproj/InfoPlist.strings',
+  'ios/Runner/ca.lproj/InfoPlist.strings',
   'web/index.html',
   'web/manifest.json',
 ];

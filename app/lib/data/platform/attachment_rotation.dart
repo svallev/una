@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/services.dart';
 
 /// Giro de la tarea actual con imagen, PDF o web (CA-008-11, CA-009-15), las
@@ -31,6 +32,15 @@ abstract final class AttachmentRotation {
       _sent = want;
       unawaited(_follow(want));
     });
+  }
+
+  /// Fija solo vertical al arrancar, antes del primer fotograma (CA-028-05 y
+  /// CA-028-13). En iOS el `Info.plist` declara también las horizontales (si no,
+  /// el sistema nunca dejaría girar la tarea con adjunto) y sin esto la app
+  /// giraría en cualquier pantalla. En Android lo fija el manifiesto: no se toca.
+  static Future<void> lockPortraitAtStart() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
 
   static Future<void> _follow(bool on) async {

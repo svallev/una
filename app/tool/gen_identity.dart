@@ -65,17 +65,38 @@ APP_DISPLAY_NAME = $displayName
 ''',
     'ios/Flutter/Debug.xcconfig': (current) => _ensureInclude(current!),
     'ios/Flutter/Release.xcconfig': (current) => _ensureInclude(current!),
-    'ios/Runner/Info.plist': (current) => current!
-        .replaceAllMapped(
-          RegExp(
-            r'(<key>CFBundleDisplayName</key>\s*<string>)[^<]*(</string>)',
-          ),
-          (m) => '${m[1]}\$(APP_DISPLAY_NAME)${m[2]}',
-        )
-        .replaceAllMapped(
-          RegExp(r'(<key>CFBundleName</key>\s*<string>)[^<]*(</string>)'),
-          (m) => '${m[1]}\$(APP_DISPLAY_NAME)${m[2]}',
-        ),
+    'ios/Runner/Info.plist': (current) {
+      var plist = current!
+          .replaceAllMapped(
+            RegExp(
+              r'(<key>CFBundleDisplayName</key>\s*<string>)[^<]*(</string>)',
+            ),
+            (m) => '${m[1]}\$(APP_DISPLAY_NAME)${m[2]}',
+          )
+          .replaceAllMapped(
+            RegExp(r'(<key>CFBundleName</key>\s*<string>)[^<]*(</string>)'),
+            (m) => '${m[1]}\$(APP_DISPLAY_NAME)${m[2]}',
+          );
+      // Idiomas del paquete (spec 028, CA-028-08) y la descripción base del permiso de cámara
+      // (la única de uso, CA-028-10); su traducción va en `InfoPlist.strings`.
+      plist = _setPlistEntry(
+        plist,
+        'CFBundleLocalizations',
+        '<array>\n${[for (final l in _iosLanguages) '\t\t<string>$l</string>\n'].join()}\t</array>',
+        before: 'CFBundleName',
+      );
+      return _setPlistEntry(
+        plist,
+        'NSCameraUsageDescription',
+        '<string>${_xmlText(_iosCameraUsage['en']!)}</string>',
+        before: 'UIApplicationSceneManifest',
+      );
+    },
+    // Textos del sistema de iOS por idioma (spec 028, CA-028-08): el nombre bajo el icono y el
+    // permiso de cámara. `ca` es una copia de `es` (como `values-ca`, CA-024-04).
+    for (final lang in _iosLanguages)
+      'ios/Runner/$lang.lproj/InfoPlist.strings': (_) =>
+          _infoPlistStrings(displayName, lang),
     'web/index.html': (current) => current!
         .replaceAllMapped(
           RegExp(r'<title>[^<]*</title>'),
@@ -147,6 +168,59 @@ String _xml(String s) => s
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", r"\'");
+
+/// Idiomas del paquete de iOS (`CFBundleLocalizations` y una `*.lproj` cada uno). `ca` abre en
+/// español (CA-028-08).
+const _iosLanguages = ['en', 'es', 'ca'];
+
+/// Texto del permiso de cámara de iOS por idioma (spec 028 §7; no es un ARB: lo lee el sistema,
+/// no Flutter). `ca` = `es`.
+const _iosCameraUsage = {
+  'en': 'To take the photo for a task.',
+  'es': 'Para hacer la foto de una tarea.',
+};
+
+/// El contenido de `<lang>.lproj/InfoPlist.strings`. `ca` usa los textos de `es`.
+String _infoPlistStrings(String displayName, String lang) {
+  final camera = _iosCameraUsage[lang == 'en' ? 'en' : 'es']!;
+  return '''
+/* GENERADO por tool/gen_identity.dart desde identity.yaml. No editar a mano. */
+"CFBundleDisplayName" = "${_stringsValue(displayName)}";
+"NSCameraUsageDescription" = "${_stringsValue(camera)}";
+''';
+}
+
+/// [s] como valor de un `.strings` (entre comillas dobles).
+String _stringsValue(String s) =>
+    s.replaceAll(r'\', r'\\').replaceAll('"', r'\"').replaceAll('\n', r'\n');
+
+/// [s] como texto de un `<string>` de un plist.
+String _xmlText(String s) =>
+    s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
+/// Pone en [plist] la entrada `<key>[key]</key>` [valueXml] justo antes de la de [before]
+/// (orden alfabético, como lo deja Xcode); si ya está, la deja en ese sitio con ese valor
+/// (idempotente). Falla si no encuentra [before].
+String _setPlistEntry(
+  String plist,
+  String key,
+  String valueXml, {
+  required String before,
+}) {
+  final existing = RegExp(
+    '\t<key>$key</key>\n\t(?:<array>.*?</array>|<string>[^<]*</string>)\n',
+    dotAll: true,
+  );
+  final clean = plist.replaceFirst(existing, '');
+  final anchor = '\t<key>$before</key>';
+  final at = clean.indexOf(anchor);
+  if (at < 0) {
+    stderr.writeln('Info.plist: falta la clave `$before` (ancla de `$key`).');
+    exit(1);
+  }
+  return '${clean.substring(0, at)}\t<key>$key</key>\n\t$valueXml\n'
+      '${clean.substring(at)}';
+}
 
 /// Formatea código Dart con `dart format` para que coincida con lo que exige CI.
 String _formatDart(String source) {

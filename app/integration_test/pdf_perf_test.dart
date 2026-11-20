@@ -36,6 +36,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'support/fixture_pdf_importer.dart';
+import 'support/test_app_guard.dart';
 
 const _textOnly = bool.fromEnvironment('PDF_PERF_TEXT_ONLY');
 const _text = 'Horario del congreso';
@@ -43,12 +44,10 @@ const _text = 'Horario del congreso';
 late FixturePdfImporter _importer;
 late FileAttachmentStore _store;
 
-/// Solo en las apps de pruebas (`.debug`, `.profile`).
+/// Solo en las apps de pruebas (ver `test_app_guard.dart`).
 Future<void> _wipe() async {
   final docs = await getApplicationDocumentsDirectory();
-  if (!docs.path.contains('.debug') && !docs.path.contains('.profile')) {
-    throw StateError('Pruebas fuera de la app de pruebas: ${docs.path}');
-  }
+  assertTestApp(docs.path);
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${docs.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();
@@ -94,92 +93,97 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
-  testWidgets('CL-008-5, CA-008-08: 20 páginas escaneadas de la 1 a la 20, '
-      'memoria sobre la misma tarea con texto', (tester) async {
-    await _wipe();
-    await bootstrap(openImages: _openImages);
-    await _wait(tester, const Duration(seconds: 1));
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(HomeRouter)),
-    );
-    await container.read(createTaskProvider).call(_text);
-    await _wait(tester, const Duration(seconds: 3));
-    final report = <String, Object>{'text': _memory()};
-    if (_textOnly) {
-      binding.reportData = {...?binding.reportData, 'pdf_memory': report};
-      return;
-    }
+  testWidgets(
+    'CL-008-5, CA-008-08: 20 páginas escaneadas de la 1 a la 20, '
+    'memoria sobre la misma tarea con texto',
+    skip: skipPerfOnIosSimulator,
+    (tester) async {
+      await _wipe();
+      await bootstrap(openImages: _openImages);
+      await _wait(tester, const Duration(seconds: 1));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeRouter)),
+      );
+      await container.read(createTaskProvider).call(_text);
+      await _wait(tester, const Duration(seconds: 3));
+      final report = <String, Object>{'text': _memory()};
+      if (_textOnly) {
+        binding.reportData = {...?binding.reportData, 'pdf_memory': report};
+        return;
+      }
 
-    // La misma tarea con el PDF escaneado (va arriba: es la actual).
-    final scanned = await getExternalStorageDirectory();
-    final path = '${scanned!.path}/scanned_20p.pdf';
-    expect(File(path).existsSync(), isTrue, reason: 'adb push de $path');
-    _importer.next = path;
-    final job = (await container.read(importPdfProvider).pick())!;
-    final staged = await job.prepare();
-    final task = await container
-        .read(createTaskProvider)
-        .call(_text, attachments: [staged]);
-    final id = task.attachment!.id;
-    await _wait(tester, const Duration(seconds: 1));
-    expect(find.byType(TaskPdfView), findsOneWidget);
-    await _wait(tester, const Duration(seconds: 4));
-    report['pdf_page1'] = _memory();
+      // La misma tarea con el PDF escaneado (va arriba: es la actual).
+      final scanned = await getExternalStorageDirectory();
+      final path = '${scanned!.path}/scanned_20p.pdf';
+      expect(File(path).existsSync(), isTrue, reason: 'adb push de $path');
+      _importer.next = path;
+      final job = (await container.read(importPdfProvider).pick())!;
+      final staged = await job.prepare();
+      final task = await container
+          .read(createTaskProvider)
+          .call(_text, attachments: [staged]);
+      final id = task.attachment!.id;
+      await _wait(tester, const Duration(seconds: 1));
+      expect(find.byType(TaskPdfView), findsOneWidget);
+      await _wait(tester, const Duration(seconds: 4));
+      report['pdf_page1'] = _memory();
 
-    // De la 1 a la 20 con el dedo; se mide la memoria mientras tanto.
-    var peak = 0.0;
-    final sampler = Timer.periodic(const Duration(milliseconds: 250), (_) {
-      final pss = _memory()['pss']!;
-      if (pss > peak) peak = pss;
-    });
-    PdfPosition? visible() => container.read(pdfPositionProvider(id)).position;
-    // Hasta el final: la posición es la página de arriba de la vista, así que
-    // con la 20 entera a la vista es la 19 o la 20 y ya no cambia.
-    await binding.watchPerformance(() async {
-      PdfPosition? last;
-      var still = 0;
-      for (var i = 0; i < 80 && still < 3; i++) {
-        await tester.fling(
-          find.byType(TaskPdfView),
-          const Offset(0, -400),
-          1500,
-        );
-        await _wait(tester, const Duration(milliseconds: 400));
-        final now = visible();
-        still = now == last ? still + 1 : 0;
-        last = now;
+      // De la 1 a la 20 con el dedo; se mide la memoria mientras tanto.
+      var peak = 0.0;
+      final sampler = Timer.periodic(const Duration(milliseconds: 250), (_) {
+        final pss = _memory()['pss']!;
+        if (pss > peak) peak = pss;
+      });
+      PdfPosition? visible() =>
+          container.read(pdfPositionProvider(id)).position;
+      // Hasta el final: la posición es la página de arriba de la vista, así que
+      // con la 20 entera a la vista es la 19 o la 20 y ya no cambia.
+      await binding.watchPerformance(() async {
+        PdfPosition? last;
+        var still = 0;
+        for (var i = 0; i < 80 && still < 3; i++) {
+          await tester.fling(
+            find.byType(TaskPdfView),
+            const Offset(0, -400),
+            1500,
+          );
+          await _wait(tester, const Duration(milliseconds: 400));
+          final now = visible();
+          still = now == last ? still + 1 : 0;
+          last = now;
+        }
+        await _wait(tester, const Duration(seconds: 2));
+      }, reportKey: 'pdf_scroll_frames');
+      sampler.cancel();
+      expect(visible()!.page, greaterThanOrEqualTo(19));
+      expect(find.byType(TaskPdfView), findsOneWidget);
+      report['pdf_page20'] = _memory();
+      report['pdf_peak_pss'] = peak;
+
+      // Vuelve a una página intermedia y la guarda como al pasar a segundo
+      // plano: el próximo arranque empieza ahí.
+      for (var i = 0; i < 8; i++) {
+        await tester.drag(find.byType(TaskPdfView), const Offset(0, 900));
+        await _wait(tester, const Duration(milliseconds: 300));
       }
       await _wait(tester, const Duration(seconds: 2));
-    }, reportKey: 'pdf_scroll_frames');
-    sampler.cancel();
-    expect(visible()!.page, greaterThanOrEqualTo(19));
-    expect(find.byType(TaskPdfView), findsOneWidget);
-    report['pdf_page20'] = _memory();
-    report['pdf_peak_pss'] = peak;
-
-    // Vuelve a una página intermedia y la guarda como al pasar a segundo
-    // plano: el próximo arranque empieza ahí.
-    for (var i = 0; i < 8; i++) {
-      await tester.drag(find.byType(TaskPdfView), const Offset(0, 900));
-      await _wait(tester, const Duration(milliseconds: 300));
-    }
-    await _wait(tester, const Duration(seconds: 2));
-    final seen = visible()!;
-    report['saved_page'] = seen.page;
-    binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
-    PdfPosition? saved;
-    await tester.runAsync(() async {
-      for (var i = 0; i < 100 && saved != seen; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-        saved = await _store.readPosition(id);
-      }
-      // La versión de pantalla de esa página, en segundo plano.
-      await Future<void>.delayed(const Duration(seconds: 3));
-    });
-    binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    expect(saved, seen);
-    binding.reportData = {...?binding.reportData, 'pdf_memory': report};
-  });
+      final seen = visible()!;
+      report['saved_page'] = seen.page;
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      PdfPosition? saved;
+      await tester.runAsync(() async {
+        for (var i = 0; i < 100 && saved != seen; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          saved = await _store.readPosition(id);
+        }
+        // La versión de pantalla de esa página, en segundo plano.
+        await Future<void>.delayed(const Duration(seconds: 3));
+      });
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      expect(saved, seen);
+      binding.reportData = {...?binding.reportData, 'pdf_memory': report};
+    },
+  );
 }

@@ -1,0 +1,17 @@
+# SHA-256 de los iconos de la plantilla de Flutter para iOS (app/ios/Runner/Assets.xcassets/AppIcon.appiconset en la creación del proyecto, bc1ee7b).
+# Ningún icono de la app puede coincidir con uno de estos (CA-028-07); lo lee tools/check-ios-parity.sh (sección icon).
+7770183009e914112de7d8ef1d235a6a30c5834424858e0d2f8253f6b8d31926  Icon-App-1024x1024@1x.png
+cab10a0d391ec5bc09ef50ce49e8ad401cee7ef03707ec0923a222c5c2b3d212  Icon-App-20x20@1x.png
+b9ad02cf6576a04d1b6806ac02a2431481b448dd0c2e505ce25842d1f7c4730b  Icon-App-20x20@2x.png
+c6e6d3b215ae744a9c391f4c4d44157eff5e739d6ad6c39f9bfa5df66dddd267  Icon-App-20x20@3x.png
+5dee24dc104ac76dc162e42ae0beb163d426bf365562ee28ba7b3ad368559a60  Icon-App-29x29@1x.png
+a9b21eb6f4271385655a8771f76e29eef8c1107d7879cbcfc567e6619d1f716a  Icon-App-29x29@2x.png
+e677d701ffe4af7bc2935098d6b3984cc9ab7ace573e6900955a5535b12410cf  Icon-App-29x29@3x.png
+b9ad02cf6576a04d1b6806ac02a2431481b448dd0c2e505ce25842d1f7c4730b  Icon-App-40x40@1x.png
+7c61c42fc7b657d9cf314d32a4ec458f0647c3aaf360be1b9377857266ec2499  Icon-App-40x40@2x.png
+19be171481dc71a0b2803ebcd01dd8b0c5fd5778dee34c0a3cabc948c225f24e  Icon-App-40x40@3x.png
+19be171481dc71a0b2803ebcd01dd8b0c5fd5778dee34c0a3cabc948c225f24e  Icon-App-60x60@2x.png
+4209a49e44a92ec40a327d3455eb1b1c153ee83d75de1c2be0a12ab18b2ff9de  Icon-App-60x60@3x.png
+836c918cb613249eba0483a6b02fa3df3c1c0a89a315ee4d3b88509b83c7ab73  Icon-App-76x76@1x.png
+41c7d42f6e61f8fe7f30b1ffa2256aecbc9682be06d18c4a3062043e1a2e547c  Icon-App-76x76@2x.png
+5d7e5bdf01b93802bc973345b3a78c038907147625035952a08a115a563b7f81  Icon-App-83.5x83.5@2x.png

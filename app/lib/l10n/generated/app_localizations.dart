@@ -692,6 +692,18 @@ abstract class AppLocalizations {
   /// **'No hay ninguna app de cámara disponible.'**
   String get errNoCamera;
 
+  /// Aviso de error de importación en iOS cuando la cámara no tiene permiso; lleva el botón errCameraDeniedOpenSettings. Spec 028, CA-028-10
+  ///
+  /// In es, this message translates to:
+  /// **'La cámara no tiene permiso. Puedes darlo en los Ajustes del iPhone.'**
+  String get errCameraDenied;
+
+  /// Botón del aviso errCameraDenied: abre los Ajustes de la app en el sistema (solo iOS). Spec 028, CA-028-10
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir Ajustes'**
+  String get errCameraDeniedOpenSettings;
+
   /// Tarjeta de adjunto perdido. CA-007-19
   ///
   /// In es, this message translates to:
@@ -1231,6 +1243,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'La notificación muestra tu tarea actual. Con el móvil bloqueado también se ve, salvo que ocultes el contenido sensible en los ajustes de tu móvil.'**
   String get settingsNotificationsPrivacy;
+
+  /// Versión de iOS de la línea de privacidad bajo la fila de Notificaciones: con el iPhone bloqueado, iOS solo enseña la tarea si se permiten las previsualizaciones siempre. Spec 028, CA-028-16
+  ///
+  /// In es, this message translates to:
+  /// **'La notificación muestra tu tarea actual. Con el iPhone bloqueado, iOS solo la enseña si permites las previsualizaciones siempre.'**
+  String get settingsNotificationsPrivacyIos;
 
   /// Aviso si el botón del aviso de bloqueo no tiene a dónde ir. CA-019-08
   ///

@@ -50,9 +50,9 @@
 | CA-007-13/14 Tipos, límites, importación acotada | `copy` acotado, `cache/import/` | Igual, en `Caches/import/` (mismo `getTemporaryDirectory`) | XCT + IT | I4 | |
 | CA-007-15 Preparando | `sanitize` en un solo hilo | Igual, una cola serie | XCT + IT | I4 | |
 | CA-007-16 Ningún archivo huérfano | `cancel` + barrido de Dart | Igual | XCT + IT | I4 | |
-| CA-007-18 Copia de seguridad | Reglas de Android (adjuntos fuera de la nube) | ADR-0004 parte iOS → CA-028-18 | XCT/IT | I2 | |
+| CA-007-18 Copia de seguridad | Reglas de Android (adjuntos fuera de la nube) | ADR-0004 parte iOS → CA-028-18 | XCT/IT | I2 | **Hecho** (T-028-07): `DataAtRest.swift` crea `Application Support/attachments/` al arrancar el motor y la excluye de la copia (`isExcludedFromBackup`), BD en `Documents/` incluida; XCTest en el simulador (`DataAtRestTests`). **[Pendiente]** ver la exclusión en una copia real: T-028-23 |
 | CA-007-19 Adjunto no disponible | `regenerate` | Igual | XCT + IT | I4 | |
-| CA-007-18 Copia de seguridad (iOS) | — | Igual que Android: adjuntos fuera de la copia (ADR-0032) → CA-028-18 | — | I2 | |
+| CA-007-18 Copia de seguridad (iOS) | — | Igual que Android: adjuntos fuera de la copia (ADR-0032) → CA-028-18 | — | I2 | **Hecho** (T-028-07): `DataAtRest.swift` crea `Application Support/attachments/` al arrancar el motor y la excluye de la copia (`isExcludedFromBackup`), BD en `Documents/` incluida; XCTest en el simulador (`DataAtRestTests`). **[Pendiente]** ver la exclusión en una copia real: T-028-23 |
 
 ### 008 PDF
 
@@ -66,7 +66,7 @@
 | CA-008-12 Enlaces del PDF | `LinkOpener.kt` | `UIApplication.open` → CA-028-13 | XCT + Disp | I3 | |
 | CA-008-13 Pantalla encendida | Como CA-007-12 | Como CA-007-12 | XCT | I3 | |
 | CA-008-15/16 Preparando, ningún huérfano | `copy`, `encodeJpeg`, `cancel` | Igual | XCT + IT (`pdf_import`) | I4 | |
-| CA-008-17 Copia de seguridad | Como CA-007-18 | Igual (ADR-0032) → CA-028-18 | XCT/IT | I2 | |
+| CA-008-17 Copia de seguridad | Como CA-007-18 | Igual (ADR-0032) → CA-028-18 | XCT/IT | I2 | **Hecho** (T-028-07): `DataAtRest.swift` crea `Application Support/attachments/` al arrancar el motor y la excluye de la copia (`isExcludedFromBackup`), BD en `Documents/` incluida; XCTest en el simulador (`DataAtRestTests`). **[Pendiente]** ver la exclusión en una copia real: T-028-23 |
 | CA-008-18 Adjunto no disponible | `encodeJpeg` sobre el guardado | Igual | XCT + IT | I4 | |
 
 ### 009 Web
@@ -85,9 +85,9 @@
 
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
-| CA-010-05 Nombre de la app | `values`/`values-es` desde `identity.yaml` | Nombre del paquete por idioma desde `identity.yaml` → CA-028-08 | Script | I2 | |
+| CA-010-05 Nombre de la app | `values`/`values-es` desde `identity.yaml` | Nombre del paquete por idioma desde `identity.yaml` → CA-028-08 | Script | I2 | **Hecho** (T-028-02: `{en,es,ca}.lproj/InfoPlist.strings` generadas, sección `l10n`, `gen_identity_test.dart`) |
 | CA-010-10 Voz del lector | TalkBack | VoiceOver | VO | I8 | |
-| (CA-024-04) `ca-ES, en-US` en español | `values-ca` | Correspondencia `ca` → español en lo del sistema → CA-028-08 | Script + simulador | I2 | |
+| (CA-024-04) `ca-ES, en-US` en español | `values-ca` | Correspondencia `ca` → español en lo del sistema → CA-028-08 | Script + simulador | I2 | Script **hecho** (T-028-02); **[Pendiente]** simulador con `ca-ES, en-US` en T-028-22 |
 
 ### 011 Recientes
 
@@ -124,12 +124,12 @@
 | CA-016-23 Memoria con 10 fotos | Medido en el Xiaomi (ADR-0024) | Medido en el iPad (2 GB) | Disp | I8 | |
 | CA-016-24 Seguridad del grupo | Tope antes de abrir | Igual | XCT | I4 | |
 | CA-016-14/16 Copia limpia y con orden, sin huérfanos | `sanitize`, `cancel` | Igual | XCT + IT | I4 | |
-| CA-016-17 Copia de seguridad | Adjuntos fuera de la nube | Igual (ADR-0032) → CA-028-18 | — | I2 | |
+| CA-016-17 Copia de seguridad | Adjuntos fuera de la nube | Igual (ADR-0032) → CA-028-18 | — | I2 | **Hecho** (T-028-07): `DataAtRest.swift` crea `Application Support/attachments/` al arrancar el motor y la excluye de la copia (`isExcludedFromBackup`), BD en `Documents/` incluida; XCTest en el simulador (`DataAtRestTests`). **[Pendiente]** ver la exclusión en una copia real: T-028-23 |
 | CA-016-18a/b Faltan fotos | `regenerate` | Igual | XCT + IT | I4 | |
 | CA-017-10 Giro con el bloqueo | `una/screen` | Como 007 | **[Pendiente sin iPhone]** | I3 | |
 | CA-017-13 Lupa del sistema | Ampliación de Android | Zoom de accesibilidad de iOS | Disp | I8 | |
-| CA-018-01 a 08, 14, 15 Icono | Adaptable + Play | Icono de iOS desde el de 1024 → CA-028-07 | Script | I2 | |
-| CA-018-06 Nada de Flutter | Android | Ahora también iOS → CA-028-07 | Script | I2 | |
+| CA-018-01 a 08, 14, 15 Icono | Adaptable + Play | Icono de iOS desde el de 1024 → CA-028-07 | Script | I2 | **Hecho** (T-028-04): `gen_icons.dart ios` + sección `icon`; en el simulador el icono sale en la pantalla de inicio; máscara y tamaños en el iPad: T-028-23 |
+| CA-018-06 Nada de Flutter | Android | Ahora también iOS → CA-028-07 | Script | I2 | **Hecho** (T-028-04): sección `icon` (ningún PNG igual a la plantilla, sin alfa) y `LaunchImage.imageset` retirado |
 
 ### 019 Notificaciones (ADR-0030)
 
@@ -163,11 +163,11 @@
 | CA-020-01 a 08 Trabajo de publicación | `release.yml` (APK/AAB) | Fuera de alcance (I9) | — | I9 | |
 | CA-020-22 a 26 MASTG, hallazgos, documentación | Pasada MASTG de Android | No aplica (el Swift lo revisa `security-reviewer` en I8; MASTG de iOS, en I9) | — | I9 | |
 | CA-020-09 a 21, 27, 28 | Código de Android y Dart | Lo de Dart vale igual; el Swift lo revisa `security-reviewer` | D + I8 | I8 | |
-| CA-021-01 a 05, 09, 10, 12 Arranque y barras | Temas de Android | CA-028-05 y 06 | Script + Disp | I2 | |
+| CA-021-01 a 05, 09, 10, 12 Arranque y barras | Temas de Android | CA-028-05 y 06 | Script + Disp | I2 | Script **Hecho** (T-028-03 y 04: secciones `plist`, `project` y `launch`; `LaunchBackground` = `paper`, sin oscuro ni imagen; visto en el simulador sin destello); **[Pendiente]** Disp en el iPad (T-028-23) |
 | CA-021-06/07 Igual en oscuro | Tema fijo | `UIUserInterfaceStyle = Light` → CA-028-05 | IT + Disp | I2 | |
 | CA-021-08 Web en claro | `noDarkening` | Estilo claro en la `WKWebView` → CA-028-05/19 | IT + Disp | I5 | |
 | CA-021-11 Sin nada nuevo | — | Solo lo de esta spec | Script | I2 | |
 | 022 Auditoría | Xiaomi + emulador | La pasada de CA-028-21 | Disp | I8 | |
 | 023 Ficha y privacidad | Play | Fuera de alcance (I9); la política no cambia salvo ADR-0030 | — | I9 | |
 | CA-024-01 a 03 Iconos de las barras | Android | CA-028-05 | Disp | I2 | |
-| CA-024-04 `ca` en español | `values-ca` | CA-028-08 | Script | I2 | |
+| CA-024-04 `ca` en español | `values-ca` | CA-028-08 | Script | I2 | **Hecho** (T-028-02, como CA-010-05) |

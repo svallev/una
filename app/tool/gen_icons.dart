@@ -1,7 +1,8 @@
 // Genera los recursos del icono de la app a partir del tablero 17 (spec 018, CA-018-10 y 15).
 //
-//   dart run tool/gen_icons.dart [android] [play] [web] [notification]
-//                                                         → escribe los archivos (sin objetivos, los cuatro)
+//   dart run tool/gen_icons.dart [android] [play] [web] [notification] [ios]
+//                                                         → escribe los archivos (sin objetivos, los
+//                                                           cuatro primeros; `ios` solo si se pide)
 //   dart run tool/gen_icons.dart --check [objetivos]      → falla si alguno no está al día
 //   --out <carpeta>     la carpeta de la app (por defecto `.`); así se prueba sin tocar el árbol
 //   --source <carpeta>  la raíz del repositorio, con `design/` (por defecto `..`)
@@ -21,6 +22,13 @@
 // Al escribir no sigue enlaces simbólicos (`--out`, sus carpetas ni el archivo) y un error de
 // archivo sale con la ruta y el motivo y código 1, sin traza (spec 020, CA-020-15).
 //
+// ios → ios/Runner/Assets.xcassets/AppIcon.appiconset/ (spec 028, CA-028-07): `Contents.json` y un PNG
+//             por entrada, solo de iPhone (la app es solo iPhone, CA-028-04) más el de 1024 de la tienda,
+//             todos del original de 1024 (RGB de 8 bits, **sin canal alfa**: iOS lo rechaza). Retira de la
+//             carpeta cualquier otro PNG (los de la plantilla de Flutter, los de iPad…); `--check` los
+//             lista como sobrantes. **No va en el conjunto por defecto** (el de la 018 se queda como está,
+//             sus tests cuentan 13 archivos): se pide con `ios`.
+//
 // El XML adaptable (`mipmap-anydpi/ic_launcher.xml`), el manifiesto de la web y `index.html` se
 // escriben a mano: no los toca este generador.
 import 'dart:convert';
@@ -31,9 +39,12 @@ import 'png_lite.dart';
 
 const _targets = ['android', 'play', 'web', 'notification'];
 
+/// Objetivos que solo se generan si se piden por su nombre (no entran en el conjunto por defecto).
+const _explicitTargets = ['ios'];
+
 final _usage =
     'Uso: dart run tool/gen_icons.dart [--check] [--out <carpeta de la app>] '
-    '[--source <raíz del repositorio>] [${_targets.join('|')}]...';
+    '[--source <raíz del repositorio>] [${[..._targets, ..._explicitTargets].join('|')}]...';
 
 void main(List<String> args) {
   exit(runGenIcons(args));
@@ -63,7 +74,7 @@ int runGenIcons(List<String> args, {StringSink? out, StringSink? err}) {
       } else {
         source = args[++i];
       }
-    } else if (_targets.contains(arg)) {
+    } else if (_targets.contains(arg) || _explicitTargets.contains(arg)) {
       if (!targets.contains(arg)) targets.add(arg);
     } else {
       stderrSink.writeln('Argumento desconocido: $arg\n$_usage');
@@ -87,16 +98,18 @@ int runGenIcons(List<String> args, {StringSink? out, StringSink? err}) {
   }
 
   final stale = <_Output>[];
+  final surplus = <String>[];
   try {
     for (final output in outputs) {
       if (!output.matches(File('$outDir/${output.path}'))) stale.add(output);
     }
+    if (targets.contains('ios')) surplus.addAll(_iosSurplus(outDir, outputs));
   } on FileSystemException catch (e) {
     stderrSink.writeln(_fileError('leer', e, '$outDir/'));
     return 1;
   }
 
-  if (!check && stale.isNotEmpty) {
+  if (!check && (stale.isNotEmpty || surplus.isNotEmpty)) {
     // Antes de escribir nada se comprueba que ningún destino pasa por un enlace simbólico
     // (CA-020-15): así un fallo no deja medio árbol generado.
     for (final output in stale) {
@@ -119,18 +132,29 @@ int runGenIcons(List<String> args, {StringSink? out, StringSink? err}) {
         return 1;
       }
     }
+    for (final path in surplus) {
+      try {
+        // Un archivo (o un enlace, que se borra él mismo, no su destino).
+        File('$outDir/$path').deleteSync();
+      } on FileSystemException catch (e) {
+        stderrSink.writeln(_fileError('borrar', e, '$outDir/$path'));
+        return 1;
+      }
+    }
   }
 
-  if (check && stale.isNotEmpty) {
+  if (check && (stale.isNotEmpty || surplus.isNotEmpty)) {
     stderrSink.writeln(
-      'Iconos desactualizados. Ejecuta `dart run tool/gen_icons.dart`:\n - ${stale.map((o) => o.path).join('\n - ')}',
+      'Iconos desactualizados. Ejecuta `dart run tool/gen_icons.dart`:\n'
+      '${[...stale.map((o) => ' - ${o.path}'), ...surplus.map((p) => ' - $p (sobra: el conjunto de iconos no la usa)')].join('\n')}',
     );
     return 1;
   }
   stdoutSink.writeln(
     check
         ? 'Iconos al día.'
-        : 'Iconos generados (${stale.length} archivos actualizados).',
+        : 'Iconos generados (${stale.length} archivos actualizados'
+              '${surplus.isEmpty ? '' : ', ${surplus.length} retirados'}).',
   );
   return 0;
 }
@@ -162,21 +186,37 @@ String _fileError(String verb, FileSystemException e, String fallbackPath) {
 
 /// Un archivo que debe existir con este contenido.
 class _Output {
-  const _Output.exact(this.path, this.bytes) : comparePixels = false;
+  const _Output.exact(this.path, this.bytes)
+    : comparePixels = false,
+      requireRgb = false;
 
   /// Un PNG recodificado por el generador: se compara por **píxeles**, no por bytes (otra versión
   /// de zlib comprime distinto el mismo dibujo y eso no es una diferencia).
-  const _Output.png(this.path, this.bytes) : comparePixels = true;
+  const _Output.png(this.path, this.bytes)
+    : comparePixels = true,
+      requireRgb = false;
+
+  /// Un PNG recodificado **sin canal alfa** (iOS lo rechaza en el icono): como [_Output.png], pero
+  /// un archivo con el mismo dibujo guardado como RGBA no cuenta como al día.
+  const _Output.rgbPng(this.path, this.bytes)
+    : comparePixels = true,
+      requireRgb = true;
 
   /// Ruta desde la carpeta de la app (`--out`).
   final String path;
   final Uint8List bytes;
   final bool comparePixels;
+  final bool requireRgb;
 
   bool matches(File file) {
     if (!file.existsSync()) return false;
     final current = Uint8List.fromList(file.readAsBytesSync());
     if (!comparePixels) return _sameBytes(current, bytes);
+    // Byte 24 = bits por canal (8) y byte 25 = tipo de color (2 = RGB) de la cabecera IHDR.
+    if (requireRgb &&
+        (current.length < 26 || current[24] != 8 || current[25] != 2)) {
+      return false;
+    }
     try {
       final a = decodePng(current);
       final b = decodePng(bytes);
@@ -271,7 +311,82 @@ List<_Output> _build(String source, List<String> targets) {
   if (targets.contains('notification')) {
     outputs.addAll(_notificationIcons('$iconDir/adaptive-foreground-432.png'));
   }
+  if (targets.contains('ios')) outputs.addAll(_iosIcons(loadOriginal()));
   return outputs;
+}
+
+/// Carpeta del conjunto de iconos de iOS, desde la carpeta de la app.
+const _iosSetDir = 'ios/Runner/Assets.xcassets/AppIcon.appiconset';
+
+/// Las entradas del conjunto: (idiom, tamaño en puntos, escala). Solo iPhone (CA-028-04: la app es
+/// de iPhone y no lleva iconos de iPad) a 2x y 3x, que es lo que usa iOS 16, y el de la tienda.
+const _iosEntries = [
+  ('iphone', 20, 2),
+  ('iphone', 20, 3),
+  ('iphone', 29, 2),
+  ('iphone', 29, 3),
+  ('iphone', 40, 2),
+  ('iphone', 40, 3),
+  ('iphone', 60, 2),
+  ('iphone', 60, 3),
+  ('ios-marketing', 1024, 1),
+];
+
+/// `Contents.json` y los PNG del icono de iOS a partir del original de 1024 (RGB, sin alfa).
+List<_Output> _iosIcons(PngImage original) {
+  if (!isOpaque(original)) {
+    throw const FormatException(
+      'icon-1024.png tiene transparencia: el icono de iOS no puede llevar canal alfa',
+    );
+  }
+  final images = StringBuffer();
+  final outputs = <_Output>[];
+  for (final (i, (idiom, points, scale)) in _iosEntries.indexed) {
+    final name = 'Icon-App-${points}x$points@${scale}x.png';
+    final side = points * scale;
+    outputs.add(
+      _Output.rgbPng(
+        '$_iosSetDir/$name',
+        encodePngRgb(
+          side == original.width ? original : resizeArea(original, side, side),
+        ),
+      ),
+    );
+    // El formato y el orden de claves que escribe Xcode.
+    images
+      ..writeln('    {')
+      ..writeln('      "filename" : "$name",')
+      ..writeln('      "idiom" : "$idiom",')
+      ..writeln('      "scale" : "${scale}x",')
+      ..writeln('      "size" : "${points}x$points"')
+      ..write('    }${i == _iosEntries.length - 1 ? '' : ','}\n');
+  }
+  final contents =
+      '{\n  "images" : [\n$images  ],\n  "info" : {\n    "author" : "xcode",\n    "version" : 1\n  }\n}\n';
+  outputs.add(
+    _Output.exact(
+      '$_iosSetDir/Contents.json',
+      Uint8List.fromList(utf8.encode(contents)),
+    ),
+  );
+  return outputs;
+}
+
+/// Los PNG del conjunto de iconos de iOS que ya no corresponden a ninguna entrada (rutas desde la
+/// carpeta de la app): los de la plantilla de Flutter, los de iPad… Se retiran al generar.
+List<String> _iosSurplus(String outDir, List<_Output> outputs) {
+  final folder = Directory('$outDir/$_iosSetDir');
+  if (!folder.existsSync()) return const [];
+  final wanted = {for (final o in outputs) o.path};
+  return [
+    for (final entity in folder.listSync(followLinks: false))
+      if (entity is! Directory)
+        if (entity.path.toLowerCase().endsWith('.png') &&
+            !wanted.contains(
+              '$_iosSetDir/${entity.path.substring(folder.path.length + 1)}',
+            ))
+          '$_iosSetDir/${entity.path.substring(folder.path.length + 1)}',
+  ]..sort();
 }
 
 /// Las cinco densidades del icono pequeño de la notificación (24 dp: 24, 36, 48, 72 y 96 px).

@@ -16,12 +16,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'support/test_app_guard.dart';
+
 Future<void> _wipeDatabase() async {
   final dir = await getApplicationDocumentsDirectory();
-  // Solo en las apps de pruebas (`.debug`, `.profile`).
-  if (!dir.path.contains('.debug') && !dir.path.contains('.profile')) {
-    throw StateError('Pruebas fuera de la app de pruebas: ${dir.path}');
-  }
+  // Solo en las apps de pruebas (ver `test_app_guard.dart`).
+  assertTestApp(dir.path);
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${dir.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();
@@ -33,31 +33,35 @@ void main() {
   // Fotogramas reales al ritmo de la pantalla (no solo los que pide el test).
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
-  testWidgets('rendimiento: rotura y enhorabuena al completar', (tester) async {
-    await _wipeDatabase();
-    await bootstrap();
-    await tester.pumpAndSettle();
-    // La tarea se crea directamente: solo se mide completar.
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(HomeRouter)),
-    );
-    await container
-        .read(createTaskProvider)
-        .call('Llamar a Marta para confirmar la cena');
-    await tester.pumpAndSettle();
-    FocusManager.instance.primaryFocus?.unfocus();
-    await tester.pumpAndSettle();
-    expect(find.byType(HoldToCompleteButton), findsOneWidget);
-
-    final task = await container.read(taskRepositoryProvider).currentTask();
-
-    // Se completa como lo haría la acción accesible (sin simular el dedo) y se
-    // miden los fotogramas de la rotura y la enhorabuena.
-    await binding.watchPerformance(() async {
-      await container.read(completionProvider.notifier).complete(task!);
+  testWidgets(
+    'rendimiento: rotura y enhorabuena al completar',
+    skip: skipPerfOnIosSimulator,
+    (tester) async {
+      await _wipeDatabase();
+      await bootstrap();
       await tester.pumpAndSettle();
-    }, reportKey: 'complete_frames');
+      // La tarea se crea directamente: solo se mide completar.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeRouter)),
+      );
+      await container
+          .read(createTaskProvider)
+          .call('Llamar a Marta para confirmar la cena');
+      await tester.pumpAndSettle();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(find.byType(HoldToCompleteButton), findsOneWidget);
 
-    expect(find.byType(AllDoneScreen), findsOneWidget);
-  });
+      final task = await container.read(taskRepositoryProvider).currentTask();
+
+      // Se completa como lo haría la acción accesible (sin simular el dedo) y se
+      // miden los fotogramas de la rotura y la enhorabuena.
+      await binding.watchPerformance(() async {
+        await container.read(completionProvider.notifier).complete(task!);
+        await tester.pumpAndSettle();
+      }, reportKey: 'complete_frames');
+
+      expect(find.byType(AllDoneScreen), findsOneWidget);
+    },
+  );
 }

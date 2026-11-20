@@ -356,6 +356,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errNoCamera => 'There\'s no camera app available.';
 
   @override
+  String get errCameraDenied =>
+      'The camera has no permission. You can allow it in iPhone Settings.';
+
+  @override
+  String get errCameraDeniedOpenSettings => 'Open Settings';
+
+  @override
   String get attachmentMissing => 'Attachment unavailable';
 
   @override
@@ -731,6 +738,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsNotificationsPrivacy =>
       'The notification shows your current task. It also shows when your phone is locked, unless you hide sensitive content in your phone\'s settings.';
+
+  @override
+  String get settingsNotificationsPrivacyIos =>
+      'The notification shows your current task. When your iPhone is locked, iOS only shows it if you always allow previews.';
 
   @override
   String get settingsNotificationsOpenError =>

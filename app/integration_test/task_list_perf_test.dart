@@ -29,6 +29,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'fixtures/image_fixtures.g.dart';
+import 'support/test_app_guard.dart';
 
 /// Fotos por tarea (0 = tareas solo de texto, como la 006).
 const _photos = int.fromEnvironment('UNA_PERF_PHOTOS');
@@ -36,10 +37,8 @@ const _suffix = _photos == 0 ? '' : '_photos_$_photos';
 
 Future<void> _wipeDatabase() async {
   final dir = await getApplicationDocumentsDirectory();
-  // Solo en las apps de pruebas (`.debug`, `.profile`).
-  if (!dir.path.contains('.debug') && !dir.path.contains('.profile')) {
-    throw StateError('Pruebas fuera de la app de pruebas: ${dir.path}');
-  }
+  // Solo en las apps de pruebas (ver `test_app_guard.dart`).
+  assertTestApp(dir.path);
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${dir.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();
@@ -91,6 +90,7 @@ void main() {
 
   testWidgets(
     'rendimiento: listado con 500 tareas${_photos == 0 ? '' : ' de $_photos fotos'}',
+    skip: skipPerfOnIosSimulator,
     (tester) async {
       final semantics = tester.ensureSemantics();
       await _wipeDatabase();

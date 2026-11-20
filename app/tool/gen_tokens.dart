@@ -1,16 +1,41 @@
-// Genera lib/app/theme/tokens.g.dart desde ../design/tokens.json (fuente única, P12).
+// Genera lib/app/theme/tokens.g.dart y el color de arranque de iOS desde ../design/tokens.json
+// (fuente única, P12).
 //
-//   dart run tool/gen_tokens.dart          → escribe el archivo
-//   dart run tool/gen_tokens.dart --check  → falla si no está al día (CI)
+//   dart run tool/gen_tokens.dart          → escribe los archivos
+//   dart run tool/gen_tokens.dart --check  → falla si alguno no está al día (CI)
+//
+// Archivos (rutas desde `app/`):
+//   lib/app/theme/tokens.g.dart
+//   ios/Runner/Assets.xcassets/LaunchBackground.colorset/Contents.json  (spec 028, CA-028-06:
+//     `color.paper` en sRGB, un solo color y sin variante oscura; lo usa `LaunchScreen.storyboard`
+//     y, más adelante, la vista que tapa el selector de apps, T-028-11)
 import 'dart:convert';
 import 'dart:io';
 
 const _out = 'lib/app/theme/tokens.g.dart';
+const _launchColorset =
+    'ios/Runner/Assets.xcassets/LaunchBackground.colorset/Contents.json';
 
 void main(List<String> args) {
-  final t = jsonDecode(
-    File('../design/tokens.json').readAsStringSync(),
-  ) as Map<String, dynamic>;
+  exit(runGenTokens(args));
+}
+
+/// Ejecuta el generador. Devuelve el código de salida: 0 bien, 1 desactualizado o fuente no
+/// válida. [tokensPath] y [appDir] permiten probarlo en un directorio temporal; [dart] es el
+/// ejecutable con el que se formatea (por defecto el del propio proceso; dentro de `flutter test`
+/// es `flutter_tester`, así que un test pasa `'dart'`).
+int runGenTokens(
+  List<String> args, {
+  String tokensPath = '../design/tokens.json',
+  String appDir = '.',
+  StringSink? out,
+  StringSink? err,
+  String? dart,
+}) {
+  final stdoutSink = out ?? stdout;
+  final stderrSink = err ?? stderr;
+  final t =
+      jsonDecode(File(tokensPath).readAsStringSync()) as Map<String, dynamic>;
   final b = StringBuffer()
     ..writeln(
       '// GENERADO por tool/gen_tokens.dart desde design/tokens.json. No editar a mano.',
@@ -140,22 +165,83 @@ void main(List<String> args) {
   }
   b.writeln('}');
 
-  final next = _formatDart(b.toString());
-  final file = File(_out);
-  final current = file.existsSync() ? file.readAsStringSync() : null;
-  if (args.contains('--check')) {
-    if (current != next) {
-      stderr.writeln(
-        '$_out no está al día con design/tokens.json. Ejecuta `dart run tool/gen_tokens.dart`.',
-      );
-      exit(1);
-    }
-    stdout.writeln('Tokens al día.');
-    return;
+  final String colorset;
+  try {
+    colorset = _launchColorsetJson(t);
+  } on FormatException catch (e) {
+    stderrSink.writeln('$tokensPath: ${e.message}');
+    return 1;
   }
-  file.parent.createSync(recursive: true);
-  file.writeAsStringSync(next);
-  stdout.writeln('Tokens generados en $_out.');
+  final files = {
+    '$appDir/$_out': _formatDart(
+      b.toString(),
+      dart ?? Platform.resolvedExecutable,
+    ),
+    '$appDir/$_launchColorset': colorset,
+  };
+  final stale = [
+    for (final e in files.entries)
+      if (!File(e.key).existsSync() ||
+          File(e.key).readAsStringSync() != e.value)
+        e.key,
+  ];
+  if (args.contains('--check')) {
+    if (stale.isNotEmpty) {
+      stderrSink.writeln(
+        '${stale.map((p) => p.substring(appDir.length + 1)).join(', ')} no está al día con '
+        'design/tokens.json. Ejecuta `dart run tool/gen_tokens.dart`.',
+      );
+      return 1;
+    }
+    stdoutSink.writeln('Tokens al día.');
+    return 0;
+  }
+  for (final e in files.entries) {
+    if (!stale.contains(e.key)) continue;
+    File(e.key)
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(e.value);
+  }
+  stdoutSink.writeln('Tokens generados en $_out y $_launchColorset.');
+  return 0;
+}
+
+/// El `Contents.json` del color de arranque de iOS: `color.paper` en sRGB, un solo color
+/// universal y **sin** variante oscura (`appearances`): el arranque es siempre `paper` (CA-028-06).
+/// Los componentes van en hexadecimal (`0xF4`), exactos, en el orden alfabético que escribe Xcode.
+String _launchColorsetJson(Map<String, dynamic> tokens) {
+  final color = tokens['color'];
+  final paper = color is Map ? color['paper'] : null;
+  final value = paper is Map ? paper[r'$value'] : null;
+  final hex = value is String
+      ? RegExp(r'^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$')
+            .firstMatch(value)
+      : null;
+  if (hex == null) {
+    throw const FormatException('falta color.paper como #RRGGBB');
+  }
+  String c(int group) => '0x${hex[group]!.toUpperCase()}';
+  return '''{
+  "colors" : [
+    {
+      "color" : {
+        "color-space" : "srgb",
+        "components" : {
+          "alpha" : "1.000",
+          "blue" : "${c(3)}",
+          "green" : "${c(2)}",
+          "red" : "${c(1)}"
+        }
+      },
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
+''';
 }
 
 Map<String, Map<String, dynamic>> _entries(Object? group) => {
@@ -192,11 +278,11 @@ String _color(String v) {
 }
 
 /// Formatea código Dart con `dart format` para que coincida con lo que exige CI.
-String _formatDart(String source) {
+String _formatDart(String source, String dart) {
   final tmp = Directory.systemTemp.createTempSync('gen_');
   try {
     final f = File('${tmp.path}/gen.dart')..writeAsStringSync(source);
-    final r = Process.runSync(Platform.resolvedExecutable, ['format', f.path]);
+    final r = Process.runSync(dart, ['format', f.path]);
     if (r.exitCode != 0) throw StateError('dart format falló: ${r.stderr}');
     return f.readAsStringSync();
   } finally {
