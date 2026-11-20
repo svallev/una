@@ -17,14 +17,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'support/test_app_guard.dart';
 import 'support/undo.dart';
 
 Future<void> _wipeDatabase() async {
   final dir = await getApplicationDocumentsDirectory();
-  // Solo en las apps de pruebas (`.debug`, `.profile`).
-  if (!dir.path.contains('.debug') && !dir.path.contains('.profile')) {
-    throw StateError('Pruebas fuera de la app de pruebas: ${dir.path}');
-  }
+  // Solo en las apps de pruebas (ver `test_app_guard.dart`).
+  assertTestApp(dir.path);
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${dir.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();
@@ -36,33 +35,37 @@ void main() {
   // Fotogramas reales al ritmo de la pantalla (no solo los que pide el test).
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
-  testWidgets('rendimiento: arrugar y tirar a la papelera', (tester) async {
-    await _wipeDatabase();
-    await bootstrap();
-    await tester.pumpAndSettle();
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(HomeRouter)),
-    );
-    final create = container.read(createTaskProvider);
-    await create.call('Comprar pan');
-    await create.call('Llamar a Marta para confirmar la cena');
-    await tester.pumpAndSettle();
-    FocusManager.instance.primaryFocus?.unfocus();
-    await tester.pumpAndSettle();
+  testWidgets(
+    'rendimiento: arrugar y tirar a la papelera',
+    skip: skipPerfOnIosSimulator,
+    (tester) async {
+      await _wipeDatabase();
+      await bootstrap();
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeRouter)),
+      );
+      final create = container.read(createTaskProvider);
+      await create.call('Comprar pan');
+      await create.call('Llamar a Marta para confirmar la cena');
+      await tester.pumpAndSettle();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
 
-    final task = await container.read(taskRepositoryProvider).currentTask();
+      final task = await container.read(taskRepositoryProvider).currentTask();
 
-    // Se elimina como desde el menú (sin simular los toques) y se miden los
-    // fotogramas del arrugado hasta que aparece la card de deshacer; la
-    // barra de la card no entra en la medida (con ella `pumpAndSettle` no se
-    // asienta).
-    await binding.watchPerformance(() async {
-      await container.read(deletionProvider.notifier).delete(task!);
-      await pumpUntilCard(tester);
-    }, reportKey: 'delete_frames');
+      // Se elimina como desde el menú (sin simular los toques) y se miden los
+      // fotogramas del arrugado hasta que aparece la card de deshacer; la
+      // barra de la card no entra en la medida (con ella `pumpAndSettle` no se
+      // asienta).
+      await binding.watchPerformance(() async {
+        await container.read(deletionProvider.notifier).delete(task!);
+        await pumpUntilCard(tester);
+      }, reportKey: 'delete_frames');
 
-    expect(find.byType(CurrentTaskScreen), findsOneWidget);
-    // La eliminación se hace definitiva al caducar la card.
-    await pumpUntilCardGone(tester);
-  });
+      expect(find.byType(CurrentTaskScreen), findsOneWidget);
+      // La eliminación se hace definitiva al caducar la card.
+      await pumpUntilCardGone(tester);
+    },
+  );
 }

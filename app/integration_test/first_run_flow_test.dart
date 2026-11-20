@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'support/test_app_guard.dart';
+
 /// Falla (y lo anota) ante cualquier intento de abrir una conexión HTTP (CA-001-11).
 class _NoNetwork extends HttpOverrides {
   final attempts = <String>[];
@@ -27,13 +29,9 @@ class _NoNetwork extends HttpOverrides {
 /// Borra la BD real de la app para empezar como en una instalación nueva.
 Future<void> _wipeDatabase() async {
   final dir = await getApplicationDocumentsDirectory();
-  // Solo en las apps de pruebas (`.debug`, `.profile`): nunca borra las
+  // Solo en las apps de pruebas (ver `test_app_guard.dart`): nunca borra las
   // tareas reales.
-  if (!dir.path.contains('.debug') && !dir.path.contains('.profile')) {
-    throw StateError(
-      'Pruebas de integración fuera de la app .debug: ${dir.path}',
-    );
-  }
+  assertTestApp(dir.path);
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${dir.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();

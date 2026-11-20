@@ -29,19 +29,18 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'support/fixture_importer.dart';
+import 'support/test_app_guard.dart';
 import 'support/undo.dart';
 
 late Directory _support;
 late Directory _cache;
 late FixtureImporter _importer;
 
-/// Solo en las apps de pruebas (`.debug`, `.profile`): nunca borra datos
+/// Solo en las apps de pruebas (ver `test_app_guard.dart`): nunca borra datos
 /// reales.
 Future<void> _wipe() async {
   final docs = await getApplicationDocumentsDirectory();
-  if (!docs.path.contains('.debug') && !docs.path.contains('.profile')) {
-    throw StateError('Pruebas de integración fuera de la app .debug: $docs');
-  }
+  assertTestApp(docs.path);
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${docs.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();

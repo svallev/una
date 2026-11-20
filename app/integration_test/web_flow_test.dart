@@ -54,6 +54,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'fixtures/selfsigned_tls.dart';
+import 'support/test_app_guard.dart';
 import 'support/undo.dart';
 
 const _airplane = bool.fromEnvironment('UNA_AIRPLANE');
@@ -126,11 +127,9 @@ final _opener = _RecordingOpener();
 
 Future<void> _wipe() async {
   final docs = await getApplicationDocumentsDirectory();
-  // Solo en las apps de pruebas (`.debug`, `.profile`): nunca borra datos
+  // Solo en las apps de pruebas (ver `test_app_guard.dart`): nunca borra datos
   // reales.
-  if (!docs.path.contains('.debug') && !docs.path.contains('.profile')) {
-    throw StateError('Pruebas de integración fuera de la app .debug: $docs');
-  }
+  assertTestApp(docs.path);
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${docs.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();

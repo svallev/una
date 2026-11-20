@@ -25,18 +25,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'support/test_app_guard.dart';
+
 const _url = String.fromEnvironment(
   'WEB_PERF_URL',
   defaultValue: 'https://example.org/',
 );
 const _text = 'Horario del congreso';
 
-/// Solo en las apps de pruebas (`.debug`, `.profile`).
+/// Solo en las apps de pruebas (ver `test_app_guard.dart`).
 Future<void> _wipe() async {
   final docs = await getApplicationDocumentsDirectory();
-  if (!docs.path.contains('.debug') && !docs.path.contains('.profile')) {
-    throw StateError('Pruebas fuera de la app de pruebas: ${docs.path}');
-  }
+  assertTestApp(docs.path);
   for (final suffix in ['', '-wal', '-shm', '-journal']) {
     final f = File('${docs.path}/una.sqlite$suffix');
     if (f.existsSync()) f.deleteSync();
@@ -65,32 +65,34 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
-  testWidgets('CA-009-07: tarea web actual sobre una tarea con texto', (
-    tester,
-  ) async {
-    await _wipe();
-    await bootstrap();
-    await _wait(tester, const Duration(seconds: 1));
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(HomeRouter)),
-    );
-    await container.read(createTaskProvider).call(_text);
-    await _wait(tester, const Duration(seconds: 2));
-    final report = <String, Object>{'text': _memory()};
+  testWidgets(
+    'CA-009-07: tarea web actual sobre una tarea con texto',
+    skip: skipPerfOnIosSimulator,
+    (tester) async {
+      await _wipe();
+      await bootstrap();
+      await _wait(tester, const Duration(seconds: 1));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeRouter)),
+      );
+      await container.read(createTaskProvider).call(_text);
+      await _wait(tester, const Duration(seconds: 2));
+      final report = <String, Object>{'text': _memory()};
 
-    final web = StagedWeb(
-      id: container.read(idGeneratorProvider).newId(),
-      url: _url,
-    );
-    final watch = Stopwatch()..start();
-    await container.read(createTaskProvider).call('', attachments: [web]);
-    await _wait(tester, const Duration(milliseconds: 500));
-    expect(find.byType(TaskWeb), findsOneWidget);
-    // Espera a la página (el aviso de sin conexión también acaba el bucle).
-    await _wait(tester, const Duration(seconds: 10));
-    report['web_shown'] = _memory();
-    report['web_url'] = _url;
-    report['web_wait_ms'] = watch.elapsedMilliseconds;
-    binding.reportData = {...?binding.reportData, 'web_memory': report};
-  });
+      final web = StagedWeb(
+        id: container.read(idGeneratorProvider).newId(),
+        url: _url,
+      );
+      final watch = Stopwatch()..start();
+      await container.read(createTaskProvider).call('', attachments: [web]);
+      await _wait(tester, const Duration(milliseconds: 500));
+      expect(find.byType(TaskWeb), findsOneWidget);
+      // Espera a la página (el aviso de sin conexión también acaba el bucle).
+      await _wait(tester, const Duration(seconds: 10));
+      report['web_shown'] = _memory();
+      report['web_url'] = _url;
+      report['web_wait_ms'] = watch.elapsedMilliseconds;
+      binding.reportData = {...?binding.reportData, 'web_memory': report};
+    },
+  );
 }
