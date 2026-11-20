@@ -11,6 +11,7 @@ import 'package:app/features/attachments/attachment_preview.dart';
 import 'package:app/features/attachments/camera_denied_notice.dart';
 import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/ui/brutal_button.dart';
+import 'package:app/ui/ios_back_gesture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -327,4 +328,151 @@ void main() {
       });
     }
   });
+
+  // Decisión del propietario (2026-11-20): el aviso es del editor; al salir de
+  // él, por la vía que sea, se cierra, también si no caduca (lector o teclado).
+  group('CA-028-10: al salir del editor el aviso se cierra', () {
+    Future<void> openEditor(
+      WidgetTester tester, {
+      bool screenReader = true,
+      Widget? home,
+    }) async {
+      listen(tester);
+      await pumpWithApp(
+        tester,
+        home ?? const _Host(),
+        repo: repo,
+        accessibleNavigation: screenReader,
+        overrides: [
+          attachmentStoreProvider.overrideWithValue(store),
+          imageImporterProvider.overrideWithValue(importer),
+          appSettingsOpenerProvider.overrideWithValue(() async {
+            opened++;
+            return openResult;
+          }),
+        ],
+      );
+      await tester.pumpAndSettle();
+      if (home == null) {
+        await tester.tap(find.text(_Host.open));
+        await tester.pumpAndSettle();
+      }
+      await takePhoto(tester);
+      expect(find.text(_message), findsOneWidget);
+    }
+
+    /// Se cierra al salir, no cuando la ruta termina de irse: mientras la
+    /// pantalla de debajo vuelve, el aviso ya está bajando (con lector,
+    /// `ScaffoldMessenger` lo quita sin animación: ya no está).
+    Future<void> expectClosingNow(WidgetTester tester) async {
+      await tester.pump();
+      final bars = tester.widgetList<SnackBar>(
+        find.byType(SnackBar, skipOffstage: false),
+      );
+      for (final bar in bars) {
+        expect(bar.animation!.status, AnimationStatus.reverse);
+      }
+    }
+
+    void expectGone(WidgetTester tester) {
+      expect(find.byType(TaskEditorScreen), findsNothing);
+      expect(find.text(_message, skipOffstage: false), findsNothing);
+      expect(
+        find.byType(CameraDeniedNotice, skipOffstage: false),
+        findsNothing,
+      );
+      expect(opened, 0);
+    }
+
+    testWidgets('con lector, atrás del sistema', (tester) async {
+      await openEditor(tester);
+      await tester.binding.handlePopRoute();
+      await expectClosingNow(tester);
+      await tester.pumpAndSettle();
+      expectGone(tester);
+      // Y no vuelve más tarde (no caducaba).
+      await tester.pump(const Duration(seconds: 30));
+      expectGone(tester);
+      expect(find.text(_Host.open), findsOneWidget);
+    });
+
+    testWidgets('con lector, gesto atrás de iOS', (tester) async {
+      await openEditor(tester);
+      await tester.timedDragFrom(
+        const Offset(5, 300),
+        const Offset(380, 0),
+        const Duration(milliseconds: 600),
+      );
+      await expectClosingNow(tester);
+      await tester.pumpAndSettle();
+      expectGone(tester);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+    testWidgets('con lector, al guardar', (tester) async {
+      await openEditor(tester);
+      await tester.enterText(find.byType(TextField), 'Llamar');
+      await tester.pump();
+      await tester.tap(find.text('Guardar'));
+      await expectClosingNow(tester);
+      await tester.pumpAndSettle();
+      expectGone(tester);
+      expect(await repo.currentTask(), isNotNull);
+    });
+
+    testWidgets('con teclado, la ruta se cierra desde el código', (
+      tester,
+    ) async {
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      try {
+        await openEditor(tester, screenReader: false);
+        expect(buttonFocused(tester), isTrue);
+        Navigator.of(tester.element(find.byType(TaskEditorScreen))).pop();
+        await expectClosingNow(tester);
+        await tester.pumpAndSettle();
+        expectGone(tester);
+      } finally {
+        FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic;
+      }
+    });
+
+    testWidgets('con lector, el editor se quita sin cerrar ninguna ruta '
+        '(primera tarea: la pantalla cambia debajo)', (tester) async {
+      final showEditor = ValueNotifier(true);
+      addTearDown(showEditor.dispose);
+      await openEditor(
+        tester,
+        home: ValueListenableBuilder<bool>(
+          valueListenable: showEditor,
+          builder: (_, show, _) => show
+              ? const TaskEditorScreen(mode: EditorMode.first)
+              : const Scaffold(body: Text(_Host.open)),
+        ),
+      );
+      showEditor.value = false;
+      await tester.pumpAndSettle();
+      expectGone(tester);
+    });
+  });
+}
+
+/// Una pantalla de debajo con un botón que abre el editor en su ruta, como
+/// "Todo hecho." o el menú de la tarea.
+class _Host extends StatelessWidget {
+  const _Host();
+
+  static const open = 'Abrir editor';
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: TextButton(
+        onPressed: () => Navigator.of(context).push(
+          UnaMaterialPageRoute<void>(builder: (_) => const TaskEditorScreen()),
+        ),
+        child: const Text(open),
+      ),
+    ),
+  );
 }

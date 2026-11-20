@@ -233,4 +233,5 @@ Respondidas por el propietario el 2026-11-19 («1. ok, 2. ok, 3. ok, 4. ok, 5. Q
 - **Q-028-3 [Resuelta: ok]** Línea de privacidad de iOS como se proponía (§7).
 - **Q-028-4 [Resuelta: ok]** **Constitución 1.11**: notas de P4 (ADR-0030) y P6 (ADR-0031).
 - **Q-028-6 [Resuelta: igual que Android]** Los adjuntos **no** entran en la copia de seguridad de iOS (CA-028-18): **ADR-0032**, que enmienda la parte iOS del ADR-0004.
+- **Decisión del propietario (2026-11-20), sobre el aviso de CA-028-10** (sin cambiar el texto del CA): «el foco va a él» es al **propio aviso** (texto y botón «Abrir Ajustes» como un solo nodo), no a (+) como en los demás avisos de CA-007-22; y el aviso es del editor: **al salir de él** (atrás, gesto atrás, guardar) se cierra y no queda en la pantalla de debajo, también cuando no caduca (lector o teclado).
 - **Q-028-5 [Pendiente, plan I6]** «Una sola a la vez» (CA-019-18): se decide con el resultado del iPad (CA-028-16).
