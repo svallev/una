@@ -77,9 +77,9 @@
 | CA-009-08/09/10 Sin conexión, solo segura, certificado | Delegado del paquete | Igual (errores de WebKit → mismos tipos) | IT | I5 | |
 | CA-009-11 y CL-009-1 Sin navegación; redirecciones del servidor (incluida la red local bloqueada) | `RenderGoneClient` avisa `mainFrameRequest` | Ver `channel-contract.md` §3 (sin sustituir el delegado del paquete); si no se consigue, **Diverge** con su CA en la 028 | IT + XCT | I5 | |
 | CA-009-12 Atrás | Atrás del sistema | Gesto desde el borde (CA-028-09); la página no navega atrás | D | I3 | **Hecho** (T-028-12): el gesto es de la ruta de la pantalla (`UnaPageRoute`), no de la página, que no navega atrás; la web en el simulador, en T-028-16 |
-| CA-009-13 Aislamiento y borrado | `harden` + `clearData` | Ajustes de `WKWebView` + `WKWebsiteDataStore.removeData` → CA-028-19 | XCT + IT (`webview_hardening`) | I5 | |
+| CA-009-13 Aislamiento y borrado | `harden` + `clearData` | Ajustes de `WKWebView` + `WKWebsiteDataStore.removeData` → CA-028-19 | XCT + IT (`webview_hardening`) | I5 || **Hecho** (T-028-16): `WebViewHardening.swift` (`harden`/`state` leídos de la vista, `clearData` con `WKWebsiteDataStore`); 14 XCTest (`WebViewHardeningTests`) e IT `webview_hardening` 5/5 + la descarga saltada hasta T-028-17; contenido mixto: una página `https` no pide nada por `http` a la red (IT nuevo) |
 | CA-009-15/16 Girar, pantalla encendida | `una/screen` | Como 007 | XCT / **[Pendiente sin iPhone]** | I3 | Como CA-007-12 y CA-008-11 (mismo canal) |
-| ADR-0017 Fallo del proceso de la página | `onRenderProcessGone` | El paquete lo da como error `webContentProcessTerminated` | IT + XCT | I5 | |
+| ADR-0017 Fallo del proceso de la página | `onRenderProcessGone` | El paquete lo da como error `webContentProcessTerminated` | IT + XCT | I5 || **Hecho** (T-028-16): `webContentProcessTerminated` → `onProcessGone(crashed: true)` (test de Dart); IT `webview_hardening` mata el proceso con `debugKillContentProcess` (solo Debug), la app sigue y otra WebView carga. El mismo caso de `web_page_controller`, **[Pendiente]** por la carga inicial en iOS (ver `tasks.md`, T-028-16) |
 
 ### 010 Idioma
 
@@ -165,7 +165,7 @@
 | CA-020-09 a 21, 27, 28 | Código de Android y Dart | Lo de Dart vale igual; el Swift lo revisa `security-reviewer` | D + I8 | I8 | |
 | CA-021-01 a 05, 09, 10, 12 Arranque y barras | Temas de Android | CA-028-05 y 06 | Script + Disp | I2 | Script **Hecho** (T-028-03 y 04: secciones `plist`, `project` y `launch`; `LaunchBackground` = `paper`, sin oscuro ni imagen; visto en el simulador sin destello); **[Pendiente]** Disp en el iPad (T-028-23) |
 | CA-021-06/07 Igual en oscuro | Tema fijo | `UIUserInterfaceStyle = Light` → CA-028-05 | IT + Disp | I2 | |
-| CA-021-08 Web en claro | `noDarkening` | Estilo claro en la `WKWebView` → CA-028-05/19 | IT + Disp | I5 | |
+| CA-021-08 Web en claro | `noDarkening` | Estilo claro en la `WKWebView` → CA-028-05/19 | IT + Disp | I5 || **Hecho** (T-028-16) en el simulador en oscuro: la página ve `prefers-color-scheme: light` (IT `webview_hardening`, `overrideUserInterfaceStyle = .light` leído de vuelta en XCTest); **[Pendiente]** Disp en el iPad (T-028-23) |
 | CA-021-11 Sin nada nuevo | — | Solo lo de esta spec | Script | I2 | |
 | 022 Auditoría | Xiaomi + emulador | La pasada de CA-028-21 | Disp | I8 | |
 | 023 Ficha y privacidad | Play | Fuera de alcance (I9); la política no cambia salvo ADR-0030 | — | I9 | |

@@ -1,10 +1,13 @@
 // Estado de la página de la tarea web con la WebView real (spec 009, T-009-10,
 // ADR-0017). Sin red externa: la página de `una.test` se sirve con
 // `loadHtmlString` (origen https ficticio) y el resto son direcciones locales.
-// En el emulador (nunca en el móvil del propietario sin su permiso):
+// En el emulador (nunca en el móvil del propietario sin su permiso) o en el
+// simulador de iOS (spec 028, CA-028-19):
 //   flutter test integration_test/web_page_controller_test.dart -d emulator-5554
+//   flutter test integration_test/web_page_controller_test.dart -d <simulador>
 //
-// Se repite en cada actualización de `webview_flutter_android` (R-21).
+// Se repite en cada actualización de `webview_flutter_android` (R-21) y de
+// `webview_flutter_wkwebview`.
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,6 +18,7 @@ import 'package:app/domain/ports/clock.dart';
 import 'package:app/features/web/web_page_controller.dart';
 import 'package:app/features/web/webview_page_driver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
@@ -110,6 +114,15 @@ Future<void> _until(
     await tester.pump(const Duration(milliseconds: 100));
   }
 }
+
+/// Mata el proceso de la página de [driver] como solo puede hacerlo una
+/// prueba: en Android, `chrome://crash`; en iOS, el gancho de depuración del
+/// Swift (`debugKillContentProcess`, solo en Debug).
+Future<void> _crash(WebViewPageDriver driver) => Platform.isIOS
+    ? const MethodChannel(
+        'una/webview',
+      ).invokeMethod<void>('debugKillContentProcess', {'id': driver.nativeId})
+    : driver.load(Uri.parse('chrome://crash'));
 
 bool _loaded(WebPageController c) =>
     c.value.status == WebPageStatus.shown && !c.value.pageLoading;
@@ -367,7 +380,7 @@ void main() {
     final c = await _mount(tester, 'data:application/pdf;base64,$pdf');
     await _until(tester, () => c.value.status == WebPageStatus.notAPage);
     await _unmount(tester);
-  });
+  }, skip: Platform.isIOS /* `downloadBlocked` en iOS: T-028-17 */);
 
   testWidgets('ADR-0017: chrome://crash no cierra la app; tras el aviso, '
       'WebView nueva y la dirección guardada otra vez (dos veces)', (
@@ -380,7 +393,7 @@ void main() {
       final oldId = old.nativeId!;
       final generation = c.value.viewGeneration;
       // Solo la prueba carga esto: la página no puede (CA-009-11).
-      await old.load(Uri.parse('chrome://crash'));
+      await _crash(old as WebViewPageDriver);
       await _until(tester, () => c.value.viewGeneration != generation);
       expect(identical(c.driver, old), isFalse);
       await _until(tester, () => _loaded(c));

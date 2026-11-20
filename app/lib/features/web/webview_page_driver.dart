@@ -3,13 +3,15 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 import '../../data/web/webview_hardening.dart';
 import '../../domain/entities/web_load_failure.dart';
 import 'web_page_driver.dart';
 
-/// La WebView de la tarea web con `webview_flutter` (spec 009, plan §1; solo
-/// Android por ahora, D17). Cada instancia es una WebView nativa.
+/// La WebView de la tarea web con `webview_flutter` (spec 009, plan §1): la
+/// `WebView` de Android y la `WKWebView` de iOS (spec 028, CA-028-19). Cada
+/// instancia es una WebView nativa.
 ///
 /// Endurecimiento desde Dart (T-4, CA-009-13): JavaScript sí, pero sin ningún
 /// canal JS; permisos de la página denegados (también la geolocalización);
@@ -18,7 +20,9 @@ import 'web_page_driver.dart';
 /// suyo); y los mensajes de la consola de la página no llegan al registro del
 /// sistema (CL-009-9). Lo nativo, con `ChannelWebViewHardening.harden`,
 /// **después** de `setNavigationDelegate`, que no se vuelve a llamar
-/// (ADR-0017).
+/// (ADR-0017). En iOS el fallo del proceso de la página no llega por el canal
+/// sino como el error `webContentProcessTerminated` del paquete
+/// ([reportWebResourceError]).
 class WebViewPageDriver implements WebPageDriver {
   WebViewPageDriver({
     ChannelWebViewHardening hardening = const ChannelWebViewHardening(),
@@ -39,8 +43,14 @@ class WebViewPageDriver implements WebPageDriver {
     return platform is AndroidWebViewController ? platform : null;
   }
 
+  WebKitWebViewController? get _webKit {
+    final platform = webView.platform;
+    return platform is WebKitWebViewController ? platform : null;
+  }
+
   @override
-  int? get nativeId => _android?.webViewIdentifier;
+  int? get nativeId =>
+      _android?.webViewIdentifier ?? _webKit?.webViewIdentifier;
 
   @override
   Future<bool> attach(WebPageListener listener) async {
@@ -111,12 +121,7 @@ class WebViewPageDriver implements WebPageDriver {
       if (uri != null) listener.onPageFinished(uri);
     },
     onProgress: listener.onProgress,
-    onWebResourceError: (error) => listener.onLoadError(
-      webLoadErrorOf(error.errorType),
-      // Android siempre lo dice; si no, se trata como de la página.
-      isMainFrame: error.isForMainFrame ?? true,
-      url: error.url == null ? null : Uri.tryParse(error.url!),
-    ),
+    onWebResourceError: (error) => reportWebResourceError(listener, error),
     onSslAuthError: (error) {
       // Nunca se acepta (CA-009-10).
       unawaited(error.cancel());
@@ -155,6 +160,25 @@ class WebViewPageDriver implements WebPageDriver {
       ),
     );
   }
+}
+
+/// Un error de la WebView para [listener]. En iOS el fallo del proceso de la
+/// página (`webViewWebContentProcessDidTerminate`) llega así, como el error
+/// `webContentProcessTerminated` del paquete, y es [WebPageListener.onProcessGone]
+/// (ADR-0017, contrato §3): WebKit no dice si lo mató el sistema, así que
+/// `crashed: true`. Lo demás es un error de carga.
+@visibleForTesting
+void reportWebResourceError(WebPageListener listener, WebResourceError error) {
+  if (error.errorType == WebResourceErrorType.webContentProcessTerminated) {
+    listener.onProcessGone(crashed: true);
+    return;
+  }
+  listener.onLoadError(
+    webLoadErrorOf(error.errorType),
+    // Android siempre lo dice; si no, se trata como de la página.
+    isMainFrame: error.isForMainFrame ?? true,
+    url: error.url == null ? null : Uri.tryParse(error.url!),
+  );
 }
 
 /// El error de la WebView, para `classifyLoadError` (T-009-05).

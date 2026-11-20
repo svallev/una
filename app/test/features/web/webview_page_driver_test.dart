@@ -1,4 +1,5 @@
 import 'package:app/domain/entities/web_load_failure.dart';
+import 'package:app/features/web/web_page_driver.dart';
 import 'package:app/features/web/webview_page_driver.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -68,4 +69,81 @@ void main() {
       WebLoadFailure.offline,
     );
   });
+
+  test('CA-028-19, ADR-0017: en iOS el fallo del proceso de la página llega '
+      'como error webContentProcessTerminated y es onProcessGone, no un error '
+      'de carga', () {
+    final listener = _RecordingListener();
+    reportWebResourceError(
+      listener,
+      const WebResourceError(
+        errorCode: 2,
+        description: '',
+        errorType: WebResourceErrorType.webContentProcessTerminated,
+        isForMainFrame: true,
+      ),
+    );
+    expect(listener.gone, [true]);
+    expect(listener.errors, isEmpty);
+  });
+
+  test('CA-009-08/09: los demás errores siguen siendo errores de carga, con '
+      'su marco y su dirección', () {
+    final listener = _RecordingListener();
+    reportWebResourceError(
+      listener,
+      const WebResourceError(
+        errorCode: -1003,
+        description: '',
+        errorType: WebResourceErrorType.hostLookup,
+        isForMainFrame: false,
+        url: 'https://una.test/x.png',
+      ),
+    );
+    // Sin marco (no lo dice la plataforma): se trata como el de la página.
+    reportWebResourceError(
+      listener,
+      const WebResourceError(errorCode: -1, description: ''),
+    );
+    expect(listener.gone, isEmpty);
+    expect(listener.errors, [
+      (WebLoadError.hostLookup, false, Uri.parse('https://una.test/x.png')),
+      (WebLoadError.other, true, null),
+    ]);
+  });
+}
+
+/// Solo apunta lo que le llega de los errores.
+class _RecordingListener implements WebPageListener {
+  final gone = <bool>[];
+  final errors = <(WebLoadError, bool, Uri?)>[];
+
+  @override
+  void onProcessGone({required bool crashed}) => gone.add(crashed);
+
+  @override
+  void onLoadError(WebLoadError error, {required bool isMainFrame, Uri? url}) =>
+      errors.add((error, isMainFrame, url));
+
+  @override
+  bool onNavigationRequest(
+    Uri? url, {
+    required bool isMainFrame,
+    required bool isServerRedirect,
+  }) => false;
+
+  @override
+  void onPageStarted(Uri url) {}
+
+  @override
+  void onPageFinished(Uri url) {}
+
+  @override
+  void onProgress(int percent) {}
+
+  @override
+  void onCertificateError() {}
+
+  @override
+  void onDownloadBlocked() {}
 }

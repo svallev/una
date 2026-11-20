@@ -46,14 +46,16 @@ final class WebDownloadBlocked extends WebViewNativeEvent {
 
 /// Canal `una/webview` (`WebViewHardening.kt`, spec 009, plan §1): el
 /// endurecimiento nativo de la WebView de la tarea web y el borrado de sus
-/// datos. El identificador es `AndroidWebViewController.webViewIdentifier`.
+/// datos. El identificador es `AndroidWebViewController.webViewIdentifier`
+/// (en iOS, `WebKitWebViewController.webViewIdentifier`; `WebViewHardening.swift`,
+/// spec 028).
 ///
 /// Orden (ADR-0017): [harden] **después** de `setNavigationDelegate`, y nunca
 /// otro `setNavigationDelegate` sobre esa WebView (quitaría el envoltorio del
 /// cliente y el bloqueo de descargas). Si [harden] devuelve `false`, la página
 /// no se carga.
 ///
-/// Sin canal (tests, iOS aún) o con un error nativo, nada lanza: se da por no
+/// Sin canal (tests) o con un error nativo, nada lanza: se da por no
 /// endurecida y por no borrada.
 class ChannelWebViewHardening implements WebDataCleaner {
   const ChannelWebViewHardening();
