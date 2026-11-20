@@ -16,5 +16,7 @@ import UIKit
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     channels = UnaChannels.register(messenger: engineBridge.applicationRegistrar.messenger())
+    // CA-028-18: `attachments/` creada y fuera de la copia de seguridad antes del primer fotograma.
+    DataAtRest.prepareAttachmentsAtLaunch()
   }
 }

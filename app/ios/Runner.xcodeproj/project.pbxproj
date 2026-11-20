@@ -18,6 +18,9 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A02800000000000000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000002 /* InfoPlist.strings */; };
+		A02800000000000000000013 /* DataAtRest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000012 /* DataAtRest.swift */; };
+		A02800000000000000000015 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000014 /* PrivacyInfo.xcprivacy */; };
+		A02800000000000000000017 /* DataAtRestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000016 /* DataAtRestTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,6 +55,9 @@
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		A02800000000000000000012 /* DataAtRest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataAtRest.swift; sourceTree = "<group>"; };
+		A02800000000000000000014 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A02800000000000000000016 /* DataAtRestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataAtRestTests.swift; sourceTree = "<group>"; };
 		A02800000000000000000010 /* UnaChannels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnaChannels.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
@@ -83,6 +89,7 @@
 			isa = PBXGroup;
 			children = (
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
+				A02800000000000000000016 /* DataAtRestTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -131,6 +138,8 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				A02800000000000000000010 /* UnaChannels.swift */,
+				A02800000000000000000012 /* DataAtRest.swift */,
+				A02800000000000000000014 /* PrivacyInfo.xcprivacy */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
@@ -240,6 +249,7 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				A02800000000000000000001 /* InfoPlist.strings in Resources */,
+				A02800000000000000000015 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,6 +295,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
+				A02800000000000000000017 /* DataAtRestTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -296,6 +307,7 @@
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				A02800000000000000000011 /* UnaChannels.swift in Sources */,
+				A02800000000000000000013 /* DataAtRest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
