@@ -5,14 +5,15 @@ import '../../domain/entities/image_type.dart';
 import '../../domain/ports/image_importer.dart';
 
 /// Importador de imágenes sobre el canal nativo `una/images` (Android,
-/// `ImageImport.kt`). No registra nada (CL-007-10).
+/// `ImageImport.kt`; iOS, `Images.swift`, spec 028). No registra nada
+/// (CL-007-10).
 class NativeImageImporter implements ImageImporter {
   NativeImageImporter({required this.heicSupported});
 
   static const _channel = MethodChannel('una/images');
 
-  /// Sin canal (iOS aún no lo tiene, D17), HEIC no se admite y cada llamada
-  /// falla como `unreadable`: el arranque no depende de ello.
+  /// Sin canal (una plataforma sin `una/images`), HEIC no se admite y cada
+  /// llamada falla como `unreadable`: el arranque no depende de ello.
   static Future<NativeImageImporter> open() async {
     try {
       final caps = await _channel.invokeMapMethod<String, Object?>(

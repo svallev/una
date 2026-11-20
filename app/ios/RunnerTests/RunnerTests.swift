@@ -62,7 +62,7 @@ class RunnerTests: XCTestCase {
   }
 
   /// Los canales que ya tienen su manejador (cada tarea de canal añade el suyo, T-028-09 a 19).
-  private let implemented: Set<String> = ["una/links", "una/a11y", "una/screen"]
+  private let implemented: Set<String> = ["una/links", "una/a11y", "una/screen", "una/images"]
 
   func testEveryChannelAnswersNotImplementedUntilItsPhase() {
     // CA-028-20: hasta que cada fase los implemente, ningún método responde otra cosa.
