@@ -31,8 +31,10 @@
 		A02800000000000000000017 /* DataAtRestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000016 /* DataAtRestTests.swift */; };
 		A0280000000000000000002F /* PickedItemsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000002E /* PickedItemsTests.swift */; };
 		A0280000000000000000002D /* ImagesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000002C /* ImagesTests.swift */; };
+		A02800000000000000000033 /* SanitizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000032 /* SanitizerTests.swift */; };
 		A0280000000000000000002B /* PickedItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000002A /* PickedItems.swift */; };
 		A02800000000000000000029 /* Images.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000028 /* Images.swift */; };
+		A02800000000000000000031 /* ImageSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000030 /* ImageSanitizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,8 +83,10 @@
 		A02800000000000000000010 /* UnaChannels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnaChannels.swift; sourceTree = "<group>"; };
 		A0280000000000000000002E /* PickedItemsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickedItemsTests.swift; sourceTree = "<group>"; };
 		A0280000000000000000002C /* ImagesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagesTests.swift; sourceTree = "<group>"; };
+		A02800000000000000000032 /* SanitizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SanitizerTests.swift; sourceTree = "<group>"; };
 		A0280000000000000000002A /* PickedItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickedItems.swift; sourceTree = "<group>"; };
 		A02800000000000000000028 /* Images.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Images.swift; sourceTree = "<group>"; };
+		A02800000000000000000030 /* ImageSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSanitizer.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
@@ -120,6 +124,7 @@
 				A02800000000000000000026 /* RecentsPrivacyTests.swift */,
 				A0280000000000000000002E /* PickedItemsTests.swift */,
 				A0280000000000000000002C /* ImagesTests.swift */,
+				A02800000000000000000032 /* SanitizerTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -175,6 +180,7 @@
 				A02800000000000000000024 /* RecentsPrivacy.swift */,
 				A0280000000000000000002A /* PickedItems.swift */,
 				A02800000000000000000028 /* Images.swift */,
+				A02800000000000000000030 /* ImageSanitizer.swift */,
 				A02800000000000000000014 /* PrivacyInfo.xcprivacy */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -338,6 +344,7 @@
 				A02800000000000000000027 /* RecentsPrivacyTests.swift in Sources */,
 				A0280000000000000000002F /* PickedItemsTests.swift in Sources */,
 				A0280000000000000000002D /* ImagesTests.swift in Sources */,
+				A02800000000000000000033 /* SanitizerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -356,6 +363,7 @@
 				A02800000000000000000025 /* RecentsPrivacy.swift in Sources */,
 				A0280000000000000000002B /* PickedItems.swift in Sources */,
 				A02800000000000000000029 /* Images.swift in Sources */,
+				A02800000000000000000031 /* ImageSanitizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

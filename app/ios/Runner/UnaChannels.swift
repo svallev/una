@@ -4,7 +4,7 @@ import Flutter
 ///
 /// Cada canal responde `FlutterMethodNotImplemented` hasta que la tarea de su fase le ponga el
 /// manejador real (`una/links` y `una/a11y` en T-028-09, `una/screen` en T-028-10, `una/images` en
-/// T-028-13 y 14; el resto, hasta I6). Dart ya sabe tratar
+/// T-028-13 y 14; `una/webview` y `una/notifications`, en I5 e I6). Dart ya sabe tratar
 /// «no implementado» como «no disponible» (`MissingPluginException`), así que un canal vacío nunca
 /// rompe la app.
 enum UnaChannels {

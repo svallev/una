@@ -72,10 +72,9 @@ final class FileSink: ByteSink {
   }
 }
 
-/// Canal `una/images`, selección y copia (contrato §2; espejo de `ImageImport.kt`; spec 007, 008 y
-/// 016; spec 028 CA-028-10 y CA-028-11). La limpieza (`sanitize`, `regenerate`, `encodeJpeg`) llega
-/// en T-028-14; hasta entonces esos métodos responden «no implementado» y Dart lo trata como
-/// `unreadable`.
+/// Canal `una/images` (contrato §2; espejo de `ImageImport.kt`; spec 007, 008 y 016; spec 028
+/// CA-028-10 y CA-028-11): selección, copia, limpieza (`sanitize`, `regenerate`) y codificación de la
+/// página de un PDF (`encodeJpeg`), estas tres con `ImageSanitizer` (ImageIO y Core Graphics).
 ///
 /// - Sin permisos para la galería ni para los PDF (selectores del sistema); la cámara sí lo pide,
 ///   porque iOS no deja abrirla sin él (CA-028-10): denegado o restringido → `cameraDenied`.
@@ -83,7 +82,8 @@ final class FileSink: ByteSink {
 ///   eligió el usuario en esta sesión; ninguna ruta ni dirección se acepta como token (equivale a
 ///   `isForeignContent` de Kotlin). Cada token de galería o de PDF se usa una sola vez.
 /// - Todo lo que escribe va a `Caches/import/` (la misma carpeta que `getTemporaryDirectory()/import`
-///   de Dart); nunca a la fototeca ni a archivos compartidos.
+///   de Dart) o, para `regenerate` y `encodeJpeg` sobre lo guardado, a
+///   `Application Support/attachments/<id>/`; nunca a la fototeca ni a archivos compartidos.
 /// - Nunca registra rutas, nombres ni metadatos (CL-007-10).
 final class Images {
   /// Tope de fotos de un grupo (CA-016-02); Dart pide el suyo y aquí se acota.
@@ -104,12 +104,21 @@ final class Images {
   private let settings: LinkApplication
   private let freeSpaceProvider: () -> Int64?
   private let makeSink: (URL) throws -> ByteSink
+  private let applicationSupport: URL?
+  private let screenSize: () -> (width: Int, height: Int)
+  private let writer: ImageSanitizer.Writer
+  /// Solo para los tests: avisa al empezar (`true`) y al acabar (`false`) cada limpieza.
+  var sanitizeProbe: ((Bool) -> Void)?
 
-  /// Copias (como el `executor` de dos hilos de Kotlin).
+  /// Copias, `regenerate` y `encodeJpeg` (como el `executor` de dos hilos de Kotlin).
   private let work = DispatchQueue(
     label: "una.images.work", qos: .userInitiated, attributes: .concurrent)
   /// Cancelar nunca espera en la cola de `work`: el borrado va por la suya.
   private let cleaner = DispatchQueue(label: "una.images.cleaner", qos: .utility)
+  /// La limpieza corre en **una cola serie propia** (spec 016, CA-016-04): nunca hay dos a la vez,
+  /// aunque Dart dé por agotada una y empiece otra; y una limpieza cancelada mientras esperaba turno
+  /// sale sin hacer nada (mira su bandera **antes de empezar**).
+  private let sanitizer = DispatchQueue(label: "una.images.sanitize", qos: .userInitiated)
   private let cancelled = LockedMap<CancelFlag>()
   /// Cargas de fotos en curso (`loadFileRepresentation`), para que cancelar las corte.
   private let loads = LockedMap<Progress>()
@@ -129,7 +138,10 @@ final class Images {
     camera: CameraAuthorizing = SystemCamera(),
     settings: LinkApplication = SystemLinkApplication(),
     freeSpace: @escaping () -> Int64? = Images.systemFreeSpace,
-    makeSink: @escaping (URL) throws -> ByteSink = { try FileSink(url: $0) }
+    makeSink: @escaping (URL) throws -> ByteSink = { try FileSink(url: $0) },
+    applicationSupportDirectory: URL? = nil,
+    screenSize: @escaping () -> (width: Int, height: Int) = Images.systemScreenSize,
+    writer: @escaping ImageSanitizer.Writer = ImageSanitizer.atomicWriter
   ) {
     let caches =
       cachesDirectory
@@ -142,6 +154,15 @@ final class Images {
     self.settings = settings
     freeSpaceProvider = freeSpace
     self.makeSink = makeSink
+    applicationSupport = applicationSupportDirectory
+    self.screenSize = screenSize
+    self.writer = writer
+  }
+
+  /// `Application Support/attachments/`: la de `getApplicationSupportDirectory()/attachments` de Dart.
+  private var attachmentsRoot: URL? {
+    return (applicationSupport ?? DataAtRest.applicationSupportDirectory())?
+      .appendingPathComponent(DataAtRest.attachmentsName, isDirectory: true)
   }
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -166,6 +187,12 @@ final class Images {
       }
     case "copy":
       copy(call, result)
+    case "sanitize":
+      sanitize(call, result)
+    case "regenerate":
+      regenerate(call, result)
+    case "encodeJpeg":
+      encodeJpeg(call, result)
     case "cancel":
       cancel(call, result)
     case "openAppSettings":
@@ -533,6 +560,108 @@ final class Images {
     }
   #endif
 
+  // MARK: - Limpiar, regenerar y codificar
+
+  /// Limpia `import/<id>/source` en la cola serie (contrato §2): `tooManyPixels` sin decodificar,
+  /// versión completa en teselas, `screen.jpg` y `thumb.jpg`, sin ningún metadato. Borra `source`
+  /// siempre. `type` no hace falta: ImageIO aplica la orientación de cualquier formato.
+  private func sanitize(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
+    let arguments = Images.arguments(call)
+    guard let id = Images.id(arguments),
+      let maxPixels = Images.number(arguments["maxPixels"])?.int64Value,
+      let storedMaxPixels = Images.number(arguments["storedMaxPixels"])?.int64Value
+    else {
+      return Images.fail(result, .unreadable)
+    }
+    let flag = cancelled.getOrInsert(id, CancelFlag())
+    let screen = screenSize()
+    background(id, result, queue: sanitizer, last: true) {
+      // Cancelada mientras esperaba turno: sale sin hacer nada.
+      if flag.isSet { throw ImageImportCode.cancelled }
+      self.sanitizeProbe?(true)
+      defer { self.sanitizeProbe?(false) }
+      let directory = self.importRoot.appendingPathComponent(id, isDirectory: true)
+      let source = directory.appendingPathComponent("source")
+      // No se conserva ningún byte del original.
+      defer { try? FileManager.default.removeItem(at: source) }
+      guard FileManager.default.fileExists(atPath: source.path) else {
+        throw ImageImportCode.unreadable
+      }
+      let out = try ImageSanitizer(
+        maxPixels: maxPixels, storedMaxPixels: storedMaxPixels, screenWidth: screen.width,
+        screenHeight: screen.height, cancelled: flag, writer: self.writer
+      ).sanitize(source: source, outDir: directory)
+      return ["width": out.width, "height": out.height, "byteSize": Int(out.byteSize)]
+    }
+  }
+
+  /// Rehace `screen.jpg` y `thumb.jpg` de un adjunto **guardado** desde sus teselas (CA-007-19). No
+  /// toca las teselas ni la preparación; si falta la carpeta, `unreadable`.
+  private func regenerate(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
+    let arguments = Images.arguments(call)
+    guard let id = Images.id(arguments),
+      let width = Images.number(arguments["width"])?.intValue,
+      let height = Images.number(arguments["height"])?.intValue
+    else {
+      return Images.fail(result, .unreadable)
+    }
+    let screen = screenSize()
+    let directory = attachmentsRoot?.appendingPathComponent(id, isDirectory: true)
+    respond(result) {
+      guard let directory, Images.isDirectory(directory) else { throw ImageImportCode.unreadable }
+      try ImageSanitizer(
+        maxPixels: Int64.max, storedMaxPixels: Int64.max, screenWidth: screen.width,
+        screenHeight: screen.height, writer: self.writer
+      ).regenerateDerived(dir: directory, width: width, height: height)
+      return nil
+    }
+  }
+
+  /// `screen.jpg` desde los píxeles de una página de PDF (spec 008), en la preparación o en el
+  /// adjunto guardado (al cambiar la última posición, CA-008-08). Escritura atómica; si la carpeta
+  /// ya no existe, nada.
+  private func encodeJpeg(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
+    let arguments = Images.arguments(call)
+    guard let id = Images.id(arguments),
+      let width = Images.number(arguments["width"])?.intValue,
+      let height = Images.number(arguments["height"])?.intValue,
+      let pixels = (arguments["pixels"] as? FlutterStandardTypedData)?.data
+    else {
+      return Images.fail(result, .unreadable)
+    }
+    let bgra = (arguments["bgra"] as? Bool) == true
+    let directory =
+      arguments["target"] as? String == "stored"
+      ? attachmentsRoot?.appendingPathComponent(id, isDirectory: true)
+      : importRoot.appendingPathComponent(id, isDirectory: true)
+    respond(result) {
+      guard let directory else { return nil }
+      try ImageSanitizer.encodeScreen(
+        width: width, height: height, bgra: bgra, pixels: pixels, dir: directory,
+        writer: self.writer)
+      return nil
+    }
+  }
+
+  private static func isDirectory(_ url: URL) -> Bool {
+    var isDirectory: ObjCBool = false
+    return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+      && isDirectory.boolValue
+  }
+
+  /// Tamaño físico de la pantalla en vertical (ancho < alto), de la escena de la app. Sin escena
+  /// (no debería pasar con la app delante), el de un iPhone grande [Suposición]: la versión de
+  /// pantalla nunca sale más pequeña de lo que se verá. Se lee en el hilo principal.
+  static func systemScreenSize() -> (width: Int, height: Int) {
+    let screen = UIApplication.shared.connectedScenes
+      .compactMap { ($0 as? UIWindowScene)?.screen }
+      .first
+    let bounds = screen?.nativeBounds ?? CGRect(x: 0, y: 0, width: 1320, height: 2868)
+    let a = Int(bounds.width.rounded())
+    let b = Int(bounds.height.rounded())
+    return (Swift.min(a, b), Swift.max(a, b))
+  }
+
   // MARK: - Cancelar y Ajustes
 
   /// Marca la cancelación, corta una carga de foto en curso y borra `import/<id>/` e
@@ -570,9 +699,10 @@ final class Images {
   /// Ejecuta `job` fuera del hilo principal y responde en él. Un error o una cancelación (también
   /// si llega mientras terminaba) no dejan nada de esta importación.
   private func background(
-    _ id: String, _ result: @escaping FlutterResult, _ job: @escaping () throws -> Any?
+    _ id: String, _ result: @escaping FlutterResult, queue: DispatchQueue? = nil,
+    last: Bool = false, _ job: @escaping () throws -> Any?
   ) {
-    work.async {
+    (queue ?? work).async {
       var outcome: Result<Any?, ImageImportCode>
       do {
         outcome = .success(try job())
@@ -588,6 +718,26 @@ final class Images {
         try? FileManager.default.removeItem(
           at: self.importRoot.appendingPathComponent(id, isDirectory: true))
         _ = self.cancelled.removeValue(forKey: id)
+      } else if last {
+        _ = self.cancelled.removeValue(forKey: id)
+      }
+      DispatchQueue.main.async {
+        switch outcome {
+        case .success(let value): result(value)
+        case .failure(let code): Images.fail(result, code)
+        }
+      }
+    }
+  }
+
+  /// Como `background` pero sin preparación que borrar (`regenerate`, `encodeJpeg`).
+  private func respond(_ result: @escaping FlutterResult, _ job: @escaping () throws -> Any?) {
+    work.async {
+      let outcome: Result<Any?, ImageImportCode>
+      do {
+        outcome = .success(try job())
+      } catch {
+        outcome = .failure(ImageSanitizer.code(for: error))
       }
       DispatchQueue.main.async {
         switch outcome {
@@ -856,6 +1006,16 @@ final class LockedMap<Value> {
       storage[key] = newValue
       lock.unlock()
     }
+  }
+
+  /// El valor de `key` o, si no hay, `value` (que se guarda), de una vez.
+  func getOrInsert(_ key: String, _ value: @autoclosure () -> Value) -> Value {
+    lock.lock()
+    defer { lock.unlock() }
+    if let existing = storage[key] { return existing }
+    let created = value()
+    storage[key] = created
+    return created
   }
 
   func removeValue(forKey key: String) -> Value? {
