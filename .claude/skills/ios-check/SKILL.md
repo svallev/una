@@ -34,6 +34,7 @@ Argumentos: sin ellos, ningún test de integración; `todos` = los 20 de `app/in
 | 4 | Paridad | `bash ../tools/check-ios-parity.sh` |
 | 5 | Dart | `dart format lib test integration_test --set-exit-if-changed`, `flutter analyze --fatal-infos` y `flutter test` |
 
+- **Tras el paso 2 el simulador puede quedar apagado** (T-028-22: `xcodebuild test` lo apagó y los 20 IT dieron «No supported devices found»): antes del paso 3, otra vez `xcrun simctl boot "$SIM"` y `xcrun simctl bootstatus "$SIM" -b`.
 - El paso 2 usa el esquema `Runner` (lleva `RunnerTests`, `Runner.xcscheme`). Si falla por «no signing»/firma, el destino es el simulador: no se toca la firma; se mira que `-destination` apunte a un simulador.
 - El paso 4 corre las secciones **activas** de `tools/ios-parity.sections` y lista las demás como `PENDIENTE`; una tarea que activa una sección la comprueba también con `--section <nombre>`.
 - Se sigue aunque un paso falle (se ve todo de una vez), pero **el resultado global es rojo** si falla cualquiera.

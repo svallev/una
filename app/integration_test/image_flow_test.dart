@@ -77,8 +77,10 @@ Future<void> _attach(WidgetTester tester, String row) async {
   await tester.tap(find.bySemanticsLabel(l10n.attachButton));
   await tester.pumpAndSettle();
   await tester.tap(find.text(row));
-  // La limpieza nativa tarda de verdad: se espera sin reloj falso.
-  for (var i = 0; i < 100; i++) {
+  // La limpieza nativa tarda de verdad: se espera sin reloj falso. Hasta
+  // 30 s: con 10 s, la captura de 1080 × 20 000 a veces seguía preparándose
+  // en el simulador de iOS cargado y se guardaba a medias (T-028-22).
+  for (var i = 0; i < 300; i++) {
     await tester.pump(const Duration(milliseconds: 100));
     final preview = find.byType(AttachmentPreview);
     if (preview.evaluate().isNotEmpty &&
@@ -92,6 +94,11 @@ Future<void> _attach(WidgetTester tester, String row) async {
   }
   await tester.pumpAndSettle();
   expect(find.byType(AttachmentPreview), findsOneWidget);
+  expect(
+    find.text(l10n.imagePreparing),
+    findsNothing,
+    reason: 'la preparación no terminó en 30 s',
+  );
 }
 
 Future<void> _saveEditor(WidgetTester tester) async {

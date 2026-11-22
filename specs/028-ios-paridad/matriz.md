@@ -10,15 +10,15 @@
 
 | Specs | CA | Por qué es Dart compartido | Verificación | Resultado |
 |---|---|---|---|---|
-| 001–006 | Todos salvo CA-001-09 (arranque) y CA-001-12 (vuelta) | Dominio, estado, UI, BD drift y animaciones son Dart | D + IT (`first_run`, `complete`, `delete`, `task_list`) | |
-| 010 | CA-010-01 a 12 salvo 05 y 10 | Resolución de idioma y textos en Dart (ARB) | D + IT | |
-| 012 | — | Sustituida por la 015 | No aplica | |
+| 001–006 | Todos salvo CA-001-09 (arranque) y CA-001-12 (vuelta) | Dominio, estado, UI, BD drift y animaciones son Dart | D + IT (`first_run`, `complete`, `delete`, `task_list`) | **Hecho** (T-028-22): suite de Dart sin cambios + IT en el simulador (iOS 27.2) en claro con `es-ES` y en oscuro con `ca-ES, en-US`: `first_run`, `complete`, `delete`, `task_list` en verde en las dos pasadas |
+| 010 | CA-010-01 a 12 salvo 05 y 10 | Resolución de idioma y textos en Dart (ARB) | D + IT | **Hecho** (T-028-22): suite de Dart sin cambios + IT en el simulador (iOS 27.2) en claro con `es-ES` y en oscuro con `ca-ES, en-US`; con `ca-ES, en-US` la app abre en español (captura) y `settings_flow` en verde tras el arreglo de T-028-22 (vuelta a «Como el sistema», también en Android) |
+| 012 | — | Sustituida por la 015 | No aplica | No aplica (sustituida por la 015) |
 | 013 | CA-013-03 a 06 (CA-013-02 obsoleta: su entrada la retiró el ADR-0026) | Semántica de Flutter | D + VO | |
-| 014 | Todos salvo CA-014-06, 13, 17, 18 y 20 | Card, cola y deshacer en Dart | D + IT (`delete_flow`) | |
-| 015 | Todos salvo los de la §2 (incluida CA-015-11) | Ajustes, persistencia y textos en Dart | D + IT (`settings_flow`) | |
-| 016 | CA-016-05 a 11, 15, 19 a 22, 25 | Carrusel, grupo y BD en Dart | D + IT (`photo_group_flow`) | |
-| 017 | Todos salvo CA-017-10 y 13 | Bloqueo de zoom en Dart | D | |
-| 007–009 | Los de editor, listado, lectura, foco, textos y estados (no listados en la §2) | UI y dominio en Dart | D + IT | |
+| 014 | Todos salvo CA-014-06, 13, 17, 18 y 20 | Card, cola y deshacer en Dart | D + IT (`delete_flow`) | **Hecho** (T-028-22): suite de Dart sin cambios + IT en el simulador (iOS 27.2) en claro con `es-ES` y en oscuro con `ca-ES, en-US`: `delete_flow` en verde en las dos pasadas |
+| 015 | Todos salvo los de la §2 (incluida CA-015-11) | Ajustes, persistencia y textos en Dart | D + IT (`settings_flow`) | **Hecho** (T-028-22): suite de Dart sin cambios + IT en el simulador (iOS 27.2) en claro con `es-ES` y en oscuro con `ca-ES, en-US`: `settings_flow` 3/3 (en oscuro con `ca-ES, en-US`, tras el arreglo de T-028-22) |
+| 016 | CA-016-05 a 11, 15, 19 a 22, 25 | Carrusel, grupo y BD en Dart | D + IT (`photo_group_flow`) | **Hecho** (T-028-22): suite de Dart sin cambios + IT en el simulador (iOS 27.2) en claro con `es-ES` y en oscuro con `ca-ES, en-US`: `photo_group_flow` y `photo_group_import` en verde en las dos pasadas |
+| 017 | Todos salvo CA-017-10 y 13 | Bloqueo de zoom en Dart | D | **Hecho** (T-028-22): suite de Dart sin cambios (`flutter test`) |
+| 007–009 | Los de editor, listado, lectura, foco, textos y estados (no listados en la §2) | UI y dominio en Dart | D + IT | **Hecho** (T-028-22): suite de Dart sin cambios + IT en el simulador (iOS 27.2) en claro con `es-ES` y en oscuro con `ca-ES, en-US`: `image_*`, `pdf_*`, `web_*` y `webview_hardening` en verde en las dos pasadas (con los `skip:` motivados del contrato). `image_flow` falló una vez en claro por la espera del test (10 s a la preparación de la captura de 1080 × 20 000 con el simulador cargado): subida a 30 s y con fallo explícito; luego verde 3 de 3 |
 
 ## 2. Lo que depende de la plataforma
 
@@ -27,7 +27,7 @@
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
 | CA-001-09 Arranque en frío < 1 s | Medido en el emulador y el Xiaomi | Medido en el iPad 6.ª gen. (*release*/*profile*) → CA-028-06 | Disp | I8 | |
-| CA-001-11 Sin conexión | Nada nativo | Igual (sin red en el Swift) | IT en modo avión del simulador + Script (sin red en el Swift) | I8 | |
+| CA-001-11 Sin conexión | Nada nativo | Igual (sin red en el Swift) | IT en modo avión del simulador + Script (sin red en el Swift) | I8 | **Hecho** (T-028-22): ningún IT usa red externa (servidores locales del propio test) y la sección `network` del script pasa (sin red en el Swift). **No se prueba** el modo avión real (decisión del propietario, 2026-11-22: el simulador comparte la red del Mac); `web_flow` lleva su caso de modo avión con `skip:` como en Android |
 | CA-001-12 Vuelta desde segundo plano | Ciclo de vida de Flutter | Igual; con la vista que tapa de CA-028-12 | IT + Disp | I3 | |
 
 ### 002–006
@@ -87,7 +87,7 @@
 |---|---|---|---|---|---|
 | CA-010-05 Nombre de la app | `values`/`values-es` desde `identity.yaml` | Nombre del paquete por idioma desde `identity.yaml` → CA-028-08 | Script | I2 | **Hecho** (T-028-02: `{en,es,ca}.lproj/InfoPlist.strings` generadas, sección `l10n`, `gen_identity_test.dart`) |
 | CA-010-10 Voz del lector | TalkBack | VoiceOver | VO | I8 | |
-| (CA-024-04) `ca-ES, en-US` en español | `values-ca` | Correspondencia `ca` → español en lo del sistema → CA-028-08 | Script + simulador | I2 | Script **hecho** (T-028-02); **[Pendiente]** simulador con `ca-ES, en-US` en T-028-22 |
+| (CA-024-04) `ca-ES, en-US` en español | `values-ca` | Correspondencia `ca` → español en lo del sistema → CA-028-08 | Script + simulador | I2 | Script **hecho** (T-028-02); **Hecho** en el simulador (T-028-22) con `ca-ES, en-US`: bajo el icono «Una», la app abre en español; al volver de «English» a «Como el sistema» se quedaba en inglés (fallo de Dart de la 015, también en Android: Flutter no recalcula el idioma del sistema al cambiar la regla), arreglado pasando siempre `resolveAppLocale` (test `locale_change_test.dart`) |
 
 ### 011 Recientes
 
@@ -107,7 +107,7 @@
 | CA-013-01 Nombre de las bibliotecas de Android | Android | No aplica (ADR-0026 retiró la pantalla) | — | — | |
 | CA-014-06 Duración de la card | `una/a11y` («Tiempo para actuar») | **Diverge → CA-028-14** | D + XCT + VO | I3 | **Hecho** (T-028-09): `A11y.swift` da `recommendedMs: null`, servicio = VoiceOver o Control por botón y lector = VoiceOver; Dart sin cambios de lógica (`UndoDuration`: 10 s con servicio, 4 s sin él), 6 tests de Dart nuevos y 9 XCTest (`A11yTests`). **[Pendiente]** con VoiceOver real: T-028-23 |
 | CA-014-17/18/20 Foco, lector, teclado y switch | TalkBack, Switch Access | VoiceOver, Control por botón, teclado externo | VO + Disp | I8 | |
-| CA-014-13 La app muere | Proceso de Android | Igual (iOS mata la app en segundo plano) | IT | I8 | |
+| CA-014-13 La app muere | Proceso de Android | Igual (iOS mata la app en segundo plano) | IT | I8 | **Parcial** (T-028-22): Dart sin cambios (`undo_controller_test`, `home_router_test`, `attachment_janitor_*`) e IT `delete_flow` en el simulador. **[Pendiente]** que iOS mate la app de verdad con la card abierta, en el iPad (T-028-23) |
 | CA-015-03 a 04d Pantalla siempre activa | `keepOn` | `isIdleTimerDisabled` | XCT + Disp | I3 | **Hecho** (T-028-10): `Screen.swift` `keepOn` = `isIdleTimerDisabled` (solo un `true` exacto la enciende; en el principal), 9 XCTest (`ScreenTests`) y 4 tests de Dart del canal. **[Pendiente]** que se apague de verdad al bloquear/volver, en el iPad: T-028-23 (el simulador no lo enseña) |
 | CA-015-12a/b, 16 Abrir una web | `una/links` | `UIApplication.open` | XCT + Disp | I3 | **Hecho** (T-028-09): igual que CA-008-12 (mismo canal y mismo `Links.swift`); en el iPad (política, licencias y ayuda abiertas en Safari): T-028-23 |
 | CA-015-11 Voz con el idioma elegido (ADR-0023) | TalkBack | VoiceOver | VO | I8 | |
@@ -164,9 +164,9 @@
 | CA-020-22 a 26 MASTG, hallazgos, documentación | Pasada MASTG de Android | No aplica (el Swift lo revisa `security-reviewer` en I8; MASTG de iOS, en I9) | — | I9 | |
 | CA-020-09 a 21, 27, 28 | Código de Android y Dart | Lo de Dart vale igual; el Swift lo revisa `security-reviewer` | D + I8 | I8 | |
 | CA-021-01 a 05, 09, 10, 12 Arranque y barras | Temas de Android | CA-028-05 y 06 | Script + Disp | I2 | Script **Hecho** (T-028-03 y 04: secciones `plist`, `project` y `launch`; `LaunchBackground` = `paper`, sin oscuro ni imagen; visto en el simulador sin destello); **[Pendiente]** Disp en el iPad (T-028-23) |
-| CA-021-06/07 Igual en oscuro | Tema fijo | `UIUserInterfaceStyle = Light` → CA-028-05 | IT + Disp | I2 | |
+| CA-021-06/07 Igual en oscuro | Tema fijo | `UIUserInterfaceStyle = Light` → CA-028-05 | IT + Disp | I2 | **Parcial** (T-028-22): los 20 IT con el simulador en oscuro (19 verdes; `settings_flow`, por el idioma, verde tras el arreglo) y la app abierta en oscuro se ve en claro (`paper`, barra de estado oscura; captura). **[Pendiente]** Disp en el iPad (T-028-23) |
 | CA-021-08 Web en claro | `noDarkening` | Estilo claro en la `WKWebView` → CA-028-05/19 | IT + Disp | I5 || **Hecho** (T-028-16) en el simulador en oscuro: la página ve `prefers-color-scheme: light` (IT `webview_hardening`, `overrideUserInterfaceStyle = .light` leído de vuelta en XCTest); **[Pendiente]** Disp en el iPad (T-028-23) |
-| CA-021-11 Sin nada nuevo | — | Solo lo de esta spec | Script | I2 | |
+| CA-021-11 Sin nada nuevo | — | Solo lo de esta spec | Script | I2 | **Hecho** (T-028-22): `check-ios-parity.sh` con las 13 secciones activas, ninguna `PENDIENTE` |
 | 022 Auditoría | Xiaomi + emulador | La pasada de CA-028-21 | Disp | I8 | |
 | 023 Ficha y privacidad | Play | Fuera de alcance (I9); la política no cambia salvo ADR-0030 | — | I9 | |
 | CA-024-01 a 03 Iconos de las barras | Android | CA-028-05 | Disp | I2 | |
