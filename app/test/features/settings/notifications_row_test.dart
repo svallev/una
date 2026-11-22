@@ -26,6 +26,14 @@ const _privacyEs =
     'La notificación muestra tu tarea actual. Con el móvil bloqueado también '
     'se ve, salvo que ocultes el contenido sensible en los ajustes de tu móvil.';
 
+const _privacyIosEs =
+    'La notificación muestra tu tarea actual. Con el iPhone bloqueado, iOS '
+    'solo la enseña si permites las previsualizaciones siempre.';
+
+const _privacyIosEn =
+    'The notification shows your current task. When your iPhone is locked, '
+    'iOS only shows it if you always allow previews.';
+
 final _block = find.byType(NotificationsBlock);
 
 Finder _inBlock(Finder f) => find.descendant(of: _block, matching: f);
@@ -166,7 +174,7 @@ void main() {
       );
     });
 
-    testWidgets('CA-019-28: en la web o en iOS (plataforma no admitida) no hay '
+    testWidgets('CA-019-28: en la web (plataforma no admitida) no hay '
         'fila aunque el indicador esté encendido', (tester) async {
       await _open(tester, platform: false);
       expect(_block, findsNothing);
@@ -179,7 +187,23 @@ void main() {
     ) async {
       await _open(tester);
       expect(_block, findsOneWidget);
+      expect(_inBlock(find.text(_privacyEs)), findsOneWidget);
     });
+
+    testWidgets('CA-028-15 y 16: en iOS la fila también está, con su línea de '
+        'privacidad propia (settingsNotificationsPrivacyIos)', (tester) async {
+      await _open(tester);
+      expect(_block, findsOneWidget);
+      expect(_inBlock(find.text(_privacyIosEs)), findsOneWidget);
+      expect(find.text(_privacyEs), findsNothing);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+    testWidgets('CA-028-16: la línea de privacidad de iOS también en inglés', (
+      tester,
+    ) async {
+      await _open(tester, locale: const Locale('en'));
+      expect(_inBlock(find.text(_privacyIosEn)), findsOneWidget);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
   });
 
   group('CA-019-02: el interruptor', () {

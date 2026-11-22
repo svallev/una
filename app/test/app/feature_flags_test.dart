@@ -16,8 +16,8 @@ void main() {
     expect(container.read(notificationsAvailableProvider), isTrue);
   });
 
-  test('CA-019-28: solo Android admite las notificaciones; iOS y otras '
-      'plataformas, no', () {
+  test('CA-019-28 / CA-028-15: Android e iOS admiten las notificaciones; '
+      'otras plataformas, no', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     expect(
@@ -26,8 +26,11 @@ void main() {
       reason: 'los tests corren como Android por defecto',
     );
     expect(container.read(notificationsPlatformProvider), isTrue);
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    final ios = ProviderContainer();
+    addTearDown(ios.dispose);
+    expect(ios.read(notificationsPlatformProvider), isTrue, reason: 'iOS');
     for (final platform in [
-      TargetPlatform.iOS,
       TargetPlatform.macOS,
       TargetPlatform.linux,
       TargetPlatform.windows,

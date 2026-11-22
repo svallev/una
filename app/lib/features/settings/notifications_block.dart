@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -225,7 +226,8 @@ class NotificationsBlockState extends ConsumerState<NotificationsBlock> {
               semanticsKey: widget.semanticsKey,
               onToggle: widget.onToggle,
             ),
-            // La línea de privacidad: siempre, también apagado (CA-019-29).
+            // La línea de privacidad: siempre, también apagado (CA-019-29);
+            // en iOS, su versión propia (CA-028-16, Q-028-3).
             Padding(
               padding: const EdgeInsets.only(
                 left: _indent,
@@ -233,7 +235,12 @@ class NotificationsBlockState extends ConsumerState<NotificationsBlock> {
                 top: UnaSpace.xs,
                 bottom: UnaSpace.sm,
               ),
-              child: Text(l10n.settingsNotificationsPrivacy, style: _smallText),
+              child: Text(
+                defaultTargetPlatform == TargetPlatform.iOS
+                    ? l10n.settingsNotificationsPrivacyIos
+                    : l10n.settingsNotificationsPrivacy,
+                style: _smallText,
+              ),
             ),
             _Accordion(
               open: shownOn,

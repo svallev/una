@@ -135,25 +135,25 @@
 
 | CA | Android | iOS | Verificación | Fase | Resultado |
 |---|---|---|---|---|---|
-| CA-019-01 a 06 Fila, interruptor, opciones, persistencia | Dart | Igual | D | I6 | |
+| CA-019-01 a 06 Fila, interruptor, opciones, persistencia | Dart | Igual | D | I6 | **Hecho** (T-028-18): la fila se monta en iOS (`notifications_row_test`, variante iOS); el resto, los tests de la 019 sin cambios |
 | CA-019-07/08/08b/09 Permiso | `POST_NOTIFICATIONS` | `UNUserNotificationCenter.requestAuthorization` | XCT + Disp | I6 | |
-| CA-019-10/12 Horas y cambios al momento | Kotlin programa | Dart programa por adelantado | D + XCT | I6 | |
+| CA-019-10/12 Horas y cambios al momento | Kotlin programa | Dart programa por adelantado | D + XCT | I6 | **Hecho en Dart** (T-028-18): `notificationSlots` (08:55, 13:55, 18:55) e `IosNotificationGateway` (`configure` en cada cambio de ajuste); XCT del programa: T-028-19 |
 | CA-019-11 Ventana inexacta | Alarmas inexactas | **Diverge → CA-028-16** (hora exacta) | Disp | I6 | |
 | CA-019-13 Siguen solos | Receptores de arranque y reloj | **Diverge → CA-028-16** (los conserva iOS) | Disp | I6 | |
 | CA-019-14 Las perdidas | «Última hora atendida» | **Diverge → CA-028-16** (no aplica) | — | I6 | |
-| CA-019-15 Sin tareas, nada | Lee la BD al llegar | Cancelar todo al quedarse sin tareas | D | I6 | |
-| CA-019-16 La tarea al llegar y su etiqueta | `TaskLabel.kt` al llegar | **Diverge → CA-028-16** (Dart al reprogramar) | D | I6 | |
+| CA-019-15 Sin tareas, nada | Lee la BD al llegar | Cancelar todo al quedarse sin tareas | D | I6 | **Hecho en Dart** (T-028-18): sin tarea actual se manda `slots: []` al arrancar y al quitarse la última (`ios_notification_gateway_test`, `notifications_lifecycle_test`); lo nativo cancela: T-028-19 |
+| CA-019-16 La tarea al llegar y su etiqueta | `TaskLabel.kt` al llegar | **Diverge → CA-028-16** (Dart al reprogramar) | D | I6 | **Diverge → CA-028-16, hecho en Dart** (T-028-18): `NotificationLabel` con `labels.txt` (el de JUnit) y los casos de `TaskLabelTest.kt`; reprograma al cambiar la tarea actual (agrupado, 300 ms) |
 | CA-019-17 Bloqueado | Versión pública | **Diverge → CA-028-16** (previsualizaciones de iOS) | Disp | I6 | |
 | CA-019-18 Una a la vez | Identificador fijo | CA-028-16 (dos resultados posibles, Q-028-5) | Disp | I6 | |
 | CA-019-19a A la vista | `ForegroundTracker` | `willPresent` sin presentación | XCT + Disp | I6 | |
 | CA-019-19b Al abrir se quita | `cancelDelivered` | `removeAllDeliveredNotifications` | XCT | I6 | |
 | CA-019-20 Tocar | Intent con `nonce` | `didReceive` → `openCurrentTask` | XCT + Disp | I6 | |
-| CA-019-21 Idioma y voz | Recursos + `LocaleSpan` | Texto de Dart en el idioma de la app; voz de VoiceOver | D + VO | I6 | |
+| CA-019-21 Idioma y voz | Recursos + `LocaleSpan` | Texto de Dart en el idioma de la app; voz de VoiceOver | D + VO | I6 | **Hecho en Dart** (T-028-18): `notificationTextsFor` (Ajustes o la regla de la 010); voz con VoiceOver: T-028-23 |
 | CA-019-22 Canal | Un canal | **Diverge → CA-028-16** (sin canal) | — | I6 | |
-| CA-019-23 Sin copias del texto | Ninguna | **Diverge → CA-028-16** (excepción, ADR-0030) | D + XCT | I6 | |
+| CA-019-23 Sin copias del texto | Ninguna | **Diverge → CA-028-16** (excepción, ADR-0030) | D + XCT | I6 | **Diverge → CA-028-16** (T-028-18, Dart): el texto solo sale en `configure` con el ajuste encendido; errores sin texto; apagado no se lee la tarea; XCT de que el Swift no guarda nada: T-028-19 |
 | CA-019-24/25 Arranque, sin red | — | Igual | Disp + Script | I6 | |
-| CA-019-28 Plataformas | Sin fila en iOS | **Diverge → CA-028-15** (fila en iOS) | D | I6 | |
-| CA-019-29 Línea de privacidad | Texto Android | **Diverge → CA-028-16** (texto iOS) | D | I6 | |
+| CA-019-28 Plataformas | Sin fila en iOS | **Diverge → CA-028-15** (fila en iOS) | D | I6 | **Diverge → CA-028-15, hecho** (T-028-18): `notificationsPlatformProvider` también en iOS (los cuatro tests de `plan.md` §1.7 cambiados en su caso de iOS) |
+| CA-019-29 Línea de privacidad | Texto Android | **Diverge → CA-028-16** (texto iOS) | D | I6 | **Diverge → CA-028-16, hecho** (T-028-18): `settingsNotificationsPrivacyIos` en iOS, ES y EN (`notifications_row_test`) |
 | CA-019-30 Antes del primer desbloqueo | Versión genérica | **No aplica** (CA-028-16) | — | I6 | |
 
 ### 020–024 (proceso y Android)

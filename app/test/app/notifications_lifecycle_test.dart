@@ -1,4 +1,6 @@
+import 'package:app/app/providers.dart';
 import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/data/platform/ios_notification_gateway.dart';
 import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/notification_settings.dart';
 import 'package:app/domain/ports/notification_gateway.dart';
@@ -7,6 +9,7 @@ import 'package:app/features/editor/task_editor_screen.dart';
 import 'package:app/features/settings/settings_screen.dart';
 import 'package:app/features/task_list/task_list_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../features/settings/settings_harness.dart' show notificationsOverrides;
@@ -165,8 +168,8 @@ void main() {
     );
 
     testWidgets(
-      'CA-019-28: con el indicador apagado o fuera de Android no se llama '
-      'al canal',
+      'CA-019-28: con el indicador apagado o en la web (plataforma no '
+      'admitida) no se llama al canal',
       (tester) async {
         for (final (flag, platform) in [(false, true), (true, false)]) {
           final gateway = FakeNotificationGateway();
@@ -373,6 +376,120 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(CurrentTaskScreen), findsOneWidget);
       },
+    );
+  });
+  group('CA-028-15 y 16: iOS, con el programador de Dart', () {
+    const channel = MethodChannel('una/notifications');
+
+    /// Monta la app en iOS con el canal de verdad (sin el falso) y anota lo
+    /// que llega a lo nativo.
+    Future<(InMemoryTaskRepository, List<MethodCall>)> pumpIos(
+      WidgetTester tester, {
+      bool on = true,
+    }) async {
+      final calls = <MethodCall>[];
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return call.method == 'canNotify' ? true : null;
+      });
+      final repo = InMemoryTaskRepository();
+      await repo.setNotificationsOn(on);
+      await pumpUnaApp(
+        tester,
+        repo: repo,
+        tasks: const ['Llamar a Marta', 'Comprar pan'],
+        overrides: [notificationsFlagProvider.overrideWithValue(true)],
+      );
+      await tester.pump();
+      await tester.pump();
+      return (repo, calls);
+    }
+
+    List<List<String?>> bodiesSent(List<MethodCall> calls) => [
+      for (final c in calls)
+        if (c.method == 'configure')
+          [
+            for (final s
+                in (c.arguments as Map<Object?, Object?>)['slots']!
+                    as List<Object?>)
+              (s! as Map<Object?, Object?>)['body'] as String?,
+          ],
+    ];
+
+    Future<void> unmount(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox());
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      );
+    }
+
+    testWidgets(
+      'al arrancar, tras el primer fotograma, se programa la tarea actual '
+      'con su texto',
+      (tester) async {
+        final (_, calls) = await pumpIos(tester);
+        expect(calls.map((c) => c.method), [
+          'setForeground',
+          'cancelDelivered',
+          'configure',
+        ]);
+        expect(calls.last.arguments, {
+          'on': true,
+          'slots': [
+            {
+              'hour': 8,
+              'minute': 55,
+              'title': 'Tarea actual',
+              'body': 'Llamar a Marta',
+              'publicBody': 'Tienes una tarea pendiente.',
+            },
+          ],
+        });
+        await unmount(tester);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    );
+
+    testWidgets(
+      'al quitarse la tarea actual se reprograma con la siguiente; sin '
+      'tareas, la lista vacía',
+      (tester) async {
+        final (repo, calls) = await pumpIos(tester);
+        calls.clear();
+        await repo.remove('t0');
+        await tester.pump(IosNotificationGateway.defaultSettleDelay);
+        await tester.pump();
+        expect(bodiesSent(calls), [
+          ['Comprar pan'],
+        ]);
+        await repo.remove('t1');
+        await tester.pump(IosNotificationGateway.defaultSettleDelay);
+        await tester.pump();
+        expect(bodiesSent(calls), [
+          ['Comprar pan'],
+          <String?>[],
+        ]);
+        await unmount(tester);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    );
+
+    testWidgets(
+      'con el ajuste apagado, el arranque cancela y los cambios de tarea no '
+      'llaman',
+      (tester) async {
+        final (repo, calls) = await pumpIos(tester, on: false);
+        expect(calls.last.arguments, {'on': false, 'slots': <Object?>[]});
+        calls.clear();
+        await repo.remove('t0');
+        await tester.pump(IosNotificationGateway.defaultSettleDelay);
+        await tester.pump();
+        expect(calls, isEmpty);
+        await unmount(tester);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
     );
   });
 }

@@ -390,7 +390,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Bloque 1: Idioma y, debajo, Notificaciones (spec 019). Sin la
-            // fila (web, iOS o indicador apagado) el bloque queda como en la
+            // fila (web o indicador apagado) el bloque queda como en la
             // 017: ni separador ni hueco de más.
             _Block(
               top: UnaSpace.m + UnaSpace.xxs,
