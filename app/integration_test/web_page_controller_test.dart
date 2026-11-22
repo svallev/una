@@ -1,10 +1,13 @@
 // Estado de la página de la tarea web con la WebView real (spec 009, T-009-10,
 // ADR-0017). Sin red externa: la página de `una.test` se sirve con
 // `loadHtmlString` (origen https ficticio) y el resto son direcciones locales.
-// En el emulador (nunca en el móvil del propietario sin su permiso):
+// En el emulador (nunca en el móvil del propietario sin su permiso) o en el
+// simulador de iOS (spec 028, CA-028-19):
 //   flutter test integration_test/web_page_controller_test.dart -d emulator-5554
+//   flutter test integration_test/web_page_controller_test.dart -d <simulador>
 //
-// Se repite en cada actualización de `webview_flutter_android` (R-21).
+// Se repite en cada actualización de `webview_flutter_android` (R-21) y de
+// `webview_flutter_wkwebview`.
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,9 +18,12 @@ import 'package:app/domain/ports/clock.dart';
 import 'package:app/features/web/web_page_controller.dart';
 import 'package:app/features/web/webview_page_driver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
+
+import 'support/js_result.dart';
 
 const hardening = ChannelWebViewHardening();
 
@@ -38,11 +44,9 @@ class _LocalPageDriver extends WebViewPageDriver {
   @override
   Future<void> load(Uri url) {
     loaded.add(url);
+    // Como carga propia: en iOS, WebKit la pasa por `onNavigationRequest`.
     return url.host == 'una.test'
-        ? webView.loadHtmlString(
-            _pageOverride ?? _page,
-            baseUrl: url.toString(),
-          )
+        ? loadOwnHtml(_pageOverride ?? _page, url)
         : super.load(url);
   }
 }
@@ -81,6 +85,21 @@ class _HostState extends State<_Host> {
 
 final _drivers = <_LocalPageDriver>[];
 
+/// **Diferencia aceptada en iOS** (propietario, 2026-11-22;
+/// `docs/ios/channel-contract.md` §3, «Diferencias aceptadas»): el
+/// `location.href` del `<head>` hacia `http://` llega en WebKit **después** de
+/// que la página termine de cargar, así que se bloquea en silencio (la página
+/// se queda) en lugar de avisar «no segura» como en Android. No cambian la
+/// regla del controlador ni Android.
+final _iosHeadToHttpDiffers = Platform.isIOS;
+
+/// **Diferencia aceptada en iOS** (propietario, 2026-11-22;
+/// `docs/ios/channel-contract.md` §3, «Diferencias aceptadas»): un formulario
+/// POST pasa por `onNavigationRequest` (en Android no) y se bloquea como un
+/// enlace, sin aviso: la página se queda, sin recargar la dirección guardada
+/// ni avisar «sigue saliendo».
+final _iosPostDiffers = Platform.isIOS;
+
 Future<WebPageController> _mount(WidgetTester tester, String address) async {
   final controller = WebPageController(
     address: Uri.parse(address),
@@ -110,6 +129,15 @@ Future<void> _until(
     await tester.pump(const Duration(milliseconds: 100));
   }
 }
+
+/// Mata el proceso de la página de [driver] como solo puede hacerlo una
+/// prueba: en Android, `chrome://crash`; en iOS, el gancho de depuración del
+/// Swift (`debugKillContentProcess`, solo en Debug).
+Future<void> _crash(WebViewPageDriver driver) => Platform.isIOS
+    ? const MethodChannel(
+        'una/webview',
+      ).invokeMethod<void>('debugKillContentProcess', {'id': driver.nativeId})
+    : driver.load(Uri.parse('chrome://crash'));
 
 bool _loaded(WebPageController c) =>
     c.value.status == WebPageStatus.shown && !c.value.pageLoading;
@@ -146,20 +174,35 @@ void main() {
     final c = await _mount(tester, 'https://una.test/programa');
     await _until(tester, () => _loaded(c));
     final web = _drivers.last.webView;
-    Future<String> js(String script) async =>
-        '${await web.runJavaScriptReturningResult(script)}';
+    Future<String> js(String script) => jsText(web, script);
     await web.runJavaScript('window.una = 7;');
     await web.runJavaScript("location.href = 'https://una.test/otra';");
     await tester.pump(const Duration(seconds: 2));
     // Sigue el mismo documento, en la misma dirección.
     expect(await js('window.una'), '7');
-    expect(await js('location.href'), '"https://una.test/programa"');
+    expect(await js('location.href'), 'https://una.test/programa');
     expect(c.value.status, WebPageStatus.shown);
     await web.runJavaScript("location.href = '#b';");
     await tester.pump(const Duration(seconds: 1));
-    expect(await js('location.href'), '"https://una.test/programa#b"');
+    expect(await js('location.href'), 'https://una.test/programa#b');
     expect(await js('window.una'), '7');
     expect(c.value.status, WebPageStatus.shown);
+    await _unmount(tester);
+  });
+
+  testWidgets('CA-009-11, CA-028-19: vista la página, que ella misma pida '
+      'otra vez la dirección guardada no la vuelve a cargar (solo la carga de '
+      'la app pasa sin preguntar, y una sola vez)', (tester) async {
+    final c = await _mount(tester, 'https://una.test/programa');
+    await _until(tester, () => _loaded(c));
+    final web = _drivers.last.webView;
+    Future<String> js(String script) => jsText(web, script);
+    await web.runJavaScript('window.una = 7;');
+    await web.runJavaScript("location.href = 'https://una.test/programa';");
+    await tester.pump(const Duration(seconds: 2));
+    expect(await js('window.una'), '7');
+    expect(c.value.status, WebPageStatus.shown);
+    expect(_drivers.last.loaded, [Uri.parse('https://una.test/programa')]);
     await _unmount(tester);
   });
 
@@ -183,8 +226,7 @@ void main() {
     final hosts = <String>{};
     c.addListener(() => hosts.add(c.value.pageUrl.host));
     final web = _drivers.last.webView;
-    Future<String> js(String script) async =>
-        '${await web.runJavaScriptReturningResult(script)}';
+    Future<String> js(String script) => jsText(web, script);
     await web.runJavaScript('window.una = 7;');
     for (final id in ['mismo', 'otro', 'tel', 'mail', 'nueva']) {
       await web.runJavaScript("document.getElementById('$id').click();");
@@ -193,12 +235,12 @@ void main() {
     await web.runJavaScript("document.getElementById('get').submit();");
     await tester.pump(const Duration(seconds: 2));
     expect(await js('window.una'), '7');
-    expect(await js('location.href'), '"https://una.test/programa"');
+    expect(await js('location.href'), 'https://una.test/programa');
     expect(c.value.status, WebPageStatus.shown);
     expect(_drivers.last.loaded, [Uri.parse('https://una.test/programa')]);
     await web.runJavaScript("document.getElementById('ancla').click();");
     await tester.pump(const Duration(seconds: 1));
-    expect(await js('location.href'), '"https://una.test/programa#b"');
+    expect(await js('location.href'), 'https://una.test/programa#b');
     expect(await js('window.scrollY > 1000'), 'true');
     expect(await js('window.una'), '7');
     expect(_drivers.last.loaded, hasLength(1));
@@ -228,7 +270,7 @@ void main() {
     await _until(tester, () => c.value.status == WebPageStatus.insecure);
     expect(_drivers.last.loaded, [Uri.parse('https://una.test/')]);
     await _unmount(tester);
-  });
+  }, skip: _iosHeadToHttpDiffers);
 
   testWidgets('CA-009-11 (T-009-12): un formulario POST (a otra página o a '
       'otro dominio) vuelve a cargar la dirección guardada, sin aviso y sin '
@@ -257,8 +299,8 @@ void main() {
       expect(c.value.status, WebPageStatus.shown, reason: form);
       expect(c.value.pageUrl, Uri.parse('https://una.test/programa'));
       expect(
-        '${await _drivers.last.webView.runJavaScriptReturningResult('location.href')}',
-        '"https://una.test/programa"',
+        await jsText(_drivers.last.webView, 'location.href'),
+        'https://una.test/programa',
       );
     }
     expect(
@@ -282,7 +324,7 @@ void main() {
     expect(_drivers.last.loaded, hasLength(loads));
     expect(hosts, {'una.test'});
     await _unmount(tester);
-  });
+  }, skip: _iosPostDiffers);
 
   testWidgets('CA-009-08/09: sin servidor, https es "sin conexión" y http '
       '(intentado como https) es "sin conexión segura"', (tester) async {
@@ -380,7 +422,7 @@ void main() {
       final oldId = old.nativeId!;
       final generation = c.value.viewGeneration;
       // Solo la prueba carga esto: la página no puede (CA-009-11).
-      await old.load(Uri.parse('chrome://crash'));
+      await _crash(old as WebViewPageDriver);
       await _until(tester, () => c.value.viewGeneration != generation);
       expect(identical(c.driver, old), isFalse);
       await _until(tester, () => _loaded(c));

@@ -32,6 +32,8 @@
 		A0280000000000000000002F /* PickedItemsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000002E /* PickedItemsTests.swift */; };
 		A0280000000000000000002D /* ImagesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000002C /* ImagesTests.swift */; };
 		A02800000000000000000033 /* SanitizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000032 /* SanitizerTests.swift */; };
+		A02800000000000000000035 /* WebViewHardening.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000034 /* WebViewHardening.swift */; };
+		A02800000000000000000037 /* WebViewHardeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000036 /* WebViewHardeningTests.swift */; };
 		A0280000000000000000002B /* PickedItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0280000000000000000002A /* PickedItems.swift */; };
 		A02800000000000000000029 /* Images.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000028 /* Images.swift */; };
 		A02800000000000000000031 /* ImageSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000030 /* ImageSanitizer.swift */; };
@@ -84,6 +86,8 @@
 		A0280000000000000000002E /* PickedItemsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickedItemsTests.swift; sourceTree = "<group>"; };
 		A0280000000000000000002C /* ImagesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagesTests.swift; sourceTree = "<group>"; };
 		A02800000000000000000032 /* SanitizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SanitizerTests.swift; sourceTree = "<group>"; };
+		A02800000000000000000034 /* WebViewHardening.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewHardening.swift; sourceTree = "<group>"; };
+		A02800000000000000000036 /* WebViewHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewHardeningTests.swift; sourceTree = "<group>"; };
 		A0280000000000000000002A /* PickedItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickedItems.swift; sourceTree = "<group>"; };
 		A02800000000000000000028 /* Images.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Images.swift; sourceTree = "<group>"; };
 		A02800000000000000000030 /* ImageSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSanitizer.swift; sourceTree = "<group>"; };
@@ -125,6 +129,7 @@
 				A0280000000000000000002E /* PickedItemsTests.swift */,
 				A0280000000000000000002C /* ImagesTests.swift */,
 				A02800000000000000000032 /* SanitizerTests.swift */,
+				A02800000000000000000036 /* WebViewHardeningTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -181,6 +186,7 @@
 				A0280000000000000000002A /* PickedItems.swift */,
 				A02800000000000000000028 /* Images.swift */,
 				A02800000000000000000030 /* ImageSanitizer.swift */,
+				A02800000000000000000034 /* WebViewHardening.swift */,
 				A02800000000000000000014 /* PrivacyInfo.xcprivacy */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -345,6 +351,7 @@
 				A0280000000000000000002F /* PickedItemsTests.swift in Sources */,
 				A0280000000000000000002D /* ImagesTests.swift in Sources */,
 				A02800000000000000000033 /* SanitizerTests.swift in Sources */,
+				A02800000000000000000037 /* WebViewHardeningTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -364,6 +371,7 @@
 				A0280000000000000000002B /* PickedItems.swift in Sources */,
 				A02800000000000000000029 /* Images.swift in Sources */,
 				A02800000000000000000031 /* ImageSanitizer.swift in Sources */,
+				A02800000000000000000035 /* WebViewHardening.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

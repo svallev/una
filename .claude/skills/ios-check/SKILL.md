@@ -8,22 +8,21 @@ argument-hint: "[todos | <archivo_it>...] [--device <id>]"
 
 Receta fija, **desde `app/`** (sin FVM: `flutter`/`dart` del sistema). No se deriva ningún comando por tarea: si falta algo, se arregla aquí.
 
-Argumentos: sin ellos, ningún test de integración; `todos` = los 19 de `app/integration_test/` (los `*_perf_test` llevan su `skip:` en el simulador, `plan.md` §1.3); una lista de archivos (`settings_flow_test.dart …`) = solo esos. `--device <id>` elige otro simulador.
+Argumentos: sin ellos, ningún test de integración; `todos` = los 20 de `app/integration_test/` (los `*_perf_test` llevan su `skip:` en el simulador, `plan.md` §1.3); una lista de archivos (`settings_flow_test.dart …`) = solo esos. `--device <id>` elige otro simulador.
 
 ## 0. El simulador
 
 - El primero que salga de `xcrun simctl list devices available` con «iPhone» (hoy iPhone 18 Pro, iOS 27.2):
   `SIM=$(xcrun simctl list devices available | grep -m1 'iPhone' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')`
 - Arrancarlo si está apagado: `xcrun simctl boot "$SIM"` (si ya está arrancado, el error «current state: Booted» es inofensivo) y `xcrun simctl bootstatus "$SIM" -b`.
-- **Preparación una vez por simulador (certificado de pruebas):** los tests web con TLS local (T-028-17) necesitan que el simulador confíe en el certificado **desechable** de `integration_test/fixtures/selfsigned_tls.dart` (no es un secreto: solo vale para esos tests). Se genera el PEM en el directorio temporal y se añade como raíz de confianza:
+- **El certificado de pruebas NO debe ser de confianza en el simulador** (T-028-17): `web_flow_test` comprueba que el certificado autofirmado de `integration_test/fixtures/selfsigned_tls.dart` **se rechaza** (CA-009-10), y los IT de redirecciones (`web_redirect_test`) van en http y no lo necesitan. Si alguna vez se añadió con `simctl keychain add-root-cert` (esta receta lo pedía hasta T-028-17), `simctl keychain reset` **no** lo quita: se borra del almacén de confianza con el simulador apagado:
   ```
-  PEM="$TMPDIR/una-test-selfsigned.pem"
-  { echo '-----BEGIN CERTIFICATE-----'
-    awk '/_certBody = \[/{f=1;next} f&&/\];/{exit} f' integration_test/fixtures/selfsigned_tls.dart | sed -E "s/^ *'(.*)',?$/\1/"
-    echo '-----END CERTIFICATE-----'; } > "$PEM"
-  xcrun simctl keychain "$SIM" add-root-cert "$PEM"
+  xcrun simctl shutdown "$SIM"
+  sqlite3 ~/Library/Developer/CoreSimulator/Devices/$SIM/data/private/var/protected/trustd/private/TrustStore.sqlite3 \
+    "delete from tsettings where hex(sha256)='5E2C9482F58A903160334493E92D79F96F8BA34070A05F45E4F26C7E79C11746';"
+  xcrun simctl boot "$SIM"
   ```
-  Es idempotente. Solo hace falta para los IT de la web (`web_flow_test`, y los de redirecciones desde la T-028-17); sin ellos se puede omitir.
+  (la suma es la del certificado de pruebas en DER: `openssl x509 -outform DER | shasum -a 256`).
 
 ## 1. Pasos
 
@@ -31,7 +30,7 @@ Argumentos: sin ellos, ningún test de integración; `todos` = los 19 de `app/in
 |---|---|---|
 | 1 | Compilar para el simulador | `flutter build ios --simulator --debug` |
 | 2 | XCTest | `xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner -destination "platform=iOS Simulator,id=$SIM"` |
-| 3 | Integración (solo si se pidieron) | `flutter test integration_test/<archivo> -d "$SIM"` (uno por llamada; `todos` = los 19) |
+| 3 | Integración (solo si se pidieron) | `flutter test integration_test/<archivo> -d "$SIM"` (uno por llamada; `todos` = los 20) |
 | 4 | Paridad | `bash ../tools/check-ios-parity.sh` |
 | 5 | Dart | `dart format lib test integration_test --set-exit-if-changed`, `flutter analyze --fatal-infos` y `flutter test` |
 

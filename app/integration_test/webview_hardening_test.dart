@@ -1,9 +1,12 @@
 // Endurecimiento nativo de la WebView de la tarea web (spec 009, T-009-09,
-// ADR-0017). Sin red externa: páginas `data:` y `loadHtmlString`. En el
-// emulador (nunca en el móvil del propietario sin su permiso):
+// ADR-0017; en iOS, spec 028, CA-028-19). Sin red externa: páginas `data:` y
+// `loadHtmlString`. En el emulador (nunca en el móvil del propietario sin su
+// permiso) o en el simulador de iOS:
 //   flutter test integration_test/webview_hardening_test.dart -d emulator-5554
+//   flutter test integration_test/webview_hardening_test.dart -d <simulador>
 //
-// Se repite en cada actualización de `webview_flutter_android` (R-21).
+// Se repite en cada actualización de `webview_flutter_android` (R-21) y de
+// `webview_flutter_wkwebview`.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -11,11 +14,13 @@ import 'dart:io';
 import 'package:app/data/web/web_data_janitor.dart';
 import 'package:app/data/web/webview_hardening.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 const hardening = ChannelWebViewHardening();
 
@@ -25,6 +30,22 @@ const _page = '''
 <body><h1>Una</h1></body></html>
 ''';
 const _origin = 'https://una.test/';
+
+/// Un campo de archivo arriba a la izquierda, su etiqueta y un botón; apunta
+/// en `window.seen` cada clic que ve la página.
+const _filePage = '''
+<!doctype html><html><head><meta name="viewport" content="width=device-width">
+<script>
+window.seen = [];
+document.addEventListener('click', function (e) {
+  window.seen.push(e.target.id || e.target.tagName);
+}, true);
+</script></head><body style="margin:0">
+<input type="file" id="archivo" style="display:block;width:300px;height:150px">
+<label for="archivo" id="etiqueta">Elegir</label>
+<button id="boton">Botón</button>
+</body></html>
+''';
 
 /// Una WebView montada, con su delegado y lo que ha recibido.
 class _Harness {
@@ -38,8 +59,15 @@ class _Harness {
   final finished = <String>[];
   final requests = <String>[];
 
-  int get id =>
-      (controller.platform as AndroidWebViewController).webViewIdentifier;
+  /// En iOS, las veces que el paquete avisó del fallo del proceso de la página
+  /// (el error `webContentProcessTerminated`, contrato §3).
+  var contentProcessGone = 0;
+
+  int get id => switch (controller.platform) {
+    final AndroidWebViewController android => android.webViewIdentifier,
+    final WebKitWebViewController webKit => webKit.webViewIdentifier,
+    final other => throw UnsupportedError('$other'),
+  };
 
   Future<void> setDelegate() => controller.setNavigationDelegate(
     NavigationDelegate(
@@ -48,9 +76,22 @@ class _Harness {
         return NavigationDecision.navigate;
       },
       onPageFinished: finished.add,
+      onWebResourceError: (e) {
+        if (e.errorType == WebResourceErrorType.webContentProcessTerminated) {
+          contentProcessGone++;
+        }
+      },
     ),
   );
 }
+
+/// Mata el proceso de la página de [h] como solo puede hacerlo una prueba: en
+/// Android, `chrome://crash`; en iOS, el gancho de depuración del Swift
+/// (`debugKillContentProcess`, solo en Debug).
+Future<void> _crash(_Harness h) => Platform.isIOS
+    ? const MethodChannel('una/webview')
+          .invokeMethod<void>('debugKillContentProcess', {'id': h.id})
+    : h.controller.loadRequest(Uri.parse('chrome://crash'));
 
 Future<void> _mount(WidgetTester tester, _Harness h) async {
   await tester.pumpWidget(
@@ -84,11 +125,27 @@ Future<void> _loadPage(WidgetTester tester, _Harness h) async {
 }
 
 /// Resultado de [script] como texto, sin las comillas de JSON.
+/// En iOS un `null` de JavaScript llega como `<null>` (`NSNull`): se da como en
+/// Android, `null`.
 Future<String> _js(_Harness h, String script) async {
-  final result = '${await h.controller.runJavaScriptReturningResult(script)}';
+  final raw = '${await h.controller.runJavaScriptReturningResult(script)}';
+  final result = raw == '<null>' ? 'null' : raw;
   return result.length >= 2 && result.startsWith('"') && result.endsWith('"')
       ? result.substring(1, result.length - 1)
       : result;
+}
+
+/// Una dirección IPv4 del dispositivo que no es de bucle local, o null.
+Future<InternetAddress?> _nonLoopbackIPv4() async {
+  final interfaces = await NetworkInterface.list(
+    type: InternetAddressType.IPv4,
+  );
+  for (final i in interfaces) {
+    for (final a in i.addresses) {
+      if (!a.isLoopback && !a.isLinkLocal) return a;
+    }
+  }
+  return null;
 }
 
 void main() {
@@ -122,11 +179,111 @@ void main() {
     await _loadPage(tester, h);
     expect(h.finished.last, _origin);
 
-    // R-21: un setNavigationDelegate posterior quita el envoltorio; la
-    // comprobación lo detecta y harden lo vuelve a poner.
+    // R-21: un setNavigationDelegate posterior quita el envoltorio (en iOS,
+    // el `NavigationWatcher`, contrato §3); la comprobación lo detecta y
+    // harden lo vuelve a poner.
     await h.setDelegate();
     expect((await hardening.state(h.id))!['wrapped'], isFalse);
     expect(await hardening.harden(h.id), isTrue);
+    expect((await hardening.state(h.id))!['wrapped'], isTrue);
+  });
+
+  testWidgets('CA-009-13, CA-028-19: un <input type=file> no abre el selector '
+      'de archivos (ni con un toque, ni con click(), ni con showPicker())', (
+    tester,
+  ) async {
+    final h = _Harness(12);
+    await h.setDelegate();
+    await _mount(tester, h);
+    expect(await hardening.harden(h.id), isTrue);
+    final before = h.finished.length;
+    await h.controller.loadHtmlString(_filePage, baseUrl: _origin);
+    await _until(tester, () => h.finished.length > before);
+    // Un toque real sobre el campo (en Android el selector ya lo corta
+    // `setOnShowFileSelector` en Dart; en iOS, el script de `harden`).
+    await tester.tapAt(const Offset(100, 60));
+    await tester.pump(const Duration(milliseconds: 800));
+    await h.controller.runJavaScript(
+      "document.getElementById('archivo').click();"
+      "document.getElementById('etiqueta').click();"
+      "document.getElementById('boton').click();"
+      "try { document.getElementById('archivo').showPicker();"
+      " window.picker = 'abierto'; } catch (e) { window.picker = e.name; }",
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    if (Platform.isIOS) {
+      // La página no ve ningún clic en el campo de archivo (ni el del toque ni
+      // el que la etiqueta le pasa); los de la etiqueta y el botón, sí.
+      expect(await _js(h, "window.seen.join(',')"), 'etiqueta,boton');
+      expect(await _js(h, 'window.picker'), 'NotAllowedError');
+    }
+    // Sigue la página a la vista, sin el selector encima.
+    expect(find.byType(WebViewWidget), findsOneWidget);
+    expect(await _js(h, 'document.visibilityState'), 'visible');
+  });
+
+  testWidgets('CA-021-08, CA-028-05: con el sistema en oscuro, la página se ve '
+      'en su versión clara', (tester) async {
+    final h = _Harness(10);
+    await h.setDelegate();
+    await _mount(tester, h);
+    expect(await hardening.harden(h.id), isTrue);
+    await _loadPage(tester, h);
+    // Lo comprueba con el sistema en claro o en oscuro: la página nunca ve
+    // `prefers-color-scheme: dark` (el simulador se pone en oscuro con
+    // `xcrun simctl ui <id> appearance dark`).
+    expect(
+      await _js(h, "matchMedia('(prefers-color-scheme: dark)').matches"),
+      anyOf('false', '0'),
+    );
+    expect(
+      await _js(h, "matchMedia('(prefers-color-scheme: light)').matches"),
+      anyOf('true', '1'),
+    );
+  });
+
+  testWidgets('CA-009-13: una página https no carga contenido por http '
+      '(contenido mixto)', (tester) async {
+    // Un servidor en el propio dispositivo apunta lo que le llega: una
+    // petición en claro empieza por el método («GET »). En una dirección que
+    // no es de bucle local: `http://127.0.0.1` cuenta como origen de confianza
+    // y no es contenido mixto (comprobado en el simulador de iOS).
+    final address = await _nonLoopbackIPv4();
+    if (address == null) {
+      markTestSkipped('sin una interfaz de red que no sea de bucle local');
+      return;
+    }
+    final server = await ServerSocket.bind(address, 0);
+    final plain = <String>[];
+    var connections = 0;
+    server.listen((socket) {
+      connections++;
+      socket.listen((data) {
+        final head = String.fromCharCodes(data.take(4));
+        if (head == 'GET ' || head == 'POST') plain.add(head);
+        socket.destroy();
+      }, onError: (_) {});
+    });
+    addTearDown(server.close);
+    final h = _Harness(11);
+    await h.setDelegate();
+    await _mount(tester, h);
+    expect(await hardening.harden(h.id), isTrue);
+    final before = h.finished.length;
+    final port = server.port;
+    await h.controller.loadHtmlString(
+      '<!doctype html><html><body><h1>Una</h1>'
+      '<img src="http://${address.address}:$port/a.png">'
+      '<script src="http://${address.address}:$port/b.js"></script>'
+      '</body></html>',
+      baseUrl: _origin,
+    );
+    await _until(tester, () => h.finished.length > before);
+    final end = DateTime.now().add(const Duration(seconds: 3));
+    while (DateTime.now().isBefore(end)) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(plain, isEmpty, reason: 'conexiones: $connections');
   });
 
   testWidgets('CL-009-4: una descarga no descarga nada y avisa', (
@@ -214,19 +371,25 @@ void main() {
       expect(await hardening.harden(h.id), isTrue);
       await _loadPage(tester, h);
       events.clear();
-      await h.controller.loadRequest(Uri.parse('chrome://crash'));
-      await _until(
-        tester,
-        () => events.whereType<WebRenderProcessGone>().any(
+      await _crash(h);
+      if (Platform.isIOS) {
+        // En iOS lo avisa el delegado del paquete, no el canal (contrato §3).
+        await _until(tester, () => h.contentProcessGone > 0);
+        expect(events.whereType<WebRenderProcessGone>(), isEmpty);
+      } else {
+        await _until(
+          tester,
+          () => events.whereType<WebRenderProcessGone>().any(
+            (e) => e.webViewId == h.id,
+          ),
+        );
+        // Todas las WebView de la app comparten el proceso de la página:
+        // avisan todas las que sigan vivas (en la app solo hay una).
+        final gone = events.whereType<WebRenderProcessGone>().firstWhere(
           (e) => e.webViewId == h.id,
-        ),
-      );
-      // Todas las WebView de la app comparten el proceso de la página: avisan
-      // todas las que sigan vivas (en la app solo hay una).
-      final gone = events.whereType<WebRenderProcessGone>().firstWhere(
-        (e) => e.webViewId == h.id,
-      );
-      expect(gone.crashed, isTrue);
+        );
+        expect(gone.crashed, isTrue);
+      }
       // La app sigue: se destruye la vieja y se monta otra. Solo **después**
       // del aviso (que tarda unos segundos): una WebView creada antes, aún sin
       // envoltorio, comparte el proceso que muere y Android cierra la app

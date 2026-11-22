@@ -26,7 +26,8 @@ enum UnaChannels {
     links: Links = Links(),
     a11y: A11y = A11y(),
     screen: Screen = Screen(),
-    images: Images = Images()
+    images: Images = Images(),
+    webView: WebViewHardening = WebViewHardening()
   ) -> [FlutterMethodChannel] {
     return names.map { name in
       let channel = FlutterMethodChannel(name: name, binaryMessenger: messenger)
@@ -39,6 +40,12 @@ enum UnaChannels {
         channel.setMethodCallHandler { call, result in screen.handle(call, result: result) }
       case "una/images":
         channel.setMethodCallHandler { call, result in images.handle(call, result: result) }
+      case "una/webview":
+        // Los avisos de lo nativo (`mainFrameRequest`, `downloadBlocked`) salen por el mismo canal.
+        webView.send = { [weak channel] method, arguments in
+          channel?.invokeMethod(method, arguments: arguments)
+        }
+        channel.setMethodCallHandler { call, result in webView.handle(call, result: result) }
       default:
         channel.setMethodCallHandler { _, result in result(FlutterMethodNotImplemented) }
       }
