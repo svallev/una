@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -12,6 +13,7 @@ import '../data/import/native_image_importer.dart';
 import '../data/links/native_link_opener.dart';
 import '../data/links/new_tab.dart';
 import '../data/platform/accessibility_timeouts.dart';
+import '../data/platform/ios_notification_gateway.dart';
 import '../data/platform/notification_gateway.dart';
 import '../data/web/web_data_janitor.dart';
 import '../data/web/webview_hardening.dart';
@@ -29,6 +31,7 @@ import '../domain/ports/notification_gateway.dart';
 import '../domain/ports/pdf_importer.dart';
 import '../domain/ports/task_repository.dart';
 import '../domain/services/attachment_janitor.dart';
+import '../domain/services/notification_content.dart';
 import '../domain/usecases/complete_current_task.dart';
 import '../domain/usecases/create_task.dart';
 import '../domain/usecases/delete_current_task.dart';
@@ -38,7 +41,9 @@ import '../domain/usecases/import_image.dart';
 import '../domain/usecases/import_pdf.dart';
 import '../domain/usecases/reorder_task.dart';
 import '../domain/usecases/restore_deleted_task.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'feature_flags.dart';
+import 'locale_resolution.dart';
 
 /// Se sobrescriben en `main` (y en los tests) con los repositorios ya abiertos.
 final taskRepositoryProvider = Provider<TaskRepository>(
@@ -153,11 +158,14 @@ final notificationsFlagProvider = Provider<bool>(
   (ref) => FeatureFlags.notifications,
 );
 
-/// ¿La plataforma admite las notificaciones locales de la app? Solo Android
-/// (CA-019-28): no hay permiso ni programador en la web de pruebas (ADR-0010)
-/// ni en iOS (D17).
+/// ¿La plataforma admite las notificaciones locales de la app? Android
+/// (CA-019-28) e iOS (CA-028-15, que enmienda CA-019-28): no hay permiso ni
+/// programador en la web de pruebas (ADR-0010).
 final notificationsPlatformProvider = Provider<bool>(
-  (ref) => !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
+  (ref) =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS),
 );
 
 /// ¿Se ofrece la fila de Notificaciones en Ajustes? Plataforma admitida **y**
@@ -169,16 +177,45 @@ final notificationsAvailableProvider = Provider<bool>(
 );
 
 /// El canal de las notificaciones de la tarea actual (spec 019, plan §3.5):
-/// `una/notifications` en Android; en la web de pruebas y en iOS (D17), uno
-/// sin efecto. Se crea al primer uso (nunca antes del primer fotograma, P2).
+/// `una/notifications` en Android; en iOS, el mismo canal con el programador
+/// de Dart, que escribe los avisos y los reprograma al cambiar la tarea actual
+/// (CA-028-16, ADR-0030); en la web de pruebas, uno sin efecto. Se crea al
+/// primer uso (nunca antes del primer fotograma, P2).
 final notificationGatewayProvider = Provider<NotificationGateway>((ref) {
   if (!ref.watch(notificationsPlatformProvider)) {
     return const UnsupportedNotificationGateway();
+  }
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    final tasks = ref.watch(taskRepositoryProvider);
+    final ios = IosNotificationGateway(
+      readCurrentTask: tasks.currentTask,
+      currentTaskChanges: tasks.watchCurrentTask(),
+      textsFor: notificationTextsFor,
+    );
+    ref.onDispose(ios.dispose);
+    return ios;
   }
   final gateway = ChannelNotificationGateway();
   ref.onDispose(gateway.dispose);
   return gateway;
 });
+
+/// Los textos fijos de la notificación de iOS en el idioma de la app
+/// (CA-019-21): el elegido en Ajustes o, con «Como el sistema», el que
+/// resuelve la 010 con los idiomas del sistema **de ahora**.
+NotificationTexts notificationTextsFor(LocaleChoice choice) {
+  final l10n = lookupAppLocalizations(
+    localeOfChoice(choice) ??
+        resolveAppLocale(WidgetsBinding.instance.platformDispatcher.locales),
+  );
+  return NotificationTexts(
+    title: l10n.notificationTitle,
+    publicBody: l10n.notificationPublic,
+    photo: l10n.attachmentPhoto,
+    image: l10n.attachmentImage,
+    pdf: l10n.attachmentPdf,
+  );
+}
 
 /// Estado leído antes del primer fotograma (P2): se inyecta para no pintar un "cargando".
 final bootStateProvider = Provider<BootState>(

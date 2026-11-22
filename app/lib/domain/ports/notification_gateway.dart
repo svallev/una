@@ -11,7 +11,7 @@ typedef PermissionResult = ({bool granted, bool dialogShown});
 
 /// Fallo del canal de notificaciones. **No lleva el texto del error** de la
 /// plataforma ni nada de la tarea (CA-019-23): quien lo recibe solo sabe que
-/// falló y, con [unsupported], que esta plataforma no tiene canal (web, iOS).
+/// falló y, con [unsupported], que esta plataforma no tiene canal (la web).
 class NotificationGatewayException implements Exception {
   const NotificationGatewayException({this.unsupported = false});
 
@@ -25,7 +25,9 @@ class NotificationGatewayException implements Exception {
 
 /// Puerto de las notificaciones de la tarea actual (spec 019, plan §3.5): el
 /// canal `una/notifications` con lo nativo, que programa las alarmas, lee la
-/// tarea y muestra el aviso con la app cerrada. Dart solo decide y pide.
+/// tarea y muestra el aviso con la app cerrada. Dart solo decide y pide. En
+/// iOS (spec 028, ADR-0030) la implementación calcula además el texto y lo
+/// programa por adelantado (`IosNotificationGateway`).
 ///
 /// Ningún método recibe ni devuelve texto de tareas (CA-019-23).
 abstract interface class NotificationGateway {

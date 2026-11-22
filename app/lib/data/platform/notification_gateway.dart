@@ -7,7 +7,8 @@ import '../../domain/entities/notification_settings.dart';
 import '../../domain/ports/notification_gateway.dart';
 
 /// [NotificationGateway] sobre el canal `una/notifications`
-/// (`NotificationsChannel.kt`, spec 019, plan §3.5).
+/// (`NotificationsChannel.kt`, spec 019, plan §3.5; en iOS, `Notifications.swift`
+/// con `IosNotificationGateway`, spec 028).
 ///
 /// Cualquier fallo del canal se traduce sin su texto (CA-019-23): el mensaje
 /// de un `PlatformException` puede arrastrar contenido y no se lee ni se guarda.
@@ -18,7 +19,10 @@ class ChannelNotificationGateway implements NotificationGateway {
     _channel.setMethodCallHandler(_fromNative);
   }
 
-  static const _channel = MethodChannel('una/notifications');
+  /// El canal, compartido con `IosNotificationGateway` (que cambia solo
+  /// `configure`, `channel-contract.md` §4).
+  static const channel = MethodChannel('una/notifications');
+  static const _channel = channel;
 
   final StreamController<void> _openRequests =
       StreamController<void>.broadcast();
@@ -120,8 +124,9 @@ class ChannelNotificationGateway implements NotificationGateway {
   }
 }
 
-/// Sin canal (web de pruebas e iOS, D17, CA-019-28): no hay permiso ni
-/// programador. El bloque de Notificaciones ni siquiera se monta.
+/// Sin canal (web de pruebas, CA-019-28; desde la 028, iOS tiene el suyo,
+/// `IosNotificationGateway`): no hay permiso ni programador. El bloque de
+/// Notificaciones ni siquiera se monta.
 class UnsupportedNotificationGateway implements NotificationGateway {
   const UnsupportedNotificationGateway();
 

@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:app/app/providers.dart';
+import 'package:app/data/in_memory_task_repository.dart';
+import 'package:app/data/platform/ios_notification_gateway.dart';
 import 'package:app/data/platform/notification_gateway.dart';
 import 'package:app/domain/entities/locale_choice.dart';
 import 'package:app/domain/entities/notification_settings.dart';
 import 'package:app/domain/ports/notification_gateway.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -291,7 +294,7 @@ void main() {
     });
   });
 
-  group('CA-019-28: web e iOS', () {
+  group('CA-019-28: la web (CA-028-15: iOS tiene su programador)', () {
     test('UnsupportedNotificationGateway: nada permitido, nada que '
         'programar, sin eventos', () async {
       const unsupported = UnsupportedNotificationGateway();
@@ -316,7 +319,8 @@ void main() {
       expect((caught! as NotificationGatewayException).unsupported, isTrue);
     });
 
-    test('el proveedor da el canal en Android y el no soportado fuera', () {
+    test('el proveedor da el canal en Android, el programador de Dart en '
+        'iOS (CA-028-15) y el no soportado fuera', () {
       final android = ProviderContainer(
         overrides: [notificationsPlatformProvider.overrideWithValue(true)],
       );
@@ -332,6 +336,19 @@ void main() {
       expect(
         other.read(notificationGatewayProvider),
         isA<UnsupportedNotificationGateway>(),
+      );
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final ios = ProviderContainer(
+        overrides: [
+          taskRepositoryProvider.overrideWithValue(InMemoryTaskRepository()),
+        ],
+      );
+      addTearDown(ios.dispose);
+      expect(ios.read(notificationsPlatformProvider), isTrue);
+      expect(
+        ios.read(notificationGatewayProvider),
+        isA<IosNotificationGateway>(),
       );
     });
   });
