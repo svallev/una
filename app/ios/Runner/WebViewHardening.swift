@@ -209,11 +209,14 @@ final class WebViewHardening {
 /// `RenderGoneClient` en Android): le reenvía todos sus métodos (`forwardingTarget`) y solo añade,
 /// en el principal y **antes** de pasarle cada decisión (el paquete la manda a Dart más tarde, con
 /// `DispatchQueue.main.async`, así que el aviso llega antes a Dart):
-/// - `mainFrameRequest` antes de cada petición del marco principal (T-009-12). **[Pendiente R-3]**
-///   siempre con `redirect: false`: WebKit avisa de la redirección del servidor
+/// - `mainFrameRequest` antes de cada petición del marco principal (T-009-12), con `redirect: true`
+///   si llega mientras la navegación provisional del marco principal sigue abierta (entre
+///   `didStartProvisionalNavigation` y `didCommit`/`didFailProvisionalNavigation`): opción (a') del
+///   contrato §3 (R-3, propietario, 2026-11-22). WebKit avisa de la redirección del servidor
 ///   (`didReceiveServerRedirectForProvisionalNavigation`) **después** de pedir la decisión sobre la
-///   dirección nueva (comprobado en el simulador, T-028-17), así que la opción (a) del contrato §3 no
-///   sirve tal cual; hasta que el propietario decida, las redirecciones del servidor no se siguen.
+///   dirección nueva, así que la opción (a) no servía; la propiedad `_isRedirect` es privada. Una
+///   navegación nueva de la página (enlace, `location.href`) cancela antes la provisional (-999), así
+///   que llega como `false`. Lo revisa `security-reviewer` en I8 (T-028-24; ADR-0018).
 /// - `downloadBlocked`: una respuesta del marco principal que no es una página (CL-009-4) se cancela
 ///   sin descargar nada ni mostrarla ([isDownload]).
 ///
@@ -250,13 +253,32 @@ final class NavigationWatcher: NSObject, WKNavigationDelegate {
     return super.forwardingTarget(for: aSelector)
   }
 
+  /// Si la navegación provisional del marco principal sigue abierta: una decisión del marco
+  /// principal que llega entonces es una redirección del servidor (opción (a'), ver la clase).
+  private(set) var provisionalOpen = false
+
   func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-    // Se guarda para `didCommit` (ver la clase).
+    provisionalOpen = true
+    // Al paquete se le pasa en `didCommit` (ver la clase).
   }
 
   func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+    provisionalOpen = false
     inner?.webView?(webView, didStartProvisionalNavigation: navigation)
     inner?.webView?(webView, didCommit: navigation)
+  }
+
+  func webView(
+    _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
+    withError error: Error
+  ) {
+    provisionalOpen = false
+    inner?.webView?(webView, didFailProvisionalNavigation: navigation, withError: error)
+  }
+
+  func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+    provisionalOpen = false
+    inner?.webViewWebContentProcessDidTerminate?(webView)
   }
 
   func webView(
@@ -264,7 +286,7 @@ final class NavigationWatcher: NSObject, WKNavigationDelegate {
     decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
   ) {
     // Sin marco de destino es una ventana nueva: el paquete la da como de otro marco.
-    if navigationAction.targetFrame?.isMainFrame == true { onMainFrameRequest(false) }
+    if navigationAction.targetFrame?.isMainFrame == true { onMainFrameRequest(provisionalOpen) }
     if let inner {
       inner.webView?(webView, decidePolicyFor: navigationAction, decisionHandler: decisionHandler)
         ?? decisionHandler(.allow)

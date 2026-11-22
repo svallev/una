@@ -85,17 +85,20 @@ class _HostState extends State<_Host> {
 
 final _drivers = <_LocalPageDriver>[];
 
-/// **[Pendiente, pregunta de T-028-17]** En iOS, el `location.href` del
-/// `<head>` hacia `http://` llega (en WebKit) **después** de que la página
-/// termine de cargar, así que no es «no segura» sino que se bloquea en
-/// silencio (la página se queda); en Android llega antes. Hasta que el
-/// propietario decida si se acepta o se cambia la regla.
-final _iosHeadToHttpPending = Platform.isIOS;
+/// **Diferencia aceptada en iOS** (propietario, 2026-11-22;
+/// `docs/ios/channel-contract.md` §3, «Diferencias aceptadas»): el
+/// `location.href` del `<head>` hacia `http://` llega en WebKit **después** de
+/// que la página termine de cargar, así que se bloquea en silencio (la página
+/// se queda) en lugar de avisar «no segura» como en Android. No cambian la
+/// regla del controlador ni Android.
+final _iosHeadToHttpDiffers = Platform.isIOS;
 
-/// **[Pendiente, pregunta de T-028-17]** En iOS, un formulario POST pasa por
-/// `onNavigationRequest` (en Android no) y se bloquea como un enlace: la página
-/// se queda, sin recargar la dirección guardada ni avisar «sigue saliendo».
-final _iosPostPending = Platform.isIOS;
+/// **Diferencia aceptada en iOS** (propietario, 2026-11-22;
+/// `docs/ios/channel-contract.md` §3, «Diferencias aceptadas»): un formulario
+/// POST pasa por `onNavigationRequest` (en Android no) y se bloquea como un
+/// enlace, sin aviso: la página se queda, sin recargar la dirección guardada
+/// ni avisar «sigue saliendo».
+final _iosPostDiffers = Platform.isIOS;
 
 Future<WebPageController> _mount(WidgetTester tester, String address) async {
   final controller = WebPageController(
@@ -267,7 +270,7 @@ void main() {
     await _until(tester, () => c.value.status == WebPageStatus.insecure);
     expect(_drivers.last.loaded, [Uri.parse('https://una.test/')]);
     await _unmount(tester);
-  }, skip: _iosHeadToHttpPending);
+  }, skip: _iosHeadToHttpDiffers);
 
   testWidgets('CA-009-11 (T-009-12): un formulario POST (a otra página o a '
       'otro dominio) vuelve a cargar la dirección guardada, sin aviso y sin '
@@ -321,7 +324,7 @@ void main() {
     expect(_drivers.last.loaded, hasLength(loads));
     expect(hosts, {'una.test'});
     await _unmount(tester);
-  }, skip: _iosPostPending);
+  }, skip: _iosPostDiffers);
 
   testWidgets('CA-009-08/09: sin servidor, https es "sin conexión" y http '
       '(intentado como https) es "sin conexión segura"', (tester) async {

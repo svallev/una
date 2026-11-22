@@ -28,11 +28,9 @@ import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 const hardening = ChannelWebViewHardening();
 
-/// **[Pendiente R-3, T-028-17]** En iOS, WebKit avisa de la redirección del
-/// servidor después de pedir la decisión sobre la dirección nueva, así que la
-/// opción (a) del contrato §3 no da el aviso a tiempo: hasta que el propietario
-/// decida, `mainFrameRequest` va siempre con `redirect: false`.
-final _redirectPending = Platform.isIOS;
+// En iOS, `redirect` es «decisión del marco principal con la navegación
+// provisional abierta» (opción (a') del contrato §3, R-3; propietario,
+// 2026-11-22): estos casos son los que la sostienen.
 
 /// Una WebView endurecida que deja pasar todo y apunta, por cada petición del
 /// marco principal, su ruta y si lo nativo la dio como redirección.
@@ -119,9 +117,13 @@ Future<void> _wait(WidgetTester tester, Duration d) async {
 }
 
 /// Las peticiones apuntadas, sin la de la propia carga de la app (en Android
-/// `loadUrl` no pasa por `onNavigationRequest`; en iOS sí, sin redirección).
-List<(String, bool)> _withoutOwnLoad(_Harness h, String own) =>
-    h.requests.first == (own, false) ? h.requests.sublist(1) : h.requests;
+/// `loadUrl` no pasa por `onNavigationRequest`; en iOS sí, y siempre sin
+/// redirección: se comprueba).
+List<(String, bool)> _withoutOwnLoad(_Harness h, String own) {
+  if (!Platform.isIOS) return h.requests;
+  expect(h.requests.first, (own, false), reason: 'carga propia');
+  return h.requests.sublist(1);
+}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -174,7 +176,7 @@ void main() {
     expect(h.requests, [('http:/d', false)]);
     // Sin avisos que se queden colgando para la petición siguiente.
     expect(hardening.takeServerRedirect(h.id), isFalse);
-  }, skip: _redirectPending);
+  });
 
   testWidgets('CA-028-19, CA-009-09: una redirección del servidor de http a '
       'https llega como redirección (el certificado de pruebas se rechaza '
@@ -194,7 +196,7 @@ void main() {
     );
     expect(_withoutOwnLoad(h, 'http:/x'), [('https:/seguro', true)]);
     await _wait(tester, const Duration(seconds: 1));
-  }, skip: _redirectPending);
+  });
 
   testWidgets('CA-028-19, T-009-12: un location.href de la página antes de '
       'terminar de cargar no es una redirección del servidor', (tester) async {
@@ -216,6 +218,60 @@ void main() {
       reason: 'fuera',
     );
     expect(_withoutOwnLoad(h, 'http:/head'), [('http:/fuera', false)]);
+  });
+
+  testWidgets('CA-028-19, T-009-12: un location.href de la página mientras '
+      'se carga despacio (un recurso o la dirección siguiente) no es una '
+      'redirección del servidor', (tester) async {
+    final slow = <Completer<void>>[];
+    final server = await _serve((r, port) async {
+      switch (r.uri.path) {
+        case '/lenta':
+          _html(r, '<h1>Lenta</h1><img src="/imagen-lenta">');
+        case '/imagen-lenta' || '/despacio':
+          final c = Completer<void>();
+          slow.add(c);
+          await c.future.timeout(const Duration(seconds: 20), onTimeout: () {});
+          _html(r, '<h1>Despacio</h1>');
+        default:
+          _html(r, '<h1>Otra</h1>');
+      }
+    });
+    addTearDown(() {
+      for (final c in slow) {
+        if (!c.isCompleted) c.complete();
+      }
+    });
+    final h = _Harness();
+    await h.mount(tester);
+    await h.controller.loadRequest(
+      Uri.parse('http://127.0.0.1:${server.port}/lenta'),
+    );
+    // La página ya se ve, pero su imagen no termina de llegar.
+    await _until(tester, () => slow.isNotEmpty, reason: 'imagen');
+    await _wait(tester, const Duration(milliseconds: 500));
+    expect(h.finished, isEmpty, reason: 'sigue cargando');
+    await h.controller.runJavaScript('location.href = "/otra"');
+    await _until(
+      tester,
+      () => h.finished.any((u) => u.endsWith('/otra')),
+      reason: 'otra',
+    );
+    expect(_withoutOwnLoad(h, 'http:/lenta'), [('http:/otra', false)]);
+
+    // Con la navegación siguiente aún sin respuesta (provisional abierta),
+    // la página cambia de dirección: tampoco es una redirección.
+    h.requests.clear();
+    await h.controller.runJavaScript('location.href = "/despacio"');
+    await _until(tester, () => slow.length == 2, reason: 'despacio');
+    await h.controller.runJavaScript('location.href = "/final"');
+    await _until(
+      tester,
+      () => h.finished.any((u) => u.endsWith('/final')),
+      reason: 'final',
+    );
+    expect(h.requests, [('http:/despacio', false), ('http:/final', false)]);
+    expect(hardening.takeServerRedirect(h.id), isFalse);
   });
 
   for (final (name, type, disposition) in [

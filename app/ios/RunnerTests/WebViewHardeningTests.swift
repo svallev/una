@@ -19,6 +19,31 @@ private final class StartRecorder: NSObject, WKNavigationDelegate {
   }
 }
 
+/// Un marco de mentira (principal o no).
+private final class FakeFrame: WKFrameInfo {
+  private let main: Bool
+  init(main: Bool) {
+    self.main = main
+    super.init()
+  }
+  override var isMainFrame: Bool { main }
+}
+
+/// Una decisión de navegación de mentira hacia un marco principal o no. WebKit no deja liberar un
+/// `WKFrameInfo` o un `WKNavigationAction` creados fuera de él (su `dealloc` falla con SIGTRAP):
+/// se guardan hasta que termina el proceso de los tests.
+private final class FakeAction: WKNavigationAction {
+  private static var keepAlive: [NSObject] = []
+  private let frame: WKFrameInfo
+  init(mainFrame: Bool) {
+    frame = FakeFrame(main: mainFrame)
+    super.init()
+    Self.keepAlive += [frame, self]
+  }
+  override var targetFrame: WKFrameInfo? { frame }
+  override var request: URLRequest { URLRequest(url: URL(string: "https://una.test/")!) }
+}
+
 /// `una/webview` (contrato §3; espejo de `WebViewHardening.kt`; CA-009-13, CA-021-08, ADR-0017 y
 /// CA-028-19). Trabaja con una `WKWebView` real del simulador: lo que `harden` pone se lee de vuelta
 /// de la propia vista, y `clearData` vacía el almacén de datos web de verdad.
@@ -284,7 +309,7 @@ class WebViewHardeningTests: XCTestCase {
 
   func testMainFrameRequestBeforeEachMainFrameDecisionAndThePageStillLoads() {
     // T-009-12: `mainFrameRequest {id, redirect}` antes de cada decisión del marco principal.
-    // [Pendiente R-3] `redirect` siempre `false`.
+    // La carga de la app no es una redirección (R-3, opción (a')).
     let (hardening, view) = make()
     var sent: [(String, [String: Any])] = []
     hardening.send = { sent.append(($0, $1)) }
@@ -297,6 +322,57 @@ class WebViewHardeningTests: XCTestCase {
     XCTAssertEqual(sent.map(\.0), ["mainFrameRequest"])
     XCTAssertEqual(sent.first?.1["id"] as? Int64, id)
     XCTAssertEqual(sent.first?.1["redirect"] as? Bool, false)
+  }
+
+  func testRedirectIsADecisionWhileTheProvisionalNavigationIsOpen() {
+    // R-3, opción (a') (propietario, 2026-11-22): `redirect: true` solo si la decisión del marco
+    // principal llega con la navegación provisional abierta; confirmarla, que falle o que muera el
+    // proceso de la página la cierran. Un marco que no es el principal no avisa.
+    var sent: [Bool] = []
+    let inner = TerminationDelegate()
+    let watcher = NavigationWatcher(
+      inner: inner, onMainFrameRequest: { sent.append($0) }, onDownloadBlocked: {})
+    let delegate = watcher as WKNavigationDelegate
+    let view = WKWebView()
+    func decide(mainFrame: Bool = true) {
+      delegate.webView?(
+        view, decidePolicyFor: FakeAction(mainFrame: mainFrame), decisionHandler: { _ in })
+    }
+    decide()
+    delegate.webView?(view, didStartProvisionalNavigation: nil)
+    decide()
+    decide()
+    decide(mainFrame: false)
+    delegate.webView?(view, didCommit: nil)
+    decide()
+    delegate.webView?(view, didStartProvisionalNavigation: nil)
+    delegate.webView?(
+      view, didFailProvisionalNavigation: nil, withError: URLError(.cancelled))
+    decide()
+    delegate.webView?(view, didStartProvisionalNavigation: nil)
+    delegate.webViewWebContentProcessDidTerminate?(view)
+    XCTAssertTrue(inner.terminated, "el paquete sigue oyendo el fallo del proceso")
+    decide()
+    XCTAssertEqual(sent, [false, true, true, false, false, false])
+  }
+
+  func testOwnLoadsAreNotRedirectsInARealView() {
+    // La carga de la app (`loadHTMLString`, `load`) llega sin navegación provisional abierta.
+    let (hardening, view) = make()
+    var sent: [Bool] = []
+    hardening.send = { method, arguments in
+      if method == "mainFrameRequest" { sent.append(arguments["redirect"] as? Bool ?? true) }
+    }
+    view.navigationDelegate = TerminationDelegate()
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    for page in ["a", "b"] {
+      let shown = expectation(
+        for: NSPredicate { _, _ in view.url?.path == "/\(page)" && !view.isLoading },
+        evaluatedWith: nil)
+      view.loadHTMLString("<h1>\(page)</h1>", baseURL: URL(string: "https://una.test/\(page)"))
+      wait(for: [shown], timeout: 10)
+    }
+    XCTAssertEqual(sent, [false, false])
   }
 
   func testAResponseThatIsNotAPageIsCancelledWithDownloadBlocked() {
