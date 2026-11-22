@@ -144,7 +144,7 @@
 | CA-019-15 Sin tareas, nada | Lee la BD al llegar | Cancelar todo al quedarse sin tareas | D | I6 | **Hecho en Dart** (T-028-18): sin tarea actual se manda `slots: []` al arrancar y al quitarse la última (`ios_notification_gateway_test`, `notifications_lifecycle_test`); lo nativo cancela: T-028-19 |
 | CA-019-16 La tarea al llegar y su etiqueta | `TaskLabel.kt` al llegar | **Diverge → CA-028-16** (Dart al reprogramar) | D | I6 | **Diverge → CA-028-16, hecho en Dart** (T-028-18): `NotificationLabel` con `labels.txt` (el de JUnit) y los casos de `TaskLabelTest.kt`; reprograma al cambiar la tarea actual (agrupado, 300 ms) |
 | CA-019-17 Bloqueado | Versión pública | **Diverge → CA-028-16** (previsualizaciones de iOS) | Disp | I6 | |
-| CA-019-18 Una a la vez | Identificador fijo | CA-028-16 (dos resultados posibles, Q-028-5) | Disp | I6 | |
+| CA-019-18 Una a la vez | Identificador fijo | CA-028-16 (dos resultados posibles, Q-028-5) | Disp | I6 | **Pasa** (iPad, T-028-20, 2026-11-22): 3 avisos sin abrir la app, en el centro solo la última; `dispositivo.md` |
 | CA-019-19a A la vista | `ForegroundTracker` | `willPresent` sin presentación | XCT + Disp | I6 | |
 | CA-019-19b Al abrir se quita | `cancelDelivered` | `removeAllDeliveredNotifications` | XCT | I6 | |
 | CA-019-20 Tocar | Intent con `nonce` | `didReceive` → `openCurrentTask` | XCT + Disp | I6 | |
