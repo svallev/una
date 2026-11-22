@@ -383,9 +383,14 @@ void main() {
       'cancel-me',
       maxBytes: 1 << 40,
     );
+    // La espera se engancha antes de cancelar: si la copia falla antes de
+    // que vuelva `cancel` (carrera entre las dos respuestas del canal), un
+    // `Future` sin oyente acabaría como error no capturado y el arnés
+    // cerraría el test antes de tiempo («inTest: is not true»).
+    final cancelled = expectLater(future, throwsA(isA<ImageImportCancelled>()));
     await Future<void>.delayed(const Duration(milliseconds: 100));
     await importer.cancel('cancel-me');
-    await expectLater(future, throwsA(isA<ImageImportCancelled>()));
+    await cancelled;
     expect(_staging('cancel-me').existsSync(), isFalse);
   });
 }
