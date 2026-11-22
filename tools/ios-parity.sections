@@ -1,4 +1,4 @@
-# Secciones de tools/check-ios-parity.sh que ya pasan (una por línea; cada tarea de la 028 añade las suyas, T-028-21 las completa).
+# Secciones de tools/check-ios-parity.sh que ya pasan (una por línea). Desde T-028-21 están **todas**: el trabajo `ios` de la CI lo exige y un test de Dart (`check_ios_parity_test.dart`) falla si falta una o si el script conoce otra.
 network
 l10n
 project

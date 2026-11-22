@@ -78,13 +78,16 @@ jobs:
       - run: flutter pub get --enforce-lockfile
       - name: Licencias de las dependencias (threat-model §5)
         run: dart run tool/check_licenses.dart
-      - name: Código generado al día (drift, l10n, identidad, tokens, textos nativos, esquema)
+      - name: Código generado al día (drift, l10n, identidad, tokens, textos nativos, iconos, esquema)
         run: |
           dart run build_runner build --delete-conflicting-outputs
           flutter gen-l10n
           dart run tool/gen_identity.dart --check
           dart run tool/gen_tokens.dart --check
           dart run tool/gen_android_strings.dart --check
+          # Los iconos de Android, Play, web, notificación e iOS (spec 018 y 028, CA-028-07): solo Dart
+          # puro y se compara por píxeles, así que corre igual en Linux.
+          dart run tool/gen_icons.dart --check android play web notification ios
           git diff --exit-code || (echo "::error::Hay código generado sin actualizar" && exit 1)
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze --fatal-infos
@@ -184,19 +187,61 @@ jobs:
         run: bash tools/check-size.sh
 
   ios:
-    name: iOS · build sin firmar
+    name: iOS · build, XCTest y paridad
+    # Spec 028, CA-028-20 (plan §1.8): además de compilar sin firmar, comprueba la paridad con Android
+    # (`tools/check-ios-parity.sh` con todas sus secciones), fija los binarios nativos de iOS
+    # (`check-pdfium.sh --ios`) y pasa XCTest del Swift en un simulador del ejecutor. Los tests de
+    # integración del simulador no van aquí (son demasiados para el tiempo de una PR): están aparte, a
+    # mano, en `ios-integration.yml`. Sin firma, sin credenciales y sin secretos.
     needs: detect
     if: needs.detect.outputs.build == 'true'
     runs-on: macos-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Paridad con Android (proyecto, Info.plist, idiomas, arranque, icono, privacidad, red y canales)
+        # Primero y sin Flutter: es lo más barato y falla rápido. `tee` y no una sustitución de proceso,
+        # para ver la salida aunque falle; `grep` sin `-q` (con `pipefail`, `-q` da falsos negativos por
+        # SIGPIPE). Una sección PENDIENTE no es un verde: aquí tienen que estar todas.
+        run: |
+          set -euo pipefail
+          bash tools/check-ios-parity.sh | tee "$RUNNER_TEMP/ios-parity.txt"
+          if grep '^PENDIENTE' "$RUNNER_TEMP/ios-parity.txt"; then
+            echo "::error::Hay secciones de tools/check-ios-parity.sh sin activar en tools/ios-parity.sections"
+            exit 1
+          fi
       - run: bash tools/install-flutter.sh && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
-      - working-directory: app
+      - name: Compilar sin firmar
+        working-directory: app
         run: |
           flutter pub get --enforce-lockfile
           flutter build ios --debug --no-codesign
+      - name: PDFium y SQLite de iOS fijados (tools/ios-binaries.lock, CA-028-17, threat-model §5)
+        # Tras compilar: el XCFramework de PDFium que deja Swift Package Manager y las descargas de
+        # SQLite del hook se comparan con el lock. `--require-built`: sin binario compilado, falla.
+        working-directory: app
+        run: bash ../tools/check-pdfium.sh --ios --require-built
+      - name: XCTest del Swift en el simulador
+        # Receta de `/ios-check` (pasos 1 y 2): compilar para el simulador y `xcodebuild test` con el
+        # esquema `Runner` (lleva `RunnerTests`). Se elige el primer iPhone que traiga la imagen del
+        # ejecutor; sin ninguno, falla.
+        working-directory: app
+        run: |
+          set -euo pipefail
+          xcrun simctl list devices available > "$RUNNER_TEMP/simulators.txt"
+          SIM="$(sed -nE '/iPhone/{s/.*\(([0-9A-F-]{36})\).*/\1/p;q;}' "$RUNNER_TEMP/simulators.txt")"
+          if [ -z "$SIM" ]; then
+            echo "::error::El ejecutor no tiene ningún simulador de iPhone"
+            cat "$RUNNER_TEMP/simulators.txt"
+            exit 1
+          fi
+          echo "Simulador: $SIM"
+          xcrun simctl bootstatus "$SIM" -b
+          flutter build ios --simulator --debug
+          xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner \
+            -destination "platform=iOS Simulator,id=$SIM"
 
   store:
     name: Ficha

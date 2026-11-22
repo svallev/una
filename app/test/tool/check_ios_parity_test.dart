@@ -1192,6 +1192,57 @@ void main() {
   });
 
   group('CA-028-20: el repositorio de verdad', () {
+    // T-028-21: con la CI del trabajo `ios` todas las secciones están activas. Un nombre nuevo en el
+    // script sin su línea en `ios-parity.sections` (o sin esta lista) falla aquí.
+    final allSections = <String>{
+      'network',
+      'l10n',
+      'project',
+      'plist',
+      'launch',
+      'icon',
+      'privacy',
+      for (final name in _channels.keys) 'channel:$name',
+    };
+
+    List<String> activeNames() =>
+        File('../tools/ios-parity.sections')
+            .readAsLinesSync()
+            .map((l) => l.split('#').first.trim())
+            .where((l) => l.isNotEmpty)
+            .toList();
+
+    test('CA-028-20: tools/ios-parity.sections tiene la lista completa de secciones', () {
+      final names = activeNames();
+      expect(names.toSet(), allSections);
+      expect(names.length, names.toSet().length, reason: 'hay una repetida');
+    });
+
+    test(
+      'CA-028-20: el script no conoce más secciones que las de la lista',
+      () {
+        // Una sección desconocida da la salida 2 y lista las que hay («hay: a, b, …»).
+        final r = Process.runSync('bash', [_script, '--section', 'no-existe']);
+        expect(r.exitCode, 2);
+        final m = RegExp(r'\(hay: ([^)]*)\)').firstMatch('${r.stderr}');
+        expect(m, isNotNull, reason: '${r.stderr}');
+        expect(m!.group(1)!.split(', ').toSet(), allSections);
+      },
+    );
+
+    test('CA-028-20: sin argumentos no deja ninguna sección PENDIENTE', () {
+      final r = Process.runSync('bash', [_script]);
+      expect(r.exitCode, 0, reason: '${r.stdout}\n${r.stderr}');
+      expect('${r.stdout}', isNot(contains('PENDIENTE')));
+      for (final name in allSections) {
+        expect(
+          '${r.stdout}',
+          contains(RegExp('^OK +${RegExp.escape(name)}\$', multiLine: true)),
+          reason: name,
+        );
+      }
+    });
+
     test('CA-028-20: las secciones activas del repositorio pasan', () {
       final r = Process.runSync('bash', [_script]);
       expect(r.exitCode, 0, reason: '${r.stdout}\n${r.stderr}');
