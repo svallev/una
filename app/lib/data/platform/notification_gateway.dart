@@ -7,7 +7,8 @@ import '../../domain/entities/notification_settings.dart';
 import '../../domain/ports/notification_gateway.dart';
 
 /// [NotificationGateway] sobre el canal `una/notifications`
-/// (`NotificationsChannel.kt`, spec 019, plan §3.5).
+/// (`NotificationsChannel.kt`, spec 019, plan §3.5; en iOS, `Notifications.swift`
+/// con `IosNotificationGateway`, spec 028).
 ///
 /// Cualquier fallo del canal se traduce sin su texto (CA-019-23): el mensaje
 /// de un `PlatformException` puede arrastrar contenido y no se lee ni se guarda.

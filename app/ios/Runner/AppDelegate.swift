@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 import WebKit
 import webview_flutter_wkwebview
 
@@ -7,11 +8,15 @@ import webview_flutter_wkwebview
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   /// Canales de plataforma (`UnaChannels`); viven tanto como el motor.
   private var channels: [FlutterMethodChannel] = []
+  /// `una/notifications`: también es el delegado del centro de notificaciones (contrato §4).
+  private let notifications = Notifications()
 
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Antes de que iOS entregue el toque que abrió la app (contrato §4).
+    UNUserNotificationCenter.current().delegate = notifications
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -25,7 +30,8 @@ import webview_flutter_wkwebview
         forIdentifier: id, withPluginRegistrar: registrar)
     })
     channels = UnaChannels.register(
-      messenger: engineBridge.applicationRegistrar.messenger(), webView: webView)
+      messenger: engineBridge.applicationRegistrar.messenger(), webView: webView,
+      notifications: notifications)
     // CA-028-18: `attachments/` creada y fuera de la copia de seguridad antes del primer fotograma.
     DataAtRest.prepareAttachmentsAtLaunch()
   }

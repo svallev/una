@@ -4,7 +4,7 @@ import Flutter
 ///
 /// Cada canal responde `FlutterMethodNotImplemented` hasta que la tarea de su fase le ponga el
 /// manejador real (`una/links` y `una/a11y` en T-028-09, `una/screen` en T-028-10, `una/images` en
-/// T-028-13 y 14; `una/webview` y `una/notifications`, en I5 e I6). Dart ya sabe tratar
+/// T-028-13 y 14; `una/webview` en I5 y `una/notifications` en T-028-19). Dart ya sabe tratar
 /// «no implementado» como «no disponible» (`MissingPluginException`), así que un canal vacío nunca
 /// rompe la app.
 enum UnaChannels {
@@ -27,7 +27,8 @@ enum UnaChannels {
     a11y: A11y = A11y(),
     screen: Screen = Screen(),
     images: Images = Images(),
-    webView: WebViewHardening = WebViewHardening()
+    webView: WebViewHardening = WebViewHardening(),
+    notifications: Notifications = Notifications()
   ) -> [FlutterMethodChannel] {
     return names.map { name in
       let channel = FlutterMethodChannel(name: name, binaryMessenger: messenger)
@@ -46,6 +47,14 @@ enum UnaChannels {
           channel?.invokeMethod(method, arguments: arguments)
         }
         channel.setMethodCallHandler { call, result in webView.handle(call, result: result) }
+      case "una/notifications":
+        // `openCurrentTask` sale por el mismo canal al tocar un aviso propio.
+        notifications.send = { [weak channel] method, arguments in
+          channel?.invokeMethod(method, arguments: arguments)
+        }
+        channel.setMethodCallHandler { call, result in
+          notifications.handle(call, result: result)
+        }
       default:
         channel.setMethodCallHandler { _, result in result(FlutterMethodNotImplemented) }
       }

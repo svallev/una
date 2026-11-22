@@ -9,9 +9,17 @@ final class RecordingMessenger: NSObject, FlutterBinaryMessenger {
   var handlers: [String: FlutterBinaryMessageHandler] = [:]
   private var next: FlutterBinaryMessengerConnection = 1
 
-  func send(onChannel channel: String, message: Data?) {}
+  /// Lo que lo nativo manda a Dart, ya decodificado (canal y llamada).
+  var sent: [(channel: String, call: FlutterMethodCall)] = []
 
-  func send(onChannel channel: String, message: Data?, binaryReply callback: FlutterBinaryReply?) {}
+  func send(onChannel channel: String, message: Data?) {
+    send(onChannel: channel, message: message, binaryReply: nil)
+  }
+
+  func send(onChannel channel: String, message: Data?, binaryReply callback: FlutterBinaryReply?) {
+    guard let message else { return }
+    sent.append((channel, FlutterStandardMethodCodec.sharedInstance().decodeMethodCall(message)))
+  }
 
   func setMessageHandlerOnChannel(
     _ channel: String, binaryMessageHandler handler: FlutterBinaryMessageHandler?
@@ -63,7 +71,7 @@ class RunnerTests: XCTestCase {
 
   /// Los canales que ya tienen su manejador (cada tarea de canal añade el suyo, T-028-09 a 19).
   private let implemented: Set<String> = [
-    "una/links", "una/a11y", "una/screen", "una/images", "una/webview",
+    "una/links", "una/a11y", "una/screen", "una/images", "una/webview", "una/notifications",
   ]
 
   func testEveryChannelAnswersNotImplementedUntilItsPhase() {
