@@ -1,0 +1,68 @@
+name: iOS · integración en el simulador
+
+# Los tests de integración (`app/integration_test/`) en el simulador de iOS (spec 028, CA-028-02 y 20,
+# plan §1.8). Aparte de la CI de las PR (`ci.yml`, trabajo `ios`): son 20 archivos, uno por llamada
+# (medido el 2026-11-22 en un Mac local ya compilado: 830 s los 20; un ejecutor de GitHub es bastante más lento y además compila), y no caben en
+# los ~15 min que se le piden al trabajo de una PR. Se lanza SOLO a mano desde GitHub; no corre con una
+# PR ni con un push. Sin firma, sin credenciales y sin secretos; no publica nada.
+#
+# Los `*_perf_test` se saltan en el simulador por sí solos (necesitan el modo profile; sus medidas se
+# toman en el iPad, T-028-23) y el recorte del selector de documentos de `photo_group_import_test`
+# también (lo cubre XCTest): cada `skip:` lleva su motivo en el test.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-integration-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  integration:
+    name: iOS · tests de integración
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash tools/install-flutter.sh && echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Dependencias
+        working-directory: app
+        run: flutter pub get --enforce-lockfile
+      - name: Tests de integración, uno por llamada
+        # Se sigue aunque uno falle (se ve todo de una vez) y el paso falla si falló alguno. Sin ningún
+        # archivo, también falla (un glob vacío no puede dar un verde). El certificado de pruebas NO se
+        # añade al simulador: `web_flow_test` comprueba que se rechaza (CA-009-10).
+        working-directory: app
+        run: |
+          set -uo pipefail
+          xcrun simctl list devices available > "$RUNNER_TEMP/simulators.txt"
+          SIM="$(sed -nE '/iPhone/{s/.*\(([0-9A-F-]{36})\).*/\1/p;q;}' "$RUNNER_TEMP/simulators.txt")"
+          if [ -z "$SIM" ]; then
+            echo "::error::El ejecutor no tiene ningún simulador de iPhone"
+            exit 1
+          fi
+          xcrun simctl bootstatus "$SIM" -b
+          total=0
+          failed=""
+          for f in integration_test/*_test.dart; do
+            [ -f "$f" ] || continue
+            total=$((total + 1))
+            echo "::group::$f"
+            if ! flutter test "$f" -d "$SIM"; then
+              failed="$failed $f"
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$total" -eq 0 ]; then
+            echo "::error::No se encontró ningún test de integración en app/integration_test/"
+            exit 1
+          fi
+          echo "Archivos de integración: $total"
+          if [ -n "$failed" ]; then
+            echo "::error::Fallaron:$failed"
+            exit 1
+          fi

@@ -508,4 +508,198 @@ void main() {
       expect(body, isNot(contains('gradlew')));
     });
   });
+
+  group('CA-028-20: trabajo ios de ci.yml (T-028-21)', () {
+    final doc = loadYaml(File(_ci).readAsStringSync()) as YamlMap;
+    final jobs = doc['jobs'] as YamlMap;
+    final ios = jobs['ios'] as YamlMap;
+    final flutter = jobs['flutter'] as YamlMap;
+    final android = jobs['android'] as YamlMap;
+    List<YamlMap> stepsOf(YamlMap job) => [
+      for (final s in job['steps'] as YamlList) s as YamlMap,
+    ];
+    String run(YamlMap s) => (s['run'] ?? '') as String;
+    int indexOfRun(YamlMap job, String needle) =>
+        stepsOf(job).indexWhere((s) => run(s).contains(needle));
+    final iosRuns = [for (final s in stepsOf(ios)) run(s)].join('\n');
+
+    test(
+      'CA-028-20: se llama «iOS · build, XCTest y paridad» y corre en macOS',
+      () {
+        expect(ios['name'], 'iOS · build, XCTest y paridad');
+        expect(ios['runs-on'], 'macos-latest');
+        expect(ios['timeout-minutes'], isA<int>());
+      },
+    );
+
+    test('CA-028-20: compila sin firmar, como antes', () {
+      expect(iosRuns, contains('flutter build ios --debug --no-codesign'));
+      expect(iosRuns, contains('flutter pub get --enforce-lockfile'));
+    });
+
+    test('CA-028-20: corre check-ios-parity.sh con todas las secciones y no admite PENDIENTE', () {
+      expect(iosRuns, contains('bash tools/check-ios-parity.sh'));
+      // Sin `--section`: son las activas de `tools/ios-parity.sections`, que el test del script exige completas.
+      expect(iosRuns, isNot(contains('--section')));
+      // Una sección sin activar no es un verde.
+      expect(iosRuns, contains("grep '^PENDIENTE'"));
+      // Con `pipefail`, `grep -q` da falsos negativos por SIGPIPE.
+      expect(iosRuns, isNot(contains('grep -q')));
+      expect(iosRuns, contains('set -euo pipefail'));
+    });
+
+    test(
+      'CA-028-20: pasa XCTest con el esquema Runner en un simulador de iPhone',
+      () {
+        expect(iosRuns, contains('xcodebuild test'));
+        expect(iosRuns, contains('-workspace ios/Runner.xcworkspace'));
+        expect(iosRuns, contains('-scheme Runner'));
+        expect(iosRuns, contains(r'platform=iOS Simulator,id=$SIM'));
+        expect(iosRuns, contains('flutter build ios --simulator --debug'));
+        // Sin simulador, falla: no hay un «no hay nada que probar».
+        expect(iosRuns, contains('-z "\$SIM"'));
+        expect(iosRuns, contains('exit 1'));
+      },
+    );
+
+    test('CA-028-20: fija PDFium y SQLite de iOS tras compilar', () {
+      expect(iosRuns, contains('check-pdfium.sh --ios --require-built'));
+      expect(
+        indexOfRun(ios, 'check-pdfium.sh --ios'),
+        greaterThan(indexOfRun(ios, 'flutter build ios --debug --no-codesign')),
+      );
+    });
+
+    test('CA-028-20: el orden es paridad, compilar, binarios, XCTest', () {
+      final parity = indexOfRun(ios, 'check-ios-parity.sh');
+      final build = indexOfRun(ios, 'flutter build ios --debug --no-codesign');
+      final pins = indexOfRun(ios, 'check-pdfium.sh --ios');
+      final xctest = indexOfRun(ios, 'xcodebuild test');
+      expect(parity, greaterThanOrEqualTo(0));
+      expect(build, greaterThan(parity));
+      expect(pins, greaterThan(build));
+      expect(xctest, greaterThan(pins));
+    });
+
+    test('CA-028-20: sigue dependiendo de detect y de build (ci-speedup)', () {
+      expect(ios['needs'], 'detect');
+      expect(ios['if'], "needs.detect.outputs.build == 'true'");
+    });
+
+    test(
+      'CA-028-20: sin firma, secretos ni despliegue; acciones fijadas por SHA',
+      () {
+        final body = stepsOf(ios)
+            .map((s) => '${s['uses'] ?? ''}${run(s)}')
+            .join('\n');
+        expect(body, isNot(contains('secrets.')));
+        expect(body, isNot(contains('deploy')));
+        expect(body, isNot(contains('provisioning')));
+        expect(body, isNot(contains('security import')));
+        expect(body, isNot(contains('--release')));
+        for (final s in stepsOf(ios)) {
+          final uses = s['uses'] as String?;
+          if (uses == null) continue;
+          expect(
+            RegExp(r'@[0-9a-f]{40}( |$)').hasMatch(uses),
+            isTrue,
+            reason: uses,
+          );
+          expect((s['with'] as YamlMap)['persist-credentials'], false);
+        }
+      },
+    );
+
+    test('CA-028-02: el trabajo flutter comprueba los iconos al día, también los de iOS', () {
+      final runs = [for (final s in stepsOf(flutter)) run(s)].join('\n');
+      expect(runs, contains('dart run tool/gen_icons.dart --check'));
+      final line = runs
+          .split('\n')
+          .firstWhere((l) => l.contains('gen_icons.dart --check'));
+      for (final target in ['android', 'play', 'web', 'notification', 'ios']) {
+        expect(line, contains(target), reason: 'falta $target');
+      }
+      // Antes de `git diff --exit-code`, en el mismo paso que el resto del código generado.
+      expect(
+        runs.indexOf('gen_icons.dart --check'),
+        lessThan(runs.indexOf('git diff --exit-code')),
+      );
+    });
+
+    test('CA-028-03: los trabajos de Android no saben nada de iOS', () {
+      final body = stepsOf(android)
+          .map((s) => '${s['uses'] ?? ''}${run(s)}')
+          .join('\n');
+      expect(body, isNot(contains('ios')));
+      expect(body, isNot(contains('xcodebuild')));
+      expect(android['runs-on'], 'ubuntu-latest');
+      expect(android['needs'], 'detect');
+      expect(android['if'], "needs.detect.outputs.build == 'true'");
+    });
+  });
+
+  group('CA-028-20: ios-integration.yml, aparte y a mano (T-028-21)', () {
+    const path = '../.github/workflows/ios-integration.yml';
+    final text = File(path).readAsStringSync();
+    final doc = loadYaml(text) as YamlMap;
+    final job = (doc['jobs'] as YamlMap).values.single as YamlMap;
+    final runs = [
+      for (final s in job['steps'] as YamlList)
+        ((s as YamlMap)['run'] ?? '') as String,
+    ].join('\n');
+
+    test('CA-028-20: solo workflow_dispatch: ni PR ni push', () {
+      // En YAML 1.1 `on` es el booleano `true`; yaml (YAML 1.2) lo deja como texto.
+      final on = doc['on'] ?? doc[true];
+      expect(on, isA<YamlMap>());
+      expect((on as YamlMap).keys.toList(), ['workflow_dispatch']);
+    });
+
+    test(
+      'CA-028-20: permisos de solo lectura, macOS, sin secretos ni firma',
+      () {
+        expect(doc['permissions'], {'contents': 'read'});
+        expect(job['runs-on'], 'macos-latest');
+        expect(job['timeout-minutes'], isA<int>());
+        expect(text, isNot(contains('secrets.')));
+        expect(text, isNot(contains('--release')));
+        expect(text, isNot(contains('add-root-cert')));
+      },
+    );
+
+    test('CA-028-20: corre cada archivo de integración en el simulador, uno por llamada', () {
+      expect(runs, contains('integration_test/*_test.dart'));
+      expect(runs, contains(r'flutter test "$f" -d "$SIM"'));
+      // Falla si falló alguno y si no hay ninguno.
+      expect(runs, contains(r'[ -n "$failed" ]'));
+      expect(runs, contains(r'[ "$total" -eq 0 ]'));
+    });
+
+    test('CA-028-20: acciones fijadas por SHA y sin guardar credenciales', () {
+      for (final s in job['steps'] as YamlList) {
+        final uses = (s as YamlMap)['uses'] as String?;
+        if (uses == null) continue;
+        expect(
+          RegExp(r'@[0-9a-f]{40}( |$)').hasMatch(uses),
+          isTrue,
+          reason: uses,
+        );
+        expect((s['with'] as YamlMap)['persist-credentials'], false);
+      }
+    });
+
+    test(
+      'CA-028-20: hay tantos tests de integración como espera el workflow',
+      () {
+        // El comentario del workflow dice 20 archivos: si cambia el número, se ajusta (y la 028 §2 dice «19»+1).
+        final n = Directory('integration_test')
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('_test.dart'))
+            .length;
+        expect(n, 20);
+        expect(text, contains('son 20 archivos'));
+      },
+    );
+  });
 }
