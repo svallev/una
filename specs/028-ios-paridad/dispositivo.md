@@ -83,3 +83,17 @@ Observado por el propietario en el iPad, *release*:
 - **Matar la app con la card de deshacer [Hecho]:** al cerrar Una desde el selector con la card visible y volver a abrirla, la tarea queda eliminada, sin card (CA-014-13).
 - **Gestos [Hecho]:** mantener para completar, arrastrar en «Todas mis tareas» y deslizar desde el borde izquierdo en Ajustes y en el editor funcionan (CA-003-01, CA-006-04/05, CA-002-07, CA-028-09). Sin háptica: el iPad no tiene motor háptico.
 - **Zoom de accesibilidad [Hecho]:** con Zoom activado, tocar dos veces con tres dedos amplía bien dentro de Una (CA-017-13).
+
+## T-028-23 · Bloque 5: VoiceOver, permiso de avisos, reinicio y enlaces del PDF (013, 014, CA-028-14; 003, 004, 006, 007, 008, 010, 015, 019) — 2026-11-23
+
+Observado por el propietario en el iPad, *release*, con VoiceOver; tareas ficticias (texto, un grupo de fotos y `tools/fixtures/out/links.pdf` pasado por AirDrop).
+
+- **Acciones del rotor [Hecho]:** «Completar tarea» completa con un solo anuncio y deja el foco en la nueva tarea; el doble toque sobre el botón no completa (CA-003-07). Con un grupo están «Foto siguiente» y «Foto anterior», y se lee la posición de la foto («foto N de N») (CA-016-19/20). «Eliminar tarea» elimina sin hoja y saca la card (CA-004-10, CA-014-19); la card no caduca con el foco, dura unos 10 s con VoiceOver y «Deshacer» lee «Tarea recuperada» con el foco en la tarea (CA-014-06/17/18, CA-028-14). En «Todas mis tareas», las acciones de la fila salen en orden (mover, «Editar tarea», «Eliminar tarea») con un único anuncio al mover (CA-006-16/17).
+- **Recorrido [Hecho]:** Ajustes e Idioma sin paradas mudas, en orden título → filas → «Volver» al final (CA-013-04/05).
+- **Reducir movimiento [Hecho]:** los botones se hunden al instante, sin animación (CA-013-03).
+- **Voz [Hecho]:** con «Como el sistema», texto de la tarea y filas con voz española (CA-010-10); con English en Ajustes, todo en inglés salvo «Español» y «English», cada uno en su idioma (CA-015-11); el aviso en la pantalla bloqueada se lee en inglés con English elegido (CA-019-21).
+- **Aviso de cámara [Hecho]:** con el permiso denegado, VoiceOver lee el aviso una vez con el foco en él y «Abrir Ajustes» abre los Ajustes de Una (CA-007-02, CA-028-10).
+- **Avisos bloqueados [Hecho]:** con «Permitir notificaciones» apagado en Ajustes de iPadOS, el interruptor de Una se queda apagado, sale «Las notificaciones están bloqueadas…» y el enlace abre los ajustes del sistema (CA-019-08).
+- **Tras reiniciar [Hecho]:** con los avisos encendidos, reiniciado el iPad sin abrir Una, el aviso llega a su hora (CA-019-13, CA-028-16).
+- **Enlaces del PDF [Hecho]:** `mailto:` pregunta y abre Mail; `tel:` pregunta y no llama; `javascript:`, `file:` e `intent:` no hacen nada (CA-008-12, CA-028-13). Con Mail instalado no hizo falta `LSApplicationQueriesSchemes` (T-028-09).
+- **Escape de VoiceOver [Hecho]:** frotar con dos dedos vuelve atrás en Ajustes, Idioma, el editor y «Todas mis tareas» (CA-002-07, CA-028-09).
