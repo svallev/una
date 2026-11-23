@@ -24,3 +24,62 @@ Simulador iPhone 18 Pro, iOS 27.2 (Xcode 27.2), con `/ios-check todos`.
 - **iOS 16: no se prueba** (decisión del propietario, 2026-11-22: «con el que hay basta»). Solo está el runtime de iOS 27.2; la versión antigua la cubre el iPad (iPadOS 17.7.1). El mínimo iOS 16 lo comprueba la sección `project` del script.
 - **Modo avión real: no se prueba** (decisión del propietario, 2026-11-22). El simulador no tiene modo avión propio y comparte la red del Mac. Ningún IT usa red externa y la sección `network` del script comprueba que el Swift no la usa.
 - **Trampa:** tras `xcodebuild test` el simulador quedó apagado y los IT no encontraban el dispositivo; anotado en `/ios-check`.
+
+## T-028-23 · Bloque 1: arranque (CA-001-09, CA-015-23, CA-028-06) — 2026-11-22
+
+*Release* reinstalada desde `feat/028-i8-cierre` (firma gratuita, bundle ID de desarrollo `dev.svallev.una.local` solo en la línea de `xcodebuild`; `project.pbxproj` sin cambios). Tarea actual: una de texto ficticia (fondo amarillo).
+
+- **Hasta el primer fotograma del sistema [Hecho]:** Instruments (`xctrace record --template 'App Launch' --launch`), 20 arranques en frío seguidos, desde que el proceso empieza hasta el fin de «Initial Frame Rendering»: **p50 353 ms · p90 464 ms** (mín. 283, máx. 785, el primero tras instalar). Ese fotograma es la pantalla de arranque `paper`; Flutter pinta la tarea después y en *release* Instruments no lo marca: en un arranque con Time Profiler el hilo `io.flutter.1.raster` dibuja hacia los ~1,2 s **con el muestreo de Instruments encima** (no vale como cifra).
+- **Del toque a ver la tarea [Hecho]:** grabación de la pantalla del iPad con QuickTime (60 fps) de ~16 aperturas desde el icono y análisis fotograma a fotograma (AVFoundation: del primer fotograma en que el icono se oscurece al primero con el fondo de la tarea): **583–617 ms, p50 600 ms** en las 10 aperturas en que el inicio se detecta sin ambigüedad. La cifra coincide con la animación de apertura del sistema: la tarea aparece justo al terminarla, así que la app está lista antes. **CA-028-06 / CA-001-09: se cumple (< 1 s).**
+- **[Suposición]** No todas las aperturas del vídeo son en frío (algunas cierran solo con el gesto a inicio, sin el selector); como todas duran lo mismo, el límite es la animación del sistema, no la app. El arranque en frío está medido con Instruments.
+- **Sin destello [Hecho]:** en el vídeo, durante la animación solo se ve el fondo liso `paper` (con las franjas negras del modo compatibilidad del iPad, que son del sistema) y después la tarea; ningún fotograma negro ni blanco dentro de la app.
+- **Medidas de los `*_perf_test`:** no se ejecutan en el iPad (decisión del propietario, 2026-11-22, opción b: la guarda de los IT solo deja el simulador y `flutter drive` necesita firma en el proyecto). **[Pendiente sin *profile* en aparato]**; se miran a ojo en los bloques siguientes.
+
+### Bloque 1: aspecto, «Recientes» y vuelta (CA-028-05, 07, 12; 011, 021, 024) — 2026-11-22
+
+Observado por el propietario en el iPad, *release*:
+
+- **Sistema en oscuro [Hecho]:** la app se ve en claro (`paper`), y la barra de estado, con iconos oscuros legibles (CA-021-06/07, CA-024-01 a 03, CA-028-05).
+- **Arranque con el sistema en oscuro [Hecho]:** solo `paper` y luego la tarea, sin destello (CA-021-01 a 05, CA-028-06).
+- **Selector de apps [Hecho]:** la miniatura de Una es un fondo liso `paper`, sin la tarea (CA-011-01/02, CA-015-18, CA-028-12).
+- **Vuelta desde el selector [Hecho]:** sin parpadeo ni destello (CA-011-03).
+- **Captura de pantalla [Hecho]:** se hace y sale la tarea (CA-011-04).
+- **Icono [Hecho]:** bien en la pantalla de inicio, con la máscara del sistema (CA-018, CA-028-07).
+- **Vuelta desde segundo plano [Hecho]:** tras ~30 s en otra app vuelve a la misma tarea sin pasos raros (CA-001-12, CA-011-08).
+
+## T-028-23 · Bloque 2: imágenes, cámara y PDF (CA-028-10, 11, 18; 007, 008, 016, 017) — 2026-11-22
+
+Observado por el propietario en el iPad, *release*, con fotos y PDF sin datos personales (no se pasan capturas):
+
+- **Cámara, primera vez [Hecho]:** sale el permiso; con *Permitir* la foto se hace y se ve a pantalla completa (CA-007-02, CA-028-10). **No visto:** qué hay detrás del diálogo de permiso (la [Suposición] de T-028-11 sobre la vista `paper` sigue abierta; no molesta al propietario).
+- **Cámara denegada [Hecho]:** con la cámara apagada en Ajustes sale el aviso con «Abrir Ajustes» y lleva a los ajustes de Una (CA-007-02, CA-028-10).
+- **Live Photo y HEIC [Hecho]:** una Live Photo y fotos del iPad (HEIC) se guardan y se ven bien, quietas y con su orientación (CA-007-03, CA-007-07).
+- **Grupo de 10 [Hecho]:** el selector no deja marcar una 11.ª; el carrusel va fluido (CA-016-01/02, CA-028-11).
+- **Giro [Hecho]:** con foto, la tarea gira; con texto, se queda en vertical; con el bloqueo de rotación, la foto se queda en vertical (CA-007-11, CA-008-11 por el mismo canal, CA-016-12, CA-017-10).
+- **PDF [Hecho]:** se elige desde Archivos, se ve a pantalla completa y se desplaza bien (CA-008-01). Los enlaces `mailto:`/`tel:` no se probaron (el PDF no los tenía).
+- **Memoria (CA-016-23) [Hecho]:** Instruments (*Activity Monitor*, huella física del proceso `Runner`, que incluye la memoria gráfica **[Suposición]**), muestras cada ~1 s. Con **10 fotos**, recorriendo el carrusel: pico **111 MiB** (la grabación cubrió ~25 s de recorrido). Con **una foto**, pellizcando, desplazando y girando 60 s: pico **138 MiB**. El grupo no supera a la foto suelta (la diferencia está dentro de lo que cambia con el giro y el zoom); la app no se cerró. En el Xiaomi el grupo sumaba ≈ +166 MB (ADR-0024); en iOS no se ve ese coste.
+- **Copia de seguridad (CA-028-18) [Pendiente, no concluyente]:** en Ajustes → iCloud → Copias, Una no aparece: la app se reinstaló hoy y probablemente aún no hay copia con ella. La exclusión de `attachments/` la cubren los XCTest (`DataAtRestTests`).
+- **Clase de protección real:** no se puede leer en una *release* sin depurador; se queda con el XCTest de que no se baja (ADR-0005). **[Pendiente sin herramienta]**.
+
+## T-028-23 · Bloque 3: web (CA-028-05, 13, 19; 009, 015, 021) — 2026-11-23
+
+Sistema en oscuro; observado por el propietario en el iPad, *release*:
+
+- **Web en claro [Hecho]:** con el sistema en oscuro, Wikipedia móvil (que sigue el modo del sistema) se ve con fondo blanco dentro de Una (CA-021-08, CA-028-05/19).
+- **Fluidez [Hecho]:** Wikipedia móvil se desplaza con fluidez.
+- **Sin navegación [Hecho]:** tocar un enlace de la página no navega (CA-009-11).
+- **Descarga bloqueada [Hecho]:** una URL que sirve un PDF muestra el aviso de que no se puede abrir porque no es una página web, no el PDF (`downloadBlocked`, T-028-17).
+- **Campo de archivo [Hecho]:** tocar «Elegir archivo» no abre ningún selector ni avisa (script de usuario de T-028-17; cierra su [Pendiente]).
+- **Webs desde Ajustes [Hecho]:** política, licencias y ayuda se abren en Safari y se vuelve a Una sin problemas (CA-015-12a/b, 16; CA-028-13).
+
+## T-028-23 · Bloque 4: pantalla, notificaciones y gestos (CA-028-09, 14, 15, 16) — 2026-11-23
+
+Observado por el propietario en el iPad, *release*:
+
+- **Pantalla siempre activa [Hecho]:** con bloqueo automático de 2 min y el ajuste encendido, el iPad no se apaga (CA-007-12, CA-015-03 a 04d, `isIdleTimerDisabled`).
+- **Aviso con Una delante [Hecho]:** al llegar la hora del aviso con la app abierta, no se muestra (CA-019-19a, `willPresent` sin presentación).
+- **Aviso con el iPad bloqueado [Hecho]:** en la pantalla bloqueada se lee «Tarea actual, imagen» (la etiqueta del tipo, sin el texto de la tarea) (CA-019-17, CA-028-16).
+- **Tocar el aviso con la app cerrada [Hecho]:** abre Una en la tarea actual (CA-019-20).
+- **Matar la app con la card de deshacer [Hecho]:** al cerrar Una desde el selector con la card visible y volver a abrirla, la tarea queda eliminada, sin card (CA-014-13).
+- **Gestos [Hecho]:** mantener para completar, arrastrar en «Todas mis tareas» y deslizar desde el borde izquierdo en Ajustes y en el editor funcionan (CA-003-01, CA-006-04/05, CA-002-07, CA-028-09). Sin háptica: el iPad no tiene motor háptico.
+- **Zoom de accesibilidad [Hecho]:** con Zoom activado, tocar dos veces con tres dedos amplía bien dentro de Una (CA-017-13).
