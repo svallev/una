@@ -156,6 +156,38 @@ void main() {
     expect(exists('app/.dart_tool/hooks_runner/lib.dylib'), isTrue);
   });
 
+  test('post-merge: --global borra el DerivedData de Xcode de este repositorio y no el de otros', () {
+    final repoPath = repo.resolveSymbolicLinksSync();
+    Directory plist(String name, String workspace) {
+      final d = Directory(
+        '${home.path}/Library/Developer/Xcode/DerivedData/$name',
+      )..createSync(recursive: true);
+      File('${d.path}/info.plist').writeAsStringSync(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+        '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        '<plist version="1.0"><dict><key>WorkspacePath</key>'
+        '<string>$workspace</string></dict></plist>\n',
+      );
+      return d;
+    }
+
+    final mine = plist('Runner-aaa', '$repoPath/app/ios/Runner.xcworkspace');
+    final other = plist('Runner-bbb', '/otro/proyecto/ios/Runner.xcworkspace');
+    final cache = Directory(
+      '${home.path}/Library/Developer/Xcode/DerivedData/ModuleCache.noindex',
+    )..createSync(recursive: true);
+
+    expect(run(['--global']).exitCode, 0);
+    expect(mine.existsSync(), isTrue, reason: 'simulación');
+
+    final r = run(['--global', '--apply']);
+    expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+    expect(mine.existsSync(), isFalse);
+    expect(other.existsSync(), isTrue);
+    expect(cache.existsSync(), isTrue);
+  }, skip: Platform.isMacOS ? false : 'plutil solo existe en macOS');
+
   test('post-merge: sin la versión del wrapper no toca la caché de Gradle', () {
     File('${repo.path}/app/android/gradle/wrapper/gradle-wrapper.properties')
         .writeAsStringSync('nada\n');
