@@ -15,7 +15,8 @@ import '../../l10n/generated/app_localizations.dart';
 /// aviso, que es **un solo nodo** con su botón (se lee entero), y con teclado o
 /// lector también el foco de entrada. Con un lector o con teclado no caduca
 /// (hay que tener tiempo de llegar al botón, WCAG 2.2.1); sin ellos dura lo que
-/// los demás avisos. [onClosed] se llama al cerrarse, por lo que sea.
+/// los demás avisos; con teclado, Escape lo cierra (sin un botón «Cerrar»: sigue
+/// siendo un solo nodo). [onClosed] se llama al cerrarse, por lo que sea.
 ScaffoldFeatureController<SnackBar, SnackBarClosedReason>
 showCameraDeniedNotice(
   BuildContext context, {
@@ -46,6 +47,8 @@ showCameraDeniedNotice(
           // Si no se abren, no hay nada más que hacer (nunca se registra).
           unawaited(openAppSettings().catchError((Object _) => false));
         },
+        onDismiss: () =>
+            messenger.hideCurrentSnackBar(reason: SnackBarClosedReason.dismiss),
       ),
     ),
   );
@@ -64,12 +67,16 @@ class CameraDeniedNotice extends StatefulWidget {
     required this.buttonLabel,
     required this.color,
     required this.onOpen,
+    required this.onDismiss,
   });
 
   final String message;
   final String buttonLabel;
   final Color color;
   final VoidCallback onOpen;
+
+  /// Escape con el foco en el aviso (`DismissIntent`, el atajo de siempre).
+  final VoidCallback onDismiss;
 
   @override
   State<CameraDeniedNotice> createState() => _CameraDeniedNoticeState();
@@ -126,29 +133,39 @@ class _CameraDeniedNoticeState extends State<CameraDeniedNotice> {
   }
 
   @override
-  Widget build(BuildContext context) => MergeSemantics(
-    child: Semantics(
-      key: _semantics,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(widget.message),
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: TextButton(
-              focusNode: _focus,
-              style: TextButton.styleFrom(
-                foregroundColor: widget.color,
-                // ≥ 44 en los dos lados (CA-028-10).
-                minimumSize: const Size.square(UnaSizes.minTouchTarget),
-                tapTargetSize: MaterialTapTargetSize.padded,
+  Widget build(BuildContext context) => Actions(
+    actions: {
+      DismissIntent: CallbackAction<DismissIntent>(
+        onInvoke: (_) {
+          widget.onDismiss();
+          return null;
+        },
+      ),
+    },
+    child: MergeSemantics(
+      child: Semantics(
+        key: _semantics,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(widget.message),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                focusNode: _focus,
+                style: TextButton.styleFrom(
+                  foregroundColor: widget.color,
+                  // ≥ 44 en los dos lados (CA-028-10).
+                  minimumSize: const Size.square(UnaSizes.minTouchTarget),
+                  tapTargetSize: MaterialTapTargetSize.padded,
+                ),
+                onPressed: widget.onOpen,
+                child: Text(widget.buttonLabel),
               ),
-              onPressed: widget.onOpen,
-              child: Text(widget.buttonLabel),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );

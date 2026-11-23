@@ -276,6 +276,86 @@ void main() {
       }
     });
 
+    // A-M1 (revisores de la 028): con lector el aviso no caduca; uno posterior
+    // no puede quedarse en cola detrás de él, sin verse ni anunciarse.
+    testWidgets('CA-028-10 / CA-007-22: con lector, otro error con el aviso '
+        'de la cámara a la vista lo sustituye: se ve y está en región viva', (
+      tester,
+    ) async {
+      const noCamera = 'No hay ninguna app de cámara disponible.';
+      final handle = tester.ensureSemantics();
+      await pumpEditor(tester, screenReader: true);
+      await takePhoto(tester);
+      expect(find.text(_message), findsOneWidget);
+
+      importer.pickError = const ImageImportFailure(ImageImportError.noCamera);
+      await takePhoto(tester);
+      expect(find.text(noCamera), findsOneWidget);
+      expect(find.text(_message), findsNothing);
+      SemanticsNode? node = tester.getSemantics(find.text(noCamera));
+      var live = false;
+      while (node != null && !live) {
+        live = node.getSemanticsData().flagsCollection.isLiveRegion;
+        node = node.parent;
+      }
+      expect(live, isTrue, reason: 'dentro de una región viva');
+
+      // Y el de la cámara no vuelve al irse este.
+      await tester.pump(const Duration(seconds: 30));
+      await tester.pumpAndSettle();
+      expect(find.text(_message), findsNothing);
+      handle.dispose();
+    });
+
+    testWidgets('CL-028-2: con lector, volver a tocar "Hacer foto" con el '
+        'aviso a la vista da un aviso nuevo, que toma el foco; no quedan dos', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpEditor(tester, screenReader: true);
+      await takePhoto(tester);
+      expect(buttonFocused(tester), isTrue);
+      final firstEvents = focusEvents.length;
+
+      await takePhoto(tester);
+      expect(find.text(_message), findsOneWidget);
+      expect(buttonFocused(tester), isTrue, reason: 'el aviso nuevo');
+      expect(focusEvents.length, greaterThan(firstEvents));
+      expect(focusEvents.last, noticeNode(tester).id);
+
+      // Al cerrarlo no sale otro que esperaba en cola.
+      await tester.tap(find.text(_open));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.text(_message), findsNothing);
+      expect(plusFocused(tester), isTrue);
+      handle.dispose();
+    });
+
+    // A-M2: con teclado el aviso no caduca; Escape lo cierra (sin un botón
+    // "Cerrar" visible: sigue siendo un solo nodo).
+    testWidgets('CA-028-10: con teclado, Escape cierra el aviso y el foco '
+        'vuelve a (+), sin abrir los Ajustes', (tester) async {
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      try {
+        await pumpEditor(tester);
+        await takePhoto(tester);
+        expect(buttonFocused(tester), isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.text(_message), findsNothing);
+        expect(find.byType(CameraDeniedNotice), findsNothing);
+        expect(plusFocused(tester), isTrue);
+        expect(opened, 0);
+        expect(find.byType(TaskEditorScreen), findsOneWidget);
+      } finally {
+        FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic;
+      }
+    });
+
     testWidgets('el botón mide ≥ 44 en los dos lados', (tester) async {
       await pumpEditor(tester);
       await takePhoto(tester);
@@ -394,6 +474,19 @@ void main() {
       await tester.pump(const Duration(seconds: 30));
       expectGone(tester);
       expect(find.text(_Host.open), findsOneWidget);
+    });
+
+    testWidgets('CL-028-2: con lector, tras un segundo aviso de la cámara, '
+        'atrás también lo cierra', (tester) async {
+      await openEditor(tester);
+      await takePhoto(tester);
+      expect(find.text(_message), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await expectClosingNow(tester);
+      await tester.pumpAndSettle();
+      expectGone(tester);
+      await tester.pump(const Duration(seconds: 30));
+      expectGone(tester);
     });
 
     testWidgets('con lector, gesto atrás de iOS', (tester) async {

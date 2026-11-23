@@ -130,6 +130,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   /// editor y se cierra al salir de él (decisión del propietario, 2026-11-20).
   ScaffoldMessengerState? _cameraNoticeMessenger;
 
+  /// Cuál de los avisos de la cámara es el último (CL-028-2: uno nuevo
+  /// sustituye al anterior, y el cierre del anterior no cuenta).
+  Object? _cameraNoticeToken;
+
   /// Lo recién elegido (una imagen, un PDF o un grupo de 2 a 10 fotos), aún en
   /// la preparación.
   List<StagedAttachment> get _staged =>
@@ -330,8 +334,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     if (error == ImageImportError.cameraDenied && before?.error == null) {
       // Solo iOS: el aviso lleva "Abrir Ajustes" y el foco (CA-028-10). Se
       // lee el abridor ahora: el botón puede tocarse con el editor ya cerrado.
-      final messenger = ScaffoldMessenger.of(context);
+      final messenger = _messengerForNotice();
+      final token = Object();
       _cameraNoticeMessenger = messenger;
+      _cameraNoticeToken = token;
       showCameraDeniedNotice(
         context,
         openAppSettings: ref.read(appSettingsOpenerProvider),
@@ -339,8 +345,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         // Al cerrarse, el foco vuelve a (+), como con los demás (CA-007-22);
         // no si se cierra porque el editor se va.
         onClosed: () {
-          if (_cameraNoticeMessenger == messenger) {
+          if (_cameraNoticeToken == token) {
             _cameraNoticeMessenger = null;
+            _cameraNoticeToken = null;
           }
           if (mounted && (ModalRoute.isCurrentOf(context) ?? true)) {
             _focusPlus();
@@ -357,7 +364,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     if (error != null && before?.error == null) {
       final l10n = AppLocalizations.of(context);
       // El aviso se anuncia solo (spec 007 §5).
-      ScaffoldMessenger.of(context).showSnackBar(
+      _messengerForNotice().showSnackBar(
         SnackBar(
           content: Text(importErrorText(l10n, error)),
           // Encima de los botones: no tapa el (+), que recibe el foco
@@ -428,9 +435,17 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
   /// Cierra el aviso de la cámara sin permiso si sigue a la vista; con él se
   /// van los avisos que esperaban detrás, que también eran del editor.
+  /// El `ScaffoldMessenger`, sin el aviso que se esté viendo: uno nuevo del
+  /// editor lo sustituye en el acto. Con lector o teclado el de la cámara no
+  /// caduca, y el nuevo se quedaría en cola sin verse ni anunciarse (A-M1 de
+  /// la 028, CL-028-2).
+  ScaffoldMessengerState _messengerForNotice() =>
+      ScaffoldMessenger.of(context)..removeCurrentSnackBar();
+
   void _closeCameraNotice() {
     final messenger = _cameraNoticeMessenger;
     _cameraNoticeMessenger = null;
+    _cameraNoticeToken = null;
     if (messenger != null && messenger.mounted) messenger.clearSnackBars();
   }
 
@@ -563,7 +578,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       if (!mounted) return false;
       setState(() => _saving = false);
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
+      _messengerForNotice().showSnackBar(
         SnackBar(
           content: Text(
             isNoSpaceError(e) ? l10n.storageErrorNoSpace : l10n.editorSaveError,

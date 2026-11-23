@@ -658,6 +658,101 @@ void main() {
       expect(tester.takeException(), isNull);
     }, variant: ios);
 
+    /// Desplazamiento que dibujan las `SlideTransition` por encima de [page].
+    List<Offset> slidesAbove(WidgetTester tester, Finder page) => [
+      for (final slide in tester.widgetList<SlideTransition>(
+        find.ancestor(of: page, matching: find.byType(SlideTransition)),
+      ))
+        slide.position.value,
+    ];
+
+    testWidgets('CA-028-09 / CA-015-01d (P6): con reducir movimiento, el dedo '
+        'a mitad del gesto no mueve Ajustes en vertical (fundido)', (
+      tester,
+    ) async {
+      await openSettingsScreen(tester, reduced: true);
+      final settings = find.byType(SettingsScreen);
+      final gesture = await tester.startGesture(const Offset(5, _edgeY));
+      var stamp = 0;
+      for (var i = 0; i < 20; i++) {
+        stamp += 16;
+        await gesture.moveBy(
+          const Offset(10, 0),
+          timeStamp: Duration(milliseconds: stamp),
+        );
+        await tester.pump();
+      }
+      final value = ModalRoute.of(tester.element(settings))!.animation!.value;
+      expect(value, inExclusiveRange(0.2, 0.8), reason: 'a mitad del gesto');
+      expect(
+        slidesAbove(tester, settings).where((o) => o != Offset.zero),
+        isEmpty,
+        reason: 'ningún deslizamiento',
+      );
+      expect(tester.getTopLeft(settings), Offset.zero);
+      final fades = tester.widgetList<FadeTransition>(
+        find.ancestor(of: settings, matching: find.byType(FadeTransition)),
+      );
+      expect(
+        fades.map((f) => f.opacity.value),
+        contains(closeTo(value, 0.001)),
+        reason: 'el dedo mueve un fundido',
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(settings, findsNothing);
+    }, variant: ios);
+
+    testWidgets('CA-028-09: sin reducir movimiento, Ajustes sigue bajando con '
+        'el dedo (la hoja, como en Android)', (tester) async {
+      await openSettingsScreen(tester);
+      final settings = find.byType(SettingsScreen);
+      final gesture = await tester.startGesture(const Offset(5, _edgeY));
+      var stamp = 0;
+      for (var i = 0; i < 20; i++) {
+        stamp += 16;
+        await gesture.moveBy(
+          const Offset(10, 0),
+          timeStamp: Duration(milliseconds: stamp),
+        );
+        await tester.pump();
+      }
+      expect(tester.getTopLeft(settings).dy, greaterThan(0));
+      await gesture.up();
+      await tester.pumpAndSettle();
+    }, variant: ios);
+
+    for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+      testWidgets('P6 / CA-028-21: con reducir movimiento, «Todo hecho.» → '
+          '«Nueva tarea» abre el editor con el fundido corto, sin deslizar '
+          '(${platform.name})', (tester) async {
+        final repo = InMemoryTaskRepository();
+        await repo.insert(sampleTask(id: 'a', rank: 'a'));
+        await repo.remove('a');
+        await pumpUnaApp(tester, repo: repo, reduced: true);
+        expect(find.byType(AllDoneScreen), findsOneWidget);
+        await tester.tap(find.byType(BrutalButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 16));
+        final editor = find.byType(TaskEditorScreen);
+        final route = ModalRoute.of(tester.element(editor))! as PageRoute;
+        expect(
+          route.transitionDuration,
+          lessThanOrEqualTo(UnaMotion.reducedMotionFade),
+        );
+        for (var t = 0; t < 30; t++) {
+          expect(
+            slidesAbove(tester, editor).where((o) => o != Offset.zero),
+            isEmpty,
+          );
+          expect(tester.getTopLeft(editor), Offset.zero);
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pumpAndSettle();
+        expect(route.animation!.status, AnimationStatus.completed);
+      }, variant: TargetPlatformVariant.only(platform));
+    }
+
     testWidgets('CA-028-09: en Android, el mismo gesto no cierra Ajustes', (
       tester,
     ) async {

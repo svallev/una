@@ -19,7 +19,6 @@ import '../features/first_run/welcome_intro.dart';
 import '../features/settings/settings_controller.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../ui/full_width.dart';
-import '../ui/ios_back_gesture.dart';
 import '../ui/semantics_action_order.dart';
 import 'app_identity.g.dart';
 import 'locale_resolution.dart';
@@ -251,11 +250,12 @@ class HomeRouter extends ConsumerWidget {
         // (ocuparía el sitio de la papelera).
         showActions: !crumpling,
         focusSignal: focusSignal,
+        // La ruta del editor de siempre: su fundido, el corto con "reducir
+        // movimiento" (P6) y el gesto atrás de iOS (CA-028-09).
         onCreate: () => Navigator.of(context).push(
-          UnaMaterialPageRoute<void>(
-            builder: (_) => TaskEditorScreen(
-              colorKey: ref.read(colorPickerProvider).pick(),
-            ),
+          TaskEditorScreen.route(
+            context,
+            TaskEditorScreen(colorKey: ref.read(colorPickerProvider).pick()),
           ),
         ),
       );
