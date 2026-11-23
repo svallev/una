@@ -63,3 +63,7 @@ Del ADR-0007 **se mantienen**:
   - se añade la excepción bajo P3 en la constitución;
   - se añade la fila en `docs/adr/README.md`;
   - se actualiza T-4 en `docs/security/threat-model.md`: no se guarda nada de la página.
+
+## Nota de iOS (spec 028, 2026-11-23)
+
+En iOS la WebView **no** usa `WKWebsiteDataStore.nonPersistent()`: `webview_flutter_wkwebview` no deja elegir el almacén sin *swizzling*. Por decisión del propietario (R2 de la 028, opción (b)) usa el almacén por defecto, con `Library/WebKit` y `Library/Cookies` excluidas de la copia de seguridad y borradas como en Android (al salir de la tarea web y, si hizo falta, en el arranque siguiente). Desviación y residual en `docs/ios/channel-contract.md` §3 y `docs/security/threat-model.md` §7; la decisión de arriba no cambia.

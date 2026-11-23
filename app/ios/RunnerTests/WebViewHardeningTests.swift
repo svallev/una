@@ -54,12 +54,14 @@ class WebViewHardeningTests: XCTestCase {
   /// Una vista con lo que trae `webview_flutter_wkwebview` (configuración por defecto) y un canal
   /// que la encuentra por [id]. `inspectionAllowed` es lo que en la app decide `#if DEBUG`.
   private func make(
-    inspectionAllowed: Bool = false, store: WKWebsiteDataStore = .default()
+    inspectionAllowed: Bool = false, store: WKWebsiteDataStore = .default(),
+    prepareWebData: @escaping () -> Void = {}
   ) -> (WebViewHardening, WKWebView) {
     let view = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
     let id = self.id
     let hardening = WebViewHardening(
-      lookup: { $0 == id ? view : nil }, dataStore: { store }, inspectionAllowed: inspectionAllowed)
+      lookup: { $0 == id ? view : nil }, dataStore: { store }, prepareWebData: prepareWebData,
+      inspectionAllowed: inspectionAllowed)
     return (hardening, view)
   }
 
@@ -322,6 +324,76 @@ class WebViewHardeningTests: XCTestCase {
     XCTAssertEqual(sent.map(\.0), ["mainFrameRequest"])
     XCTAssertEqual(sent.first?.1["id"] as? Int64, id)
     XCTAssertEqual(sent.first?.1["redirect"] as? Bool, false)
+  }
+
+  // MARK: datos de la WebView fuera de la copia de seguridad (R2 de la 028, opción (b))
+
+  private func isExcluded(_ url: URL) throws -> Bool {
+    let fresh = URL(fileURLWithPath: url.path, isDirectory: true)
+    return try fresh.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup ?? false
+  }
+
+  private func load(_ view: WKWebView, _ page: String) {
+    let shown = expectation(
+      for: NSPredicate { _, _ in view.url?.path == "/\(page)" && !view.isLoading },
+      evaluatedWith: nil)
+    view.loadHTMLString("<h1>\(page)</h1>", baseURL: URL(string: "https://una.test/\(page)"))
+    wait(for: [shown], timeout: 10)
+  }
+
+  func testHardenAndEveryMainFrameRequestPrepareTheWebDataBeforeTheLoad() {
+    // R2 (028, opción (b)): `Library/WebKit` y `Library/Cookies` se marcan en `harden` (antes de la
+    // primera carga) y antes de cada petición del marco principal, antes de avisar a Dart.
+    var log: [String] = []
+    let (hardening, view) = make(prepareWebData: { log.append("prepare") })
+    hardening.send = { method, _ in log.append(method) }
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    XCTAssertEqual(log, ["prepare"])
+    load(view, "a")
+    load(view, "b")
+    XCTAssertEqual(
+      log, ["prepare", "prepare", "mainFrameRequest", "prepare", "mainFrameRequest"])
+  }
+
+  func testAWebViewLoadLeavesBothFoldersExcludedEvenIfWebKitRecreatedThem() throws {
+    // R2 (028, opción (b)): con un `Library` de mentira, tras `harden` y tras una carga (con las
+    // carpetas borradas entre medias, como si WebKit las recrease) las dos quedan excluidas.
+    let library = FileManager.default.temporaryDirectory
+      .appendingPathComponent("una-web-data-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: library, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: library) }
+    let folders = ["WebKit", "Cookies"].map {
+      library.appendingPathComponent($0, isDirectory: true)
+    }
+    let (hardening, view) = make(prepareWebData: {
+      DataAtRest.prepareWebDataNow(library: library)
+    })
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    for folder in folders { XCTAssertTrue(try isExcluded(folder), folder.lastPathComponent) }
+    for folder in folders { try FileManager.default.removeItem(at: folder) }
+    load(view, "a")
+    for folder in folders { XCTAssertTrue(try isExcluded(folder), folder.lastPathComponent) }
+  }
+
+  func testByDefaultHardenMarksTheRealWebDataFolders() throws {
+    // R2 (028, opción (b)): la `WebViewHardening` que crea `AppDelegate` (sin inyectar nada) marca
+    // las carpetas reales del contenedor.
+    let library = try XCTUnwrap(DataAtRest.libraryDirectory())
+    try DataAtRest.prepareWebData(in: library)
+    for name in ["WebKit", "Cookies"] {
+      var folder = library.appendingPathComponent(name, isDirectory: true)
+      var values = URLResourceValues()
+      values.isExcludedFromBackup = false
+      try folder.setResourceValues(values)
+      XCTAssertFalse(try isExcluded(folder))
+    }
+    let view = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+    let id = self.id
+    let hardening = WebViewHardening(lookup: { $0 == id ? view : nil }, inspectionAllowed: false)
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    for name in ["WebKit", "Cookies"] {
+      XCTAssertTrue(try isExcluded(library.appendingPathComponent(name, isDirectory: true)), name)
+    }
   }
 
   func testRedirectIsADecisionWhileTheProvisionalNavigationIsOpen() {

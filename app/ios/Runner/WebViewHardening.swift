@@ -30,6 +30,10 @@ final class WebViewHardening {
   /// En la app, la vista del paquete con ese identificador (o `nil`).
   private let lookup: (Int64) -> WKWebView?
   private let dataStore: () -> WKWebsiteDataStore
+  /// Deja `Library/WebKit` y `Library/Cookies` fuera de la copia de seguridad (R2 de la 028,
+  /// `DataAtRest`): en `harden` (antes de la primera carga de cada vista) y antes de cada petición
+  /// del marco principal, por si WebKit ha creado o recreado las carpetas.
+  private let prepareWebData: () -> Void
   /// Si se deja la inspección como está (solo en depuración, como `isDebuggable` en Android).
   private let inspectionAllowed: Bool
   /// Avisos a Dart (`mainFrameRequest`, `downloadBlocked`); lo pone `UnaChannels` con el canal.
@@ -44,10 +48,12 @@ final class WebViewHardening {
   init(
     lookup: @escaping (Int64) -> WKWebView? = { _ in nil },
     dataStore: @escaping () -> WKWebsiteDataStore = { .default() },
+    prepareWebData: @escaping () -> Void = { DataAtRest.prepareWebDataNow() },
     inspectionAllowed: Bool = WebViewHardening.isDebugBuild
   ) {
     self.lookup = lookup
     self.dataStore = dataStore
+    self.prepareWebData = prepareWebData
     self.inspectionAllowed = inspectionAllowed
   }
 
@@ -91,12 +97,15 @@ final class WebViewHardening {
   }
 
   private func harden(_ view: WKWebView, id: Int64) -> Bool {
+    // R2 (028): antes de que la vista cargue nada. No bloquea la carga si falla (como al arrancar).
+    prepareWebData()
     // Una sola vez por vista: el delegado del paquete, envuelto (se llama tras
     // `setNavigationDelegate`, que no se vuelve a llamar; ADR-0017).
     if !(view.navigationDelegate is NavigationWatcher) {
       let watcher = NavigationWatcher(
         inner: view.navigationDelegate,
         onMainFrameRequest: { [weak self] in
+          self?.prepareWebData()
           self?.send("mainFrameRequest", ["id": id, "redirect": $0])
         },
         onDownloadBlocked: { [weak self] in self?.send("downloadBlocked", ["id": id]) })

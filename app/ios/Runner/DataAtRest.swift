@@ -12,6 +12,15 @@ import Foundation
 ///   subirla (`complete`) rompería el contrato, y `DataAtRestTests` lo vigila sobre el código y el
 ///   proyecto.
 ///
+/// - **Datos de la WebView (R2 de la 028, opción (b), propietario, 2026-11-23):** el paquete
+///   `webview_flutter_wkwebview` no deja usar un almacén no persistente sin *swizzling*, así que la
+///   WebView usa `WKWebsiteDataStore.default()` (desviación de ADR-0007 y ADR-0016, contrato §3).
+///   Lo que guarda (`Library/WebKit/`: almacenamiento web, IndexedDB, estadísticas…; y
+///   `Library/Cookies/`) queda **fuera** de la copia de seguridad: las dos carpetas se crean si
+///   faltan (para marcarlas antes de que WebKit escriba nada; WebKit usa la que encuentra) y se
+///   marcan al arrancar y antes de cada carga web (`WebViewHardening`), por si WebKit las recrea.
+///   Marcar una carpeta excluye todo lo que tiene dentro. La caché ya va en `Caches/`.
+///
 /// Se ejecuta al arrancar el motor, antes del primer fotograma: una carpeta y un atributo, sin leer
 /// nada del disco más. Dart solo crea esa carpeta y nunca la borra, así que marcarla en cada
 /// arranque basta (si Dart la creó antes, en un primer uso, el siguiente arranque la marca).
@@ -33,6 +42,55 @@ enum DataAtRest {
     in base: URL, fileManager: FileManager = .default
   ) throws -> URL {
     var directory = base.appendingPathComponent(attachmentsName, isDirectory: true)
+    try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+    let current = try directory.resourceValues(forKeys: [.isExcludedFromBackupKey])
+    if current.isExcludedFromBackup != true {
+      var values = URLResourceValues()
+      values.isExcludedFromBackup = true
+      try directory.setResourceValues(values)
+    }
+    return directory
+  }
+
+  /// Carpetas de `Library/` donde WebKit guarda los datos de las páginas con el almacén por defecto.
+  static let webDataNames = ["WebKit", "Cookies"]
+
+  /// `Library/` del contenedor de la app.
+  static func libraryDirectory(fileManager: FileManager = .default) -> URL? {
+    return try? fileManager.url(
+      for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+  }
+
+  /// Crea `WebKit/` y `Cookies/` dentro de [library] si faltan y las marca como excluidas de la
+  /// copia de seguridad (sean nuevas o ya existentes). No toca lo que haya dentro. Devuelve las
+  /// carpetas.
+  @discardableResult
+  static func prepareWebData(
+    in library: URL, fileManager: FileManager = .default
+  ) throws -> [URL] {
+    return try webDataNames.map { name in
+      try excludedDirectory(
+        library.appendingPathComponent(name, isDirectory: true), fileManager: fileManager)
+    }
+  }
+
+  /// Lo que llaman el arranque y la WebView antes de cargar. Si falla, ni detiene nada ni registra
+  /// nada (P4); se vuelve a intentar en la siguiente carga. Devuelve si quedaron preparadas.
+  @discardableResult
+  static func prepareWebDataNow(library: URL? = nil) -> Bool {
+    guard let base = library ?? libraryDirectory() else { return false }
+    do {
+      try prepareWebData(in: base)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /// Crea [url] si falta y la marca como excluida de la copia de seguridad si aún no lo está.
+  private static func excludedDirectory(_ url: URL, fileManager: FileManager) throws -> URL {
+    // Un `URL` guarda en caché los valores ya leídos: se lee siempre desde uno nuevo.
+    var directory = URL(fileURLWithPath: url.path, isDirectory: true)
     try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
     let current = try directory.resourceValues(forKeys: [.isExcludedFromBackupKey])
     if current.isExcludedFromBackup != true {

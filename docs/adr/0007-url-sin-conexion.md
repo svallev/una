@@ -53,3 +53,7 @@
 ## Resultados del spike S4 (2026-09-24, Android)
 
 Ver `docs/spikes/F1-S3-S4-S5-resultados.md`. Capturas completas de Wikipedia (6263 px, 4,3 s) y w3.org (15 330 px, 3,6 s); flutter.dev recortada a 16 000 px ("copia parcial"). Rechazados: http, certificado caducado y autofirmado, y 404. Navegación a otro dominio, `tel:`, `intent:` y `window.open` bloqueados. En modo avión: error inmediato y la captura guardada sigue disponible.
+
+## Nota de iOS (spec 028, 2026-11-23)
+
+En iOS la WebView **no** usa `WKWebsiteDataStore.nonPersistent()`: `webview_flutter_wkwebview` no deja elegir el almacén sin *swizzling*. Por decisión del propietario (R2 de la 028, opción (b)) usa el almacén por defecto, con `Library/WebKit` y `Library/Cookies` excluidas de la copia de seguridad y borradas como en Android (al salir de la tarea web y, si hizo falta, en el arranque siguiente). Desviación y residual en `docs/ios/channel-contract.md` §3 y `docs/security/threat-model.md` §7; la decisión de arriba no cambia.
