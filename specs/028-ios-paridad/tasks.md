@@ -1,6 +1,6 @@
 # Tareas — Spec 028: Una en iOS, igual que en Android (paridad)
 
-**Siguiente:** T-028-24 (revisores: `security-reviewer` sobre Swift y Dart, incluida la (a') de T-028-17 por tocar ADR-0018; `a11y-reviewer` sobre el aviso de cámara, el gesto atrás y la fila de notificaciones; `/security-check`, `/i18n-check`, `/tokens-validate`; los altos, con un `spec-task`), en una sesión nueva. Rama `feat/028-i8-cierre`.
+**Siguiente:** T-028-24, arreglos R1 a R5 de `revisores.md` (decididos por el propietario el 2026-11-23), un `spec-task` por grupo y en orden; luego T-028-25. Rama `feat/028-i8-cierre`.
 
 Reglas: tareas **pequeñas** (≤ medio día; T-028-13 y 18 se aceptan más largas, `plan.md` §1.1), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden**. La columna **Toca** acota lo que cambia y lo que lee el subagente. Los textos van juntos al principio (T-028-02).
 
