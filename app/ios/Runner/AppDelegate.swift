@@ -36,5 +36,7 @@ import webview_flutter_wkwebview
     DataAtRest.prepareAttachmentsAtLaunch()
     // R2 (028): los datos de la WebView (`Library/WebKit`, `Library/Cookies`), fuera de la copia.
     DataAtRest.prepareWebDataNow()
+    // S-B2 (028): copias de PDF elegidas y sin usar que dejó una sesión anterior en `tmp/*-Inbox`.
+    Images.purgeDocumentInboxes()
   }
 }

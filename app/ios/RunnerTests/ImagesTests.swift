@@ -728,6 +728,120 @@ class ImagesTests: XCTestCase {
     XCTAssertFalse(exists(importRoot.appendingPathComponent("k1.camera")))
   }
 
+  // MARK: copias de PDF sin usar (S-B2 de la 028)
+
+  /// Elige un PDF con el selector de mentira (la copia, en `tmp/<x>-Inbox/` como la del sistema) y
+  /// devuelve su token y su archivo.
+  private func pickPdf(_ id: String, name: String = "elegido.pdf") throws -> (String, URL) {
+    let picked = root.appendingPathComponent("invalid.pending.app-Inbox/\(name)")
+    try FileManager.default.createDirectory(
+      at: picked.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try Data("%PDF-1.7\n".utf8).write(to: picked)
+    let answer = start("pick", ["origin": "file", "id": id])
+    presenter.finishDocument(picked)
+    let token = try XCTUnwrap((answer() as? [String: Any])?["token"] as? String)
+    return (token, picked)
+  }
+
+  /// El borrado de un selector nuevo va en otra cola: espera (como mucho 5 s) a que termine.
+  private func waitGone(_ url: URL, file: StaticString = #filePath, line: UInt = #line) {
+    let gone = expectation(description: "borrado")
+    func poll() {
+      if !exists(url) { return gone.fulfill() }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.01, execute: poll)
+    }
+    poll()
+    wait(for: [gone], timeout: 5)
+  }
+
+  func testCancelDeletesThePdfCopiesNotYetCopiedAndTheirTokensStopWorking() throws {
+    // S-B2: el editor se cierra con un PDF elegido y sin copiar → la copia del selector se borra.
+    let (token, picked) = try pickPdf("f1")
+    XCTAssertTrue(exists(picked))
+    XCTAssertNil(invoke("cancel", ["id": "f1"]))
+    XCTAssertFalse(exists(picked), "la copia del selector no se queda en tmp/")
+    assertError(invoke("copy", ["token": token, "id": "f1", "maxBytes": 10_000]), "unreadable")
+    // Cualquier `cancel` las borra (la que se canceló puede ser otra importación).
+    let (other, otherFile) = try pickPdf("f2", name: "otro.pdf")
+    XCTAssertNil(invoke("cancel", ["id": "zz"]))
+    XCTAssertFalse(exists(otherFile))
+    assertError(invoke("copy", ["token": other, "id": "f2", "maxBytes": 10_000]), "unreadable")
+  }
+
+  func testOpeningAnotherPickerDeletesThePdfCopiesNotYetCopied() throws {
+    // S-B2: un selector nuevo (de fotos, de PDF o la cámara) descarta lo elegido y no copiado.
+    let (first, firstFile) = try pickPdf("f1")
+    let gallery = start("pick", ["origin": "gallery", "id": "g1"])
+    presenter.finishPhotos(CountingPhotos(count: 0))
+    XCTAssertNil(gallery())
+    waitGone(firstFile)
+    assertError(invoke("copy", ["token": first, "id": "f1", "maxBytes": 10_000]), "unreadable")
+
+    let (second, secondFile) = try pickPdf("f2", name: "dos.pdf")
+    let many = start("pickMany", ["max": 3])
+    presenter.finishPhotos(CountingPhotos(count: 0))
+    XCTAssertNil(many())
+    waitGone(secondFile)
+    assertError(invoke("copy", ["token": second, "id": "f2", "maxBytes": 10_000]), "unreadable")
+
+    let (third, thirdFile) = try pickPdf("f3", name: "tres.pdf")
+    let (fourth, fourthFile) = try pickPdf("f4", name: "cuatro.pdf")
+    waitGone(thirdFile)  // abrir el selector de PDF también
+    assertError(invoke("copy", ["token": third, "id": "f3", "maxBytes": 10_000]), "unreadable")
+    // Lo elegido en el último selector sí se copia.
+    let copied = invoke("copy", ["token": fourth, "id": "f4", "maxBytes": 10_000]) as? [String: Any]
+    XCTAssertEqual(copied?["byteSize"] as? Int, 9)
+    XCTAssertFalse(exists(fourthFile))
+  }
+
+  func testACancelRightAfterCopyNeverDeletesTheFileThatCopyIsReading() throws {
+    // S-B2: `copy` retira su token en el hilo principal, antes de leer: un `cancel` de otra
+    // importación que llega justo detrás no le borra el archivo.
+    for round in 0..<20 {
+      let (token, picked) = try pickPdf("c\(round)", name: "c\(round).pdf")
+      let copy = start("copy", ["token": token, "id": "c\(round)", "maxBytes": 10_000])
+      let cancel = start("cancel", ["id": "other\(round)"])
+      XCTAssertNil(cancel())
+      XCTAssertEqual((copy() as? [String: Any])?["byteSize"] as? Int, 9, "vuelta \(round)")
+      XCTAssertFalse(exists(picked))
+    }
+  }
+
+  func testAtLaunchTheInboxFoldersOfTmpAreDeleted() throws {
+    // S-B2: lo que dejó una sesión anterior (la app murió con un PDF elegido y sin copiar).
+    let tmp = root.appendingPathComponent("tmp", isDirectory: true)
+    let inbox = tmp.appendingPathComponent("invalid.pending.app-Inbox", isDirectory: true)
+    let other = tmp.appendingPathComponent("other.bundle-Inbox", isDirectory: true)
+    let kept = tmp.appendingPathComponent("WebKit", isDirectory: true)
+    for directory in [inbox, other, kept] {
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      try Data("%PDF-".utf8).write(to: directory.appendingPathComponent("a.pdf"))
+    }
+    let notAFolder = tmp.appendingPathComponent("file-Inbox")
+    try Data([1]).write(to: notAFolder)
+    XCTAssertEqual(Images.purgeDocumentInboxes(temporaryDirectory: tmp), 2)
+    XCTAssertFalse(exists(inbox))
+    XCTAssertFalse(exists(other))
+    XCTAssertTrue(exists(kept.appendingPathComponent("a.pdf")), "solo las `*-Inbox`")
+    XCTAssertTrue(exists(notAFolder), "solo carpetas")
+    XCTAssertEqual(Images.purgeDocumentInboxes(temporaryDirectory: tmp), 0)
+    XCTAssertEqual(
+      Images.purgeDocumentInboxes(temporaryDirectory: root.appendingPathComponent("nope")), 0)
+  }
+
+  func testTheLaunchCallsTheInboxPurgeOfTheRealTmp() throws {
+    // S-B2: el arranque del motor la llama (con `tmp/` de verdad, el valor por defecto).
+    let source = try String(
+      contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        .appendingPathComponent("../Runner/AppDelegate.swift"), encoding: .utf8)
+    XCTAssertTrue(source.contains("Images.purgeDocumentInboxes()"))
+    let images = try String(
+      contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        .appendingPathComponent("../Runner/Images.swift"), encoding: .utf8)
+    XCTAssertTrue(
+      images.contains("temporaryDirectory: URL = FileManager.default.temporaryDirectory"))
+  }
+
   // MARK: debugCopyFile (contrato §9: solo depuración, solo `Caches/fixtures/`)
 
   func testTheDebugHooksOnlyExistInDebugBuilds() throws {
