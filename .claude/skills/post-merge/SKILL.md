@@ -29,7 +29,7 @@ Decisión del propietario (2026-10-14): tras **cada** PR fusionada se limpia tod
 
 ## 4. Fuera del repositorio (solo con el sí del propietario, cada vez)
 
-- `tools/clean-workspace.sh --global`: informa y propone borrar solo lo obsoleto, es decir, las versiones de Gradle que ya no usa el *wrapper* (en `~/.gradle/caches/<versión>` y `~/.gradle/wrapper/dists`) y las imágenes de sistema que no usa ningún emulador.
+- `tools/clean-workspace.sh --global`: informa y propone borrar solo lo obsoleto, es decir, las versiones de Gradle que ya no usa el *wrapper* (en `~/.gradle/caches/<versión>` y `~/.gradle/wrapper/dists`) las imágenes de sistema que no usa ningún emulador y el DerivedData de Xcode de este repositorio (`~/Library/Developer/Xcode/DerivedData/*`, solo las carpetas cuyo `info.plist` apunta a un *workspace* de este repositorio; las de otros proyectos y las cachés compartidas de Xcode no se tocan).
 - Enseña la lista con los tamaños y pregunta. Solo con un «sí» explícito: `tools/clean-workspace.sh --global --apply`.
 - No se tocan sin pedirlo: `~/.gradle/caches/modules-2`, `~/.pub-cache`, los emuladores (AVD), el SDK ni nada de fuera del repositorio que el script no liste.
 

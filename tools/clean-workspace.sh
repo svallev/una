@@ -10,7 +10,8 @@
 # the Android .gradle/.kotlin/.cxx folders, coverage, the build folders of the spikes and
 # .DS_Store files. It keeps app/build/mastg-NNN while spec NNN is not «Implementada» (it is
 # the evidence of its MASTG pass). Outside the repo it deletes only what is obsolete: the
-# Gradle versions the wrapper no longer uses and the system images no emulator uses.
+# Gradle versions the wrapper no longer uses and the system images no emulator uses, plus the
+# Xcode DerivedData folders of this repo's workspace (regenerable; other projects' are kept).
 # Never follows symlinks, never touches a tracked file or anything outside its list.
 set -euo pipefail
 
@@ -115,7 +116,7 @@ clean_global() {
     done
   fi
   local sdk="${ANDROID_HOME:-$HOME/Library/Android/sdk}" used image rel
-  used="$(cat "$HOME"/.android/avd/*.avd/config.ini 2>/dev/null | sed -n 's/^image\.sysdir\.[0-9]*=//p' | sed 's#/*$##')"
+  used="$(cat "$HOME"/.android/avd/*.avd/config.ini 2>/dev/null | sed -n 's/^image\.sysdir\.[0-9]*=//p' | sed 's#/*$##' || true)"
   if [[ -d "$sdk/system-images" ]]; then
     while IFS= read -r -d '' image; do
       rel="${image#"$sdk"/}"
@@ -126,6 +127,14 @@ clean_global() {
       remove "$image" "imagen de sistema sin emulador"
     done < <(find "$sdk/system-images" -mindepth 3 -maxdepth 3 -type d -print0)
   fi
+  # Xcode DerivedData: only the folders whose info.plist points at a workspace inside this repo.
+  local derived="$HOME/Library/Developer/Xcode/DerivedData" workspace
+  for dir in "$derived"/*-*; do
+    [[ -d "$dir" && -f "$dir/info.plist" ]] || continue
+    workspace="$(plutil -extract WorkspacePath raw -o - "$dir/info.plist" 2>/dev/null)" || continue
+    [[ "$workspace" == "$root"/* ]] || continue
+    remove "$dir" "Xcode DerivedData de ${workspace#"$root"/}"
+  done
   local pub="${PUB_CACHE:-$HOME/.pub-cache}"
   if [[ -d "$pub" ]]; then
     echo "  sin tocar: $pub ($(human "$(size_kb "$pub")")): la usan los proyectos; vaciarla obliga a descargarlo todo"
