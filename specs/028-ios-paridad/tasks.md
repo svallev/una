@@ -1,6 +1,6 @@
 # Tareas — Spec 028: Una en iOS, igual que en Android (paridad)
 
-**Siguiente:** ninguna: spec **Implementada** (T-028-25, 2026-11-23). Queda **[Pendiente]** en el iPad, sin tarea (propietario, 2026-11-23: cerrar sin hacerlas): VoiceOver con «Seleccionado» (R1), aviso de cámara con teclado y VoiceOver (R4), PDF real del selector tras R5, Control por botón y teclado externo (CA-014-17/18/20) y una restauración real de iCloud (CA-028-18). Distribuir en iOS: **[Pendiente I9]**.
+**Siguiente:** ninguna: spec **Implementada** (T-028-25, 2026-11-23). Tras el cierre, en el iPad (2026-11-23): R1, R4, R5 y el teclado en la card **hechos**; siguen **[Pendiente]** Control por botón (el propietario no puede usarlo), la restauración real de iCloud (CA-028-18) y rechazar el diálogo de avisos (aceptado). Distribuir en iOS: **[Pendiente I9]**.
 
 Reglas: tareas **pequeñas** (≤ medio día; T-028-13 y 18 se aceptan más largas, `plan.md` §1.1), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden**. La columna **Toca** acota lo que cambia y lo que lee el subagente. Los textos van juntos al principio (T-028-02).
 

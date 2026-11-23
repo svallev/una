@@ -111,3 +111,15 @@ El propietario decide cerrar la 028 sin estas pruebas en el iPad; quedan **[Pend
 - **Control por botón y teclado externo en la card** (CA-014-17/18/20): sin probar.
 - **Restauración real de iCloud** (CA-028-18): la exclusión la cubren XCTest y el `xattr` en el simulador.
 - **Rechazar el diálogo de permiso de avisos** (CA-019-07/08): ya aceptado en el bloque 5.
+
+## Tras el cierre · Comprobaciones pendientes en el iPad — 2026-11-23
+
+Observado por el propietario en el iPad, *release* de `main` tras la PR #109 (instalada como actualización, firma gratuita), con teclado externo conectado:
+
+- **R1, «Seleccionado» con VoiceOver [Hecho]:** en Idioma y en Notificaciones 1·2·3, la opción marcada se lee como seleccionada y las demás como «No seleccionado» (CA-015-07, A-A1).
+- **R4, aviso de la cámara [Hecho]:** con el permiso denegado y el teclado, Escape cierra el aviso y el foco vuelve a (+); con VoiceOver, el aviso se lee una vez con el foco en él y otro aviso lo sustituye en lugar de quedar detrás (CA-007-02, CA-028-10, A-M1, A-M2).
+- **R5, PDF real del selector [Hecho]:** un PDF elegido en Archivos se guarda y se ve a pantalla completa; cancelar el selector o salir sin guardar no deja nada raro (CA-008-01, S-B2).
+- **Card de deshacer con teclado [Hecho]:** Tab llega a «Deshacer», Espacio o Intro la deshacen y el tiempo es el esperado (CA-014-17/18/20).
+- **Card de deshacer con Control por botón [Pendiente]:** el propietario no puede usar Control por botón en el iPad. La duración de 10 s con Control por botón la cubren los XCTest de `A11y.swift` y los tests de Dart de `UndoDuration` (CA-014-06, CA-028-14).
+- Siguen **[Pendiente]**: la restauración real de iCloud (CA-028-18) y rechazar el diálogo de permiso de avisos (CA-019-07/08, aceptado).
+
