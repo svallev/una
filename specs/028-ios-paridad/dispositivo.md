@@ -100,3 +100,14 @@ Observado por el propietario en el iPad, *release*, con VoiceOver; tareas fictic
 - **Rechazar el diálogo de permiso (CA-019-07/08) [Pendiente, aceptado]:** no se prueba (propietario, 2026-11-23): para que iPadOS vuelva a preguntar hay que borrar Una y recompilar; el bloqueo ya se comprobó desde los Ajustes del sistema y el caso «rechazo» lo cubren los tests de widgets con el canal falso.
 - **Arranque con los avisos encendidos (CA-019-24) [Hecho, aceptado por el propietario]:** Instruments como en el bloque 1, por cable, tras el reinicio de CA-019-13. Encendidos (n = 10): **p50 649 ms** (349–787); apagados justo después (n = 8, cortada por el propietario): **p50 359 ms** (301–545), igual que la línea base del bloque 1 (353 ms). Todos < 1 s. El código no explica la diferencia: antes del primer fotograma el Swift solo pone el delegado de avisos (con el ajuste encendido o apagado) y Dart solo abre la base y lee la tarea; reprogramar va después del primer fotograma. **[Suposición]** es el orden: la serie encendida fue la primera tras el reinicio (y tras una serie por wifi descartada, `xctrace` lanzado sin cable porque el iPad seguía emparejado por la red). No se repitió con los avisos encendidos (propietario, 2026-11-23: «con estas cifras estamos contentos»).
 - **Trampa de la medida:** con el iPad bloqueado, `xctrace … --launch` da «Timed out waiting for device to boot»; con conexión por wifi va lento y a veces la traza sale sin datos («run data is missing»). Por cable, desbloqueado, con `--time-limit 15s` y un `devicectl device info lockState` antes de cada grabación, funciona (≈ 2 min por arranque).
+
+## T-028-25 · Pendiente al cerrar (enmienda de CA-028-01) — 2026-11-23
+
+El propietario decide cerrar la 028 sin estas pruebas en el iPad; quedan **[Pendiente]** con su motivo, cubiertas en el simulador donde se puede:
+
+- **R1, VoiceOver dice «Seleccionado»** en la opción marcada de Idioma y de Notificaciones 1·2·3 (CA-015-07): tests de Dart por plataforma; sin oírlo en el aparato.
+- **R4, aviso de la cámara con teclado y VoiceOver** (CA-007-02): Escape lo cierra y un aviso nuevo sustituye al anterior; tests de widget e IT en el simulador.
+- **R5, PDF real del selector** (CA-008-01): las copias sin usar se borran; XCTest e IT en el simulador.
+- **Control por botón y teclado externo en la card** (CA-014-17/18/20): sin probar.
+- **Restauración real de iCloud** (CA-028-18): la exclusión la cubren XCTest y el `xattr` en el simulador.
+- **Rechazar el diálogo de permiso de avisos** (CA-019-07/08): ya aceptado en el bloque 5.

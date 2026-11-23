@@ -4,7 +4,7 @@
 
 **[Hecho, 2026-09-24]** macOS 26.6 en Apple Silicon; Xcode **no** instalado (solo las Command Line Tools); sin Homebrew, `gh` ni Flutter; Node 24 (nvm); **30 GB libres**.
 
-**Estado actualizado (2026-09-24, D17 Android primero):** 72 GB libres ✅ · Android Studio 2026.1 (JDK integrado OpenJDK 25) ✅ · SDK Platform 37, Build-Tools 36, Platform-Tools, Emulator y Command-line Tools ✅ · emulador `Pixel_6a` (Android 37.2, Google APIs Play Store, arm64-v8a, **páginas de 16 KB**) ✅ · **Xcode aplazado** hasta F-iOS (los pasos 2–3 de abajo se harán entonces).
+**Estado actualizado (2026-09-24, D17 Android primero):** 72 GB libres ✅ · Android Studio 2026.1 (JDK integrado OpenJDK 25) ✅ · SDK Platform 37, Build-Tools 36, Platform-Tools, Emulator y Command-line Tools ✅ · emulador `Pixel_6a` (Android 37.2, Google APIs Play Store, arm64-v8a, **páginas de 16 KB**) ✅ · ~~**Xcode aplazado** hasta F-iOS~~ Xcode instalado en F-iOS (spec 028; ver «iOS» en §2).
 
 1. **Liberar espacio:** objetivo ≥ 60 GB libres.
 2. **Xcode, desde la Mac App Store** (oficial, firmado por Apple, no necesita el espacio extra de descomprimir un `.xip`). Basta un Apple ID gratuito. Desactiva **App Store → Ajustes → Actualizaciones automáticas** para que no cambie de versión a mitad del trabajo; actualiza cuando Flutter confirme la compatibilidad.
@@ -32,12 +32,19 @@
 
 | Destino | Comando (dentro de `app/`) | Notas |
 |---|---|---|
-| Simulador de iOS | `fvm flutter run -d "iPhone 17"` | No requiere cuenta |
+| Simulador de iOS | `fvm flutter run -d "iPhone 18 Pro"` (el que haya en `xcrun simctl list devices available`) | No requiere cuenta |
 | Emulador de Android | `fvm flutter run -d emulator-5554` | |
 | iPhone físico | `fvm flutter run -d <id>` | Sin cuenta de pago: firma gratuita con tu Apple ID, **la app caduca a los 7 días**; activa el Modo desarrollador en el iPhone |
 | Android físico | `fvm flutter run -d <id>` | Depuración USB; o instalar un APK |
 | Navegador | `fvm flutter run -d chrome` | Web de pruebas (ADR-0010) |
 | Rendimiento | `fvm flutter run --profile --trace-startup` | Siempre en dispositivo real |
+
+### iOS (spec 028, F-iOS) [Hecho, 2026-11-23]
+
+- **Xcode** instalado (Mac App Store); el simulador de las pruebas es el primer «iPhone» de `xcrun simctl list devices available` (hoy iPhone 18 Pro, iOS 27.2). La verificación común es la skill `/ios-check` (compila, XCTest, tests de integración elegidos, `tools/check-ios-parity.sh`, analyze y test de Dart).
+- **Único aparato:** iPad de 6.ª gen. (iPadOS 17.7.1) con la app «solo iPhone» en modo compatibilidad, firma gratuita (caduca a los 7 días). El equipo y un bundle ID de desarrollo van **solo en la línea de `xcodebuild`**; `project.pbxproj` sigue con `invalid.pending.app` y sin equipo (PD-2). Receta en `specs/028-ios-paridad/dispositivo.md` («Aparato y forma de instalar»).
+- **Datos en reposo y copias de seguridad (CA-028-18, ADR-0005 y ADR-0032):** la BD (`Documents/`) usa la protección por defecto de iOS («hasta el primer desbloqueo») y **entra** en la copia de iCloud o del ordenador; los adjuntos (`Application Support/attachments/`), los datos de la WebView (`Library/WebKit`, `Library/Cookies`) se marcan `isExcludedFromBackup` y **no** entran (`DataAtRest.swift`); lo temporal de una importación (`Caches/import/`) tampoco, porque iOS no copia `Caches/`. Al restaurar una copia, las tareas con adjunto quedan sin él, como en Android. **[Pendiente]** comprobarlo en una restauración real del iPad (la exclusión la cubren XCTest y el `xattr` leído en el simulador).
+- **Distribución:** ninguna por ahora (proyecto de aprendizaje). **[Pendiente I9]** antes de distribuir cualquier compilación de iOS: política de privacidad con lo de iOS (ADR-0030), trabajo de publicación, MASTG de iOS y ficha de App Store.
 
 ## 3. Web de pruebas en Vercel (ADR-0010)
 
