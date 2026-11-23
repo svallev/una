@@ -608,8 +608,11 @@ class _OptionState extends State<_Option> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final ios = radioSemanticsOnIos(context, selected: widget.selected);
     return Semantics(
       checked: widget.selected,
+      selected: ios.selected,
+      hint: ios.hint,
       inMutuallyExclusiveGroup: true,
       focusable: true,
       focused: _focused,

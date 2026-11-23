@@ -354,6 +354,9 @@ void main() {
           );
           expect(data.flagsCollection.isInMutuallyExclusiveGroup, isTrue);
           expect(data.hasAction(SemanticsAction.tap), isTrue);
+          // En Android, "checked" y no "selected" (TalkBack; CA-015-07).
+          expect(data.flagsCollection.isSelected, Tristate.none, reason: label);
+          expect(data.hint, isEmpty, reason: label);
           // WCAG 2.5.3: el número que se ve está en el nombre.
           expect(label, contains('${i + 1}'));
           expect(
@@ -366,6 +369,43 @@ void main() {
         }
         handle.dispose();
       });
+
+      testWidgets(
+        'CA-019-26, CA-015-07, CA-028-21: en iOS la opción marcada lleva '
+        '"selected" y las demás "no seleccionado" (VoiceOver solo lee el '
+        'rasgo Seleccionado)',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await _open(
+            tester,
+            lang: lang,
+            perDay: NotificationsPerDay.two,
+            screenReader: true,
+          );
+          final unselected = lang.code == 'es'
+              ? 'No seleccionado'
+              : 'Not selected';
+          for (final (i, label) in lang.options.indexed) {
+            final data = tester
+                .getSemantics(find.bySemanticsLabel(label))
+                .getSemanticsData();
+            expect(
+              data.flagsCollection.isChecked,
+              i == 1 ? CheckedState.isTrue : CheckedState.isFalse,
+              reason: label,
+            );
+            expect(data.flagsCollection.isInMutuallyExclusiveGroup, isTrue);
+            expect(
+              data.flagsCollection.isSelected,
+              i == 1 ? Tristate.isTrue : Tristate.isFalse,
+              reason: label,
+            );
+            expect(data.hint, i == 1 ? isEmpty : unselected, reason: label);
+          }
+          handle.dispose();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
 
       testWidgets('CA-019-26: Tab recorre el interruptor y las tres opciones; '
           'las flechas solo mueven el foco; Intro y Espacio seleccionan', (

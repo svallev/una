@@ -18,7 +18,7 @@ Alcance: `git diff b04345f...HEAD` (toda la 028; I2–I7 ya en `main`). Estado d
 
 ## `a11y-reviewer` (1 alta, 4 medias, 4 bajas)
 
-- **A-A1 [Abierto]** En iOS VoiceOver no dice cuál está elegida en los grupos de radio (1·2·3 de Notificaciones, Idioma): el motor de iOS no da valor a `inMutuallyExclusiveGroup` y solo `selected` da el rasgo. `RawRadio` de Flutter pone `selected` solo en iOS. Choca con CA-015-07 y `radio_row_test.dart:82-83` (`isSelected == none`, pensado para TalkBack). Arreglo: `selected` (+ pista «no seleccionado») solo en iOS; separar el test por plataforma; verificar en el iPad.
+- **A-A1 [Hecho, R1]** En iOS VoiceOver no dice cuál está elegida en los grupos de radio (1·2·3 de Notificaciones, Idioma): el motor de iOS no da valor a `inMutuallyExclusiveGroup` y solo `selected` da el rasgo. `RawRadio` de Flutter pone `selected` solo en iOS. Choca con CA-015-07 y `radio_row_test.dart:82-83` (`isSelected == none`, pensado para TalkBack). Arreglo: `selected` (+ pista «no seleccionado») solo en iOS; separar el test por plataforma; verificar en el iPad.
 - **A-M1 [Abierto]** Con el aviso de la cámara fijo (lector/teclado), otro aviso queda en cola detrás y no se ve ni se anuncia (`task_editor_screen.dart:330-371`). Arreglo: quitar el aviso actual antes de mostrar otro; test con `screenReader: true`.
 - **A-M2 [Abierto]** Con teclado no se puede cerrar el aviso fijo (Escape no hace nada) y puede tapar el campo al 200 %. Arreglo: Escape (`DismissIntent`) lo cierra.
 - **A-M3 [Abierto]** Con reducir movimiento, el gesto atrás en Ajustes (nivel 1) mueve la pantalla en vertical (`settings_route.dart:35-52`). Arreglo: fundido con `disableAnimations`.
@@ -29,7 +29,7 @@ Alcance: `git diff b04345f...HEAD` (toda la 028; I2–I7 ya en `main`). Estado d
 
 Arreglos, un `spec-task` por grupo y en este orden:
 
-1. **R1** A-A1: `selected` (+ pista «no seleccionado») **solo en iOS** en `UnaRadioRow` y `_Option`; CA-015-07 y su test separados por plataforma; nota en la matriz. **[Pendiente]** VoiceOver en el iPad.
+1. **R1** A-A1: `selected` (+ pista «no seleccionado») **solo en iOS** en `UnaRadioRow` y `_Option`; CA-015-07 y su test separados por plataforma; nota en la matriz. **[Hecho]** (commit `fix(028): announce the chosen radio option to VoiceOver`, 2026-11-23): `radioSemanticsOnIos` en `radio_row.dart` (pista de `WidgetsLocalizations`: «No seleccionado»/«Not selected», sin texto propio); 4 tests nuevos de iOS (fallan sin el arreglo) y los de Android comprueban `selected` nulo y sin pista; fila CA-015-07 en `matriz.md`. **[Pendiente]** VoiceOver en el iPad.
 2. **R2** S-M1: almacén **no persistente** en la WebView de iOS (API interna del paquete); si sale frágil, excluir `Library/WebKit` y `Library/Cookies` de la copia. Desviación y residual en el contrato §3 y `threat-model.md`.
 3. **R3** S-M2: primero IT en el simulador con el `input` suelto y el `iframe about:blank`; si se salta, `runOpenPanelWith` → `nil` en iOS 18.4+ y script ampliado antes.
 4. **R4** A-M1, A-M2, A-M3, A-M4: quitar el aviso anterior antes de mostrar otro; Escape cierra el aviso de la cámara; fundido con reducir movimiento en el gesto atrás de Ajustes y en «Todo hecho.» → «Nueva tarea».

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
@@ -29,12 +30,34 @@ class UnaRadioGroup extends StatelessWidget {
   );
 }
 
+/// Lo que VoiceOver necesita para decir qué opción está elegida (spec 028,
+/// R1): el motor de iOS no da valor a un nodo `inMutuallyExclusiveGroup` y solo
+/// `selected` da el rasgo «Seleccionado». Como el `RawRadio` de Flutter, en
+/// iOS la marcada lleva `selected: true` y las demás `selected: false` y la
+/// pista «No seleccionado» (de `WidgetsLocalizations`, en el idioma de la
+/// app). En Android no cambia nada (CA-015-07: `checked`, no `selected`).
+({bool? selected, String? hint}) radioSemanticsOnIos(
+  BuildContext context, {
+  required bool selected,
+}) {
+  if (defaultTargetPlatform != TargetPlatform.iOS) {
+    return (selected: null, hint: null);
+  }
+  return (
+    selected: selected,
+    hint: selected
+        ? null
+        : WidgetsLocalizations.of(context).radioButtonUnselectedLabel,
+  );
+}
+
 /// Opción de un grupo de selección única (prototipo: fila de Ajustes de 60;
 /// spec 015, CA-015-07): nombre, línea opcional debajo ("Como el sistema" dice
 /// el idioma que resulta) y, a la derecha, la marca de selección.
 ///
 /// - Para el lector es un **botón de radio** (`checked`, dentro de un grupo de
-///   selección única, no `selected`); la marca visible (una palanca de tinta
+///   selección única, no `selected`; en iOS también `selected`, ver
+///   [radioSemanticsOnIos]); la marca visible (una palanca de tinta
 ///   ≥ 3:1 frente al papel) es decorativa. El nombre lleva la línea de debajo
 ///   ("Como el sistema, Español"); [attributedLabel] lo sustituye cuando hay
 ///   que marcar un tramo con su idioma (CA-015-11).
@@ -84,9 +107,12 @@ class _UnaRadioRowState extends State<UnaRadioRow> {
   Widget build(BuildContext context) {
     final subtitle = widget.subtitle;
     final attributed = widget.attributedLabel;
+    final ios = radioSemanticsOnIos(context, selected: widget.selected);
     return Semantics(
       key: widget.semanticsKey,
       checked: widget.selected,
+      selected: ios.selected,
+      hint: ios.hint,
       inMutuallyExclusiveGroup: true,
       focusable: true,
       focused: _focused,
