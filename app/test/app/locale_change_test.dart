@@ -378,6 +378,38 @@ void main() {
       expect(shown(tester), 'es');
     });
 
+    // Regresión (T-028-22): al volver de un idioma fijo a "Como el sistema",
+    // Flutter no recalcula el idioma si solo cambia la regla; la regla de la
+    // app debe estar puesta desde el principio o se queda la de Flutter.
+    for (final (system, expected) in [
+      (const [Locale('ca', 'ES'), Locale('en', 'US')], 'es'),
+      (const [Locale('es')], 'es'),
+      (const [Locale('fr')], 'en'),
+    ]) {
+      testWidgets('CA-015-09/CA-024-04: abierta con "English" y el sistema en '
+          '"${system.map((l) => l.toLanguageTag()).join(', ')}", volver a '
+          '"Como el sistema" → "$expected"', (tester) async {
+        final repo = InMemoryTaskRepository();
+        await repo.setLocale(LocaleChoice.en);
+        await pumpUnaApp(
+          tester,
+          repo: repo,
+          locale: system.first,
+          tasks: _tasks,
+        );
+        await _switchTo(tester, system);
+        expect(shown(tester), 'en');
+
+        controller(tester).applyLocale(LocaleChoice.system);
+        await tester.pumpAndSettle();
+        expect(shown(tester), expected);
+        expect(
+          find.bySemanticsLabel(_l10n(expected).menuButton),
+          findsOneWidget,
+        );
+      });
+    }
+
     testWidgets('CA-015-10: con un idioma guardado, la primera pintura ya '
         'está en ese idioma', (tester) async {
       final repo = InMemoryTaskRepository();

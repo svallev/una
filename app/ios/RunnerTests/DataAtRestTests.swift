@@ -123,6 +123,93 @@ class DataAtRestTests: XCTestCase {
     XCTAssertTrue(source[start.upperBound...].contains("DataAtRest.prepareAttachmentsAtLaunch()"))
   }
 
+  // MARK: - Datos de la WebView (R2 de la 028, opción (b))
+
+  private func webFolders(_ library: URL) -> [URL] {
+    return ["WebKit", "Cookies"].map { library.appendingPathComponent($0, isDirectory: true) }
+  }
+
+  func testCreatesTheWebDataFoldersAndExcludesThemFromTheBackup() throws {
+    // R2 (028): `Library/WebKit` y `Library/Cookies` se crean si faltan y nacen excluidas.
+    let folders = try DataAtRest.prepareWebData(in: base)
+    XCTAssertEqual(folders.map(\.lastPathComponent), ["WebKit", "Cookies"])
+    for folder in webFolders(base) {
+      XCTAssertTrue(isDirectory(folder), folder.lastPathComponent)
+      XCTAssertTrue(try isExcluded(folder), folder.lastPathComponent)
+    }
+  }
+
+  func testMarksTheWebDataFoldersWebKitAlreadyCreatedWithoutTouchingWhatIsInside() throws {
+    // R2 (028): si WebKit ya las creó (y escribió cookies), se marcan sin tocar lo de dentro.
+    let cookies = base.appendingPathComponent("Cookies/Cookies.binarycookies")
+    let storage = base.appendingPathComponent("WebKit/WebsiteData/LocalStorage/x.sqlite3")
+    for file in [cookies, storage] {
+      try FileManager.default.createDirectory(
+        at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try Data([4, 5]).write(to: file)
+    }
+    for folder in webFolders(base) { XCTAssertFalse(try isExcluded(folder)) }
+
+    try DataAtRest.prepareWebData(in: base)
+
+    for folder in webFolders(base) { XCTAssertTrue(try isExcluded(folder), folder.lastPathComponent) }
+    XCTAssertEqual(try Data(contentsOf: cookies), Data([4, 5]))
+    XCTAssertEqual(try Data(contentsOf: storage), Data([4, 5]))
+  }
+
+  func testTheWebDataMarkIsIdempotentAndRestoredIfSomethingClearedIt() throws {
+    // R2 (028): repetirlo no falla; si otra cosa quita la marca a una, la siguiente vez vuelve.
+    let first = try DataAtRest.prepareWebData(in: base)
+    XCTAssertEqual(try DataAtRest.prepareWebData(in: base), first)
+    for index in first.indices {
+      var folder = first[index]
+      var values = URLResourceValues()
+      values.isExcludedFromBackup = false
+      try folder.setResourceValues(values)
+      XCTAssertFalse(try isExcluded(folder))
+      try DataAtRest.prepareWebData(in: base)
+      XCTAssertTrue(try isExcluded(folder), folder.lastPathComponent)
+    }
+  }
+
+  func testOnlyTheWebDataFoldersAreExcludedFromLibrary() throws {
+    // R2 (028): `Library` y lo demás de dentro (p. ej. `Preferences`) siguen en la copia.
+    let preferences = base.appendingPathComponent("Preferences", isDirectory: true)
+    try FileManager.default.createDirectory(at: preferences, withIntermediateDirectories: true)
+    try DataAtRest.prepareWebData(in: base)
+    XCTAssertFalse(try isExcluded(base))
+    XCTAssertFalse(try isExcluded(preferences))
+  }
+
+  func testWebDataFailsWithoutCrashingWhenTheFoldersCannotBeCreated() throws {
+    let notAFolder = base.appendingPathComponent("file")
+    try Data([0]).write(to: notAFolder)
+    XCTAssertThrowsError(try DataAtRest.prepareWebData(in: notAFolder))
+    XCTAssertFalse(DataAtRest.prepareWebDataNow(library: notAFolder))
+  }
+
+  func testWebDataUsesTheRealLibraryFolderAndKeepsTheDefaultProtection() throws {
+    // R2 (028) y ADR-0005: en el simulador, las carpetas reales del contenedor quedan excluidas y
+    // sin `.none` de protección ([Suposición] el simulador no aplica Data Protection).
+    let library = try XCTUnwrap(DataAtRest.libraryDirectory())
+    XCTAssertEqual(library.lastPathComponent, "Library")
+    XCTAssertTrue(DataAtRest.prepareWebDataNow())
+    for folder in webFolders(library) {
+      XCTAssertTrue(try isExcluded(folder), folder.lastPathComponent)
+      let attributes = try FileManager.default.attributesOfItem(atPath: folder.path)
+      if let protection = attributes[.protectionKey] as? FileProtectionType {
+        XCTAssertNotEqual(protection, .none)
+      }
+    }
+  }
+
+  func testTheEngineStartupPreparesTheWebData() throws {
+    // R2 (028): el arranque del motor también marca los datos de la WebView.
+    let source = code(try read("Runner/AppDelegate.swift"))
+    let start = try XCTUnwrap(source.range(of: "func didInitializeImplicitFlutterEngine"))
+    XCTAssertTrue(source[start.upperBound...].contains("DataAtRest.prepareWebDataNow()"))
+  }
+
   // MARK: - Protección por defecto (se lee del código, no se puede bajar sin que falle esto)
 
   /// Raíz de `app/ios/`, a partir de la ruta de este archivo (el simulador lee el disco del Mac).

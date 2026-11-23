@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../domain/entities/locale_choice.dart';
 import '../features/all_done/all_done_screen.dart';
 import '../features/app_error/storage_error_screen.dart';
 import '../features/complete/celebration_overlay.dart';
@@ -20,7 +19,6 @@ import '../features/first_run/welcome_intro.dart';
 import '../features/settings/settings_controller.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../ui/full_width.dart';
-import '../ui/ios_back_gesture.dart';
 import '../ui/semantics_action_order.dart';
 import 'app_identity.g.dart';
 import 'locale_resolution.dart';
@@ -196,9 +194,11 @@ class _UnaAppState extends ConsumerState<UnaApp> {
       // `locale` y decide la regla de la 010. `BootState.locale` lo trae ya
       // leído: el primer fotograma sale en ese idioma (CA-015-10).
       locale: localeOfChoice(choice),
-      localeListResolutionCallback: choice == LocaleChoice.system
-          ? (locales, _) => resolveAppLocale(locales)
-          : null,
+      // La regla va siempre, también con un idioma elegido (Flutter no la mira
+      // entonces): Flutter no recalcula el idioma si solo cambia esta función,
+      // y al volver a "Como el sistema" se quedaría el que dio su regla por
+      // defecto (`ca-ES, en-US` → inglés; CA-015-09, CA-024-04).
+      localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
       builder: appFrame,
       home: HomeRouter(key: ValueKey(_resetGeneration)),
     );
@@ -250,11 +250,12 @@ class HomeRouter extends ConsumerWidget {
         // (ocuparía el sitio de la papelera).
         showActions: !crumpling,
         focusSignal: focusSignal,
+        // La ruta del editor de siempre: su fundido, el corto con "reducir
+        // movimiento" (P6) y el gesto atrás de iOS (CA-028-09).
         onCreate: () => Navigator.of(context).push(
-          UnaMaterialPageRoute<void>(
-            builder: (_) => TaskEditorScreen(
-              colorKey: ref.read(colorPickerProvider).pick(),
-            ),
+          TaskEditorScreen.route(
+            context,
+            TaskEditorScreen(colorKey: ref.read(colorPickerProvider).pick()),
           ),
         ),
       );

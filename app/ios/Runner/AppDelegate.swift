@@ -34,5 +34,9 @@ import webview_flutter_wkwebview
       notifications: notifications)
     // CA-028-18: `attachments/` creada y fuera de la copia de seguridad antes del primer fotograma.
     DataAtRest.prepareAttachmentsAtLaunch()
+    // R2 (028): los datos de la WebView (`Library/WebKit`, `Library/Cookies`), fuera de la copia.
+    DataAtRest.prepareWebDataNow()
+    // S-B2 (028): copias de PDF elegidas y sin usar que dejó una sesión anterior en `tmp/*-Inbox`.
+    Images.purgeDocumentInboxes()
   }
 }

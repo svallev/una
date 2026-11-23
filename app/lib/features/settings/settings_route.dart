@@ -32,23 +32,33 @@ Route<T> settingsRoute<T>(BuildContext context, WidgetBuilder builder) {
 /// deja de dibujarse. **Absorbe los punteros mientras sube**: un segundo toque
 /// sobre "Ajustes" (CL-015-1) no puede caer sobre la fila que pasa bajo el
 /// dedo.
+///
+/// Con "reducir movimiento" no se desliza nunca: el gesto atrás de iOS mueve
+/// la animación de la ruta con el dedo (CA-028-09), y con ella la pantalla
+/// subiría y bajaría; en su lugar, un fundido (A-M3 de la 028, P6).
 Route<T> settingsSheetRoute<T>(BuildContext context, WidgetBuilder builder) {
   final reduced = MediaQuery.disableAnimationsOf(context);
   return UnaPageRoute<T>(
     transitionDuration: reduced ? Duration.zero : UnaMotion.sheetIn,
     reverseTransitionDuration: reduced ? Duration.zero : UnaMotion.sheetOut,
     pageBuilder: (context, _, _) => builder(context),
-    transitionsBuilder: (context, animation, _, child) => SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-          .animate(
-            CurvedAnimation(
-              parent: animation,
-              curve: UnaMotion.sheetCurve,
-              reverseCurve: UnaMotion.sheetOutCurve,
+    transitionsBuilder: (context, animation, _, child) {
+      final rising = _AbsorbWhileRising(animation: animation, child: child);
+      if (MediaQuery.disableAnimationsOf(context)) {
+        return FadeTransition(opacity: animation, child: rising);
+      }
+      return SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+            .animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: UnaMotion.sheetCurve,
+                reverseCurve: UnaMotion.sheetOutCurve,
+              ),
             ),
-          ),
-      child: _AbsorbWhileRising(animation: animation, child: child),
-    ),
+        child: rising,
+      );
+    },
   );
 }
 

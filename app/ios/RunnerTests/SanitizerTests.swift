@@ -596,6 +596,44 @@ class SanitizerTests: XCTestCase {
     assertError(invoke("regenerate", ["id": "g3", "width": w, "height": h]), "unreadable")
   }
 
+  func testRegenerateRefusesSizesOutOfRangeOrNotIntegers() throws {
+    // I-4 (028, revisores): un ancho o alto de una BD manipulada responde `unreadable` sin texto y
+    // sin tocar nada; con `Int.max` la cuenta de teselas desbordaba y la app se cerraba.
+    let (w, h) = try storedAttachment("g4", quadrants(40, 40))
+    let directory = attachments.appendingPathComponent("g4")
+    let before = try (files(directory), Data(contentsOf: directory.appendingPathComponent("screen.jpg")))
+    let bad: [(Any, Any)] = [
+      (Int.max, h), (w, Int.max), (Int.max, Int.max), (Int64.max, 1), (Int.min, h), (w, Int.min),
+      (0, h), (w, 0), (-1, h), (w, -40), (64_000_001, 1), (8001, 8000), (1 << 32, 1 << 32),
+      (40.0, h), (w, 40.5), (true, h), (w, false), ("40", h), (NSNull(), h), (w, [40]),
+    ]
+    for (width, height) in bad {
+      assertError(invoke("regenerate", ["id": "g4", "width": width, "height": height]), "unreadable")
+    }
+    XCTAssertEqual(files(directory), before.0, "ni temporales ni derivadas nuevas")
+    XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("screen.jpg")), before.1)
+    // El tope admite lo que de verdad se guarda.
+    XCTAssertNil(invoke("regenerate", ["id": "g4", "width": w, "height": h]))
+  }
+
+  func testTheRegenerableSizeIsBoundedWithoutOverflowing() {
+    // I-4: también si se llama directamente (sin el canal).
+    XCTAssertTrue(ImageSanitizer.isRegenerableSize(width: 1, height: 1))
+    XCTAssertTrue(ImageSanitizer.isRegenerableSize(width: 8000, height: 8000))
+    XCTAssertTrue(ImageSanitizer.isRegenerableSize(width: 1, height: 64_000_000))
+    XCTAssertFalse(ImageSanitizer.isRegenerableSize(width: 1, height: 64_000_001))
+    XCTAssertFalse(ImageSanitizer.isRegenerableSize(width: Int.max, height: 2))
+    XCTAssertFalse(ImageSanitizer.isRegenerableSize(width: Int.max, height: Int.max))
+    XCTAssertFalse(ImageSanitizer.isRegenerableSize(width: 0, height: 10))
+    XCTAssertFalse(ImageSanitizer.isRegenerableSize(width: 10, height: -1))
+    let sanitizer = ImageSanitizer(
+      maxPixels: Int64.max, storedMaxPixels: Int64.max, screenWidth: 100, screenHeight: 200)
+    XCTAssertThrowsError(
+      try sanitizer.regenerateDerived(dir: attachments, width: 1, height: Int.max))
+    XCTAssertThrowsError(
+      try sanitizer.regenerateDerived(dir: attachments, width: Int.max, height: Int.max))
+  }
+
   // MARK: - encodeJpeg
 
   private func pixels(_ width: Int, _ height: Int, _ bytes: [UInt8]) -> FlutterStandardTypedData {

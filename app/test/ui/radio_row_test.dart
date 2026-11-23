@@ -79,10 +79,51 @@ void main() {
     expect(system.flagsCollection.isChecked, CheckedState.isFalse);
     expect(es.flagsCollection.isChecked, CheckedState.isTrue);
     expect(en.flagsCollection.isChecked, CheckedState.isFalse);
-    // Es "checked", no "selected" (CA-015-07).
-    expect(es.flagsCollection.isSelected, Tristate.none);
+    // En Android es "checked", no "selected" (CA-015-07; TalkBack), y sin
+    // pista.
+    for (final node in [system, es, en]) {
+      expect(node.flagsCollection.isSelected, Tristate.none);
+      expect(node.hint, isEmpty);
+    }
     handle.dispose();
   });
+
+  for (final (locale, unselected) in [
+    (const Locale('es'), 'No seleccionado'),
+    (const Locale('en'), 'Not selected'),
+  ]) {
+    testWidgets(
+      'CA-015-07, CA-028-21 (${locale.languageCode}): en iOS la marcada lleva '
+      '"selected" y las demás "selected: false" y la pista "$unselected" '
+      '(VoiceOver solo lee el rasgo Seleccionado)',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpWithApp(tester, _page(selected: 'es'), locale: locale);
+        final system = tester
+            .getSemantics(find.bySemanticsLabel('Como el sistema, Español'))
+            .getSemanticsData();
+        final es = tester
+            .getSemantics(find.bySemanticsLabel('Español').last)
+            .getSemanticsData();
+        final en = tester
+            .getSemantics(find.bySemanticsLabel('English'))
+            .getSemanticsData();
+        for (final node in [system, es, en]) {
+          expect(node.flagsCollection.isInMutuallyExclusiveGroup, isTrue);
+        }
+        expect(es.flagsCollection.isChecked, CheckedState.isTrue);
+        expect(es.flagsCollection.isSelected, Tristate.isTrue);
+        expect(es.hint, isEmpty);
+        for (final node in [system, en]) {
+          expect(node.flagsCollection.isChecked, CheckedState.isFalse);
+          expect(node.flagsCollection.isSelected, Tristate.isFalse);
+          expect(node.hint, unselected);
+        }
+        handle.dispose();
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    );
+  }
 
   testWidgets('CA-015-07: el grupo no añade ninguna parada con nombre ni sin '
       'él entre el título y la primera opción', (tester) async {

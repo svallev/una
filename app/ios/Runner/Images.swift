@@ -233,6 +233,15 @@ final class Images {
     return value as? NSNumber
   }
 
+  /// Un entero del códec estándar: ni un `Bool` (que también llega como `NSNumber`) ni un decimal.
+  static func integer(_ value: Any?) -> Int? {
+    guard let number = value as? NSNumber,
+      CFGetTypeID(number) != CFBooleanGetTypeID(),
+      !CFNumberIsFloatType(number)
+    else { return nil }
+    return number.intValue
+  }
+
   private static func headBytes(_ arguments: [String: Any]) -> Int {
     let asked = number(arguments["headBytes"])?.intValue ?? headBytes
     return Swift.min(Swift.max(asked, 1), maxHeadBytes)
@@ -251,6 +260,8 @@ final class Images {
     }
     if pending { return Images.fail(result, .busy) }
     pending = true
+    // Otro selector: lo elegido antes y no copiado ya no se usará (S-B2).
+    discardPendingDocuments()
     switch origin {
     case "camera":
       pickFromCamera(id, result)
@@ -343,6 +354,7 @@ final class Images {
     let max = Swift.min(Swift.max(asked, 1), Images.maxGroup)
     if pending { return Images.fail(result, .busy) }
     pending = true
+    discardPendingDocuments()
     let shown = presenter.presentPhotos(limit: max) { photos in
       self.pending = false
       let total = photos.count
@@ -359,6 +371,49 @@ final class Images {
       pending = false
       Images.fail(result, .unreadable)
     }
+  }
+
+  /// S-B2 (028): las copias de PDF que el selector dejó en `tmp/<bundle>-Inbox/` y que nadie copió
+  /// (el editor se cerró, se canceló o se abre otro selector) se borran y su token deja de valer.
+  /// Solo toca lo que sigue en `picks`: una `copy` retira su token **en el hilo principal**, antes de
+  /// leer, así que nunca se borra lo que una copia en curso está leyendo. Borra en `cleaner`; `then`,
+  /// si llega, corre en esa cola tras borrar.
+  private func discardPendingDocuments(then: (() -> Void)? = nil) {
+    let urls = picks.removeAll { pick in
+      if case .document = pick { return true }
+      return false
+    }.compactMap { pick -> URL? in
+      if case .document(let url) = pick { return url }
+      return nil
+    }
+    if urls.isEmpty && then == nil { return }
+    cleaner.async {
+      for url in urls { try? FileManager.default.removeItem(at: url) }
+      then?()
+    }
+  }
+
+  /// S-B2 (028): al arrancar el motor, borra las carpetas `*-Inbox` de `tmp/` (donde
+  /// `UIDocumentPickerViewController(asCopy: true)` deja la copia de cada PDF elegido): lo que quedó
+  /// de una sesión anterior (la app murió con un token sin usar). Al arrancar no hay ninguna copia en
+  /// curso. Sin registros (P4). Devuelve cuántas borró.
+  @discardableResult
+  static func purgeDocumentInboxes(
+    temporaryDirectory: URL = FileManager.default.temporaryDirectory,
+    fileManager: FileManager = .default
+  ) -> Int {
+    guard
+      let children = try? fileManager.contentsOfDirectory(
+        at: temporaryDirectory, includingPropertiesForKeys: [.isDirectoryKey],
+        options: [])
+    else { return 0 }
+    var removed = 0
+    for child in children where child.lastPathComponent.hasSuffix("-Inbox") {
+      let isDirectory = (try? child.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory
+      guard isDirectory == true else { continue }
+      if (try? fileManager.removeItem(at: child)) != nil { removed += 1 }
+    }
+    return removed
   }
 
   private func store(_ pick: StoredPick) -> String {
@@ -384,6 +439,9 @@ final class Images {
     let headBytes = Images.headBytes(arguments)
     let flag = CancelFlag()
     cancelled[id] = flag
+    // Solo lo que eligió el usuario en esta sesión; cada token, una vez. Se retira **aquí**, en el
+    // hilo principal y antes de leer: un `cancel` o un selector nuevo (S-B2) ya no lo borran.
+    let stored = token.hasPrefix("camera:") ? nil : picks.removeValue(forKey: token)
     background(id, result) {
       if token.hasPrefix("camera:") {
         let cameraId = String(token.dropFirst("camera:".count))
@@ -393,10 +451,7 @@ final class Images {
         defer { try? FileManager.default.removeItem(at: file) }
         return try self.copyFile(file, id, maxBytes, headBytes, flag)
       }
-      // Solo lo que eligió el usuario en esta sesión; cada token, una vez.
-      guard let stored = self.picks.removeValue(forKey: token) else {
-        throw ImageImportCode.unreadable
-      }
+      guard let stored else { throw ImageImportCode.unreadable }
       switch stored {
       case .document(let url):
         // La copia del selector (en el `tmp/` de la app) se borra al terminar.
@@ -599,9 +654,12 @@ final class Images {
   /// toca las teselas ni la preparación; si falta la carpeta, `unreadable`.
   private func regenerate(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
     let arguments = Images.arguments(call)
+    // I-4 (028): enteros de verdad (ni `Bool` ni decimales) y dentro del tope: lo que venga de una
+    // BD manipulada responde `unreadable`, nunca cierra la app.
     guard let id = Images.id(arguments),
-      let width = Images.number(arguments["width"])?.intValue,
-      let height = Images.number(arguments["height"])?.intValue
+      let width = Images.integer(arguments["width"]),
+      let height = Images.integer(arguments["height"]),
+      ImageSanitizer.isRegenerableSize(width: width, height: height)
     else {
       return Images.fail(result, .unreadable)
     }
@@ -665,7 +723,8 @@ final class Images {
   // MARK: - Cancelar y Ajustes
 
   /// Marca la cancelación, corta una carga de foto en curso y borra `import/<id>/` e
-  /// `import/<id>.camera` en otro hilo (CA-007-16).
+  /// `import/<id>.camera` en otro hilo (CA-007-16), además de las copias de PDF elegidas y sin
+  /// copiar (S-B2): sus tokens dejan de valer.
   private func cancel(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
     guard let id = Images.id(Images.arguments(call)) else {
       return Images.fail(result, .unreadable)
@@ -674,7 +733,8 @@ final class Images {
     loads[id]?.cancel()
     let directory = importRoot.appendingPathComponent(id, isDirectory: true)
     let cameraFile = importRoot.appendingPathComponent("\(id).camera")
-    cleaner.async {
+    // Y las copias de PDF elegidas que no se llegaron a copiar (S-B2).
+    discardPendingDocuments {
       try? FileManager.default.removeItem(at: directory)
       try? FileManager.default.removeItem(at: cameraFile)
       DispatchQueue.main.async { result(nil) }
@@ -1016,6 +1076,14 @@ final class LockedMap<Value> {
     let created = value()
     storage[key] = created
     return created
+  }
+
+  /// Retira y devuelve, de una vez, los valores que cumplen `predicate`.
+  func removeAll(where predicate: (Value) -> Bool) -> [Value] {
+    lock.lock()
+    defer { lock.unlock() }
+    let keys = storage.filter { predicate($0.value) }.map(\.key)
+    return keys.compactMap { storage.removeValue(forKey: $0) }
   }
 
   func removeValue(forKey key: String) -> Value? {

@@ -202,7 +202,9 @@ final class ImageSanitizer {
   /// (CA-007-19). Solo decodifica, reducida, cada tesela que toca la zona recortada, así que una
   /// captura larga no ocupa memoria de más. Lanza `unreadable` si falta o no se lee alguna tesela.
   func regenerateDerived(dir: URL, width: Int, height: Int) throws {
-    guard width > 0, height > 0 else { throw ImageImportCode.unreadable }
+    guard ImageSanitizer.isRegenerableSize(width: width, height: height) else {
+      throw ImageImportCode.unreadable
+    }
     let screen = ImageSanitizer.fitWidthCrop(width, height, screenWidth, screenHeight)
     try writeDerived(
       dir, width, height, screen.scale, screen.crop, "screen.jpg", ImageSanitizer.screenQuality)
@@ -264,6 +266,18 @@ final class ImageSanitizer {
       throw ImageImportCode.unreadable
     }
     return image
+  }
+
+  /// Tope de lo que se regenera (I-4 de la 028): lo guardado ya está reducido a `storedMaxPixels`
+  /// (24 MP); se admite hasta el tope de la imagen original (64 MP, `ImageLimits.maxPixels`).
+  static let regenerateMaxPixels = 64_000_000
+
+  /// Ancho y alto de un adjunto guardado que se pueden regenerar: ≥ 1 cada lado y `ancho × alto`
+  /// sin desbordar y ≤ `regenerateMaxPixels` (así `alto + tesela - 1` tampoco desborda).
+  static func isRegenerableSize(width: Int, height: Int) -> Bool {
+    guard width > 0, height > 0 else { return false }
+    let (pixels, overflow) = width.multipliedReportingOverflow(by: height)
+    return !overflow && pixels <= regenerateMaxPixels
   }
 
   // MARK: - Codificar (página de un PDF)
