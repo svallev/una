@@ -222,6 +222,95 @@ void main() {
     expect(await _js(h, 'document.visibilityState'), 'visible');
   });
 
+  testWidgets('CA-009-13, CA-028-19: tampoco con un campo de archivo que la '
+      'página no inserta, en un iframe about:blank, en un shadow root cerrado '
+      'o con dispatchEvent (S-M2 de la 028)', (tester) async {
+    final h = _Harness(13);
+    await h.setDelegate();
+    await _mount(tester, h);
+    expect(await hardening.harden(h.id), isTrue);
+    await _loadPage(tester, h);
+    // Cada caso, en su propia llamada (`evaluateJavaScript` cuenta como gesto
+    // del usuario, así que el campo pediría el selector de verdad).
+    const cases = {
+      'campo insertado':
+          "var i = document.createElement('input'); i.type = 'file';"
+          ' document.body.appendChild(i); i.click();',
+      'campo sin insertar, click()':
+          "var i = document.createElement('input'); i.type = 'file';"
+          ' i.click();',
+      'campo sin insertar, dispatchEvent':
+          "var i = document.createElement('input'); i.type = 'file';"
+          " i.dispatchEvent(new MouseEvent('click'));",
+      'campo sin insertar, showPicker()':
+          "var i = document.createElement('input'); i.type = 'file';"
+          ' try { i.showPicker(); } catch (e) {}',
+      'etiqueta sin insertar':
+          "var l = document.createElement('label');"
+          " l.innerHTML = '<input type=file>'; l.click();",
+      'etiqueta sin insertar, dispatchEvent':
+          "var l = document.createElement('label');"
+          " l.innerHTML = '<input type=file>';"
+          " l.dispatchEvent(new MouseEvent('click'));",
+      'shadow root cerrado':
+          "var d = document.createElement('div');"
+          ' document.body.appendChild(d);'
+          " var r = d.attachShadow({mode: 'closed'});"
+          " r.innerHTML = '<input type=file id=s>';"
+          " r.getElementById('s').click();",
+      // El clic que la etiqueta pasa a su campo no se ve desde `window`.
+      'etiqueta en un shadow root cerrado':
+          "var d = document.createElement('div');"
+          ' document.body.appendChild(d);'
+          " var r = d.attachShadow({mode: 'closed'});"
+          " r.innerHTML = '<label>L<input type=file></label>';"
+          " r.querySelector('label').click();",
+      'iframe about:blank':
+          "var f = document.createElement('iframe');"
+          ' document.body.appendChild(f); var d = f.contentDocument;'
+          " d.body.innerHTML = '<input type=file id=x>';"
+          " d.getElementById('x').click();",
+      'iframe about:blank, campo sin insertar':
+          "var f = document.createElement('iframe');"
+          ' document.body.appendChild(f);'
+          " var i = f.contentDocument.createElement('input');"
+          " i.type = 'file'; i.click();",
+      'iframe about:blank, showPicker()':
+          "var f = document.createElement('iframe');"
+          ' document.body.appendChild(f); var d = f.contentDocument;'
+          " d.body.innerHTML = '<input type=file id=x>';"
+          " try { d.getElementById('x').showPicker(); } catch (e) {}",
+      'funciones de otro marco':
+          "var f = document.createElement('iframe');"
+          ' document.body.appendChild(f); var w = f.contentWindow;'
+          " var i = document.createElement('input'); i.type = 'file';"
+          ' w.HTMLElement.prototype.click.call(i);'
+          " w.EventTarget.prototype.dispatchEvent.call(i, new MouseEvent('click'));"
+          ' try { w.HTMLInputElement.prototype.showPicker.call(i); }'
+          ' catch (e) {}',
+      'iframe srcdoc':
+          "var f = document.createElement('iframe');"
+          " f.srcdoc = '<input type=file id=y><script>"
+          "document.getElementById(\"y\").click()<\\/script>';"
+          ' document.body.appendChild(f);',
+    };
+    for (final MapEntry(key: name, value: js) in cases.entries) {
+      await h.controller.runJavaScript('(function () { $js })();');
+      await tester.pump(const Duration(milliseconds: 900));
+      if (Platform.isIOS) {
+        // Las veces que la página llegó a pedir el selector a WebKit (que,
+        // desde iOS 18.4, corta el `FilePanelBlocker`): 0 = lo cortó el
+        // script, que es lo único que hay en iOS 16–18.3 (contrato §3).
+        final asked = await const MethodChannel('una/webview')
+            .invokeMethod<int>('debugOpenPanelRequests', {'id': h.id});
+        expect(asked, 0, reason: name);
+      }
+    }
+    // Sigue la página a la vista, sin el selector encima.
+    expect(find.byType(WebViewWidget), findsOneWidget);
+    expect(await _js(h, 'document.visibilityState'), 'visible');
+  });
+
   testWidgets('CA-021-08, CA-028-05: con el sistema en oscuro, la página se ve '
       'en su versión clara', (tester) async {
     final h = _Harness(10);

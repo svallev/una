@@ -19,6 +19,13 @@ private final class StartRecorder: NSObject, WKNavigationDelegate {
   }
 }
 
+/// Delegado de interfaz de mentira (el del paquete pone `createWebViewWith` y los diálogos):
+/// apunta si le llegó el cierre de la ventana.
+private final class CloseRecorder: NSObject, WKUIDelegate {
+  var closed = 0
+  func webViewDidClose(_ webView: WKWebView) { closed += 1 }
+}
+
 /// Un marco de mentira (principal o no).
 private final class FakeFrame: WKFrameInfo {
   private let main: Bool
@@ -265,7 +272,10 @@ class WebViewHardeningTests: XCTestCase {
       contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         .deletingLastPathComponent().appendingPathComponent("Runner/WebViewHardening.swift"),
       encoding: .utf8)
-    for marker in ["private func debugKillContentProcess(", "_killWebContentProcess"] {
+    for marker in [
+      "private func debugKillContentProcess(", "_killWebContentProcess",
+      "FilePanelBlocker.requests(of:",
+    ] {
       let hook = try XCTUnwrap(swift.range(of: marker), marker)
       let guardStart = try XCTUnwrap(
         swift.range(of: "#if DEBUG", options: .backwards, range: swift.startIndex..<hook.lowerBound), marker)
@@ -555,6 +565,94 @@ class WebViewHardeningTests: XCTestCase {
     }
     wait(for: [done], timeout: 10)
     XCTAssertEqual(result as? String, "l,b|NotAllowedError")
+  }
+
+  // MARK: selector de archivos desde iOS 18.4 (FilePanelBlocker, S-M2 de la 028)
+
+  func testHardenWrapsThePackageUIDelegateOnceAndStateSaysSo() throws {
+    // CA-009-13 y CA-028-19: como el de navegación, una sola vez; si otro lo quita, `state` lo dice
+    // (`wrapped`) y `harden` lo vuelve a poner.
+    guard #available(iOS 18.4, *) else { throw XCTSkip("runOpenPanelWith es de iOS 18.4") }
+    let (hardening, view) = make()
+    let inner = CloseRecorder()
+    view.uiDelegate = inner
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    let blocker = try XCTUnwrap(view.uiDelegate as? FilePanelBlocker)
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    XCTAssertTrue(view.uiDelegate === blocker, "no se envuelve dos veces")
+    view.uiDelegate = inner
+    XCTAssertEqual((call(hardening, "state", ["id": id]) as? [String: Bool])?["wrapped"], false)
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    XCTAssertEqual((call(hardening, "state", ["id": id]) as? [String: Bool])?["wrapped"], true)
+  }
+
+  func testTheUIWrapperForwardsEverythingElseToThePackageDelegate() {
+    // El paquete sigue recibiendo lo suyo (ventanas nuevas, diálogos…); lo que no tiene, tampoco
+    // lo dice el envoltorio (WebKit pregunta `responds(to:)` al ponerlo).
+    let inner = CloseRecorder()
+    let blocker = FilePanelBlocker(inner: inner)
+    let close = #selector(WKUIDelegate.webViewDidClose(_:))
+    XCTAssertTrue(blocker.responds(to: close))
+    XCTAssertFalse(FilePanelBlocker(inner: nil).responds(to: close))
+    let alert = #selector(
+      WKUIDelegate.webView(_:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:))
+    XCTAssertFalse(blocker.responds(to: alert), "el de mentira no lo tiene")
+    let view = WKWebView(frame: .zero)
+    (blocker as WKUIDelegate).webViewDidClose?(view)
+    XCTAssertEqual(inner.closed, 1)
+    if #available(iOS 18.4, *) {
+      let panel = #selector(
+        WKUIDelegate.webView(_:runOpenPanelWith:initiatedByFrame:completionHandler:))
+      XCTAssertTrue(FilePanelBlocker(inner: nil).responds(to: panel))
+    }
+  }
+
+  func testWebKitAsksTheBlockerAndTheScriptStopsFileInputsThatAreNotInTheDocument() throws {
+    // S-M2: un campo creado y no insertado (`click()`, `dispatchEvent`) no pasa por `window`. Con
+    // el script, la página no llega a pedir el selector (lo único que lo corta en iOS 16–18.3);
+    // sin él, WebKit lo pide y el envoltorio responde «cancelar».
+    guard #available(iOS 18.4, *) else { throw XCTSkip("runOpenPanelWith es de iOS 18.4") }
+    let (hardening, view) = make()
+    // En una ventana, como en la app.
+    let window = try XCTUnwrap(
+      UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.windows.first }
+        .first)
+    view.frame = CGRect(x: 0, y: 0, width: 200, height: 200)
+    window.addSubview(view)
+    defer { view.removeFromSuperview() }
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
+    // Uno por llamada: con una petición pendiente, WebKit no atiende otra en la misma página.
+    let loose = [
+      "var i = document.createElement('input'); i.type = 'file'; i.click(); 1",
+      "var i = document.createElement('input'); i.type = 'file';"
+        + " i.dispatchEvent(new MouseEvent('click')); 1",
+    ]
+    func load() {
+      let shown = expectation(
+        for: NSPredicate { _, _ in view.url?.host == "una.test" && !view.isLoading },
+        evaluatedWith: nil)
+      view.loadHTMLString("<h1>Una</h1>", baseURL: URL(string: "https://una.test/"))
+      wait(for: [shown], timeout: 10)
+    }
+    func run() {
+      for js in loose {
+        let done = expectation(description: "js")
+        view.evaluateJavaScript(js) { _, _ in done.fulfill() }
+        wait(for: [done], timeout: 10)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+      }
+    }
+    load()
+    run()
+    XCTAssertEqual(FilePanelBlocker.requests(of: view), 0, "lo corta el script")
+    view.configuration.userContentController.removeAllUserScripts()
+    load()
+    run()
+    let asked = expectation(
+      for: NSPredicate { _, _ in FilePanelBlocker.requests(of: view) == 2 }, evaluatedWith: nil)
+    wait(for: [asked], timeout: 10)
+    // `harden` vuelve a poner el script.
+    XCTAssertEqual(call(hardening, "harden", ["id": id]) as? Bool, true)
   }
 
   // MARK: canal

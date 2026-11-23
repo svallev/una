@@ -79,6 +79,12 @@ final class WebViewHardening {
       #else
         result(FlutterMethodNotImplemented)
       #endif
+    case "debugOpenPanelRequests":
+      #if DEBUG
+        result(webView(call).map { FilePanelBlocker.requests(of: $0) })
+      #else
+        result(FlutterMethodNotImplemented)
+      #endif
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -114,8 +120,17 @@ final class WebViewHardening {
         view, &NavigationWatcher.key, watcher, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       view.navigationDelegate = watcher
     }
-    // Sin selector de archivos (`setOnShowFileSelector` en Android): iOS 16 no tiene API pública
-    // para impedirlo (`runOpenPanelWith` llega en iOS 18.4), así que un script de usuario lo corta.
+    // Sin selector de archivos (`setOnShowFileSelector` en Android). Desde iOS 18.4, de raíz: el
+    // delegado de interfaz del paquete, envuelto por un [FilePanelBlocker] que responde «cancelar»
+    // a `runOpenPanelWith` (lo pone el paquete al crear el controlador y no lo vuelve a cambiar).
+    // Antes no hay API pública, así que además un script de usuario lo corta (contrato §3).
+    if #available(iOS 18.4, *), !(view.uiDelegate is FilePanelBlocker) {
+      let blocker = FilePanelBlocker(inner: view.uiDelegate)
+      // `uiDelegate` es débil: la vista conserva al envoltorio.
+      objc_setAssociatedObject(
+        view, &FilePanelBlocker.key, blocker, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      view.uiDelegate = blocker
+    }
     let scripts = view.configuration.userContentController
     if !scripts.userScripts.contains(where: { $0.source == Self.noFileChooserScript }) {
       scripts.addUserScript(
@@ -157,29 +172,79 @@ final class WebViewHardening {
       "safeBrowsing": prefs.isFraudulentWebsiteWarningEnabled,
       "noMultipleWindows": !prefs.javaScriptCanOpenWindowsAutomatically,
       "noDarkening": view.overrideUserInterfaceStyle == .light,
-      "wrapped": view.navigationDelegate is NavigationWatcher,
+      "wrapped": view.navigationDelegate is NavigationWatcher && filePanelBlocked(view),
     ]
   }
 
-  /// Corta el selector de archivos de `<input type=file>` en todos los marcos: el clic en uno (del
-  /// usuario, de una etiqueta o de `click()`, también dentro de un *shadow root*) se cancela antes de
-  /// que la página lo vea, y `showPicker()` falla. Se registra en `window` en la fase de captura
-  /// antes que cualquier script de la página, así que esta no puede pararlo antes.
+  /// Desde iOS 18.4, el delegado de interfaz del paquete está envuelto por el [FilePanelBlocker];
+  /// antes no hay nada que leer (lo corta el script, que `harden` comprueba).
+  private func filePanelBlocked(_ view: WKWebView) -> Bool {
+    if #available(iOS 18.4, *) { return view.uiDelegate is FilePanelBlocker }
+    return true
+  }
+
+  /// Corta el selector de archivos de `<input type=file>` en todos los marcos (en iOS 16–18.3 es lo
+  /// único que lo corta; desde 18.4 hay además el [FilePanelBlocker]). Guarda al empezar las
+  /// funciones del navegador que usa, antes que cualquier script de la página, y:
+  /// - cancela en `window` (fase de captura) todo clic cuyo camino pase por un campo de archivo
+  ///   (toque, etiqueta, `click()`), y también en cada *shadow root*, abierto o cerrado (el camino
+  ///   que ve `window` no entra en uno cerrado);
+  /// - `click()` y `dispatchEvent` de un clic sobre un campo de archivo (o una etiqueta no insertada
+  ///   que lo controla) no hacen nada: lo que no está en el documento no pasa por `window` (S-M2 de
+  ///   la 028);
+  /// - `showPicker()` de un campo de archivo falla con `NotAllowedError`.
+  /// Se reconoce el campo con el `type` de `HTMLInputElement` guardado, que comprueba la interfaz y
+  /// no el marco: vale para un campo de otro marco del mismo origen (`about:blank`).
   static let noFileChooserScript = """
     (function () {
+      var inputType = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'type').get;
+      var labelControl = Object.getOwnPropertyDescriptor(HTMLLabelElement.prototype, 'control').get;
+      var eventType = Object.getOwnPropertyDescriptor(Event.prototype, 'type').get;
+      var isConnected = Object.getOwnPropertyDescriptor(Node.prototype, 'isConnected').get;
+      var preventDefault = Event.prototype.preventDefault;
+      var stopImmediatePropagation = Event.prototype.stopImmediatePropagation;
+      var composedPath = Event.prototype.composedPath;
+      var addListener = EventTarget.prototype.addEventListener;
       function isFile(el) {
-        return el instanceof HTMLInputElement && String(el.type).toLowerCase() === 'file';
+        try { return String(inputType.call(el)).toLowerCase() === 'file'; } catch (e) { return false; }
       }
-      window.addEventListener('click', function (e) {
-        var path = e.composedPath ? e.composedPath() : [e.target];
+      // Una etiqueta insertada pasa el clic a su campo por `window` (lo corta `guard`, y la página
+      // sigue viendo el de la etiqueta); una que no lo está, no.
+      function opensFile(el) {
+        if (isFile(el)) return true;
+        try { return !isConnected.call(el) && isFile(labelControl.call(el)); } catch (e) { return false; }
+      }
+      function guard(e) {
+        var path = composedPath.call(e);
         for (var i = 0; i < path.length; i++) {
           if (isFile(path[i])) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
+            preventDefault.call(e);
+            stopImmediatePropagation.call(e);
             return;
           }
         }
-      }, true);
+      }
+      addListener.call(window, 'click', guard, true);
+      var attachShadow = Element.prototype.attachShadow;
+      if (attachShadow) {
+        Element.prototype.attachShadow = function () {
+          var root = attachShadow.apply(this, arguments);
+          addListener.call(root, 'click', guard, true);
+          return root;
+        };
+      }
+      var click = HTMLElement.prototype.click;
+      HTMLElement.prototype.click = function () {
+        if (opensFile(this)) return;
+        return click.apply(this, arguments);
+      };
+      var dispatchEvent = EventTarget.prototype.dispatchEvent;
+      EventTarget.prototype.dispatchEvent = function (e) {
+        var type;
+        try { type = eventType.call(e); } catch (x) { type = ''; }
+        if (type === 'click' && opensFile(this)) return false;
+        return dispatchEvent.apply(this, arguments);
+      };
       var proto = HTMLInputElement.prototype;
       if (proto.showPicker) {
         var showPicker = proto.showPicker;
@@ -347,5 +412,48 @@ final class NavigationWatcher: NSObject, WKNavigationDelegate {
       "application/xhtml+xml", "application/xml", "application/json", "application/javascript",
     ]
     return !(pages.contains(mime) || mime.hasSuffix("+xml") || mime.hasSuffix("+json"))
+  }
+}
+
+/// El delegado de interfaz del paquete, envuelto sin cambiar nada de lo que hace (como
+/// [NavigationWatcher]): le reenvía todos sus métodos y solo añade, desde iOS 18.4,
+/// `runOpenPanelWith`, que responde «cancelar» (`nil`) sin mostrar el selector de archivos
+/// (`setOnShowFileSelector` en Android; CA-009-13, CA-028-19, S-M2 de la 028). El script de
+/// usuario no basta: un `<input type=file>` creado por la página y no insertado, al que se le hace
+/// `click()`, no pasa por `window` (comprobado en `webview_hardening_test`, contrato §3).
+final class FilePanelBlocker: NSObject, WKUIDelegate {
+  static var key: UInt8 = 0
+
+  /// El delegado del paquete (fuerte: `uiDelegate` es débil y el envoltorio lo sustituye).
+  private let inner: WKUIDelegate?
+  /// Las veces que WebKit pidió el selector (solo lo leen los tests, `debugOpenPanelRequests`).
+  private(set) var requests = 0
+
+  init(inner: WKUIDelegate?) {
+    self.inner = inner
+  }
+
+  /// Las peticiones del selector que ha cortado el envoltorio de [view] (0 sin envoltorio).
+  static func requests(of view: WKWebView) -> Int {
+    (objc_getAssociatedObject(view, &key) as? FilePanelBlocker)?.requests ?? 0
+  }
+
+  override func responds(to aSelector: Selector!) -> Bool {
+    super.responds(to: aSelector) || (inner?.responds(to: aSelector) ?? false)
+  }
+
+  override func forwardingTarget(for aSelector: Selector!) -> Any? {
+    if let inner, inner.responds(to: aSelector) { return inner }
+    return super.forwardingTarget(for: aSelector)
+  }
+
+  @available(iOS 18.4, *)
+  func webView(
+    _ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters,
+    initiatedByFrame frame: WKFrameInfo,
+    completionHandler: @escaping @MainActor ([URL]?) -> Void
+  ) {
+    requests += 1
+    completionHandler(nil)
   }
 }
