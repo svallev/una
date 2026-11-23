@@ -1,6 +1,6 @@
 # Tareas — Spec 028: Una en iOS, igual que en Android (paridad)
 
-**Siguiente:** T-028-24, arreglos R1 a R5 de `revisores.md` (decididos por el propietario el 2026-11-23), un `spec-task` por grupo y en orden; luego T-028-25. Rama `feat/028-i8-cierre`.
+**Siguiente:** T-028-25 (cierre: matriz completa y `spec-reviewer`, `docs/PLAN.md`, `CLAUDE.md`, nota iOS en ADR-0025, `docs/environments.md`, `threat-model.md` §5 l. 85 y l. 62 (I-6 de `revisores.md`), [Pendiente I9] política, pregunta del «Muy pronto en App Store»), en una sesión nueva. Pendiente en el iPad de T-028-24: VoiceOver con «Seleccionado» (R1), aviso de cámara con teclado y VoiceOver (R4), PDF real del selector (R5). Rama `feat/028-i8-cierre`.
 
 Reglas: tareas **pequeñas** (≤ medio día; T-028-13 y 18 se aceptan más largas, `plan.md` §1.1), **ordenadas** (las dependencias arriba) y **verificables**. Se hacen **de una en una, en orden**. La columna **Toca** acota lo que cambia y lo que lee el subagente. Los textos van juntos al principio (T-028-02).
 
