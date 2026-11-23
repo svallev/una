@@ -76,7 +76,7 @@ Sistema en oscuro; observado por el propietario en el iPad, *release*:
 
 Observado por el propietario en el iPad, *release*:
 
-- **Pantalla siempre activa [Hecho]:** con bloqueo automático de 2 min y el ajuste encendido, el iPad no se apaga (CA-007-12, CA-015-03 a 04d, `isIdleTimerDisabled`).
+- **Pantalla siempre activa [Hecho]:** con bloqueo automático de 2 min y el ajuste encendido, el iPad no se apaga; con el ajuste apagado, sí se apaga (CA-007-12, CA-015-03 a 04d, `isIdleTimerDisabled`).
 - **Aviso con Una delante [Hecho]:** al llegar la hora del aviso con la app abierta, no se muestra (CA-019-19a, `willPresent` sin presentación).
 - **Aviso con el iPad bloqueado [Hecho]:** en la pantalla bloqueada se lee «Tarea actual, imagen» (la etiqueta del tipo, sin el texto de la tarea) (CA-019-17, CA-028-16).
 - **Tocar el aviso con la app cerrada [Hecho]:** abre Una en la tarea actual (CA-019-20).
