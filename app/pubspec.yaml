@@ -23,7 +23,7 @@ dependencies:
   webview_flutter_android: 4.14.1
   # Spec 028 (T-028-08, P11): el motor de la WebView de iOS, que hasta ahora entraba solo como
   # transitiva de webview_flutter. Misma versión que ya fijaba el lock; no añade nada a Android.
-  webview_flutter_wkwebview: 3.26.1
+  webview_flutter_wkwebview: 3.27.2
 
 dev_dependencies:
   flutter_test:
